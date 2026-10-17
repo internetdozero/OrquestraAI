@@ -93,11 +93,14 @@ export function SkillsView({
     () => new Set(),
   );
   const [batchPending, setBatchPending] = useState(false);
-  // Name order is stable when a skill is switched off. "Active first" is
-  // still available, but it is what used to throw the card down the grid.
-  const [sortMode, setSortMode] = useState<SortMode>("alpha");
-  // The card that just changed state. `nonce` lets the same skill flash twice.
-  const [flash, setFlash] = useState<{ id: string; nonce: number } | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>("active");
+  // Highlight the card that just changed. `follow` scrolls to it only when it
+  // was enabled; disabling must leave the viewport where the user is.
+  const [flash, setFlash] = useState<{
+    id: string;
+    nonce: number;
+    follow: boolean;
+  } | null>(null);
 
   // Pending writes and a highlight belong to the scope that started them.
   const [shownScope, setShownScope] = useState(scope);
@@ -208,7 +211,11 @@ export function SkillsView({
         items.map((skill) => (skill.id === id ? optimistic : skill)),
       );
       setPendingIds((currentIds) => new Set(currentIds).add(id));
-      setFlash((current) => ({ id, nonce: (current?.nonce ?? 0) + 1 }));
+      setFlash((current) => ({
+        id,
+        nonce: (current?.nonce ?? 0) + 1,
+        follow: nextEnabled,
+      }));
       setError(null);
 
       try {
@@ -347,13 +354,13 @@ export function SkillsView({
           activeSkills={activeSkills}
           idleSkills={idleSkills}
           renderCard={renderSkillCard}
-          focusKey={flash?.id ?? null}
+          focusKey={flash?.follow ? flash.id : null}
         />
       ) : (
         <FlatSkillGrid
           skills={visibleSkills}
           renderCard={renderSkillCard}
-          focusKey={flash?.id ?? null}
+          focusKey={flash?.follow ? flash.id : null}
         />
       )}
 
