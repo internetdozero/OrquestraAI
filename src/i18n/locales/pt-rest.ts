@@ -10,6 +10,9 @@ export const ptRest = {
     delete: "Excluir",
     edit: "Editar",
     notInstalled: "não instalado",
+    loadingResources: "Carregando recursos...",
+    loadingResourcesHint:
+      "O essencial entra agora. O restante carrega em segundo plano.",
   },
 
   scopes: {

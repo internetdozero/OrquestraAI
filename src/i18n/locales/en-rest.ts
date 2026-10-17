@@ -9,6 +9,9 @@ export const enRest: typeof ptRest = {
     delete: "Delete",
     edit: "Edit",
     notInstalled: "not installed",
+    loadingResources: "Loading resources...",
+    loadingResourcesHint:
+      "Essentials come in now. Everything else keeps loading in the background.",
   },
 
   scopes: {

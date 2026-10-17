@@ -4,10 +4,11 @@ import type { SkillItem } from "../lib/skills";
 import {
   dropSkillsCache,
   hasSkillsCache,
+  isSkillsCacheStale,
   readSkillsCache,
   writeSkillsCache,
 } from "../lib/skillsCache";
-import { listSkills } from "../lib/tauri";
+import { loadSkillsScope } from "../lib/skillsLoader";
 
 function toMessage(cause: unknown, fallback: string): string {
   if (typeof cause === "string") return cause;
@@ -61,8 +62,7 @@ export function useSkillsCache(scope: string, isTauri: boolean) {
 
       if (!silent) setRefreshing(true);
       try {
-        const items = await listSkills(scope);
-        writeSkillsCache(scope, items);
+        const items = await loadSkillsScope(scope);
         if (request !== requestRef.current) return;
         setSkills(items);
         setError(null);
@@ -79,9 +79,13 @@ export function useSkillsCache(scope: string, isTauri: boolean) {
     [isTauri, scope, t],
   );
 
-  // Stale-while-revalidate: cached scopes paint from memory and revalidate
-  // silently; an uncached scope is the only case that shows the skeleton.
+  // A fresh cache paints as-is. Only a missing or stale scope hits the core,
+  // and a stale one keeps its cards up while that read finishes.
   useEffect(() => {
+    if (hasSkillsCache(scope) && !isSkillsCacheStale(scope)) {
+      setLoading(false);
+      return;
+    }
     void reload(hasSkillsCache(scope));
   }, [reload, scope]);
 
