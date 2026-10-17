@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { AgentsView } from "./components/AgentsView";
+import { BootScreen } from "./components/BootScreen";
 import { BridgeModal } from "./components/BridgeModal";
 import { Header } from "./components/Header";
 import { McpView } from "./components/McpView";
@@ -12,7 +13,8 @@ import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
 import { usePresets } from "./hooks/usePresets";
 import { useToast } from "./hooks/useToast";
-import { listMcpServers } from "./lib/mcps";
+import { ensureMcpCatalog, refreshMcpCatalog } from "./lib/mcpCache";
+import { preloadBackground, preloadEssentials } from "./lib/preloadResources";
 import { useCoreStatus } from "./lib/tauri";
 import { cn } from "./lib/utils";
 import type { ActiveView } from "./lib/views";
@@ -35,6 +37,7 @@ export default function App() {
   // Count of MCP servers enabled somewhere, for the sidebar badge only; the MCP
   // view keeps its own copy and reports changes back through `onActiveCountChange`.
   const [mcpCount, setMcpCount] = useState(0);
+  const [skillsReady, setSkillsReady] = useState(false);
 
   const { toast, showToast } = useToast();
   const clearError = useCallback(() => setError(null), []);
@@ -65,12 +68,38 @@ export default function App() {
     if (!isTauri) return;
 
     let cancelled = false;
-    listMcpServers()
+    preloadEssentials()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setSkillsReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isTauri]);
+
+  useEffect(() => {
+    if (!isTauri || !skillsReady) return;
+
+    let cancelled = false;
+    void preloadBackground(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [isTauri, skillsReady]);
+
+  useEffect(() => {
+    if (!isTauri || !skillsReady) return;
+
+    let cancelled = false;
+    const read = reloadToken === 0 ? ensureMcpCatalog() : refreshMcpCatalog();
+    read
       .then((catalog) => {
         if (cancelled) return;
 
         setMcpCount(
-          catalog.filter(
+          catalog.servers.filter(
             (server) =>
               server.globalEnabled || server.enabledHarnesses.length > 0,
           ).length,
@@ -83,7 +112,9 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [isTauri, reloadToken]);
+  }, [isTauri, reloadToken, skillsReady]);
+
+  const essentialsReady = !isTauri || (skillsReady && !presets.loading);
 
   // Harnesses the bridge could not find are dimmed in the skills scope tabs.
   const installedHarnessIds = useMemo(
@@ -107,6 +138,8 @@ export default function App() {
     setQuery("");
     clearError();
   };
+
+  if (!essentialsReady) return <BootScreen />;
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-[#09090b] text-zinc-100">

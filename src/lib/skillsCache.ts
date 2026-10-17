@@ -23,6 +23,17 @@ export interface CachedSkills {
 const cache = new Map<string, CachedSkills>();
 
 /**
+ * Bumped on every mutation that can make an in-flight evaluation lie.
+ * A loader that started before the bump must not store its reply as fresh.
+ */
+let generation = 0;
+
+/** Generation observed by loaders when they started a request. */
+export function skillsCacheGeneration(): number {
+  return generation;
+}
+
+/**
  * Optimistic projection of one skill after a toggle in `scope`, mirroring the
  * Rust rules: a Global toggle also carries into the harness projection, while
  * a harness toggle only ever moves that harness's own flag. The cache stores
@@ -62,11 +73,17 @@ export function writeSkillsCache(scope: string, items: SkillItem[]): void {
   cache.set(scope, { items, stale: false });
 }
 
+/** Keep a list visible, but force the next visit to revalidate it. */
+export function writeSkillsCacheStale(scope: string, items: SkillItem[]): void {
+  cache.set(scope, { items, stale: true });
+}
+
 /**
  * Keep every cached scope servable but due for revalidation. `exceptScope`
  * stays fresh — used when only the other scopes can be affected.
  */
 export function markSkillsCacheStale(exceptScope?: string): void {
+  generation += 1;
   for (const [scope, entry] of cache) {
     if (scope === exceptScope) continue;
     entry.stale = true;
@@ -75,6 +92,7 @@ export function markSkillsCacheStale(exceptScope?: string): void {
 
 /** Drop one scope's entry, or the whole cache when called without a scope. */
 export function dropSkillsCache(scope?: string): void {
+  generation += 1;
   if (scope === undefined) {
     cache.clear();
     return;

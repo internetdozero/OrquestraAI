@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Loader2,
@@ -13,14 +13,12 @@ import {
   coversHarness,
   deleteMcp,
   deployMcps,
-  listMcpServers,
-  listMcpTargets,
   saveMcp,
   setMcpState,
   type McpServer,
-  type McpTarget,
 } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
+import { useMcpCatalog } from "../hooks/useMcpCatalog";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { sumMcpTokens } from "../lib/tokens";
 import { cn, formatTokens } from "../lib/utils";
@@ -53,12 +51,10 @@ export function McpView({
   reloadToken = 0,
 }: McpViewProps) {
   const { t } = useI18n();
-  const [servers, setServers] = useState<McpServer[]>([]);
-  const [targets, setTargets] = useState<McpTarget[]>([]);
+  const { servers, targets, loading, error, setError, load, replaceServers } =
+    useMcpCatalog(isTauri, reloadToken);
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
-  const [loading, setLoading] = useState(true);
   const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(() => new Set());
-  const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<McpServer | null>(null);
   const [saving, setSaving] = useState(false);
@@ -66,41 +62,6 @@ export function McpView({
   const [deploying, setDeploying] = useState(false);
   // Server whose execution details are open in the inspector drawer.
   const [inspecting, setInspecting] = useState<McpServer | null>(null);
-
-  const load = useCallback(async () => {
-    if (!isTauri) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const [catalog, rows] = await Promise.all([
-        listMcpServers(),
-        listMcpTargets(),
-      ]);
-      setServers(catalog);
-      setTargets(rows);
-      setError(null);
-    } catch (cause) {
-      setError(t.mcps.readFailed(toMessage(cause, t.common.unexpected)));
-    } finally {
-      setLoading(false);
-    }
-  }, [isTauri, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // A preset applies catalog-wide changes the view never started, so the shell
-  // asks for a re-read by bumping the token instead of reaching in here.
-  const lastReloadToken = useRef(reloadToken);
-  useEffect(() => {
-    if (reloadToken === lastReloadToken.current) return;
-
-    lastReloadToken.current = reloadToken;
-    void load();
-  }, [reloadToken, load]);
 
   const activeServers = useMemo(
     () =>
@@ -139,7 +100,7 @@ export function McpView({
 
     // Optimistic: the switch moves now, the catalog catches up. The Rust side
     // re-compiles every harness config before it resolves.
-    setServers((previous) =>
+    replaceServers((previous) =>
       previous.map((item) => {
         if (item.id !== server.id) return item;
         if (harnessId === null) return { ...item, globalEnabled: enabled };
@@ -177,7 +138,7 @@ export function McpView({
 
     try {
       await deleteMcp(server.id);
-      setServers((previous) => previous.filter((item) => item.id !== server.id));
+      replaceServers((previous) => previous.filter((item) => item.id !== server.id));
       onToast(t.mcps.deletedFromConfigs(server.name));
     } catch (cause) {
       setError(t.mcps.deleteFailed(server.name, toMessage(cause, t.common.unexpected)));

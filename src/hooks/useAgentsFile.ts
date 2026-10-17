@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useI18n } from "./useI18n";
-import { readMasterAgentsMd, writeMasterAgentsMd } from "../lib/tauri";
+import { ensureAgentsText, readAgentsCache, writeAgentsCache } from "../lib/agentsCache";
+import { writeMasterAgentsMd } from "../lib/tauri";
 
 /** Draft and save state for the master `~/.orquestra/AGENTS.md`. */
 export function useAgentsFile(options: {
@@ -12,17 +13,18 @@ export function useAgentsFile(options: {
 }) {
   const { isTauri, onToast, onError, onClear } = options;
   const { t } = useI18n();
-  const [content, setContent] = useState("");
-  const [savedContent, setSavedContent] = useState("");
-  const [loading, setLoading] = useState(false);
+  const cached = readAgentsCache();
+  const [content, setContent] = useState(cached ?? "");
+  const [savedContent, setSavedContent] = useState(cached ?? "");
+  const [loading, setLoading] = useState(isTauri && cached === null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!isTauri) return;
 
-    setLoading(true);
+    if (readAgentsCache() === null) setLoading(true);
     try {
-      const text = await readMasterAgentsMd();
+      const text = await ensureAgentsText();
       setContent(text);
       setSavedContent(text);
       onClear();
@@ -39,6 +41,7 @@ export function useAgentsFile(options: {
     setSaving(true);
     try {
       await writeMasterAgentsMd(content);
+      writeAgentsCache(content);
       setSavedContent(content);
       onClear();
       onToast(t.agents.savedToast);
