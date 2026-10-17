@@ -1,0 +1,396 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  Loader2,
+  Plug,
+  Plus,
+  RefreshCw,
+  Unplug,
+  Waypoints,
+  Wrench,
+} from "lucide-react";
+import {
+  coversHarness,
+  deleteMcp,
+  deployMcps,
+  listMcpServers,
+  listMcpTargets,
+  saveMcp,
+  setMcpState,
+  type McpServer,
+  type McpTarget,
+} from "../lib/mcps";
+import { useI18n } from "../hooks/useI18n";
+import { GLOBAL_SCOPE } from "../lib/harnesses";
+import { sumMcpTokens } from "../lib/tokens";
+import { cn, formatTokens } from "../lib/utils";
+import { McpCard } from "./McpCard";
+import { StatePanel } from "./ui";
+import { McpDetailDrawer } from "./McpDetailDrawer";
+import { McpFormModal } from "./McpFormModal";
+import { McpScopeSelector } from "./McpScopeSelector";
+import { VirtualCardGrid } from "./VirtualCardGrid";
+
+interface McpViewProps {
+  isTauri: boolean;
+  onToast: (message: string) => void;
+  /** Keeps the sidebar badge in step with the catalog. */
+  onActiveCountChange?: (count: number) => void;
+  /** Bumped when something outside the view (a preset) changed the catalog. */
+  reloadToken?: number;
+}
+
+function toMessage(cause: unknown, fallback: string): string {
+  if (typeof cause === "string") return cause;
+  if (cause instanceof Error) return cause.message;
+  return fallback;
+}
+
+export function McpView({
+  isTauri,
+  onToast,
+  onActiveCountChange,
+  reloadToken = 0,
+}: McpViewProps) {
+  const { t } = useI18n();
+  const [servers, setServers] = useState<McpServer[]>([]);
+  const [targets, setTargets] = useState<McpTarget[]>([]);
+  const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
+  const [loading, setLoading] = useState(true);
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<McpServer | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deploying, setDeploying] = useState(false);
+  // Server whose execution details are open in the inspector drawer.
+  const [inspecting, setInspecting] = useState<McpServer | null>(null);
+
+  const load = useCallback(async () => {
+    if (!isTauri) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [catalog, rows] = await Promise.all([
+        listMcpServers(),
+        listMcpTargets(),
+      ]);
+      setServers(catalog);
+      setTargets(rows);
+      setError(null);
+    } catch (cause) {
+      setError(t.mcps.readFailed(toMessage(cause, t.common.unexpected)));
+    } finally {
+      setLoading(false);
+    }
+  }, [isTauri, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // A preset applies catalog-wide changes the view never started, so the shell
+  // asks for a re-read by bumping the token instead of reaching in here.
+  const lastReloadToken = useRef(reloadToken);
+  useEffect(() => {
+    if (reloadToken === lastReloadToken.current) return;
+
+    lastReloadToken.current = reloadToken;
+    void load();
+  }, [reloadToken, load]);
+
+  const activeServers = useMemo(
+    () =>
+      servers.filter(
+        (server) =>
+          server.globalEnabled || server.enabledHarnesses.length > 0,
+      ),
+    [servers],
+  );
+
+  const scopeTokens = useMemo(
+    () => sumMcpTokens(servers, (server) => coversHarness(server, scope)),
+    [servers, scope],
+  );
+
+  useEffect(() => {
+    onActiveCountChange?.(activeServers.length);
+  }, [activeServers.length, onActiveCountChange]);
+
+  const scopeLabel =
+    scope === GLOBAL_SCOPE.id
+      ? "Global"
+      : (targets.find((target) => target.id === scope)?.label ?? scope);
+
+  const setPending = (id: string, pending: boolean) =>
+    setBusyIds((previous) => {
+      const next = new Set(previous);
+      if (pending) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  const toggle = async (server: McpServer) => {
+    const harnessId = scope === GLOBAL_SCOPE.id ? null : scope;
+    const enabled = !coversHarness(server, scope);
+
+    // Optimistic: the switch moves now, the catalog catches up. The Rust side
+    // re-compiles every harness config before it resolves.
+    setServers((previous) =>
+      previous.map((item) => {
+        if (item.id !== server.id) return item;
+        if (harnessId === null) return { ...item, globalEnabled: enabled };
+        return {
+          ...item,
+          enabledHarnesses: enabled
+            ? [...new Set([...item.enabledHarnesses, harnessId])]
+            : item.enabledHarnesses.filter((id) => id !== harnessId),
+        };
+      }),
+    );
+    setPending(server.id, true);
+    setError(null);
+
+    try {
+      await setMcpState(server.id, harnessId, enabled);
+      onToast(
+        t.mcps.toggled(
+          server.name,
+          enabled ? t.mcps.enabledVerb : t.mcps.disabledVerb,
+          scopeLabel,
+        ),
+      );
+    } catch (cause) {
+      setError(toMessage(cause, t.common.unexpected));
+      await load();
+    } finally {
+      setPending(server.id, false);
+    }
+  };
+
+  const remove = async (server: McpServer) => {
+    setPending(server.id, true);
+    setError(null);
+
+    try {
+      await deleteMcp(server.id);
+      setServers((previous) => previous.filter((item) => item.id !== server.id));
+      onToast(t.mcps.deletedFromConfigs(server.name));
+    } catch (cause) {
+      setError(t.mcps.deleteFailed(server.name, toMessage(cause, t.common.unexpected)));
+    } finally {
+      setPending(server.id, false);
+    }
+  };
+
+  const save = async (server: McpServer) => {
+    setSaving(true);
+    setFormError(null);
+
+    try {
+      await saveMcp(server);
+      setFormOpen(false);
+      setEditing(null);
+      onToast(t.mcps.savedDeployed(server.name));
+      await load();
+    } catch (cause) {
+      setFormError(toMessage(cause, t.common.unexpected));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const recompile = async () => {
+    setDeploying(true);
+    setError(null);
+
+    try {
+      const changed = await deployMcps();
+      onToast(
+        changed.length === 0
+          ? t.mcps.alreadyMatches
+          : t.mcps.recompiled(changed.length),
+      );
+      await load();
+    } catch (cause) {
+      setError(t.mcps.recompileFailed(toMessage(cause, t.common.unexpected)));
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  if (!isTauri) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <StatePanel icon={Unplug} title={t.skills.stateUnavailableTitle} description={t.mcps.unavailableBody}>
+          <code className="rounded border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10.5px] text-zinc-400">npm run tauri dev</code>
+        </StatePanel>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-5 sm:px-6">
+      <div className="mx-auto w-full max-w-[1400px]">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+              {t.mcps.headerChip}
+            </p>
+            <h2 className="text-lg font-semibold tracking-tight text-zinc-100">
+              {t.mcps.registryTitle}
+            </h2>
+            <p className="mt-0.5 max-w-2xl text-[11px] leading-relaxed text-zinc-500">
+              {t.mcps.subtitle}
+            </p>
+            <p className="mt-1 font-mono text-[10.5px] text-zinc-600" title={t.tokens.scopeHint}>
+              {t.tokens.entry} ≈ {formatTokens(scopeTokens.entry)} · {t.tokens.full} ≈ {formatTokens(scopeTokens.full)} {t.tokens.unit}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2">
+              <Plug className="size-3.5 text-emerald-300" />
+              <span className="text-[11.5px] font-medium text-emerald-300">
+                {t.mcps.active}
+              </span>
+              <span className="font-mono text-[11.5px] text-emerald-200/70">
+                {activeServers.length}/{servers.length}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={recompile}
+              disabled={deploying || loading}
+              title={t.mcps.recompile}
+              className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 disabled:cursor-wait disabled:opacity-60"
+            >
+              <RefreshCw className={cn("size-4", deploying && "animate-spin")} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setFormError(null);
+                setFormOpen(true);
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-[11.5px] font-medium text-emerald-200 transition hover:bg-emerald-500/25"
+            >
+              <Plus className="size-3.5" />
+              {t.mcps.addServer}
+            </button>
+          </div>
+        </div>
+
+        {/* The toggle writes to whichever scope is chosen here. */}
+        <McpScopeSelector scope={scope} targets={targets} onSelect={setScope} />
+
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.07] px-3 py-2 text-[11.5px] leading-relaxed text-red-200"
+          >
+            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            <span className="min-w-0 flex-1">{error}</span>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="shrink-0 text-red-300/70 hover:text-red-200"
+            >
+              {t.common.dismiss}
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-[12px] text-zinc-500">
+            <Loader2 className="size-4 animate-spin" />
+            {t.mcps.reading}
+          </div>
+        ) : servers.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-white/10 bg-zinc-900/20 px-6 py-16 text-center">
+            <div className="grid size-10 place-items-center rounded-full border border-white/[0.07] bg-white/[0.03]">
+              <Wrench className="size-4 text-zinc-500" />
+            </div>
+            <p className="text-sm font-semibold text-zinc-200">
+              {t.mcps.emptyTitle}
+            </p>
+            <p className="max-w-sm text-[12px] leading-relaxed text-zinc-500">
+              {t.mcps.emptyBody}
+            </p>
+          </div>
+        ) : (
+          <VirtualCardGrid
+            items={servers}
+            keyOf={(server) => server.id}
+            className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+            renderItem={(server) => (
+              <McpCard
+                server={server}
+                scope={scope}
+                scopeLabel={scopeLabel}
+                busy={busyIds.has(server.id)}
+                onToggle={(item) => void toggle(item)}
+                onInspect={(item) => setInspecting(item)}
+                onEdit={(item) => {
+                  setEditing(item);
+                  setFormError(null);
+                  setFormOpen(true);
+                }}
+                onDelete={(item) => void remove(item)}
+              />
+            )}
+          />
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-[10.5px] text-zinc-600">
+          <Waypoints className="size-3 shrink-0" />
+          <span>
+            {t.mcps.targets}:{" "}
+            {targets.length === 0
+              ? t.mcps.noAdapters
+              : targets
+                  .map(
+                    (target) =>
+                      `${target.label}${target.installed ? "" : ` ${t.mcps.notInstalledMark}`}`,
+                  )
+                  .join(" · ")}
+          </span>
+        </div>
+      </div>
+
+      {inspecting && (
+        <McpDetailDrawer
+          server={
+            servers.find((server) => server.id === inspecting.id) ?? inspecting
+          }
+          scopeLabel={scopeLabel}
+          onClose={() => setInspecting(null)}
+          onEdit={(item) => {
+            setInspecting(null);
+            setEditing(item);
+            setFormError(null);
+            setFormOpen(true);
+          }}
+        />
+      )}
+
+      {formOpen && (
+        <McpFormModal
+          server={editing}
+          existingIds={servers.map((server) => server.id)}
+          saving={saving}
+          error={formError}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(null);
+          }}
+          onSave={(server) => void save(server)}
+        />
+      )}
+    </div>
+  );
+}

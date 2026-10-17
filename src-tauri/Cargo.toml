@@ -1,0 +1,45 @@
+[package]
+name = "orquestra-ai"
+version = "0.1.0"
+description = "OrquestraAI — Universal AI Harness Administration Platform"
+authors = ["Operator"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# The `_lib` suffix avoids a name collision with the binary on Windows.
+[lib]
+name = "orquestra_ai_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+# Passed by `tauri build`, and by `cargo build --release --features custom-protocol`.
+# Without it the binary reads its UI from `devUrl` (the Vite dev server) instead
+# of the frontend compiled into `../dist`, so a release build would need a local
+# dev server running to show anything.
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
+# the persistent icon, its Show/Hide, Bridge Status and Quit menu.
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+# `preserve_order` keeps the key order of the configs we edit, so a harness
+# whose config is already correct is left byte-identical instead of being
+# rewritten just to reorder its keys.
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml = "0.9"
+json5 = "0.4"
+# Format-preserving TOML editing: the Codex adapter rewrites `[mcp_servers.*]`
+# blocks inside a hand-maintained config.toml, and losing its comments, key
+# order or unrelated sections would be unacceptable.
+toml_edit = "0.22"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

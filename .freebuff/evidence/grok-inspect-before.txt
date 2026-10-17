@@ -1,0 +1,157 @@
+
+  Environment
+  └ Version: 1.0.62 [stable]
+  └ CWD: /home/system/Persistente/Coding/OrquestraAI
+  └ Project trusted: yes
+
+  Project Instructions (2)
+  └ /home/system/.grok/rules/direct-edits.md (global, ~166 tokens)
+  └ /home/system/.claude/CLAUDE.md (global, ~2301 tokens) [claude]
+
+  Permissions
+  └ Source: /home/system/.claude/settings.json (settings)
+  └ 1 loaded, 0 skipped
+
+  Login Policy
+  └ disable_api_key_auth: (unset)
+  └ force_login_team_uuid: (none)
+  └ api_key_auth_disabled: false
+
+  Skills (68)
+  └ rtk                            user
+  └ agents-sdk                     user
+  └ cavecrew                       user
+  └ caveman                        user
+  └ caveman-commit                 user
+  └ caveman-compress               user
+  └ caveman-discover               user
+  └ caveman-evidence-review        user
+  └ caveman-explore                user
+  └ caveman-help                   user
+  └ caveman-learn                  user
+  └ caveman-manage                 user
+  └ caveman-optimize               user
+  └ caveman-review                 user
+  └ caveman-setup                  user
+  └ caveman-stats                  user
+  └ cloudflare                     user
+  └ cloudflare-email-service       user
+  └ cloudflare-one                 user
+  └ cloudflare-one-migrations      user
+  └ durable-objects                user
+  └ find-skills                    user
+  └ investigate-first              user
+  └ lean-build                     user
+  └ migration                      user
+  └ modular-start                  user
+  └ nextjs-on-cloudflare           user
+  └ orca-cli                       user
+  └ orchestration                  user
+  └ reverse-engineer-anything      user
+  └ safe-refactor                  user
+  └ sandbox-migrate-to-next        user
+  └ sandbox-next                   user
+  └ sandbox-stable                 user
+  └ surgical-patch                 user
+  └ turnstile-spin                 user
+  └ verify-and-stop                user
+  └ web-perf                       user
+  └ workers-best-practices         user
+  └ wrangler                       user
+  └ build-with-ai                  bundled
+  └ code-review                    bundled
+  └ create-skill                   bundled
+  └ create-workflow                bundled
+  └ design                         bundled
+  └ docx                           bundled
+  └ execute-plan                   bundled
+  └ game-assets                    bundled
+  └ imagine                        bundled [collides with /imagine → /bundled:imagine]
+  └ implement                      bundled
+  └ learn                          bundled
+  └ long-running-background-tasks  bundled
+  └ pdf                            bundled
+  └ pptx                           bundled
+  └ pr-babysit                     bundled
+  └ resume-claude                  bundled
+  └ resume-codex                   bundled
+  └ resume-cursor                  bundled
+  └ review                         bundled
+  └ skill-design-principles        bundled
+  └ statusline                     bundled
+  └ threejs-frame-conventions      bundled
+  └ ponytail                       plugin: ponytail
+  └ ponytail-audit                 plugin: ponytail
+  └ ponytail-debt                  plugin: ponytail
+  └ ponytail-gain                  plugin: ponytail
+  └ ponytail-help                  plugin: ponytail
+  └ ponytail-review                plugin: ponytail
+
+  Agents (3)
+  └ general-purpose  builtin
+  └ explore          builtin
+  └ plan             builtin
+
+  Plugins (1)
+  └ ponytail (user, enabled)  6 skills
+
+  Marketplaces (None)
+
+  MCP Servers (2)
+  └ headroom (stdio)  config
+  └ rea (stdio)       config
+
+  LSP Servers (None)
+
+  Hooks (22)
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user [claude]
+  └ command matcher=.*                    user
+  └ command matcher=run_terminal_command  user
+  └ command matcher=*                     user [claude]
+  └ command matcher=.*                    user
+  └ command matcher=*                     user [claude]
+  └ command matcher=.*                    user
+  └ command matcher=*                     user [claude]
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user [claude]
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user [claude]
+
+  Config Sources
+  └ User: /home/system/.grok/config.toml
+  └ Project: (none)
+
+  Experiments (None)
+
+  Config Warnings
+  └ 1 warning(s)
+    └ [privacy] — unrecognized config key
+
+  Harness Compatibility
+  └ cursor
+    └ skills     on   (default)
+    └ rules      on   (default)
+    └ agents     on   (default)
+    └ mcps       on   (default)
+    └ hooks      on   (default)
+    └ sessions   on   (default)
+  └ claude
+    └ skills     on   (default)
+    └ rules      on   (default)
+    └ agents     on   (default)
+    └ mcps       on   (default)
+    └ hooks      on   (default)
+    └ sessions   on   (default)
+  └ codex
+    └ sessions   on   (default)
+
