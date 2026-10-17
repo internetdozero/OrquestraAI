@@ -1,6 +1,6 @@
 /**
- * Toggling a skill must not change its place in the default name order.
- * "Active first" still groups by state; that mode is opt-in.
+ * Name order is stable across a toggle. Active-first still groups by state;
+ * the viewport, not this sort, is what must stay put when a skill is disabled.
  */
 import test from "node:test";
 import assert from "node:assert/strict";

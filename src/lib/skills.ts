@@ -71,8 +71,9 @@ function compareNames(left: SkillItem, right: SkillItem): number {
 }
 
 /**
- * Order the grid. Name, token and active-first are explicit modes. The
- * default is name order so toggling a skill never moves its card.
+ * Order the grid. `active` floats every enabled skill above the rest (A–Z
+ * inside each group). Turning one off moves the card into the idle group;
+ * the grid must not scroll to follow it.
  */
 export function sortSkills(items: SkillItem[], mode: SortMode): SkillItem[] {
   const sorted = [...items];
