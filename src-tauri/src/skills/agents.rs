@@ -1,0 +1,65 @@
+//! The master `AGENTS.md`: the single instruction file every harness
+//! links to, created from a template on first use and replaced atomically.
+
+use std::fs;
+
+use crate::paths::{create_dir, open_paths, OrquestraPaths, AGENTS_FILE};
+
+pub(crate) const DEFAULT_AGENTS: &str = r#"# Global Agent Instructions
+
+> Managed by OrquestraAI. This master file is the single source of truth for every linked harness.
+
+## Operating Principles
+
+- Prefer retrieval over guessing; verify against the repository before acting.
+- Make the smallest change that solves the problem, then prove it works.
+- Never overwrite user data or discard uncommitted work without permission.
+- Report failing checks honestly; never present unverified work as complete.
+
+## Workflow
+
+1. Read the relevant context before editing.
+2. State the plan for multi-step work.
+3. Validate with the project's own build, test, and typecheck commands.
+"#;
+
+/// Read the master instructions, creating a clean template on first use.
+pub fn read_master_agents_md() -> Result<String, String> {
+    let paths = open_paths()?;
+    read_agents(&paths)
+}
+
+/// Atomically replace the master instructions file.
+pub fn write_master_agents_md(content: &str) -> Result<(), String> {
+    let paths = open_paths()?;
+    write_agents(&paths, content)
+}
+
+pub(crate) fn read_agents(paths: &OrquestraPaths) -> Result<String, String> {
+    let path = paths.agents_path();
+
+    if !path.is_file() {
+        write_agents(paths, DEFAULT_AGENTS)?;
+    }
+
+    fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))
+}
+
+pub(crate) fn write_agents(paths: &OrquestraPaths, content: &str) -> Result<(), String> {
+    create_dir(&paths.root)?;
+    let path = paths.agents_path();
+    let temporary = paths
+        .root
+        .join(format!(".{AGENTS_FILE}.tmp-{}", std::process::id()));
+
+    fs::write(&temporary, content).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("failed to write {}: {error}", temporary.display())
+    })?;
+
+    fs::rename(&temporary, &path).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("failed to replace {}: {error}", path.display())
+    })
+}

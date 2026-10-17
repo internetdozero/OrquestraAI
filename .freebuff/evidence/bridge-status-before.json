@@ -1,0 +1,232 @@
+[
+  {
+    "id": "antigravity",
+    "label": "Antigravity",
+    "kind": "skills",
+    "target": "/home/system/.gemini/config/skills",
+    "skillsPaths": [
+      "/home/system/.gemini/config/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": "/home/system/.gemini/config/AGENTS.md",
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [
+      {
+        "path": "/home/system/.gemini/antigravity/builtin/skills",
+        "action": "adoptOnly",
+        "cleared": true,
+        "rationale": "Vendor built-ins ship with the app; archived in the vault so ~/.gemini/config/skills stays the only user source"
+      }
+    ],
+    "secondaryCleared": true,
+    "installed": true,
+    "supported": true,
+    "bridged": true,
+    "note": null
+  },
+  {
+    "id": "codex",
+    "label": "Codex",
+    "kind": "skills",
+    "target": "/home/system/.codex/skills",
+    "skillsPaths": [
+      "/home/system/.codex/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": "/home/system/.codex/AGENTS.md",
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [
+      {
+        "path": "/home/system/.codex/vendor_imports/skills",
+        "action": "quarantine",
+        "cleared": false,
+        "rationale": "Curated vendor checkout Codex indexes beside ~/.codex/skills"
+      },
+      {
+        "path": "/home/system/.codex/.tmp/bundled-marketplaces",
+        "action": "quarantine",
+        "cleared": false,
+        "rationale": "Bundled marketplace cache of plugin skills"
+      },
+      {
+        "path": "/home/system/.codex/.tmp/marketplaces",
+        "action": "quarantine",
+        "cleared": false,
+        "rationale": "Stale marketplace cache of plugin skills"
+      }
+    ],
+    "secondaryCleared": false,
+    "installed": true,
+    "supported": true,
+    "bridged": false,
+    "note": "Internal .system folders are moved into the projection first"
+  },
+  {
+    "id": "claude",
+    "label": "Claude Code",
+    "kind": "skills",
+    "target": "/home/system/.claude/skills",
+    "skillsPaths": [
+      "/home/system/.claude/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": "/home/system/.claude/CLAUDE.md",
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [
+      {
+        "path": "/home/system/.claude/plugins/marketplaces",
+        "action": "quarantine",
+        "cleared": false,
+        "rationale": "Plugin marketplace skills load beside ~/.claude/skills"
+      }
+    ],
+    "secondaryCleared": false,
+    "installed": true,
+    "supported": true,
+    "bridged": false,
+    "note": null
+  },
+  {
+    "id": "freebuff",
+    "label": "Freebuff",
+    "kind": "skills",
+    "target": "/home/system/.freebuff/skills",
+    "skillsPaths": [
+      "/home/system/.freebuff/skills",
+      "/home/system/.config/manicode/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": "/home/system/.config/manicode/AGENTS.md",
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [],
+    "secondaryCleared": true,
+    "installed": true,
+    "supported": true,
+    "bridged": true,
+    "note": "Manicode shares the Freebuff projection"
+  },
+  {
+    "id": "opencode",
+    "label": "OpenCode",
+    "kind": "config",
+    "target": "/home/system/.config/opencode/opencode.jsonc",
+    "skillsPaths": [],
+    "skillsLinked": true,
+    "instructionsPath": null,
+    "instructionsLinked": true,
+    "configPath": "/home/system/.config/opencode/opencode.jsonc",
+    "configLinked": true,
+    "secondaryPaths": [],
+    "secondaryCleared": true,
+    "installed": true,
+    "supported": true,
+    "bridged": true,
+    "note": null
+  },
+  {
+    "id": "kilo",
+    "label": "Kilo Code",
+    "kind": "config",
+    "target": "/home/system/.config/kilo/kilo.jsonc",
+    "skillsPaths": [],
+    "skillsLinked": true,
+    "instructionsPath": null,
+    "instructionsLinked": true,
+    "configPath": "/home/system/.config/kilo/kilo.jsonc",
+    "configLinked": true,
+    "secondaryPaths": [],
+    "secondaryCleared": true,
+    "installed": true,
+    "supported": true,
+    "bridged": true,
+    "note": null
+  },
+  {
+    "id": "copilot",
+    "label": "Copilot CLI",
+    "kind": "skills",
+    "target": "/home/system/.copilot/skills",
+    "skillsPaths": [
+      "/home/system/.copilot/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": null,
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [],
+    "secondaryCleared": true,
+    "installed": true,
+    "supported": true,
+    "bridged": true,
+    "note": null
+  },
+  {
+    "id": "hermes",
+    "label": "Hermes Agent",
+    "kind": "skills",
+    "target": "/home/system/.hermes/skills",
+    "skillsPaths": [
+      "/home/system/.hermes/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": null,
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [
+      {
+        "path": "/home/system/.hermes/hermes-agent/optional-skills",
+        "action": "quarantine",
+        "cleared": false,
+        "rationale": "Optional skill repository Hermes auto-loads beside ~/.hermes/skills"
+      }
+    ],
+    "secondaryCleared": false,
+    "installed": true,
+    "supported": true,
+    "bridged": false,
+    "note": "Curator state files are kept inside the projection"
+  },
+  {
+    "id": "grok",
+    "label": "xAI Grok",
+    "kind": "skills",
+    "target": "/home/system/.grok/skills",
+    "skillsPaths": [
+      "/home/system/.grok/skills"
+    ],
+    "skillsLinked": true,
+    "instructionsPath": null,
+    "instructionsLinked": true,
+    "configPath": null,
+    "configLinked": true,
+    "secondaryPaths": [
+      {
+        "path": "/home/system/.grok/bundled/skills",
+        "action": "project",
+        "cleared": false,
+        "rationale": "Grok resolves its built-ins here and ignores ~/.grok/skills"
+      },
+      {
+        "path": "/home/system/.grok/installed-plugins",
+        "action": "quarantine",
+        "cleared": false,
+        "rationale": "Third-party plugin bundles Grok loads on startup"
+      }
+    ],
+    "secondaryCleared": false,
+    "installed": true,
+    "supported": true,
+    "bridged": false,
+    "note": null
+  }
+]

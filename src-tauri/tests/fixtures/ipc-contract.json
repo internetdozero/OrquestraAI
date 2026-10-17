@@ -1,0 +1,111 @@
+{
+  "_comment": "Frozen wire contract between the Rust core and the React client. `cargo test` fails if a command, a CLI flag or a serialized payload key changes, so a refactor cannot silently break the frontend. Update this file only together with the matching change in src/lib/*.ts.",
+  "commands": [
+    "apply_preset",
+    "batch_set_all",
+    "core_status",
+    "delete_mcp",
+    "delete_preset",
+    "deploy_harness_bridge",
+    "deploy_mcps",
+    "get_bridge_status",
+    "harness_summary",
+    "list_mcps",
+    "list_presets",
+    "list_skills",
+    "mcp_targets",
+    "read_master_agents_md",
+    "save_mcp",
+    "save_preset",
+    "set_mcp_state",
+    "set_skill_state",
+    "write_master_agents_md"
+  ],
+  "cliFlags": [
+    "--bridge-deploy",
+    "--bridge-status",
+    "--mcp-deploy",
+    "--mcp-set",
+    "--mcp-status",
+    "--preset",
+    "--help",
+    "-h"
+  ],
+  "payloadShapes": {
+    "SkillItem": [
+      "category",
+      "description",
+      "globalEnabled",
+      "harnessEnabled",
+      "id",
+      "inheritedFromGlobal",
+      "name",
+      "tokens"
+    ],
+    "HarnessSummary": ["active", "id", "total"],
+    "McpServer": [
+      "args",
+      "command",
+      "description",
+      "enabledHarnesses",
+      "env",
+      "globalEnabled",
+      "id",
+      "name"
+    ],
+    "McpTargetStatus": ["configPath", "id", "installed", "label"],
+    "Preset": [
+      "active",
+      "allMcps",
+      "allSkills",
+      "builtin",
+      "description",
+      "icon",
+      "id",
+      "mcps",
+      "name",
+      "skills"
+    ],
+    "PresetReport": [
+      "configsChanged",
+      "id",
+      "mcpsDisabled",
+      "mcpsEnabled",
+      "name",
+      "skillsDisabled",
+      "skillsEnabled",
+      "warnings"
+    ],
+    "SecondaryStatus": ["action", "cleared", "path", "rationale"],
+    "HarnessStatus": [
+      "bridged",
+      "configLinked",
+      "configPath",
+      "id",
+      "installed",
+      "instructionsLinked",
+      "instructionsPath",
+      "kind",
+      "label",
+      "note",
+      "secondaryCleared",
+      "secondaryPaths",
+      "skillsLinked",
+      "skillsPaths",
+      "supported",
+      "target"
+    ],
+    "BridgeReport": [
+      "adopted",
+      "backupDir",
+      "bridged",
+      "errors",
+      "harnesses",
+      "instructionsImported",
+      "quarantined",
+      "total",
+      "warnings"
+    ],
+    "SecondaryAction": ["adoptOnly", "project", "quarantine"]
+  }
+}

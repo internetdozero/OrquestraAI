@@ -1,0 +1,90 @@
+
+  Environment
+  └ Version: 1.0.62 [stable]
+  └ CWD: /home/system/Persistente/Coding/OrquestraAI
+  └ Project trusted: yes
+
+  Project Instructions (2)
+  └ /home/system/.grok/rules/direct-edits.md (global, ~166 tokens)
+  └ /home/system/.claude/CLAUDE.md (global, ~2301 tokens) [claude]
+
+  Permissions
+  └ Source: /home/system/.claude/settings.json (settings)
+  └ 1 loaded, 0 skipped
+
+  Login Policy
+  └ disable_api_key_auth: (unset)
+  └ force_login_team_uuid: (none)
+  └ api_key_auth_disabled: false
+
+  Skills (2)
+  └ rtk            user
+  └ modular-start  user [cursor]
+
+  Agents (3)
+  └ general-purpose  builtin
+  └ explore          builtin
+  └ plan             builtin
+
+  Plugins (None)
+
+  Marketplaces (None)
+
+  MCP Servers (2)
+  └ headroom (stdio)  config
+  └ rea (stdio)       config
+
+  LSP Servers (None)
+
+  Hooks (22)
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user [claude]
+  └ command matcher=.*                    user
+  └ command matcher=run_terminal_command  user
+  └ command matcher=*                     user [claude]
+  └ command matcher=.*                    user
+  └ command matcher=*                     user [claude]
+  └ command matcher=.*                    user
+  └ command matcher=*                     user [claude]
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user
+  └ command                               user [claude]
+  └ command                               user [claude]
+  └ command                               user [claude]
+  └ command                               user
+  └ command                               user [claude]
+
+  Config Sources
+  └ User: /home/system/.grok/config.toml
+  └ Project: (none)
+
+  Experiments (None)
+
+  Config Warnings
+  └ 1 warning(s)
+    └ [privacy] — unrecognized config key
+
+  Harness Compatibility
+  └ cursor
+    └ skills     on   (default)
+    └ rules      on   (default)
+    └ agents     on   (default)
+    └ mcps       on   (default)
+    └ hooks      on   (default)
+    └ sessions   on   (default)
+  └ claude
+    └ skills     on   (default)
+    └ rules      on   (default)
+    └ agents     on   (default)
+    └ mcps       on   (default)
+    └ hooks      on   (default)
+    └ sessions   on   (default)
+  └ codex
+    └ sessions   on   (default)
+
