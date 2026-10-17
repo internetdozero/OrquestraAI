@@ -93,9 +93,10 @@ export function SkillsView({
     () => new Set(),
   );
   const [batchPending, setBatchPending] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>("active");
-  // The card that just changed state, flashed so its jump between the active
-  // and idle blocks is legible. `nonce` lets the same skill flash twice.
+  // Name order is stable when a skill is switched off. "Active first" is
+  // still available, but it is what used to throw the card down the grid.
+  const [sortMode, setSortMode] = useState<SortMode>("alpha");
+  // The card that just changed state. `nonce` lets the same skill flash twice.
   const [flash, setFlash] = useState<{ id: string; nonce: number } | null>(null);
 
   // Pending writes and a highlight belong to the scope that started them.
