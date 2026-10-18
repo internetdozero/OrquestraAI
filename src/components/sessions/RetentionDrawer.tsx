@@ -79,7 +79,7 @@ export function RetentionDrawer({ policy, onClose, onSave }: RetentionDrawerProp
               max={720}
               value={interval}
               onChange={(e) => setInterval(Number(e.target.value) || 24)}
-              className="mt-1 w-full bg-transparent font-mono text-sm text-zinc-100 outline-none"
+              className="mt-1 w-full bg-transparent font-mono text-sm text-zinc-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           </label>
           <label className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-2.5">
@@ -90,7 +90,7 @@ export function RetentionDrawer({ policy, onClose, onSave }: RetentionDrawerProp
               max={365}
               value={ttl}
               onChange={(e) => setTtl(Number(e.target.value) || 15)}
-              className="mt-1 w-full bg-transparent font-mono text-sm text-zinc-100 outline-none"
+              className="mt-1 w-full bg-transparent font-mono text-sm text-zinc-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           </label>
         </div>
@@ -132,7 +132,7 @@ export function RetentionDrawer({ policy, onClose, onSave }: RetentionDrawerProp
                     });
                   }}
                   aria-label={`${h.label} TTL`}
-                  className="w-14 rounded border border-white/10 bg-zinc-900/60 px-1.5 py-0.5 text-right font-mono text-[11.5px] text-zinc-100 outline-none focus:border-emerald-500/40"
+                  className="w-16 rounded border border-white/10 bg-zinc-900/60 px-2 py-0.5 text-center font-mono text-[11.5px] text-zinc-100 outline-none focus:border-emerald-500/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <span className="text-[10px] text-zinc-600">{s.perHarness}</span>
               </span>

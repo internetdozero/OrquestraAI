@@ -44,6 +44,11 @@ export function IdeasBoard({
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
     () => new Set(["archived"]),
   );
+  // Columns the user explicitly opened: shields them from the auto-collapse
+  // rule for empty columns below.
+  const [userOpened, setUserOpened] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [expandedCompleted, setExpandedCompleted] = useState(false);
   const [dropStatus, setDropStatus] = useState<string | null>(null);
 
@@ -51,20 +56,46 @@ export function IdeasBoard({
     return <StatePanel icon={Inbox} title={s.empty} description={s.emptyHint} />;
   }
 
-  const toggle = (status: string) =>
-    setCollapsed((previous) => {
-      const next = new Set(previous);
-      if (next.has(status)) next.delete(status);
-      else next.add(status);
-      return next;
-    });
+  const toggle = (status: string) => {
+    // The strip's expand/collapse buttons act on the *effective* state:
+    // an auto-collapsed empty column must open on click, not sink into
+    // the manual set and stay shut.
+    const isEmpty = !ideas.some((idea) => idea.status === status);
+    const effectivelyCollapsed =
+      collapsed.has(status) || (isEmpty && !userOpened.has(status));
+    if (effectivelyCollapsed) {
+      setCollapsed((previous) => {
+        const next = new Set(previous);
+        next.delete(status);
+        return next;
+      });
+      setUserOpened((previous) => new Set(previous).add(status));
+    } else {
+      setCollapsed((previous) => new Set(previous).add(status));
+      setUserOpened((previous) => {
+        const next = new Set(previous);
+        next.delete(status);
+        return next;
+      });
+    }
+  };
+
+  /** No-op IPC guard: dropping onto the card's own column changes nothing. */
+  const dropIdea = (ideaId: number, sourceStatus: string | undefined, targetStatus: string) => {
+    const current = sourceStatus ?? ideas.find((idea) => idea.id === ideaId)?.status;
+    if (current === targetStatus) return;
+    onDropIdea(ideaId, targetStatus);
+  };
 
   return (
     <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:flex">
       {COLUMNS.map((column) => {
         const rows = ideas.filter((idea) => idea.status === column.status);
-        if (column.status === "archived" && rows.length === 0) return null;
-        const isCollapsed = collapsed.has(column.status);
+        // Empty columns auto-collapse to the slim strip so zero-card
+        // statuses cost no horizontal space; an explicit user open wins.
+        const isCollapsed =
+          collapsed.has(column.status) ||
+          (rows.length === 0 && !userOpened.has(column.status));
         const isCompleted = column.status === "completed";
         const shown =
           isCompleted && !expandedCompleted ? rows.slice(0, COMPLETED_PAGE) : rows;
@@ -75,7 +106,32 @@ export function IdeasBoard({
             <section
               key={column.status}
               aria-label={s[column.titleKey]}
-              className="rounded-xl border border-white/[0.05] bg-black/20 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]"
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDropStatus(column.status);
+              }}
+              onDragLeave={() =>
+                setDropStatus((current) => (current === column.status ? null : current))
+              }
+              onDrop={(event) => {
+                event.preventDefault();
+                setDropStatus(null);
+                const raw = event.dataTransfer.getData("text/idea-id");
+                const id = Number.parseInt(raw, 10);
+                if (!Number.isInteger(id)) return;
+                dropIdea(
+                  id,
+                  event.dataTransfer.getData("text/idea-status") || undefined,
+                  column.status,
+                );
+              }}
+              className={cn(
+                "rounded-xl border bg-black/20 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]",
+                dropStatus === column.status
+                  ? "border-amber-500/50 bg-amber-500/[0.04]"
+                  : "border-white/[0.05]",
+              )}
             >
               <button
                 type="button"
@@ -118,7 +174,12 @@ export function IdeasBoard({
               setDropStatus(null);
               const raw = event.dataTransfer.getData("text/idea-id");
               const id = Number.parseInt(raw, 10);
-              if (Number.isInteger(id)) onDropIdea(id, column.status);
+              if (!Number.isInteger(id)) return;
+              dropIdea(
+                id,
+                event.dataTransfer.getData("text/idea-status") || undefined,
+                column.status,
+              );
             }}
             className={cn(
               "flex min-w-0 flex-col gap-2 rounded-xl border bg-black/20 p-2.5 transition-colors xl:min-w-0 xl:flex-1",

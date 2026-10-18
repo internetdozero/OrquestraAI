@@ -39,21 +39,8 @@ mod tests {
         let all = builtins::all();
         let ids: Vec<&str> = all.iter().map(|preset| preset.id.as_str()).collect();
 
-        assert_eq!(
-            ids,
-            vec!["stealth", "rust-dev", "web-fullstack", "full-power"]
-        );
+        assert_eq!(ids, vec!["full-power"]);
         assert!(all.iter().all(|preset| preset.builtin && !preset.active));
-
-        let stealth = builtin("stealth");
-        assert_eq!(stealth.icon, "shield");
-        assert_eq!(stealth.skills, vec!["rtk"]);
-        assert!(stealth.mcps.contains(&"headroom".to_string()));
-        assert!(stealth.mcps.contains(&"orquestra-core".to_string()));
-        assert!(!stealth.all_skills);
-
-        assert_eq!(builtin("rust-dev").icon, "cpu");
-        assert_eq!(builtin("web-fullstack").icon, "globe");
 
         let full = builtin("full-power");
         assert_eq!(full.icon, "zap");
@@ -78,21 +65,45 @@ mod tests {
 
         let file = PresetFile::default();
         assert_eq!(unique_id("Bug Hunting", &file), "bug-hunting");
-        assert_eq!(unique_id("Stealth", &file), "stealth-2");
+        assert_eq!(unique_id("Full Power", &file), "full-power-2");
 
         let mut taken = PresetFile::default();
         taken.custom.push(Preset {
             id: "bug-hunting".to_string(),
             name: "Bug Hunting".to_string(),
-            ..builtin("stealth")
+            ..builtin("full-power")
         });
         assert_eq!(unique_id("Bug Hunting", &taken), "bug-hunting-2");
     }
 
     #[test]
     fn plans_known_ids_and_warns_about_the_rest() {
+        // A selective profile listing its members explicitly.
+        let selective = Preset {
+            id: "selective".to_string(),
+            name: "Selective".to_string(),
+            description: String::new(),
+            icon: "cpu".to_string(),
+            skills: vec![
+                "rtk".to_string(),
+                "modular-start".to_string(),
+                "github".to_string(),
+            ],
+            mcps: vec![
+                "github".to_string(),
+                "rea".to_string(),
+                "idea-vault".to_string(),
+                "orquestra-core".to_string(),
+            ],
+            harness_skills: Default::default(),
+            harness_mcps: Default::default(),
+            all_skills: false,
+            all_mcps: false,
+            builtin: false,
+            active: false,
+        };
         let (skills, warnings) = plan_skills(
-            &builtin("rust-dev"),
+            &selective,
             &[
                 "rtk".to_string(),
                 "modular-start".to_string(),
@@ -104,14 +115,14 @@ mod tests {
 
         // A vault missing one skill keeps the others and reports the gap.
         let (skills, warnings) = plan_skills(
-            &builtin("rust-dev"),
+            &selective,
             &["rtk".to_string(), "github".to_string()],
         );
         assert_eq!(skills.len(), 2);
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("modular-start"));
 
-        let (_, warnings) = plan_mcps(&builtin("rust-dev"), &["github".to_string()]);
+        let (_, warnings) = plan_mcps(&selective, &["github".to_string()]);
         assert_eq!(warnings.len(), 3, "rea, idea-vault and orquestra-core are missing");
     }
 
@@ -241,7 +252,7 @@ mod tests {
             .active);
         assert!(listed
             .iter()
-            .find(|preset| preset.id == "stealth")
+            .find(|preset| preset.id == "full-power")
             .is_some_and(|preset| !preset.active));
 
         // A stored built-in flag cannot smuggle a deletable built-in.
@@ -267,20 +278,20 @@ mod tests {
         // Initially no overrides
         let empty = load_from(&root).unwrap();
         assert!(empty.overrides().is_empty());
-        let default_stealth = builtin("stealth");
-        assert_eq!(default_stealth.name, "Stealth");
-        assert_eq!(default_stealth.skills, vec!["rtk"]);
+        let default_full = builtin("full-power");
+        assert_eq!(default_full.name, "Full Power");
+        assert!(default_full.all_skills && default_full.all_mcps);
 
         // Simulate an override written to disk
-        let mut overridden_stealth = default_stealth.clone();
-        overridden_stealth.name = "Custom Stealth".to_string();
-        overridden_stealth.skills = vec!["rtk".to_string(), "github".to_string()];
-        overridden_stealth.icon = "zap".to_string();
+        let mut overridden_full = default_full.clone();
+        overridden_full.name = "Custom Full Power".to_string();
+        overridden_full.skills = vec!["rtk".to_string(), "github".to_string()];
+        overridden_full.icon = "custom".to_string();
 
         let file = PresetFile {
             custom: Vec::new(),
-            active: Some("stealth".to_string()),
-            overrides: vec![overridden_stealth.clone()],
+            active: Some("full-power".to_string()),
+            overrides: vec![overridden_full.clone()],
         };
         save_to(&root, &file).unwrap();
 
@@ -288,27 +299,27 @@ mod tests {
         assert_eq!(reloaded.overrides().len(), 1);
 
         let listed = merged(&reloaded);
-        let merged_stealth = listed.iter().find(|p| p.id == "stealth").unwrap();
-        assert_eq!(merged_stealth.name, "Custom Stealth");
-        assert_eq!(merged_stealth.skills, vec!["rtk", "github"]);
-        assert_eq!(merged_stealth.icon, "zap");
-        assert!(merged_stealth.builtin, "must retain builtin: true");
-        assert!(merged_stealth.active, "active flag matches active ID");
+        let merged_full = listed.iter().find(|p| p.id == "full-power").unwrap();
+        assert_eq!(merged_full.name, "Custom Full Power");
+        assert_eq!(merged_full.skills, vec!["rtk", "github"]);
+        assert_eq!(merged_full.icon, "custom");
+        assert!(merged_full.builtin, "must retain builtin: true");
+        assert!(merged_full.active, "active flag matches active ID");
 
         // Clear override (simulate reset)
         let reset_file = PresetFile {
             custom: Vec::new(),
-            active: Some("stealth".to_string()),
+            active: Some("full-power".to_string()),
             overrides: Vec::new(),
         };
         save_to(&root, &reset_file).unwrap();
 
         let reset_reloaded = load_from(&root).unwrap();
         let reset_listed = merged(&reset_reloaded);
-        let restored_stealth = reset_listed.iter().find(|p| p.id == "stealth").unwrap();
-        assert_eq!(restored_stealth.name, "Stealth");
-        assert_eq!(restored_stealth.skills, vec!["rtk"]);
-        assert_eq!(restored_stealth.icon, "shield");
+        let restored_full = reset_listed.iter().find(|p| p.id == "full-power").unwrap();
+        assert_eq!(restored_full.name, "Full Power");
+        assert!(restored_full.all_skills && restored_full.all_mcps);
+        assert_eq!(restored_full.icon, "zap");
 
         fs::remove_dir_all(&root).unwrap();
     }
