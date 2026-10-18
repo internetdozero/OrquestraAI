@@ -106,27 +106,10 @@ cargo test --lib
 
 ---
 
-## ⚡ Quick Install (Direct Binary)
-
-Install or update the latest Linux binary directly with one command:
+## ⚡ Quick Install
 
 ```bash
-curl -sL https://github.com/internetdozero/OrquestraAI/releases/latest/download/orquestra-ai -o ~/.local/bin/orquestra && chmod +x ~/.local/bin/orquestra
-```
-
----
-
-## ☁️ Zero-Heat Remote Compilation (GitHub Actions)
-
-To prevent severe thermal throttling on dual-core hardware during release compilation, official release binaries are compiled via GitHub Actions:
-
-```bash
-# Trigger remote release build in GitHub Actions
-gh workflow run "Remote Build & Release" --ref main
-
-# Download the compiled Linux binary directly
-gh run download -n orquestra-linux-x86_64
-chmod +x orquestra-linux-x86_64/orquestra-linux-x86_64
+curl -fsSL https://raw.githubusercontent.com/internetdozero/OrquestraAI/main/install.sh | bash
 ```
 
 ---
