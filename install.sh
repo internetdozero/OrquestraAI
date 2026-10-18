@@ -20,7 +20,7 @@ curl -fsSL "https://github.com/${REPO}/releases/latest/download/SHA256SUMS.txt" 
 # Cryptographic Integrity Check
 if [ -s "${TMP_DIR}/SHA256SUMS.txt" ]; then
     echo "🔍 Verifying binary authenticity with SHA-256..."
-    (cd "$TMP_DIR" && sha256sum --check --status SHA256SUMS.txt) || {
+    (cd "$TMP_DIR" && grep "orquestra-ai$" SHA256SUMS.txt | sha256sum --check --status) || {
         echo "❌ Security Error: SHA-256 checksum verification failed!"
         echo "The downloaded binary does not match the official release hash."
         exit 1
