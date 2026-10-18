@@ -40,7 +40,7 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
     harness::HARNESSES
         .iter()
         .map(|spec| {
-            let installed = home.join(spec.install_rel).is_dir();
+            let installed = harness::is_installed(spec, home);
             let projection = paths.projection_dir(spec.id);
             let master = paths.agents_path();
 

@@ -8,6 +8,7 @@
 //! harness is described in exactly one place.
 
 use serde::Serialize;
+use std::path::{Path, PathBuf};
 
 /// Reserved scope id for the universal baseline projection.
 pub const GLOBAL_SCOPE: &str = "global";
@@ -65,6 +66,9 @@ pub struct McpSpec {
 pub struct HarnessSpec {
     pub id: &'static str,
     pub label: &'static str,
+    /// Environment variable that overrides the install directory (e.g.
+    /// `CODEX_HOME`). When set and non-empty, it wins over `install_rel`.
+    pub env_override: Option<&'static str>,
     /// Directory that must exist for the harness to count as installed.
     pub install_rel: &'static str,
     /// Source paths that all become symlinks to `active/<id>`.
@@ -94,6 +98,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "antigravity",
         label: "Antigravity",
+        env_override: Some("ANTIGRAVITY_CONFIG_DIR"),
         install_rel: ".gemini/config",
         skills_links: &[".gemini/config/skills"],
         instructions_rel: Some(".gemini/config/AGENTS.md"),
@@ -114,6 +119,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "codex",
         label: "Codex",
+        env_override: Some("CODEX_HOME"),
         install_rel: ".codex",
         skills_links: &[".codex/skills"],
         instructions_rel: Some(".codex/AGENTS.md"),
@@ -146,6 +152,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "claude",
         label: "Claude Code",
+        env_override: Some("CLAUDE_CONFIG_DIR"),
         install_rel: ".claude",
         skills_links: &[".claude/skills"],
         instructions_rel: Some(".claude/CLAUDE.md"),
@@ -165,6 +172,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "freebuff",
         label: "Freebuff",
+        env_override: None,
         install_rel: ".freebuff",
         skills_links: &[".freebuff/skills", ".config/manicode/skills"],
         instructions_rel: Some(".config/manicode/AGENTS.md"),
@@ -176,6 +184,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "opencode",
         label: "OpenCode",
+        env_override: Some("OPENCODE_CONFIG_DIR"),
         install_rel: ".config/opencode",
         skills_links: &[],
         instructions_rel: None,
@@ -191,6 +200,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "kilo",
         label: "Kilo Code",
+        env_override: Some("KILO_CONFIG_DIR"),
         install_rel: ".config/kilo",
         skills_links: &[],
         instructions_rel: None,
@@ -206,6 +216,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "copilot",
         label: "Copilot CLI",
+        env_override: None,
         install_rel: ".copilot",
         skills_links: &[".copilot/skills"],
         instructions_rel: None,
@@ -221,6 +232,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "hermes",
         label: "Hermes Agent",
+        env_override: None,
         install_rel: ".hermes",
         skills_links: &[".hermes/skills"],
         instructions_rel: None,
@@ -236,6 +248,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
     HarnessSpec {
         id: "grok",
         label: "xAI Grok",
+        env_override: None,
         install_rel: ".grok",
         skills_links: &[".grok/skills"],
         instructions_rel: None,
@@ -270,6 +283,109 @@ pub fn harness_ids() -> impl Iterator<Item = &'static str> {
 /// Look up one harness by id.
 pub fn find(id: &str) -> Option<&'static HarnessSpec> {
     HARNESSES.iter().find(|harness| harness.id == id)
+}
+
+/// Where a harness is installed. A set, non-empty `env_override` wins;
+/// otherwise the standard home-relative default applies.
+pub fn resolve_install_dir(spec: &HarnessSpec, home: &Path) -> PathBuf {
+    if let Some(key) = spec.env_override {
+        if let Ok(value) = std::env::var(key) {
+            if !value.trim().is_empty() {
+                return PathBuf::from(value);
+            }
+        }
+    }
+    home.join(spec.install_rel)
+}
+
+/// True when the harness's install directory exists.
+pub fn is_installed(spec: &HarnessSpec, home: &Path) -> bool {
+    resolve_install_dir(spec, home).exists()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    /// `CODEX_HOME` wins over `~/.codex` while set; removing it restores
+    /// the home-relative default, and `is_installed` follows the resolved
+    /// path. One test covers every `CODEX_HOME` mutation so parallel
+    /// runners cannot interleave a set/remove on the same variable.
+    #[test]
+    fn env_override_wins_and_falls_back() {
+        let spec = find("codex").expect("codex is registered");
+        assert_eq!(spec.env_override, Some("CODEX_HOME"));
+
+        let home = std::env::temp_dir().join(format!(
+            "orquestra-harness-{}",
+            std::process::id()
+        ));
+        let previous = env::var("CODEX_HOME").ok();
+
+        unsafe { env::set_var("CODEX_HOME", "/tmp/orquestra-codex-mock") };
+        assert_eq!(
+            resolve_install_dir(spec, &home),
+            PathBuf::from("/tmp/orquestra-codex-mock")
+        );
+
+        unsafe { env::remove_var("CODEX_HOME") };
+        assert_eq!(resolve_install_dir(spec, &home), home.join(".codex"));
+        assert!(!is_installed(spec, &home));
+
+        std::fs::create_dir_all(home.join(".codex")).unwrap();
+        assert!(is_installed(spec, &home));
+        std::fs::remove_dir_all(&home).unwrap();
+        assert!(!is_installed(spec, &home));
+
+        if let Some(value) = previous {
+            unsafe { env::set_var("CODEX_HOME", value) };
+        }
+    }
+
+    #[test]
+    fn empty_override_falls_back_to_home() {
+        let spec = find("claude").expect("claude is registered");
+        assert_eq!(spec.env_override, Some("CLAUDE_CONFIG_DIR"));
+        let home = Path::new("/tmp/orquestra-home-that-cannot-exist");
+
+        let previous = env::var("CLAUDE_CONFIG_DIR").ok();
+        unsafe { env::set_var("CLAUDE_CONFIG_DIR", "   ") };
+        assert_eq!(resolve_install_dir(spec, home), home.join(".claude"));
+
+        if let Some(value) = previous {
+            unsafe { env::set_var("CLAUDE_CONFIG_DIR", value) };
+        } else {
+            unsafe { env::remove_var("CLAUDE_CONFIG_DIR") };
+        }
+    }
+
+    #[test]
+    fn harnesses_without_override_use_home() {
+        let spec = find("freebuff").expect("freebuff is registered");
+        assert_eq!(spec.env_override, None);
+        let home = Path::new("/tmp/orquestra-home-that-cannot-exist");
+        assert_eq!(resolve_install_dir(spec, home), home.join(".freebuff"));
+    }
+
+    #[test]
+    fn override_mapping_covers_the_announced_harnesses() {
+        assert_eq!(
+            find("antigravity").expect("registered").env_override,
+            Some("ANTIGRAVITY_CONFIG_DIR")
+        );
+        assert_eq!(
+            find("opencode").expect("registered").env_override,
+            Some("OPENCODE_CONFIG_DIR")
+        );
+        assert_eq!(
+            find("kilo").expect("registered").env_override,
+            Some("KILO_CONFIG_DIR")
+        );
+        assert_eq!(find("copilot").expect("registered").env_override, None);
+        assert_eq!(find("hermes").expect("registered").env_override, None);
+        assert_eq!(find("grok").expect("registered").env_override, None);
+    }
 }
 
 /// True when the harness has an MCP adapter, so a scope can be targeted.
