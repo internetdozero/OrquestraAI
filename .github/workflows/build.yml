@@ -33,8 +33,12 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             clang \
-            mold \
-            sccache
+            mold
+
+      - name: Configure runner cargo environment
+        run: |
+          # Remove local .cargo/config.toml that forces /usr/bin/sccache
+          rm -f .cargo/config.toml
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
