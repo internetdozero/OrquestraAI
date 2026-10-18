@@ -38,3 +38,16 @@
 - **Synchronous Execution:** Run verification commands (`rtk cargo test`, `rtk npm test`, `rtk cargo check`) directly in the foreground.
 - **Event-Driven Waiting:** If a background process is strictly necessary, wait for it event-driven via `wait $PID` or `tail --pid=$PID -f /dev/null`, or use tight polling intervals with short delays (`while kill -0 $PID 2>/dev/null; do sleep 2; done`). Never block turn execution on static sleep.
 
+## 6. Remote Compilation & Thermal Preservation (GitHub Actions)
+- **Zero-Heat Cloud Builds:** To avoid severe CPU thermal throttling (~93 °C) on local dual-core hardware during heavy release compilation, official binaries can be compiled remotely via GitHub Actions:
+  - Workflow: `.github/workflows/build.yml`
+  - Trigger: `rtk gh workflow run "Remote Build & Release" --ref main` (or pushing a tag `v*`)
+  - Pull Artifact:
+    ```bash
+    rtk gh run download <RUN_ID>
+    # Or fetch latest:
+    rtk gh run download -n orquestra-linux-x86_64
+    chmod +x orquestra-linux-x86_64/orquestra-linux-x86_64
+    ```
+- **Local Dev vs. Release:** For day-to-day code changes, use `npm run dev` or fast incremental builds (`cargo check`, `npm run build:fast`). Avoid running full local release builds (`build.sh`) consecutively to prevent hardware degradation.
+
