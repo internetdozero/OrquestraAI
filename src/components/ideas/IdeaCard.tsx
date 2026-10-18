@@ -46,6 +46,7 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
       draggable
       onDragStart={(event) => {
         event.dataTransfer.setData("text/idea-id", String(idea.id));
+        event.dataTransfer.setData("text/idea-status", idea.status);
         event.dataTransfer.effectAllowed = "move";
       }}
       onClick={() => onOpen(idea)}
