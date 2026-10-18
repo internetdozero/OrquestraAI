@@ -32,3 +32,9 @@
 ## 4. IPC Contract & Safety
 - **Zero Breaking Changes:** Never alter Tauri command signatures or serialized field names without corresponding frontend updates and regression contract tests.
 - **Atomic Operations:** Always preserve non-MCP/non-managed configuration keys across harness targets.
+
+## 5. Process Execution & Polling Protocol (No Blind Sleeps)
+- **Forbidden:** NEVER use static blind sleep commands (e.g. `sleep 60`, `sleep 120`, `sleep 150`) to wait for processes, background builds or test commands to finish.
+- **Synchronous Execution:** Run verification commands (`rtk cargo test`, `rtk npm test`, `rtk cargo check`) directly in the foreground.
+- **Event-Driven Waiting:** If a background process is strictly necessary, wait for it event-driven via `wait $PID` or `tail --pid=$PID -f /dev/null`, or use tight polling intervals with short delays (`while kill -0 $PID 2>/dev/null; do sleep 2; done`). Never block turn execution on static sleep.
+
