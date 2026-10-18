@@ -39,7 +39,7 @@ json5 = "0.4"
 # Format-preserving TOML editing: the Codex adapter rewrites `[mcp_servers.*]`
 # blocks inside a hand-maintained config.toml, and losing its comments, key
 # order or unrelated sections would be unacceptable.
-toml_edit = "0.22"
+toml_edit = "0.25"
 # Every harness keeps its chat history in SQLite. `bundled` ships the engine
 # inside the binary so a release build never depends on a system libsqlite3,
 # and sessions are opened read-only so a running agent keeps its locks.
