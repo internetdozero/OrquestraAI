@@ -21,6 +21,10 @@ use crate::sessions::types::UnifiedSession;
 
 use super::{fsops, utils};
 
+mod transcript;
+
+pub use transcript::transcript;
+
 const HARNESS: &str = "freebuff";
 /// Prefix of every desktop-thread session id: `desktop:<slug>:<thread-id>`.
 pub const PREFIX: &str = "desktop:";

@@ -1,0 +1,308 @@
+//! Transcript reading: JSONL (and JSON-array) conversation logs normalized
+//! to [`TranscriptTurn`].
+//!
+//! Split out of `utils.rs` so both files stay under the line cap. Parsing is
+//! best-effort throughout: corrupt lines are skipped, tool payloads and
+//! thinking blocks are stripped, and oversized inputs are refused whole, so a
+//! harness that is mid-write when the drawer opens can never break the read.
+
+use std::path::Path;
+
+use serde_json::Value;
+
+use crate::sessions::types::TranscriptTurn;
+
+use super::utils::{
+    file_size, iso8601_from_secs, json_string, json_timestamp, normalized_timestamp,
+};
+
+/// Most turns a transcript read returns; a full replay is the drawer's job
+/// to page, not the core's to dump in one payload. Shared with adapters
+/// that page multi-file transcripts (Codex rollouts) themselves.
+pub(crate) const MAX_TRANSCRIPT_TURNS: usize = 1000;
+/// Longest single turn kept: long dumps are trimmed, never dropped whole.
+const MAX_TURN_CHARS: usize = 12_000;
+/// Refuse files above the shared JSONL guard: a runaway artifact must not
+/// stall the UI thread.
+const MAX_TRANSCRIPT_BYTES: u64 = super::utils::MAX_JSONL_BYTES;
+
+/// Plain text of one transcript line's message, restricted to text blocks.
+///
+/// Accepts the `type` marker (Claude, Grok, Antigravity), the `kind` marker
+/// (Freebuff Desktop parts) and Codex's `input_text` / `output_text` content
+/// parts. Tool calls and tool results are excluded on purpose: they are
+/// usually command output or JSON arguments, not conversation. A corrupt or
+/// foreign shape yields `None`.
+fn turn_text(message: &Value) -> Option<String> {
+    match message {
+        Value::String(text) => {
+            let text = text.trim();
+            (!text.is_empty()).then(|| text.to_string())
+        }
+        Value::Array(blocks) => {
+            let mut joined = String::new();
+            for block in blocks {
+                let Some(block) = block.as_object() else {
+                    continue;
+                };
+                let kind = block
+                    .get("type")
+                    .or_else(|| block.get("kind"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("text");
+                if !matches!(kind, "text" | "input_text" | "output_text") {
+                    continue;
+                }
+                let text = block
+                    .get("text")
+                    .or_else(|| block.get("content"))
+                    .or_else(|| block.get("value"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim();
+                if !text.is_empty() {
+                    if !joined.is_empty() {
+                        joined.push('\n');
+                    }
+                    joined.push_str(text);
+                }
+            }
+            (!joined.is_empty()).then_some(joined)
+        }
+        Value::Object(map) => {
+            // A nested envelope (`{"content": …}`) unwraps first; otherwise
+            // the object itself may be one bare part
+            // (`{"type": "text", "text": "…"}`, as OpenCode stores it).
+            if let Some(nested) = map.get("content") {
+                if let Some(text) = turn_text(nested) {
+                    return Some(text);
+                }
+            }
+            let kind = map
+                .get("type")
+                .or_else(|| map.get("kind"))
+                .and_then(Value::as_str)
+                .unwrap_or("text");
+            if !matches!(kind, "text" | "input_text" | "output_text") {
+                return None;
+            }
+            map.get("text")
+                .or_else(|| map.get("value"))
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .map(str::to_string)
+        }
+        _ => None,
+    }
+}
+
+/// Canonical role of one transcript line, or `None` to skip it.
+///
+/// Accepts the `role` field, the `source` marker Antigravity writes
+/// (`USER_EXPLICIT`, `MODEL`) and the `type` marker (`USER_INPUT`,
+/// `PLANNER_RESPONSE`, plus what Claude writes on every line). Anything else
+/// — summaries, mode latches, permission records — is not conversation.
+fn turn_role(entry: &Value) -> Option<&'static str> {
+    for key in ["role", "source", "type"] {
+        let source = match key {
+            "role" => entry
+                .get("role")
+                .or_else(|| entry.get("message")?.get("role")),
+            "source" => entry.get("source"),
+            _ => entry.get("type"),
+        };
+        if let Some(role) = source.and_then(Value::as_str) {
+            return match role {
+                "user" | "human" | "USER_EXPLICIT" | "USER_INPUT" => Some("user"),
+                "assistant" | "model" | "ai" | "MODEL" | "PLANNER_RESPONSE" => {
+                    Some("assistant")
+                }
+                "system" => Some("system"),
+                _ => continue,
+            };
+        }
+    }
+    None
+}
+
+/// Timestamp of one transcript line as ISO 8601 UTC, when recorded.
+fn turn_timestamp(entry: &Value) -> Option<String> {
+    if let Some(raw) = json_string(entry, &["timestamp", "published_at", "created_at"]) {
+        return Some(normalized_timestamp(&raw));
+    }
+    json_timestamp(entry, &["timestamp", "published_at", "created_at"])
+        .map(iso8601_from_secs)
+}
+
+/// Drop one `<tag …>…</tag>` span family from already-extracted text.
+/// Closed spans are removed; an unclosed opener drops everything after it,
+/// because a dangling thinking block is truncated reasoning, never content.
+fn strip_tag(text: &str, tag: &str) -> String {
+    let open = format!("<{tag}");
+    let close = format!("</{tag}>");
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+
+    while let Some(start) = rest.find(open.as_str()) {
+        let Some(end_of_open) = rest[start..].find('>') else {
+            break;
+        };
+        let after_open = start + end_of_open + 1;
+        out.push_str(&rest[..start]);
+        if let Some(end) = rest[after_open..].find(close.as_str()) {
+            rest = &rest[after_open + end + close.len()..];
+        } else {
+            rest = "";
+            break;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Clean raw turn text for display: user prompts wrapped in Antigravity's
+/// `<USER_REQUEST>…</USER_REQUEST>` envelope are unwrapped to the actual
+/// prompt, and thinking blocks are stripped for every role.
+pub fn clean_turn_content(role: &str, raw: &str) -> String {
+    let mut text = raw.trim().to_string();
+
+    if role == "user" {
+        if let Some(start) = text.find("<USER_REQUEST>") {
+            let inner = &text[start + "<USER_REQUEST>".len()..];
+            let end = inner
+                .find("</USER_REQUEST>")
+                .map(|index| &inner[..index])
+                .unwrap_or(inner);
+            text = end.trim().to_string();
+        }
+    }
+
+    for tag in ["thought", "thinking", "think"] {
+        text = strip_tag(&text, tag);
+    }
+
+    text.trim().to_string()
+}
+
+/// Assemble one turn: cleaned, empties dropped, long dumps trimmed.
+pub fn build_turn(
+    role: &str,
+    raw_content: &str,
+    timestamp: Option<String>,
+) -> Option<TranscriptTurn> {
+    let mut content = clean_turn_content(role, raw_content);
+    if content.is_empty() {
+        return None;
+    }
+    if content.chars().count() > MAX_TURN_CHARS {
+        content = content.chars().take(MAX_TURN_CHARS).collect();
+        content.push('…');
+    }
+    Some(TranscriptTurn {
+        role: role.to_string(),
+        content,
+        timestamp,
+    })
+}
+
+/// One parsed turn from a raw JSON value, or `None` when the line carries no
+/// conversation text. Exposed for adapters (like Codex) whose lines wrap the
+/// turn inside an envelope object rather than carrying it directly.
+pub(crate) fn parse_value(entry: &Value) -> Option<TranscriptTurn> {
+    let role = turn_role(entry)?;
+    let message = entry.get("message").unwrap_or(entry);
+    let raw = turn_text(message)
+        .or_else(|| entry.get("content").and_then(turn_text))
+        .or_else(|| json_string(entry, &["text", "input", "output"]))?;
+    build_turn(role, &raw, turn_timestamp(entry))
+}
+
+/// Every conversation turn in a JSONL transcript file.
+///
+/// Corrupt lines are skipped (`filter_map`, never `unwrap`): a harness that
+/// is mid-write when the drawer opens must not break the read. A file that
+/// parses as a single JSON array instead (Manicode chat logs) is read
+/// element-wise, so both layouts work without the caller caring.
+pub fn read_transcript(path: &Path) -> Vec<TranscriptTurn> {
+    if file_size(path) > MAX_TRANSCRIPT_BYTES {
+        return Vec::new();
+    }
+
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+
+    let mut turns: Vec<TranscriptTurn> = raw
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .filter_map(|entry| parse_value(&entry))
+        .take(MAX_TRANSCRIPT_TURNS)
+        .collect();
+
+    if turns.is_empty() {
+        if let Ok(Value::Array(items)) = serde_json::from_str::<Value>(&raw) {
+            turns = items
+                .iter()
+                .filter_map(parse_value)
+                .take(MAX_TRANSCRIPT_TURNS)
+                .collect();
+        }
+    }
+
+    turns
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_request_envelope_unwraps_to_the_prompt() {
+        let raw = "<CONTEXT>x</CONTEXT>\n<USER_REQUEST>\n  fix the kernel\n</USER_REQUEST>\n<CONTEXT>y</CONTEXT>";
+        assert_eq!(clean_turn_content("user", raw), "fix the kernel");
+    }
+
+    #[test]
+    fn unclosed_user_request_keeps_the_remainder() {
+        assert_eq!(
+            clean_turn_content("user", "<USER_REQUEST>\n  hello"),
+            "hello"
+        );
+    }
+
+    #[test]
+    fn plain_text_is_only_trimmed() {
+        assert_eq!(clean_turn_content("assistant", "  on it\n"), "on it");
+        assert_eq!(
+            clean_turn_content("user", "no envelope here"),
+            "no envelope here"
+        );
+    }
+
+    #[test]
+    fn thinking_blocks_are_stripped_for_every_role() {
+        assert_eq!(
+            clean_turn_content("assistant", "start <thinking>hmm</thinking> end"),
+            "start  end"
+        );
+        assert_eq!(
+            clean_turn_content("assistant", "<thought size=\"3\">x</thought>ok"),
+            "ok"
+        );
+        assert_eq!(
+            clean_turn_content("user", "keep <think>drop this"),
+            "keep"
+        );
+    }
+
+    #[test]
+    fn build_turn_drops_empties_and_trims_dumps() {
+        assert!(build_turn("user", "   ", None).is_none());
+        assert!(build_turn("user", "<thinking>only</thinking>", None).is_none());
+        let long = "a".repeat(MAX_TURN_CHARS + 10);
+        let turn = build_turn("assistant", &long, None).expect("trimmed, not dropped");
+        assert_eq!(turn.content.chars().count(), MAX_TURN_CHARS + 1);
+        assert!(turn.content.ends_with('…'));
+    }
+}

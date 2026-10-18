@@ -7,9 +7,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
-use super::{fsops, utils, SessionAdapter};
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "hermes";
 const STORE_REL: &str = ".hermes";
@@ -124,6 +124,80 @@ impl SessionAdapter for Hermes {
 
     fn optimize_storage(&self) -> Result<(), String> {
         fsops::vacuum(&self.store().join(DATABASE))
+    }
+
+    /// Conversation turns from the `messages` table, oldest first. Only
+    /// `user` and `assistant` rows are read, and archived rows (`active = 0`)
+    /// are skipped when the column exists. Epoch floats become ISO 8601 UTC.
+    /// A missing table, database or expected column is an empty feed.
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        let database = self.store().join(DATABASE);
+        if !database.is_file() {
+            return Vec::new();
+        }
+
+        let Ok(connection) = utils::open_readonly(&database) else {
+            return Vec::new();
+        };
+        if !utils::table_exists(&connection, "messages").unwrap_or(false) {
+            return Vec::new();
+        }
+
+        let columns = utils::table_columns(&connection, "messages");
+        for required in ["session_id", "role", "content"] {
+            if !columns.contains(&required.to_string()) {
+                return Vec::new();
+            }
+        }
+        let archived = if columns.contains(&"active".to_string()) {
+            "AND (active = 1 OR active IS NULL)"
+        } else {
+            ""
+        };
+        let timestamp = if columns.contains(&"timestamp".to_string()) {
+            "timestamp"
+        } else {
+            "NULL"
+        };
+
+        let Ok(mut statement) = connection.prepare(&format!(
+            "SELECT role, content, {timestamp} FROM messages \
+             WHERE session_id = ?1 AND role IN ('user', 'assistant') \
+             {archived} ORDER BY rowid ASC"
+        )) else {
+            return Vec::new();
+        };
+        let Ok(rows) = statement.query_map([session_id], |row| {
+            Ok((
+                utils::text_cell(row, 0),
+                utils::text_cell(row, 1),
+                utils::text_cell(row, 2),
+            ))
+        }) else {
+            return Vec::new();
+        };
+
+        let mut turns = Vec::new();
+        for row in rows.flatten() {
+            let (role, content, timestamp) = row;
+            let (Some(role), Some(content)) = (role, content) else {
+                continue;
+            };
+            if role != "user" && role != "assistant" {
+                continue;
+            }
+            let stamped = timestamp
+                .filter(|stamp| !stamp.trim().is_empty())
+                .and_then(|stamp| utils::timestamp_secs(&stamp))
+                .map(utils::iso8601_from_secs);
+            if let Some(turn) = transcript::build_turn(&role, &content, stamped) {
+                turns.push(turn);
+                if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
+                    break;
+                }
+            }
+        }
+        turns
     }
 
     fn list_sessions(&self) -> Result<Vec<UnifiedSession>, String> {

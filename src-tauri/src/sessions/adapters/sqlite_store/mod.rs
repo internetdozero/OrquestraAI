@@ -11,6 +11,10 @@ use crate::sessions::types::UnifiedSession;
 use super::fsops;
 use super::utils::{self, text_cell, timestamp_secs, trim_title};
 
+mod transcript;
+
+pub use transcript::read_transcript;
+
 /// List sessions from `<root>/<db_rel>`.
 ///
 /// Columns are discovered instead of assumed: the lineage has added columns

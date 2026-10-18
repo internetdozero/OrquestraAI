@@ -13,7 +13,7 @@ use serde_json::Value;
 
 use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
-use super::{fsops, utils, SessionAdapter};
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "antigravity";
 const STORES: [&str; 2] = [".gemini/antigravity", ".gemini/antigravity-cli"];
@@ -112,7 +112,7 @@ impl SessionAdapter for Antigravity {
                 brain.join("logs").join("transcript.jsonl"),
             ] {
                 if candidate.is_file() {
-                    return utils::read_transcript(&candidate);
+                    return transcript::read_transcript(&candidate);
                 }
             }
         }

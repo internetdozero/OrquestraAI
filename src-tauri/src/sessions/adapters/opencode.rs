@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
 use super::{sqlite_store, SessionAdapter};
 
@@ -44,6 +44,14 @@ impl SessionAdapter for OpenCode {
             HARNESS,
             &format!("{STORE_REL}/{DATABASE}"),
             STORE_REL,
+        )
+    }
+
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        sqlite_store::read_transcript(
+            &self.root,
+            &format!("{STORE_REL}/{DATABASE}"),
+            session_id,
         )
     }
 
