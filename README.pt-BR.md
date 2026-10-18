@@ -106,6 +106,16 @@ cargo test --lib
 
 ---
 
+## ⚡ Instalação Rápida (Binário Direto)
+
+Instale ou atualize o executável mais recente diretamente com um único comando:
+
+```bash
+curl -sL https://github.com/internetdozero/OrquestraAI/releases/latest/download/orquestra-ai -o ~/.local/bin/orquestra && chmod +x ~/.local/bin/orquestra
+```
+
+---
+
 ## ☁️ Compilação Remota Zero-Heat (GitHub Actions)
 
 Para evitar superaquecimento da CPU e thermal throttling durante compilações pesadas de release em computadores com recursos limitados, os binários oficiais são gerados na nuvem via GitHub Actions:
