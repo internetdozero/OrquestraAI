@@ -23,14 +23,14 @@ if [ ! -s "${TMP_DIR}/SHA256SUMS.txt" ]; then
     exit 1
 fi
 
-HASH_LINE=$(grep -E '[[:space:]]orquestra-ai$' "${TMP_DIR}/SHA256SUMS.txt" || true)
+MATCH_COUNT=$(grep -Ec '[[:space:]]orquestra-ai$' "${TMP_DIR}/SHA256SUMS.txt" || true)
 
-if [ -z "$HASH_LINE" ]; then
-    echo "❌ Security Error: No checksum found for orquestra-ai in SHA256SUMS.txt."
+if [ "$MATCH_COUNT" -ne 1 ]; then
+    echo "❌ Security Error: Expected exactly one checksum entry for orquestra-ai, found ${MATCH_COUNT}."
     exit 1
 fi
 
-printf '%s\n' "$HASH_LINE" > "${TMP_DIR}/CHECKSUM.txt"
+grep -E '[[:space:]]orquestra-ai$' "${TMP_DIR}/SHA256SUMS.txt" > "${TMP_DIR}/CHECKSUM.txt"
 
 echo "🔍 Verifying binary authenticity with SHA-256..."
 (cd "$TMP_DIR" && sha256sum --check --status CHECKSUM.txt) || {
