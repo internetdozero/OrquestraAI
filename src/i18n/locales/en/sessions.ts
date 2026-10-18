@@ -88,4 +88,10 @@ export const sessions: TranslationSchema["sessions"] = {
   turnSystem: "System",
   copyMessage: "Copy message",
   copied: "Copied to clipboard",
+  searchMessages: "Search messages…",
+  exportMarkdown: "Export Markdown",
+  copyAll: "Copy all",
+  copiedAll: "Conversation copied to clipboard",
+  matchesCount: (count: number) => `${count} matches`,
+  noSearchMatches: "No messages match your search",
 };
