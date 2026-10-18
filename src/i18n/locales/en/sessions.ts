@@ -86,6 +86,8 @@ export const sessions: TranslationSchema["sessions"] = {
   turnUser: "You",
   turnAssistant: "Assistant",
   turnSystem: "System",
+  fixturesBanner:
+    "Fixture mode · 9 simulated harness transcripts for visual review (development only)",
   copyMessage: "Copy message",
   copied: "Copied to clipboard",
   searchMessages: "Search messages…",

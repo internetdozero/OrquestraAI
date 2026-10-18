@@ -12,6 +12,7 @@ import {
   type RetentionPolicy,
   type UnifiedSession,
 } from "../lib/sessions";
+import { fixturesEnabled } from "../lib/fixtures";
 import { formatMb } from "../lib/sessionFormat";
 import { useI18n } from "./useI18n";
 
@@ -65,6 +66,10 @@ export function useSessions(options: {
 }) {
   const { isTauri, notifyOnPurge, onToast, onError } = options;
   const { t } = useI18n();
+  // Dev fixture mode keeps the view usable in a plain browser preview; every
+  // IPC entry point has a matching in-memory implementation in `lib/fixtures`.
+  const [fixtureMode] = useState(fixturesEnabled);
+  const enabled = isTauri || fixtureMode;
   const [sessions, setSessions] = useState<UnifiedSession[]>(() => cachedSessions ?? peekWarmedSessions() ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +85,7 @@ export function useSessions(options: {
   const [retentionOpen, setRetentionOpen] = useState(false);
 
   const refreshSessions = useCallback(async () => {
-    if (!isTauri) return;
+    if (!enabled) return;
     // Warm cache: paint instantly, revalidate silently. Cold start keeps
     // the loading banner so first paint never flashes an empty catalog.
     const cold = cachedSessions === null && peekWarmedSessions() === null;
@@ -103,7 +108,7 @@ export function useSessions(options: {
     } finally {
       setLoading(false);
     }
-  }, [isTauri, onError, t]);
+  }, [enabled, onError, t]);
 
   useEffect(() => {
     void refreshSessions();
@@ -147,7 +152,7 @@ export function useSessions(options: {
 
   const togglePin = useCallback(
     async (harness: string, sessionId: string) => {
-      if (!isTauri) return;
+      if (!enabled) return;
       const key = `${harness}:${sessionId}`;
       setPendingIds((ids) => new Set(ids).add(key));
       try {
@@ -172,12 +177,12 @@ export function useSessions(options: {
         });
       }
     },
-    [isTauri, onError, onToast, t],
+    [enabled, onError, onToast, t],
   );
 
   const openPurgeModal = useCallback(
     async (next: PurgeFilter) => {
-      if (!isTauri) return;
+      if (!enabled) return;
       setPurgeFilter(next);
       setEstimate(null);
       setEstimating(true);
@@ -190,7 +195,7 @@ export function useSessions(options: {
         setEstimating(false);
       }
     },
-    [isTauri, onError, t],
+    [enabled, onError, t],
   );
 
   const closePurgeModal = useCallback(() => {
@@ -200,7 +205,7 @@ export function useSessions(options: {
   }, [purging]);
 
   const executePurge = useCallback(async () => {
-    if (!isTauri || !purgeFilter || purging) return;
+    if (!enabled || !purgeFilter || purging) return;
     setPurging(true);
     try {
       const report = await purgeSessions(purgeFilter);
@@ -215,11 +220,11 @@ export function useSessions(options: {
     } finally {
       setPurging(false);
     }
-  }, [isTauri, purgeFilter, purging, notifyOnPurge, onToast, onError, refreshSessions, t]);
+  }, [enabled, purgeFilter, purging, notifyOnPurge, onToast, onError, refreshSessions, t]);
 
   const deleteSingleSession = useCallback(
     async (harness: string, sessionId: string) => {
-      if (!isTauri) return;
+      if (!enabled) return;
       const before = sessions.find(
         (s) => s.harness === harness && s.id === sessionId,
       );
@@ -238,12 +243,12 @@ export function useSessions(options: {
         onError(t.sessions.purgeFailed(toMessage(cause, t.common.unexpected)));
       }
     },
-    [isTauri, notifyOnPurge, onError, onToast, refreshSessions, sessions, t],
+    [enabled, notifyOnPurge, onError, onToast, refreshSessions, sessions, t],
   );
 
   const updatePolicy = useCallback(
     async (next: RetentionPolicy) => {
-      if (!isTauri) return;
+      if (!enabled) return;
       try {
         await saveRetentionPolicy(next);
         setPolicy(next);
@@ -253,10 +258,12 @@ export function useSessions(options: {
         onError(t.sessions.saveFailed(toMessage(cause, t.common.unexpected)));
       }
     },
-    [isTauri, onError, onToast, t],
+    [enabled, onError, onToast, t],
   );
 
   return {
+    enabled,
+    fixtureMode,
     sessions: visible,
     totalCount: sessions.length,
     loading,

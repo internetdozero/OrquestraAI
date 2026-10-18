@@ -1,4 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
+import {
+  fixtureEstimate,
+  fixturePurge,
+  fixtureRetention,
+  fixtureSaveRetention,
+  fixtureSessionTranscript,
+  fixtureSessions,
+  fixtureTogglePin,
+  fixturesEnabled,
+} from "./fixtures";
 import { isTauri } from "./tauri";
 
 /** Canonical harness ids, in the order the core lists them. */
@@ -80,6 +90,7 @@ export interface RetentionPolicy {
 
 /** Every harness conversation, newest first, with pin state applied. */
 export function getUnifiedSessions(): Promise<UnifiedSession[]> {
+  if (fixturesEnabled()) return Promise.resolve(fixtureSessions());
   return invoke<UnifiedSession[]>("get_unified_sessions");
 }
 
@@ -96,6 +107,7 @@ export async function getSessionTranscript(
   harness: string,
   sessionId: string,
 ): Promise<TranscriptTurn[]> {
+  if (fixturesEnabled()) return fixtureSessionTranscript(harness, sessionId) ?? [];
   if (!isTauri()) return [];
   return invoke<TranscriptTurn[]>("get_session_transcript", {
     harness,
@@ -129,6 +141,10 @@ export function togglePinSession(
   sessionId: string,
   label?: string | null,
 ): Promise<boolean> {
+  if (fixturesEnabled()) {
+    void label;
+    return Promise.resolve(fixtureTogglePin(harness, sessionId));
+  }
   return invoke<boolean>("toggle_pin_session", {
     harness,
     sessionId,
@@ -137,20 +153,27 @@ export function togglePinSession(
 }
 
 export function getRetentionPolicy(): Promise<RetentionPolicy> {
+  if (fixturesEnabled()) return Promise.resolve(fixtureRetention());
   return invoke<RetentionPolicy>("get_retention_policy");
 }
 
 /** Replace the retention rules; the pin list is preserved by the core. */
 export function saveRetentionPolicy(policy: RetentionPolicy): Promise<void> {
+  if (fixturesEnabled()) {
+    fixtureSaveRetention(policy);
+    return Promise.resolve();
+  }
   return invoke<void>("save_retention_policy", { policy });
 }
 
 /** Dry run: what `purgeSessions` would delete for this filter. */
 export function estimatePurge(filter: PurgeFilter): Promise<PurgeEstimate> {
+  if (fixturesEnabled()) return Promise.resolve(fixtureEstimate(filter));
   return invoke<PurgeEstimate>("estimate_purge", { filter });
 }
 
 /** Delete every session the filter matches, keeping pinned and open ones. */
 export function purgeSessions(filter: PurgeFilter): Promise<PurgeReport> {
+  if (fixturesEnabled()) return Promise.resolve(fixturePurge(filter));
   return invoke<PurgeReport>("purge_sessions", { filter });
 }

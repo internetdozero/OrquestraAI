@@ -2,9 +2,10 @@
 //! to [`TranscriptTurn`].
 //!
 //! Split out of `utils.rs` so both files stay under the line cap. Parsing is
-//! best-effort throughout: corrupt lines are skipped, tool payloads and
-//! thinking blocks are stripped, and oversized inputs are refused whole, so a
-//! harness that is mid-write when the drawer opens can never break the read.
+//! best-effort throughout: corrupt lines are skipped, system scaffolding,
+//! tool payloads and thinking blocks are stripped, and oversized inputs are
+//! refused whole, so a harness that is mid-write when the drawer opens can
+//! never break the read.
 
 use std::path::Path;
 
@@ -12,6 +13,7 @@ use serde_json::Value;
 
 use crate::sessions::types::TranscriptTurn;
 
+use super::transcript_sanitize::strip_tool_run;
 use super::utils::{
     file_size, iso8601_from_secs, json_string, json_timestamp, normalized_timestamp,
 };
@@ -102,7 +104,8 @@ fn turn_text(message: &Value) -> Option<String> {
 /// Accepts the `role` field, the `source` marker Antigravity writes
 /// (`USER_EXPLICIT`, `MODEL`) and the `type` marker (`USER_INPUT`,
 /// `PLANNER_RESPONSE`, plus what Claude writes on every line). Anything else
-/// — summaries, mode latches, permission records — is not conversation.
+/// — system prompts, developer instructions, summaries, mode latches,
+/// permission records — is not conversation and is skipped.
 fn turn_role(entry: &Value) -> Option<&'static str> {
     for key in ["role", "source", "type"] {
         let source = match key {
@@ -118,7 +121,9 @@ fn turn_role(entry: &Value) -> Option<&'static str> {
                 "assistant" | "model" | "ai" | "MODEL" | "PLANNER_RESPONSE" => {
                     Some("assistant")
                 }
-                "system" => Some("system"),
+                // System prompts are harness scaffolding: they are not a
+                // turn, and the drawer must never paint them as one.
+                "system" | "developer" => return None,
                 _ => continue,
             };
         }
@@ -163,7 +168,8 @@ fn strip_tag(text: &str, tag: &str) -> String {
 
 /// Clean raw turn text for display: user prompts wrapped in Antigravity's
 /// `<USER_REQUEST>…</USER_REQUEST>` envelope are unwrapped to the actual
-/// prompt, and thinking blocks are stripped for every role.
+/// prompt, thinking blocks are stripped for every role, and assistant text
+/// drops any tool-execution record a harness appended to it.
 pub fn clean_turn_content(role: &str, raw: &str) -> String {
     let mut text = raw.trim().to_string();
 
@@ -182,15 +188,23 @@ pub fn clean_turn_content(role: &str, raw: &str) -> String {
         text = strip_tag(&text, tag);
     }
 
+    if role != "user" {
+        text = strip_tool_run(&text);
+    }
+
     text.trim().to_string()
 }
 
-/// Assemble one turn: cleaned, empties dropped, long dumps trimmed.
+/// Assemble one turn: system scaffolding refused, cleaned, empties dropped,
+/// long dumps trimmed.
 pub fn build_turn(
     role: &str,
     raw_content: &str,
     timestamp: Option<String>,
 ) -> Option<TranscriptTurn> {
+    if role == "system" {
+        return None;
+    }
     let mut content = clean_turn_content(role, raw_content);
     if content.is_empty() {
         return None;
@@ -294,6 +308,49 @@ mod tests {
             clean_turn_content("user", "keep <think>drop this"),
             "keep"
         );
+    }
+
+    #[test]
+    fn tool_execution_records_never_become_speech() {
+        let dump = "Created At: 2026-10-18T11:56:40Z\n\
+                    Completed At: 2026-10-18T11:56:41Z\n\
+                    Output:\nsrc-tauri/src/main.rs\n\
+                    The command exited with code 0";
+        assert!(build_turn("assistant", dump, None).is_none());
+        assert!(build_turn("assistant", "The command exited with code 0", None).is_none());
+        assert!(build_turn(
+            "assistant",
+            "Output:\nsrc-tauri/src/main.rs\nThe command exited with code 0",
+            None
+        )
+        .is_none());
+
+        let mixed = "I moved the cache.\n\nCreated At: 2026-10-18T11:56:40Z\n\
+                     Output:\nls\nThe command exited with code 0";
+        assert_eq!(
+            build_turn("assistant", mixed, None)
+                .expect("planner text survives the record")
+                .content,
+            "I moved the cache."
+        );
+    }
+
+    #[test]
+    fn prose_that_mentions_output_is_left_alone() {
+        let prose = "Output: the command prints the resolved path";
+        assert_eq!(clean_turn_content("assistant", prose), prose);
+        let pasted = "Created At: when the record was written";
+        assert_eq!(clean_turn_content("user", pasted), pasted);
+    }
+
+    #[test]
+    fn system_turns_are_never_conversation() {
+        let entry = serde_json::json!({
+            "role": "system",
+            "content": "You are Grok 4.7 <dangerous_actions>…"
+        });
+        assert!(parse_value(&entry).is_none());
+        assert!(build_turn("system", "You are Grok 4.7", None).is_none());
     }
 
     #[test]

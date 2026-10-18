@@ -57,22 +57,29 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Build OrquestraAI Release Binary
+      - name: Build OrquestraAI Release Binary & SHA-256 Checksum
         run: |
           npx tauri build --no-bundle
           cp target/release/orquestra-ai ./orquestra-linux-x86_64
-          chmod +x ./orquestra-linux-x86_64
+          cp target/release/orquestra-ai ./orquestra-ai
+          chmod +x ./orquestra-linux-x86_64 ./orquestra-ai
+          sha256sum orquestra-ai orquestra-linux-x86_64 > SHA256SUMS.txt
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: orquestra-linux-x86_64
-          path: ./orquestra-linux-x86_64
+          path: |
+            ./orquestra-linux-x86_64
+            ./SHA256SUMS.txt
           retention-days: 14
 
       - name: Create GitHub Release (if tagged or requested)
         if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
         uses: softprops/action-gh-release@v2
         with:
-          files: ./orquestra-linux-x86_64
+          files: |
+            ./orquestra-ai
+            ./orquestra-linux-x86_64
+            ./SHA256SUMS.txt
           generate_release_notes: true

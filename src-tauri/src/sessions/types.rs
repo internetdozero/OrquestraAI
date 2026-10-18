@@ -64,7 +64,7 @@ impl UnifiedSession {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptTurn {
-    /// `user`, `assistant` or `system`.
+    /// `user` or `assistant`. System scaffolding is never emitted.
     pub role: String,
     /// Plain text of the turn; tool payloads are excluded, long dumps trimmed.
     pub content: String,

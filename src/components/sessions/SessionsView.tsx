@@ -61,6 +61,15 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
         <ErrorBanner message={state.error} onDismiss={() => void state.refreshSessions()} />
       )}
 
+      {state.fixtureMode && (
+        <p
+          role="status"
+          className="rounded-lg border border-cyan-500/25 bg-cyan-500/[0.06] px-3 py-1.5 font-mono text-[10.5px] text-cyan-200/90"
+        >
+          {s.fixturesBanner}
+        </p>
+      )}
+
       <SessionsHeader
         total={state.metrics.total}
         bytes={state.metrics.bytes}
@@ -87,7 +96,7 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
       <SessionsTable
         sessions={state.sessions}
         loading={state.loading}
-        isTauri={isTauri}
+        enabled={state.enabled}
         pendingIds={state.pendingIds}
         onTogglePin={(h, id) => void state.togglePin(h, id)}
         onDelete={(h, id) => void state.deleteSingleSession(h, id)}

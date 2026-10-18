@@ -232,10 +232,55 @@ fn manicode_chat_logs_read_as_json_arrays() {
     );
 
     let turns = adapter(&home.0, "freebuff").read_transcript("app/chat-1");
-    assert_eq!(turns.len(), 3, "drawer shows the full exchange: {turns:?}");
+    assert_eq!(
+        turns.len(),
+        2,
+        "system scaffolding is not a turn: {turns:?}"
+    );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "deploy now");
+    assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "deploying");
+}
+
+#[test]
+fn antigravity_tool_execution_dumps_are_not_speech() {
+    let home = TestHome::new("antigravity-tools");
+    home.write(
+        ".gemini/antigravity/brain/sess-2/.system_generated/logs/transcript.jsonl",
+        "{\"source\":\"USER_EXPLICIT\",\"type\":\"USER_INPUT\",\
+          \"content\":\"<USER_REQUEST>move the cache</USER_REQUEST>\"}\n\
+         {\"source\":\"MODEL\",\"type\":\"PLANNER_RESPONSE\",\
+          \"content\":\"Created At: 2026-10-18T11:56:40Z\\nCompleted At: 2026-10-18T11:56:41Z\\nOutput:\\nsrc-tauri/src/main.rs\\nThe command exited with code 0\"}\n\
+         {\"source\":\"MODEL\",\"type\":\"PLANNER_RESPONSE\",\
+          \"content\":[{\"type\":\"text\",\"text\":\"The cache now lives in the new module.\"}]}\n",
+    );
+
+    let turns = adapter(&home.0, "antigravity").read_transcript("sess-2");
+    assert_eq!(turns.len(), 2, "tool runs are metadata: {turns:?}");
+    assert_eq!(turns[0].content, "move the cache");
+    assert_eq!(turns[1].role, "assistant");
+    assert_eq!(turns[1].content, "The cache now lives in the new module.");
+}
+
+#[test]
+fn system_prompt_rows_never_reach_the_feed() {
+    let home = TestHome::new("grok-system");
+    home.write(
+        ".grok/sessions/-work-app/sess-1/chat_history.jsonl",
+        "{\"type\":\"system\",\"content\":\"You are Grok 4.7\\n<dangerous_actions>never run rm -rf</dangerous_actions>\"}\n\
+         {\"type\":\"user\",\"content\":\"summarize the diff\"}\n\
+         {\"type\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Two files changed.\"}]}\n",
+    );
+
+    let turns = adapter(&home.0, "grok").read_transcript("sess-1");
+    assert_eq!(turns.len(), 2, "the system prompt is scaffolding: {turns:?}");
+    assert_eq!(turns[0].role, "user");
+    assert_eq!(turns[1].role, "assistant");
+    assert!(
+        turns.iter().all(|turn| !turn.content.contains("dangerous_actions")),
+        "no raw system instructions anywhere: {turns:?}"
+    );
 }
 
 #[test]
