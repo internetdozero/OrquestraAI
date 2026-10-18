@@ -12,9 +12,9 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
-use super::{freebuff_desktop, fsops, utils, SessionAdapter};
+use super::{freebuff_desktop, fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "freebuff";
 const WORKTREES_REL: &str = ".freebuff/worktrees";
@@ -89,6 +89,35 @@ impl SessionAdapter for Freebuff {
     /// `desktop-v2.db` files are vacuumed to reclaim deleted threads.
     fn optimize_storage(&self) -> Result<(), String> {
         freebuff_desktop::vacuum_all(&self.root)
+    }
+
+    /// Conversation turns for Manicode chats and desktop threads. Manicode
+    /// logs are JSON arrays read straight through the transcript parser;
+    /// desktop threads are read from their project's `desktop-v2.db`. Bare
+    /// worktree ids have no message store — only metadata — so they report
+    /// an empty feed.
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        if let Some((slug, thread)) = freebuff_desktop::parse_id(session_id) {
+            return freebuff_desktop::transcript(&self.root, &slug, &thread);
+        }
+
+        let Some((project, chat)) = session_id.split_once('/') else {
+            return Vec::new();
+        };
+        if !valid_segment(project) || !valid_segment(chat) {
+            return Vec::new();
+        }
+        let log = self
+            .root
+            .join(MANICODE_REL)
+            .join(project)
+            .join("chats")
+            .join(chat)
+            .join("chat-messages.json");
+        if !log.is_file() {
+            return Vec::new();
+        }
+        transcript::read_transcript(&log)
     }
 }
 
@@ -224,6 +253,15 @@ fn summarize(messages: &Value) -> (Option<String>, usize) {
     }
 
     (title, turns)
+}
+
+/// A session-id path segment: single, non-empty, and never a traversal.
+fn valid_segment(segment: &str) -> bool {
+    !(segment.is_empty()
+        || segment == "."
+        || segment == ".."
+        || segment.contains('/')
+        || segment.contains('\\'))
 }
 
 fn title(id: &str, meta: Option<&Value>) -> String {

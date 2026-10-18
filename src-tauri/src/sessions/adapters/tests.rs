@@ -126,12 +126,15 @@ fn antigravity_transcript_covers_both_log_layouts() {
 }
 
 #[test]
-fn harnesses_without_a_reader_report_an_empty_feed() {
+fn harnesses_without_data_report_an_empty_feed() {
+    // Every harness has a transcript reader now; with no store on disk each
+    // one must report an empty feed rather than an error. Readers with
+    // fixture data are covered in `transcript_tests`.
     let home = TestHome::new();
-    for harness in ["codex", "opencode", "copilot", "grok"] {
+    for harness in super::HARNESS_IDS {
         assert!(
             adapter(&home.0, harness).read_transcript("whatever").is_empty(),
-            "{harness} has no transcript reader yet"
+            "{harness} must return an empty feed when its store is missing"
         );
     }
 }

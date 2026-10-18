@@ -19,7 +19,10 @@ mod opencode;
 mod sqlite_store;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod transcript_tests;
 pub mod time;
+mod transcript;
 pub mod utils;
 
 use std::collections::BTreeMap;

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
-use super::{fsops, utils, SessionAdapter};
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "claude";
 const STORE_REL: &str = ".claude";
@@ -174,14 +174,14 @@ impl SessionAdapter for Claude {
             for project in projects.flatten() {
                 let candidate = project.path().join(format!("{session_id}.jsonl"));
                 if candidate.is_file() {
-                    return utils::read_transcript(&candidate);
+                    return transcript::read_transcript(&candidate);
                 }
             }
         }
 
         let legacy = store.join("sessions").join(format!("{session_id}.jsonl"));
         if legacy.is_file() {
-            return utils::read_transcript(&legacy);
+            return transcript::read_transcript(&legacy);
         }
 
         Vec::new()

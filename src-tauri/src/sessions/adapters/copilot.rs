@@ -7,9 +7,9 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
-use super::{fsops, utils, SessionAdapter};
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "copilot";
 const STORE_REL: &str = ".copilot";
@@ -203,6 +203,82 @@ impl SessionAdapter for Copilot {
 
     fn optimize_storage(&self) -> Result<(), String> {
         fsops::vacuum(&self.store().join(DATABASE))
+    }
+
+    /// Conversation turns from the `turns` table: one user turn plus one
+    /// assistant turn per row, in `turn_index` order. Empty halves are
+    /// skipped, so a turn still waiting for its response shows just the
+    /// prompt. A missing table or database is an empty feed.
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        let database = self.store().join(DATABASE);
+        if !database.is_file() {
+            return Vec::new();
+        }
+
+        let Ok(connection) = utils::open_readonly(&database) else {
+            return Vec::new();
+        };
+        if !utils::table_exists(&connection, "turns").unwrap_or(false) {
+            return Vec::new();
+        }
+
+        let columns = utils::table_columns(&connection, "turns");
+        for required in ["session_id", "user_message", "assistant_response"] {
+            if !columns.contains(&required.to_string()) {
+                return Vec::new();
+            }
+        }
+        let order = if columns.contains(&"turn_index".to_string()) {
+            "ORDER BY turn_index ASC"
+        } else {
+            "ORDER BY rowid ASC"
+        };
+        let timestamp = if columns.contains(&"timestamp".to_string()) {
+            "timestamp"
+        } else {
+            "NULL"
+        };
+
+        let Ok(mut statement) = connection.prepare(&format!(
+            "SELECT user_message, assistant_response, {timestamp} \
+             FROM turns WHERE session_id = ?1 {order}"
+        )) else {
+            return Vec::new();
+        };
+        let Ok(rows) = statement.query_map([session_id], |row| {
+            Ok((
+                utils::text_cell(row, 0),
+                utils::text_cell(row, 1),
+                utils::text_cell(row, 2),
+            ))
+        }) else {
+            return Vec::new();
+        };
+
+        let mut turns = Vec::new();
+        for row in rows.flatten() {
+            let (user, assistant, timestamp) = row;
+            let stamped = timestamp
+                .filter(|stamp| !stamp.trim().is_empty())
+                .map(|stamp| utils::normalized_timestamp(&stamp));
+            for (role, content) in [
+                ("user", user.as_deref().unwrap_or("")),
+                ("assistant", assistant.as_deref().unwrap_or("")),
+            ] {
+                if content.trim().is_empty() {
+                    continue;
+                }
+                if let Some(turn) =
+                    transcript::build_turn(role, content, stamped.clone())
+                {
+                    turns.push(turn);
+                    if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
+                        return turns;
+                    }
+                }
+            }
+        }
+        turns
     }
 
     fn list_sessions(&self) -> Result<Vec<UnifiedSession>, String> {

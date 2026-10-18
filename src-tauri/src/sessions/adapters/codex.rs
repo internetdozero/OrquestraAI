@@ -10,9 +10,11 @@
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use serde_json::{json, Value};
 
-use super::{fsops, utils, SessionAdapter};
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "codex";
 const STORE_REL: &str = ".codex";
@@ -196,6 +198,52 @@ impl SessionAdapter for Codex {
         delete_rows_in(&store.join(LOG_DATABASE), "logs", "thread_id", session_id)?;
 
         Ok(bytes)
+    }
+
+    /// Conversation turns from this thread's rollout files. Only
+    /// `response_item` lines with a `user` or `assistant` payload role become
+    /// turns: `developer` instructions, environment setup blocks and bare
+    /// tool items are harness scaffolding, not conversation.
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        if session_id.is_empty()
+            || session_id.contains('/')
+            || session_id.contains('\\')
+        {
+            return Vec::new();
+        }
+
+        let mut turns = Vec::new();
+        for rollout in self.rollouts_for(session_id) {
+            for entry in utils::read_jsonl(&rollout) {
+                if entry.get("type").and_then(Value::as_str) != Some("response_item") {
+                    continue;
+                }
+                let Some(payload) = entry.get("payload") else {
+                    continue;
+                };
+                if !matches!(
+                    payload.get("role").and_then(Value::as_str),
+                    Some("user") | Some("assistant")
+                ) {
+                    continue;
+                }
+                let normalized = json!({
+                    "role": payload.get("role"),
+                    "message": payload.get("content"),
+                    "timestamp": entry.get("timestamp"),
+                });
+                if let Some(turn) = transcript::parse_value(&normalized) {
+                    turns.push(turn);
+                    if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
+                        break;
+                    }
+                }
+            }
+            if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
+                break;
+            }
+        }
+        turns
     }
 
     fn optimize_storage(&self) -> Result<(), String> {

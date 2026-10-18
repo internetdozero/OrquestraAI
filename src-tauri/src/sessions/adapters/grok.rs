@@ -7,9 +7,9 @@
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
-use super::{fsops, utils, SessionAdapter};
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "grok";
 const STORE_REL: &str = ".grok/sessions";
@@ -188,6 +188,42 @@ impl SessionAdapter for Grok {
 
     fn optimize_storage(&self) -> Result<(), String> {
         fsops::vacuum(&self.store().join(DATABASE))
+    }
+
+    /// Conversation turns in `sessions/<encoded-cwd>/<id>/chat_history.jsonl`.
+    /// The folder layout mirrors [`Self::folders`]: every project directory
+    /// is scanned for the session folder, so an encoded cwd the index forgot
+    /// still resolves. A missing log is an empty feed, not an error.
+    ///
+    /// [`Self::folders`]: Grok::folders
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        if session_id.is_empty()
+            || session_id.contains('/')
+            || session_id.contains('\\')
+            || session_id == "."
+            || session_id == ".."
+        {
+            return Vec::new();
+        }
+        let Ok(projects) = std::fs::read_dir(self.store()) else {
+            return Vec::new();
+        };
+
+        for project in projects.flatten() {
+            if !project
+                .file_type()
+                .map(|kind| kind.is_dir())
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            let log = project.path().join(session_id).join("chat_history.jsonl");
+            if log.is_file() {
+                return transcript::read_transcript(&log);
+            }
+        }
+
+        Vec::new()
     }
 
     fn list_sessions(&self) -> Result<Vec<UnifiedSession>, String> {
