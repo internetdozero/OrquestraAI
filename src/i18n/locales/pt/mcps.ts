@@ -11,6 +11,8 @@ export const mcps = {
   emptyTitle: "Nenhum servidor MCP ainda",
   emptyBody:
     "Adicione o primeiro servidor e o OrquestraAI o compilará em cada harness instalado que tenha um adaptador.",
+  exploreStoreAction: "Explorar loja oficial",
+  addManualAction: "Adicionar manualmente",
   targets: "Destinos",
   unavailableBody:
     "O registro MCP é compilado pelo núcleo em Rust na configuração de cada harness. Abra o aplicativo desktop para ler ou alterar.",

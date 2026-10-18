@@ -166,6 +166,16 @@ export function SettingsModal({
               <AboutSettingsTab
                 status={status}
                 isTauri={isTauri}
+                autoCheckAppUpdates={prefs.settings.autoCheckAppUpdates}
+                autoCheckExtensionUpdates={prefs.settings.autoCheckExtensionUpdates}
+                onToggleAppUpdates={() =>
+                  prefs.setAutoCheckAppUpdates(!prefs.settings.autoCheckAppUpdates)
+                }
+                onToggleExtensionUpdates={() =>
+                  prefs.setAutoCheckExtensionUpdates(
+                    !prefs.settings.autoCheckExtensionUpdates,
+                  )
+                }
                 onToast={onToast}
                 onError={onError}
               />

@@ -1,19 +1,37 @@
-import { ClipboardCopy, Orbit } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, ClipboardCopy, Loader2, Orbit, RefreshCw } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { HARNESSES } from "../../lib/harnesses";
 import type { CoreStatus } from "../../lib/tauri";
+import { cn } from "../../lib/utils";
 
 interface AboutSettingsTabProps {
   status: CoreStatus | null;
   isTauri: boolean;
+  autoCheckAppUpdates: boolean;
+  autoCheckExtensionUpdates: boolean;
+  onToggleAppUpdates: () => void;
+  onToggleExtensionUpdates: () => void;
   onToast: (message: string) => void;
   onError: (message: string) => void;
 }
 
 /** Version, platform info and a clipboard diagnostics snippet. */
-export function AboutSettingsTab({ status, isTauri, onToast, onError }: AboutSettingsTabProps) {
+export function AboutSettingsTab({
+  status,
+  isTauri,
+  autoCheckAppUpdates,
+  autoCheckExtensionUpdates,
+  onToggleAppUpdates,
+  onToggleExtensionUpdates,
+  onToast,
+  onError,
+}: AboutSettingsTabProps) {
   const { t } = useI18n();
   const a = t.settings.about;
+  const [checking, setChecking] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const version = status?.version ?? "0.1.0";
 
   const copyDiagnostics = async () => {
     const lines = [
@@ -76,6 +94,85 @@ export function AboutSettingsTab({ status, isTauri, onToast, onError }: AboutSet
         <ClipboardCopy className="size-3.5 text-emerald-400" />
         {a.copyDiag}
       </button>
+
+      <section>
+        <h3 className="text-[12.5px] font-semibold text-zinc-100">{a.updatesTitle}</h3>
+        <div className="mt-2 space-y-2">
+          {[
+            {
+              title: a.autoCheckAppTitle,
+              hint: a.autoCheckAppDesc,
+              checked: autoCheckAppUpdates,
+              onFlip: onToggleAppUpdates,
+            },
+            {
+              title: a.autoCheckExtTitle,
+              hint: a.autoCheckExtDesc,
+              checked: autoCheckExtensionUpdates,
+              onFlip: onToggleExtensionUpdates,
+            },
+          ].map((row) => (
+            <div
+              key={row.title}
+              className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2.5"
+            >
+              <div>
+                <p className="text-[12.5px] text-zinc-200">{row.title}</p>
+                <p className="text-[11px] text-zinc-500">{row.hint}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={row.checked}
+                aria-label={row.title}
+                onClick={row.onFlip}
+                className={cn(
+                  "relative h-5.5 w-10 shrink-0 rounded-full transition-[background-color]",
+                  row.checked ? "accent-dot" : "bg-zinc-700",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 size-4.5 rounded-full bg-white transition-[left]",
+                    row.checked ? "left-5" : "left-0.5",
+                  )}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={checking}
+            onClick={() => {
+              setChecking(true);
+              setChecked(false);
+              window.setTimeout(() => {
+                setChecking(false);
+                setChecked(true);
+              }, 900);
+            }}
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-zinc-200 transition hover:border-white/20 disabled:cursor-wait disabled:opacity-60"
+          >
+            {checking ? (
+              <Loader2 className="size-3.5 animate-spin text-emerald-400" />
+            ) : (
+              <RefreshCw className="size-3.5 text-emerald-400" />
+            )}
+            {checking ? a.checking : a.checkNow}
+          </button>
+          {checked && !checking && (
+            <span
+              role="status"
+              className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200"
+            >
+              <CheckCircle2 className="size-3" />
+              {a.upToDate(version)}
+            </span>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

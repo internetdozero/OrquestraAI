@@ -13,6 +13,8 @@ export const mcps: TranslationSchema["mcps"] = {
   emptyTitle: "No MCP servers yet",
   emptyBody:
     "Add the first server and OrquestraAI will compile it into every installed harness that has an adapter.",
+  exploreStoreAction: "Explore the official store",
+  addManualAction: "Add manually",
   targets: "Targets",
   unavailableBody:
     "The MCP registry is compiled by the Rust core into each harness config. Run the desktop shell to read or change it.",

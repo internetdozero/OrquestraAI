@@ -57,6 +57,7 @@ export default function App() {
   const janitor = useJanitor({
     isTauri,
     notifyOnPurge: prefs.settings.notifyOnPurge,
+    active: janitorOpen,
     onToast: showToast,
     onError: setError,
   });

@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Unplug,
   Waypoints,
-  Wrench,
 } from "lucide-react";
 import {
   coversHarness,
@@ -24,6 +23,7 @@ import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { sumMcpTokens } from "../lib/tokens";
 import { cn, formatTokens } from "../lib/utils";
 import { McpCard } from "./McpCard";
+import { McpEmptyState } from "./McpEmptyState";
 import { StatePanel } from "./ui";
 import { McpDetailDrawer } from "./McpDetailDrawer";
 import { McpFormModal } from "./McpFormModal";
@@ -287,17 +287,14 @@ export function McpView({
             {t.mcps.reading}
           </div>
         ) : servers.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-white/10 bg-zinc-900/20 px-6 py-16 text-center">
-            <div className="grid size-10 place-items-center rounded-full border border-white/[0.07] bg-white/[0.03]">
-              <Wrench className="size-4 text-zinc-500" />
-            </div>
-            <p className="text-sm font-semibold text-zinc-200">
-              {t.mcps.emptyTitle}
-            </p>
-            <p className="max-w-sm text-[12px] leading-relaxed text-zinc-500">
-              {t.mcps.emptyBody}
-            </p>
-          </div>
+          <McpEmptyState
+            onExploreStore={() => setShowStore(true)}
+            onAddManual={() => {
+              setEditing(null);
+              setFormError(null);
+              setFormOpen(true);
+            }}
+          />
         ) : (
           <VirtualCardGrid
             items={servers}
