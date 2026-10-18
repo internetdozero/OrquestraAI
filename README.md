@@ -20,6 +20,14 @@
 
 ---
 
+## ⚡ Quick Install
+
+```bash
+curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash
+```
+
+---
+
 ## 🌟 What is OrquestraAI?
 
 Modern AI engineering often involves using multiple AI coding agents and CLI harnesses concurrently: **Claude Code**, **OpenAI Codex**, **xAI Grok**, **Antigravity (AGY)**, **Freebuff / Manicode**, **GitHub Copilot CLI**, **Hermes Agent**, **OpenCode**, and **Kilo Code**.
@@ -102,14 +110,6 @@ npm run test:all
 
 # Run Rust sessions and harness tests directly
 cargo test --lib
-```
-
----
-
-## ⚡ Quick Install
-
-```bash
-curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash
 ```
 
 ---

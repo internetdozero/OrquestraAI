@@ -20,6 +20,14 @@
 
 ---
 
+## ⚡ Instalação Rápida
+
+```bash
+curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash
+```
+
+---
+
 ## 🌟 O que é o OrquestraAI?
 
 A rotina de engenharia com agentes de IA modernos costuma envolver múltiplos assistentes e CLIs simultaneamente: **Claude Code**, **OpenAI Codex**, **xAI Grok**, **Antigravity (AGY)**, **Freebuff / Manicode**, **GitHub Copilot CLI**, **Hermes Agent**, **OpenCode** e **Kilo Code**.
@@ -102,14 +110,6 @@ npm run test:all
 
 # Executa os testes do core Rust diretamente
 cargo test --lib
-```
-
----
-
-## ⚡ Instalação Rápida
-
-```bash
-curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash
 ```
 
 ---
