@@ -113,7 +113,19 @@ fn text_in(value: &serde_json::Value) -> Option<String> {
             (!out.is_empty()).then(|| out.join("\n"))
         }
         serde_json::Value::Object(map) => {
-            for key in ["text", "content", "message", "body", "input", "output"] {
+            // Freebuff parts distinguish `kind: "text"` from `kind: "reasoning"`,
+            // `kind: "tool"`, `kind: "ad"`. Tool calls and execution outputs
+            // are internal actions, not conversation speech.
+            if let Some(kind) = map
+                .get("kind")
+                .or_else(|| map.get("type"))
+                .and_then(serde_json::Value::as_str)
+            {
+                if !matches!(kind, "text" | "input_text" | "output_text") {
+                    return None;
+                }
+            }
+            for key in ["text", "content", "message", "body"] {
                 if let Some(found) = map.get(key).and_then(text_in) {
                     if !found.trim().is_empty() {
                         return Some(found);
