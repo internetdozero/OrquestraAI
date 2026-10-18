@@ -48,7 +48,7 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
         backup_dir = Some(backup.clone());
 
         for spec in harness::HARNESSES {
-            if !home.join(spec.install_rel).is_dir() {
+            if !harness::is_installed(spec, home) {
                 continue;
             }
 

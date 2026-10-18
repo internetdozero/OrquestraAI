@@ -33,7 +33,7 @@ pub fn list_targets() -> Result<Vec<McpTargetStatus>, String> {
                 id: spec.id.to_string(),
                 label: spec.label.to_string(),
                 config_path: home.join(mcp.rel).to_string_lossy().into_owned(),
-                installed: home.join(spec.install_rel).is_dir(),
+                installed: harness::is_installed(spec, &home),
             }
         })
         .collect())
@@ -75,7 +75,7 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Res
     let mut backup_dir: Option<PathBuf> = None;
 
     for spec in harness::mcp_targets() {
-        if !home.join(spec.install_rel).is_dir() {
+        if !harness::is_installed(spec, home) {
             continue;
         }
 
