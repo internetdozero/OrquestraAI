@@ -187,14 +187,14 @@ fn fallback_from_brain(store: &Path) -> Vec<UnifiedSession> {
     entries
         .flatten()
         .filter(|entry| entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false))
-        .filter_map(|entry| {
+        .map(|entry| {
             let id = entry.file_name().to_string_lossy().into_owned();
             let mut session = UnifiedSession::new(HARNESS, id.clone(), label(&id, None, None));
             session.updated_at = utils::modified_secs(&entry.path())
                 .map(utils::iso8601_from_secs)
                 .unwrap_or_default();
             session.size_bytes = artifact_size(store, &id);
-            Some(session)
+            session
         })
         .collect()
 }

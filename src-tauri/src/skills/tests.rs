@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Unit tests for the vault, the projections and the instruction file.
 
 use super::agents::{read_agents, write_agents};

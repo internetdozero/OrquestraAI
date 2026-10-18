@@ -30,7 +30,7 @@ pub fn spawn() {
     let builder = std::thread::Builder::new().name("orquestra-auto-purge".to_string());
 
     if let Err(error) = builder.spawn(run) {
-        eprintln!("[orquestra] auto-purge daemon did not start: {error}");
+        crate::log_error!("auto-purge daemon did not start: {error}");
     }
 }
 
@@ -39,7 +39,7 @@ fn run() {
         std::thread::sleep(TICK);
 
         if let Err(error) = tick() {
-            eprintln!("[orquestra] auto-purge skipped: {error}");
+            crate::log_warn!("auto-purge skipped: {error}");
         }
     }
 }
@@ -63,12 +63,12 @@ fn tick() -> Result<(), String> {
     }
 
     let report = purge::execute_selection(&store, selection)?;
-    eprintln!(
-        "[orquestra] auto-purge removed {} sessions ({} bytes) with {} failures",
+    crate::log_info!(
+        "auto-purge removed {} sessions ({} bytes) with {} failures",
         report.deleted_count, report.reclaimed_bytes, report.failed_count
     );
     for error in &report.errors {
-        eprintln!("[orquestra] auto-purge: {error}");
+        crate::log_error!("auto-purge: {error}");
     }
 
     Ok(())

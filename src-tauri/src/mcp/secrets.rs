@@ -140,7 +140,10 @@ fn interpolate_with(
             continue;
         }
         if bytes[index] != b'$' {
-            let character = value[index..].chars().next().expect("valid UTF-8 boundary");
+            let character = match value[index..].chars().next() {
+                Some(c) => c,
+                None => return output,
+            };
             output.push(character);
             index += character.len_utf8();
             continue;

@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Transcript-reader fixtures: one test per harness store layout.
 //!
 //! Each test builds the real on-disk shape (JSONL log, SQLite database or

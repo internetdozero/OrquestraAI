@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Per-harness deletion: what each adapter must remove, and what it must
 //! leave behind.
 

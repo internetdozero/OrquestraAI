@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Tests for the pure layers of the session catalog: timestamp and title
 //! handling, the atomic policy sidecar, and the frozen payload shapes.
 

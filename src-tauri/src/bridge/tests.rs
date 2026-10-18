@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 //! Unit tests for fusion: backups, link state, config merging and the
 //! secondary discovery cleanup.
 

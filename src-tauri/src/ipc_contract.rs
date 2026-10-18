@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Frozen wire contract between the Rust core and the React client.
 //!
 //! The frontend talks to the core through `invoke("<command>")` and reads the

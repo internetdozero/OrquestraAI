@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 //! Unit tests for the built-in profiles, the preset store and the planning
 //! that decides what an apply will project.
 

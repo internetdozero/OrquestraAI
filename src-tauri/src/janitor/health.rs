@@ -187,10 +187,10 @@ fn tmp_stats(path: &Path, is_tmpfs: bool) -> Result<TmpStats, String> {
         stats.f_bsize
     } else {
         stats.f_frsize
-    } as u64;
-    let total_bytes = block_size.saturating_mul(stats.f_blocks as u64);
+    };
+    let total_bytes = block_size.saturating_mul(stats.f_blocks);
     let free_bytes = block_size
-        .saturating_mul(stats.f_bavail as u64)
+        .saturating_mul(stats.f_bavail)
         .min(total_bytes);
     let used_bytes = total_bytes.saturating_sub(free_bytes);
     let total_mb = total_bytes / 1_048_576;

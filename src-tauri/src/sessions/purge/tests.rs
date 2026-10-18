@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Destruction tests.
 //!
 //! Every fixture is built under `/var/tmp/testing` on the real store layout, so

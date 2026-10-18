@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Unit tests for seeding, the adapter serializers, and the deploy's
 //! non-destructive guarantees.
 

@@ -35,16 +35,16 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
     }
     let role_col = pick_column(&columns, &["role"]);
     let text_col = pick_column(&columns, &["parts_json", "content", "text", "body"]);
-    if role_col.is_none() || text_col.is_none() {
+    let (Some(role_col), Some(text_col)) = (role_col, text_col) else {
         return Vec::new();
-    }
+    };
     let ts_col = pick_column(&columns, &["created_at", "timestamp", "updated_at", "ts"]);
     let order_col = pick_column(&columns, &["seq", "created_at", "rowid"]).unwrap_or_else(|| "rowid".to_string());
 
     let sql = format!(
         "SELECT {}, {}, {} FROM messages WHERE thread_id = ?1 ORDER BY {} ASC LIMIT {LIMIT}",
-        role_col.expect("checked above"),
-        text_col.expect("checked above"),
+        role_col,
+        text_col,
         ts_col.as_deref().unwrap_or("NULL"),
         order_col,
     );
