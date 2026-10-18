@@ -300,6 +300,9 @@ pub fn run() {
                 Err(error) => crate::log_error!("storage bootstrap failed: {error}"),
             }
 
+            // Desktop entry and icon integration for Linux application launchers and docks.
+            desktop::ensure_desktop_integration();
+
             // Panel presence. A host without a tray must still get a window,
             // so a failure here is reported and the app carries on.
             if let Err(error) = tray::setup_tray(app.handle()) {

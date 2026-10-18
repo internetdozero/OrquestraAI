@@ -44,6 +44,39 @@ echo "✓ SHA-256 integrity check passed: binary authentic."
 mv "${TMP_DIR}/orquestra-ai" "$TARGET_BIN"
 chmod +x "$TARGET_BIN"
 
+# Set up desktop launcher & icons for Wayland and X11 docks
+APP_DIR="${HOME}/.local/share/applications"
+ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
+mkdir -p "$APP_DIR" "$ICON_DIR"
+
+curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/src-tauri/icons/icon.png" -o "${ICON_DIR}/orquestra.png" 2>/dev/null || true
+cp "${ICON_DIR}/orquestra.png" "${ICON_DIR}/orquestra-ai.png" 2>/dev/null || true
+cp "${ICON_DIR}/orquestra.png" "${HOME}/.local/share/icons/orquestra.png" 2>/dev/null || true
+cp "${ICON_DIR}/orquestra.png" "${HOME}/.local/share/icons/orquestra-ai.png" 2>/dev/null || true
+
+cat << 'EOF' > "${APP_DIR}/orquestra.desktop"
+[Desktop Entry]
+Name=OrquestraAI
+GenericName=AI Harness Control Plane
+Comment=Universal AI Harness Administration Platform
+Exec=orquestra %U
+Icon=orquestra
+Terminal=false
+Type=Application
+Categories=Development;Utility;System;
+StartupNotify=true
+StartupWMClass=orquestra
+Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;
+EOF
+cp "${APP_DIR}/orquestra.desktop" "${APP_DIR}/orquestra-ai.desktop" 2>/dev/null || true
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$APP_DIR" 2>/dev/null || true
+fi
+
 echo "========================================================"
 echo "🎉 OrquestraAI installed successfully to ${TARGET_BIN}"
 echo "Run 'orquestra' in your terminal to launch the control plane."
