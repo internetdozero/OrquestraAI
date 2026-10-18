@@ -1,4 +1,4 @@
-import { FolderGit2, Pin, Trash2 } from "lucide-react";
+import { Eye, FolderGit2, Pin, Trash2 } from "lucide-react";
 import { scopeLabel } from "../../lib/harnesses";
 import { useI18n } from "../../hooks/useI18n";
 import type { UnifiedSession } from "../../lib/sessions";
@@ -17,10 +17,11 @@ interface SessionRowProps {
   busy: boolean;
   onTogglePin: () => void;
   onDelete: () => void;
+  onInspect: () => void;
 }
 
 /** One compact session card: harness badge, title, cwd, age, size, actions. */
-export function SessionRow({ session, busy, onTogglePin, onDelete }: SessionRowProps) {
+export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: SessionRowProps) {
   const { t, locale } = useI18n();
   const s = t.sessions;
 
@@ -37,10 +38,15 @@ export function SessionRow({ session, busy, onTogglePin, onDelete }: SessionRowP
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[12.5px] font-medium text-zinc-100" title={session.title}>
+        <button
+          type="button"
+          onClick={onInspect}
+          title={s.inspectTitle}
+          className="block w-full truncate text-left text-[12.5px] font-medium text-zinc-100 transition hover:text-emerald-200"
+        >
           {session.isPinned && <span className="mr-1 text-amber-300">📌</span>}
           {session.title || session.id}
-        </p>
+        </button>
         <p
           className="flex min-w-0 items-center gap-1 truncate font-mono text-[10.5px] text-zinc-500"
           title={session.projectPath ?? session.id}
@@ -64,6 +70,15 @@ export function SessionRow({ session, busy, onTogglePin, onDelete }: SessionRowP
       </span>
 
       <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={onInspect}
+          title={s.inspectTitle}
+          aria-label={s.inspectTitle}
+          className="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.02] text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:text-emerald-200 focus-visible:opacity-100"
+        >
+          <Eye className="size-3.5" />
+        </button>
         <button
           type="button"
           disabled={busy}

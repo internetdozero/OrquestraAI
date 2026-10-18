@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { History, RefreshCw } from "lucide-react";
 import { useSessions } from "../../hooks/useSessions";
 import { useI18n } from "../../hooks/useI18n";
+import type { UnifiedSession } from "../../lib/sessions";
 import { ErrorBanner } from "../ui";
+import { SessionDetailDrawer } from "./SessionDetailDrawer";
 import { SessionsHeader } from "./SessionsHeader";
 import { SessionsToolbar } from "./SessionsToolbar";
 import { SessionsTable } from "./SessionsTable";
@@ -21,6 +24,15 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
   const { t } = useI18n();
   const state = useSessions({ isTauri, notifyOnPurge, onToast, onError });
   const s = t.sessions;
+  const [inspecting, setInspecting] = useState<UnifiedSession | null>(null);
+  // Re-resolve against the live list so pin toggles repaint the drawer.
+  const liveInspecting =
+    inspecting == null
+      ? null
+      : (state.sessions.find(
+          (session) =>
+            session.harness === inspecting.harness && session.id === inspecting.id,
+        ) ?? inspecting);
 
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-3">
@@ -79,6 +91,7 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
         pendingIds={state.pendingIds}
         onTogglePin={(h, id) => void state.togglePin(h, id)}
         onDelete={(h, id) => void state.deleteSingleSession(h, id)}
+        onInspect={setInspecting}
       />
 
       {state.purgeFilter && (
@@ -89,6 +102,24 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
           purging={state.purging}
           onCancel={state.closePurgeModal}
           onConfirm={() => void state.executePurge()}
+        />
+      )}
+
+      {liveInspecting && (
+        <SessionDetailDrawer
+          session={liveInspecting}
+          onClose={() => setInspecting(null)}
+          onTogglePin={() =>
+            void state.togglePin(liveInspecting.harness, liveInspecting.id)
+          }
+          onDelete={() => {
+            void state.deleteSingleSession(
+              liveInspecting.harness,
+              liveInspecting.id,
+            );
+            setInspecting(null);
+          }}
+          onToast={onToast}
         />
       )}
 

@@ -14,6 +14,7 @@ interface SessionsTableProps {
   pendingIds: ReadonlySet<string>;
   onTogglePin: (harness: string, sessionId: string) => void;
   onDelete: (harness: string, sessionId: string) => void;
+  onInspect: (session: UnifiedSession) => void;
 }
 
 /**
@@ -28,6 +29,7 @@ export function SessionsTable({
   pendingIds,
   onTogglePin,
   onDelete,
+  onInspect,
 }: SessionsTableProps) {
   const { t } = useI18n();
   const s = t.sessions;
@@ -80,6 +82,7 @@ export function SessionsTable({
             busy={pendingIds.has(`${session.harness}:${session.id}`)}
             onTogglePin={() => onTogglePin(session.harness, session.id)}
             onDelete={() => onDelete(session.harness, session.id)}
+            onInspect={() => onInspect(session)}
           />
         </div>
       ))}
