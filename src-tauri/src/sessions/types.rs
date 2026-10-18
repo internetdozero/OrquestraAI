@@ -59,6 +59,19 @@ impl UnifiedSession {
     }
 }
 
+/// One conversation turn, normalized for the transcript feed in the detail
+/// drawer. Parsing is best-effort: see `adapters::utils::read_transcript`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranscriptTurn {
+    /// `user`, `assistant` or `system`.
+    pub role: String,
+    /// Plain text of the turn; tool payloads are excluded, long dumps trimmed.
+    pub content: String,
+    /// ISO 8601 UTC when the harness recorded one.
+    pub timestamp: Option<String>,
+}
+
 /// Filter the Sessions tab (and, from Phase 2, purge) applies in memory.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]

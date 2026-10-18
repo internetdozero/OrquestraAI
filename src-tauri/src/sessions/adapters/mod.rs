@@ -25,7 +25,7 @@ pub mod utils;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
 pub use utils::home;
 
@@ -70,6 +70,14 @@ pub trait SessionAdapter: Send + Sync {
     /// Reclaim the pages a delete left in this harness's databases. Failing
     /// here is reported, never fatal: the rows are already gone.
     fn optimize_storage(&self) -> Result<(), String>;
+
+    /// Conversation turns for the detail drawer's transcript feed.
+    ///
+    /// Defaults to empty: most harnesses have no parsed reader yet, and the
+    /// UI shows its in-development note for those instead of an error.
+    fn read_transcript(&self, _session_id: &str) -> Vec<TranscriptTurn> {
+        Vec::new()
+    }
 }
 
 /// All adapters, bound to one home directory.

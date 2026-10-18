@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "./tauri";
 
 /** Canonical harness ids, in the order the core lists them. */
 export type SessionHarness =
@@ -80,6 +81,26 @@ export interface RetentionPolicy {
 /** Every harness conversation, newest first, with pin state applied. */
 export function getUnifiedSessions(): Promise<UnifiedSession[]> {
   return invoke<UnifiedSession[]>("get_unified_sessions");
+}
+
+/** One conversation turn. Mirrors the Rust `TranscriptTurn` struct. */
+export interface TranscriptTurn {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp?: string;
+}
+
+/** Conversation turns for the detail drawer's feed; empty outside Tauri or
+ * for harnesses without a transcript reader yet. */
+export async function getSessionTranscript(
+  harness: string,
+  sessionId: string,
+): Promise<TranscriptTurn[]> {
+  if (!isTauri()) return [];
+  return invoke<TranscriptTurn[]>("get_session_transcript", {
+    harness,
+    sessionId,
+  });
 }
 
 /** Warm index of the unified catalog, filled once per boot by the background preload. */

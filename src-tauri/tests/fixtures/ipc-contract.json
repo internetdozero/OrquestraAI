@@ -15,6 +15,7 @@
     "estimate_purge",
     "get_bridge_status",
     "get_retention_policy",
+    "get_session_transcript",
     "get_system_health",
     "get_unified_sessions",
     "harness_summary",
@@ -161,6 +162,7 @@
       "updatedAt"
     ],
     "SessionFilter": ["harness", "olderThanDays", "pinnedOnly", "search"],
+    "TranscriptTurn": ["content", "role", "timestamp"],
     "RetentionPolicy": [
       "autoPurgeEnabled",
       "autoPurgeIntervalHours",

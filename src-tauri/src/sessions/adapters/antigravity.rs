@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
 use super::{fsops, utils, SessionAdapter};
 
@@ -98,6 +98,26 @@ impl SessionAdapter for Antigravity {
         }
 
         Ok(())
+    }
+
+    /// Every conversation turn in `brain/<id>/…/logs/transcript.jsonl`,
+    /// checked in both the desktop and CLI stores. Either layout may or may
+    /// not nest the logs under `.system_generated`; a missing transcript is
+    /// an empty feed.
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        for relative in STORES {
+            let brain = self.root.join(relative).join("brain").join(session_id);
+            for candidate in [
+                brain.join(".system_generated").join("logs").join("transcript.jsonl"),
+                brain.join("logs").join("transcript.jsonl"),
+            ] {
+                if candidate.is_file() {
+                    return utils::read_transcript(&candidate);
+                }
+            }
+        }
+
+        Vec::new()
     }
 }
 

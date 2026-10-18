@@ -15,7 +15,13 @@ use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OpenFlags, Row};
 use serde_json::Value;
 
-use crate::sessions::types::TITLE_LIMIT;
+use crate::sessions::types::{TranscriptTurn, TITLE_LIMIT};
+
+/// Most turns a transcript read returns; a full replay is the drawer's job
+/// to page, not the core's to dump in one payload.
+const MAX_TRANSCRIPT_TURNS: usize = 1000;
+/// Longest single turn kept: tool dumps are trimmed, never dropped whole.
+const MAX_TURN_CHARS: usize = 12_000;
 
 /// Refuse to load a JSONL index bigger than this; such a file is a runaway
 /// artifact, and parsing it would cost more than the listing is worth.
@@ -218,6 +224,140 @@ pub fn json_timestamp(value: &Value, keys: &[&str]) -> Option<i64> {
     }
 
     None
+}
+
+/// Plain text of one transcript line's message, restricted to `text` blocks.
+///
+/// Tool calls and tool results are excluded on purpose: they are usually
+/// command output or JSON arguments, not conversation. A corrupt or foreign
+/// shape yields `None` instead of panicking.
+fn turn_text(message: &Value) -> Option<String> {
+    match message {
+        Value::String(text) => {
+            let text = text.trim();
+            (!text.is_empty()).then(|| text.to_string())
+        }
+        Value::Array(blocks) => {
+            let mut joined = String::new();
+            for block in blocks {
+                let Some(block) = block.as_object() else {
+                    continue;
+                };
+                let kind = block
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("text");
+                if kind != "text" {
+                    continue;
+                }
+                if let Some(text) = block.get("text").and_then(Value::as_str) {
+                    let text = text.trim();
+                    if !text.is_empty() {
+                        if !joined.is_empty() {
+                            joined.push('\n');
+                        }
+                        joined.push_str(text);
+                    }
+                }
+            }
+            (!joined.is_empty()).then_some(joined)
+        }
+        Value::Object(map) => map.get("content").and_then(turn_text),
+        _ => None,
+    }
+}
+
+/// Canonical role of one transcript line, or `None` to skip it.
+///
+/// Accepts the `role` field (`user`, `assistant`, `system`, plus the `human`
+/// and `model` aliases some harnesses use) and the `type` marker Claude
+/// writes on every line. Anything else — summaries, mode latches, permission
+/// records — is not conversation and is skipped.
+fn turn_role(entry: &Value) -> Option<&'static str> {
+    for key in ["role", "type"] {
+        let source = if key == "role" {
+            entry.get("role").or_else(|| entry.get("message")?.get("role"))
+        } else {
+            entry.get("type")
+        };
+        if let Some(role) = source.and_then(Value::as_str) {
+            return match role {
+                "user" | "human" => Some("user"),
+                "assistant" | "model" | "ai" => Some("assistant"),
+                "system" => Some("system"),
+                _ => continue,
+            };
+        }
+    }
+    None
+}
+
+/// Timestamp of one transcript line as ISO 8601 UTC, when recorded.
+fn turn_timestamp(entry: &Value) -> Option<String> {
+    if let Some(raw) = json_string(entry, &["timestamp", "published_at", "created_at"]) {
+        return Some(normalized_timestamp(&raw));
+    }
+    json_timestamp(entry, &["timestamp", "published_at", "created_at"])
+        .map(iso8601_from_secs)
+}
+
+/// One parsed turn from a raw JSON value, or `None` when the line carries no
+/// conversation text.
+fn parse_turn(entry: &Value) -> Option<TranscriptTurn> {
+    let role = turn_role(entry)?;
+    let message = entry.get("message").unwrap_or(entry);
+    let mut content = turn_text(message)
+        .or_else(|| entry.get("content").and_then(turn_text))
+        .or_else(|| json_string(entry, &["text", "input", "output"]))?;
+    if content.chars().count() > MAX_TURN_CHARS {
+        content = content.chars().take(MAX_TURN_CHARS).collect();
+        content.push('…');
+    }
+    Some(TranscriptTurn {
+        role: role.to_string(),
+        content,
+        timestamp: turn_timestamp(entry),
+    })
+}
+
+/// Every conversation turn in a JSONL transcript file.
+///
+/// Corrupt lines are skipped (`filter_map`, never `unwrap`): a harness that
+/// is mid-write when the drawer opens must not break the read. A file that
+/// parses as a single JSON array instead is read element-wise, so both
+/// layouts work without the caller caring.
+///
+/// Oversized files are skipped whole, like [`read_jsonl`]: a runaway
+/// artifact must not stall the UI thread.
+///
+/// [`read_jsonl`]: crate::sessions::adapters::utils::read_jsonl
+pub fn read_transcript(path: &Path) -> Vec<TranscriptTurn> {
+    if file_size(path) > MAX_JSONL_BYTES {
+        return Vec::new();
+    }
+
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+
+    let mut turns: Vec<TranscriptTurn> = raw
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .filter_map(|entry| parse_turn(&entry))
+        .take(MAX_TRANSCRIPT_TURNS)
+        .collect();
+
+    if turns.is_empty() {
+        if let Ok(Value::Array(items)) = serde_json::from_str::<Value>(&raw) {
+            turns = items
+                .iter()
+                .filter_map(parse_turn)
+                .take(MAX_TRANSCRIPT_TURNS)
+                .collect();
+        }
+    }
+
+    turns
 }
 
 /// Human text of a message body: a plain string, a list of `{"text": ...}`

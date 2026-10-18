@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Copy, Eye, Pin, Trash2, X } from "lucide-react";
+import { Copy, Pin, Trash2, X } from "lucide-react";
 import { scopeLabel } from "../../lib/harnesses";
 import type { UnifiedSession } from "../../lib/sessions";
 import {
@@ -11,6 +11,7 @@ import {
 } from "../../lib/sessionFormat";
 import { cn } from "../../lib/utils";
 import { useI18n } from "../../hooks/useI18n";
+import { TranscriptFeed } from "./TranscriptFeed";
 
 interface SessionDetailDrawerProps {
   session: UnifiedSession;
@@ -38,8 +39,8 @@ function CopyButton({ value, label, onCopied }: { value: string; label: string; 
 }
 
 /**
- * Sliding inspector for one session: full metadata, pin/delete actions
- * and a transcript placeholder until Phase 2 ships the real preview.
+ * Sliding inspector for one session: full metadata, the real transcript
+ * feed, and pin/delete actions.
  */
 export function SessionDetailDrawer({
   session,
@@ -171,16 +172,12 @@ export function SessionDetailDrawer({
             <p className="text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase">
               {s.transcriptTitle}
             </p>
-            <div className="mt-1 rounded border border-white/[0.06] bg-black/40 p-3 font-mono text-[10.5px] leading-relaxed text-zinc-500">
-              <p className="flex items-center gap-1.5 text-zinc-400">
-                <Eye className="size-3" />
-                {s.transcriptSoon}
-              </p>
-              {session.title && (
-                <p className="selectable-text mt-2 border-l-2 border-emerald-500/30 pl-2 text-zinc-300">
-                  {session.title}
-                </p>
-              )}
+            <div className="mt-1">
+              <TranscriptFeed
+                key={`${session.harness}:${session.id}`}
+                harness={session.harness}
+                sessionId={session.id}
+              />
             </div>
           </section>
         </div>
