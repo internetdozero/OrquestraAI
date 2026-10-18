@@ -264,6 +264,48 @@ fn antigravity_tool_execution_dumps_are_not_speech() {
 }
 
 #[test]
+fn grok_sanitizes_environment_rules_and_extracts_user_query() {
+    let home = TestHome::new("grok-user-query");
+    home.write(
+        ".grok/sessions/-work-app/sess-7/chat_history.jsonl",
+        "{\"type\":\"user\",\"synthetic_reason\":\"system_reminder\",\
+          \"content\":\"<user_info>cwd: /work/app</user_info>\\n<rules>be terse</rules>\"}\n\
+         {\"type\":\"user\",\
+          \"content\":\"<user_info>cwd: /work/app</user_info>\\n<rules>be terse</rules>\"}\n\
+         {\"type\":\"user\",\
+          \"content\":\"<system-reminder>context</system-reminder>\\n<user_query>\\nfix the drawer\\n</user_query>\",\
+          \"timestamp\":1791708904}\n\
+         {\"type\":\"assistant\",\
+          \"content\":[{\"type\":\"text\",\"text\":\"Fixed the **drawer**.\"}]}\n\
+         {\"type\":\"assistant\",\"synthetic_reason\":\"task_completed\",\
+          \"content\":\"task finished\"}\n",
+    );
+
+    let turns = adapter(&home.0, "grok").read_transcript("sess-7");
+    assert_eq!(
+        turns.len(),
+        2,
+        "rules and synthetic rows are scaffolding: {turns:?}"
+    );
+    assert_eq!(turns[0].role, "user");
+    assert_eq!(turns[0].content, "fix the drawer");
+    assert_eq!(
+        turns[0].timestamp.as_deref(),
+        Some("2026-10-11T08:55:04Z")
+    );
+    assert_eq!(turns[1].role, "assistant");
+    assert_eq!(turns[1].content, "Fixed the **drawer**.");
+    assert!(
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("<rules>")
+                && !turn.content.contains("<user_info>")
+                && !turn.content.contains("system-reminder")),
+        "no environment scaffolding anywhere: {turns:?}"
+    );
+}
+
+#[test]
 fn system_prompt_rows_never_reach_the_feed() {
     let home = TestHome::new("grok-system");
     home.write(

@@ -87,6 +87,7 @@ export const sessions = {
   fixturesBanner:
     "Modo de fixtures · 9 transcrições simuladas para revisão visual (somente desenvolvimento)",
   copyMessage: "Copiar mensagem",
+  copyCode: "Copiar código",
   copied: "Copiado para a área de transferência",
   searchMessages: "Buscar mensagens…",
   exportMarkdown: "Exportar Markdown",

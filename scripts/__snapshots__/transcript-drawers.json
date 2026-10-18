@@ -1,0 +1,605 @@
+{
+  "version": 1,
+  "drawers": [
+    {
+      "harness": "antigravity",
+      "title": "Sanitize the transcript adapter",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Move the transcript sanitizer into its own adapter module and keep the drawer stable.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Plan Keep the sanitizer behind clean_turn_content. Drop tool-run records before they reach the feed. Leave the adapter line caps intact. The drawer should only ever paint dialogue.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 3,
+          "quotes": 0,
+          "headings": 1,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Also stop the system prompt from showing up as a bubble in the transcript.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Done. turn_role now refuses system and developer rows, so the feed starts at your first real prompt. Tool-run records are cut at their header, which means a planner reply that ran a command shows the reply and nothing else.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "grok",
+      "title": "System prompt in the drawer",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "The drawer opens with a wall of harness system instructions. Why?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "That was the harness system prompt being treated as a transcript turn. The reader now skips system and developer roles entirely, so the feed opens with your first question instead.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 2,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "And the transcript search?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Search stays client-side over the parsed turns: it matches content only, ignores role labels, and never re-reads the session file.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "codex",
+      "title": "Page Codex rollouts independently",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Split the rollout reader so each thread pages independently.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "I kept read_transcript on the adapter and left rollout discovery alone. response_item rows only user and assistant payload roles only tool items skipped That keeps developer instructions and environment setup out of the transcript.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 4,
+          "bullets": 3,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Did you keep the 1000-turn ceiling?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Yes. MAX_TRANSCRIPT_TURNS is shared with the Codex multi-file pager, so a long rollout stops at the same cap as every other harness.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Good. Run the tests.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "sessions::adapters is green: 65 passed. The transcript fixtures cover all nine stores now.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "claude",
+      "title": "Transcript pipeline review",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Summarize what changed in the transcript pipeline this week.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Transcript pipeline Sanitization system prompts are skipped tool-run records are stripped thinking blocks stay removed Fixtures one gallery covers all nine harnesses The exported Markdown mirrors the visible feed. What you review is what you copy.",
+          "strong": 2,
+          "em": 1,
+          "inlineCode": 0,
+          "bullets": 4,
+          "ordered": 0,
+          "quotes": 1,
+          "headings": 1,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Any risk to the IPC contract?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "None. TranscriptTurn keeps the same three fields; only the values of role narrow to user and assistant.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 4,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "freebuff",
+      "title": "Desktop parts JSON cleanup",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "The desktop thread shows raw JSON parts in the assistant bubble.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "The parts_json payload is now unwrapped before rendering: only text parts contribute, while reasoning, tool and ad parts are skipped. Plain-string rows still pass through unchanged.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 5,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "So a thread with reasoning blocks shows just the answer?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Exactly. Reasoning never leaves the reader, and the transcript keeps sequence order from the seq column.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "copilot",
+      "title": "Copilot turns table audit",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Show me the last two turns from the Copilot store.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "The turns table stores one row per exchange. The reader splits each row into a user turn and an assistant turn, ordered by turn_index, and skips empty halves.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 2,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "What happens when a response is still streaming?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "The prompt still renders; the assistant half is simply absent until the row is updated. No placeholder text and no error.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "hermes",
+      "title": "Hermes migration triage",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Triage the failed migration job and keep the transcript readable.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "The job failed on a lock timeout, not on the schema change. Retry after the writer drains. Keep the transcript to active messages only.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 2,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "What about the archived drafts?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "They stay out of the feed: rows with active = 0 are skipped, and epoch-float timestamps are normalized to ISO 8601 for display.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "opencode",
+      "title": "OpenCode text parts join",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "The part table has text and tool rows. Which ones should the drawer show?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Only text parts: TS const parts = rows.filter((part) => part.type === \"text\"); The join keeps message roles authoritative, so a tool part never becomes an assistant bubble.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": [
+            {
+              "lang": "ts",
+              "code": "const parts = rows.filter((part) => part.type === \"text\");"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "And when the join is unavailable?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "The reader falls back to the message table, then to part rows that carry their own role. Same normalized transcript, three schema shapes.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 2,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    },
+    {
+      "harness": "kilo",
+      "title": "Kilo code-part extraction",
+      "overflow": 0,
+      "turns": [
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Extract the code part from the Kilo transcript without the diff noise.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "The reader now prefers text parts and ignores tool payloads, so a code-heavy reply keeps its prose and code while the diff metadata stays on disk.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 1,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "user",
+          "justify": "flex-end",
+          "emerald": true,
+          "text": "Does the search still match inside code?",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        },
+        {
+          "role": "assistant",
+          "justify": "flex-start",
+          "emerald": false,
+          "text": "Yes. Search runs over the final normalized content, so fenced code is searchable just like prose.",
+          "strong": 0,
+          "em": 0,
+          "inlineCode": 0,
+          "bullets": 0,
+          "ordered": 0,
+          "quotes": 0,
+          "headings": 0,
+          "code": []
+        }
+      ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ export const CLAUDE_TURNS: TranscriptTurn[] = [
   {
     role: "assistant",
     content:
-      "## Transcript pipeline\n\n**Sanitization**\n- system prompts are skipped\n- tool-run records are stripped\n- thinking blocks stay removed\n\n**Fixtures**\n- one gallery covers all nine harnesses\n\nThe Markdown export mirrors the visible feed, so what you review is what you copy.",
+      "## Transcript pipeline\n\n**Sanitization**\n- system prompts are skipped\n- tool-run records are stripped\n- thinking blocks stay removed\n\n**Fixtures**\n- one gallery covers all nine harnesses\n\n> The exported Markdown mirrors the visible feed.\n\n_What you review is what you copy._",
     timestamp: "2026-10-18T11:14:30Z",
   },
   {

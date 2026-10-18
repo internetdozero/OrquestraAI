@@ -23,6 +23,7 @@ mod tests;
 mod transcript_tests;
 pub mod time;
 mod transcript;
+mod transcript_clean;
 mod transcript_sanitize;
 pub mod utils;
 

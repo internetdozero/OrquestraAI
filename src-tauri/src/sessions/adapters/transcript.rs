@@ -13,7 +13,7 @@ use serde_json::Value;
 
 use crate::sessions::types::TranscriptTurn;
 
-use super::transcript_sanitize::strip_tool_run;
+pub use super::transcript_clean::clean_turn_content;
 use super::utils::{
     file_size, iso8601_from_secs, json_string, json_timestamp, normalized_timestamp,
 };
@@ -105,8 +105,14 @@ fn turn_text(message: &Value) -> Option<String> {
 /// (`USER_EXPLICIT`, `MODEL`) and the `type` marker (`USER_INPUT`,
 /// `PLANNER_RESPONSE`, plus what Claude writes on every line). Anything else
 /// — system prompts, developer instructions, summaries, mode latches,
-/// permission records — is not conversation and is skipped.
+/// permission records — is not conversation and is skipped. Grok marks its
+/// synthetic scaffolding rows (`system_reminder`, `task_completed`) with
+/// `synthetic_reason`, which is refused before the role is even read.
 fn turn_role(entry: &Value) -> Option<&'static str> {
+    if entry.get("synthetic_reason").is_some() {
+        return None;
+    }
+
     for key in ["role", "source", "type"] {
         let source = match key {
             "role" => entry
@@ -138,61 +144,6 @@ fn turn_timestamp(entry: &Value) -> Option<String> {
     }
     json_timestamp(entry, &["timestamp", "published_at", "created_at"])
         .map(iso8601_from_secs)
-}
-
-/// Drop one `<tag …>…</tag>` span family from already-extracted text.
-/// Closed spans are removed; an unclosed opener drops everything after it,
-/// because a dangling thinking block is truncated reasoning, never content.
-fn strip_tag(text: &str, tag: &str) -> String {
-    let open = format!("<{tag}");
-    let close = format!("</{tag}>");
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-
-    while let Some(start) = rest.find(open.as_str()) {
-        let Some(end_of_open) = rest[start..].find('>') else {
-            break;
-        };
-        let after_open = start + end_of_open + 1;
-        out.push_str(&rest[..start]);
-        if let Some(end) = rest[after_open..].find(close.as_str()) {
-            rest = &rest[after_open + end + close.len()..];
-        } else {
-            rest = "";
-            break;
-        }
-    }
-    out.push_str(rest);
-    out
-}
-
-/// Clean raw turn text for display: user prompts wrapped in Antigravity's
-/// `<USER_REQUEST>…</USER_REQUEST>` envelope are unwrapped to the actual
-/// prompt, thinking blocks are stripped for every role, and assistant text
-/// drops any tool-execution record a harness appended to it.
-pub fn clean_turn_content(role: &str, raw: &str) -> String {
-    let mut text = raw.trim().to_string();
-
-    if role == "user" {
-        if let Some(start) = text.find("<USER_REQUEST>") {
-            let inner = &text[start + "<USER_REQUEST>".len()..];
-            let end = inner
-                .find("</USER_REQUEST>")
-                .map(|index| &inner[..index])
-                .unwrap_or(inner);
-            text = end.trim().to_string();
-        }
-    }
-
-    for tag in ["thought", "thinking", "think"] {
-        text = strip_tag(&text, tag);
-    }
-
-    if role != "user" {
-        text = strip_tool_run(&text);
-    }
-
-    text.trim().to_string()
 }
 
 /// Assemble one turn: system scaffolding refused, cleaned, empties dropped,
@@ -341,6 +292,45 @@ mod tests {
         assert_eq!(clean_turn_content("assistant", prose), prose);
         let pasted = "Created At: when the record was written";
         assert_eq!(clean_turn_content("user", pasted), pasted);
+    }
+
+    #[test]
+    fn grok_user_query_unwraps_and_drops_environment_rules() {
+        assert_eq!(
+            clean_turn_content(
+                "user",
+                "<user_info>cwd: /work</user_info>\n<user_query>\n  fix it\n</user_query>"
+            ),
+            "fix it"
+        );
+        assert!(clean_turn_content(
+            "user",
+            "<user_info>cwd: /work</user_info>\n<rules>be terse</rules>"
+        )
+        .is_empty());
+        assert!(clean_turn_content("user", "<rules>be terse</rules>").is_empty());
+    }
+
+    #[test]
+    fn synthetic_reason_rows_are_not_turns() {
+        for (role, reason) in [
+            ("user", "system_reminder"),
+            ("assistant", "task_completed"),
+        ] {
+            let entry = serde_json::json!({
+                "type": role,
+                "content": "synthetic",
+                "synthetic_reason": reason
+            });
+            assert!(parse_value(&entry).is_none(), "{reason} leaked");
+        }
+    }
+
+    #[test]
+    fn harness_tags_are_stripped() {
+        let raw = "before <system-reminder>noise</system-reminder>\
+                   <image_files>x.png</image_files>after <context>y</context>";
+        assert_eq!(clean_turn_content("assistant", raw), "before after");
     }
 
     #[test]

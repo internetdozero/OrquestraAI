@@ -12,14 +12,39 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  build-linux:
-    runs-on: ubuntu-22.04
+  build:
+    name: Build (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux x86_64
+            os: ubuntu-22.04
+            artifact: orquestra-linux-x86_64
+            bin_name: orquestra-linux-x86_64
+            is_linux: true
+          - name: macOS Apple Silicon (arm64)
+            os: macos-14
+            artifact: orquestra-macos-arm64
+            bin_name: orquestra-macos-arm64
+            is_linux: false
+          - name: macOS Intel (x86_64)
+            os: macos-13
+            artifact: orquestra-macos-x86_64
+            bin_name: orquestra-macos-x86_64
+            is_linux: false
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install system dependencies (WebKitGTK & Tauri prerequisites)
+        if: matrix.platform.is_linux
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -37,7 +62,7 @@ jobs:
 
       - name: Configure runner cargo environment
         run: |
-          # Remove local .cargo/config.toml that forces /usr/bin/sccache
+          # Remove local .cargo/config.toml that forces local paths
           rm -f .cargo/config.toml
 
       - name: Set up Rust toolchain
@@ -60,26 +85,53 @@ jobs:
       - name: Build OrquestraAI Release Binary & SHA-256 Checksum
         run: |
           npx tauri build --no-bundle
-          cp target/release/orquestra-ai ./orquestra-linux-x86_64
-          cp target/release/orquestra-ai ./orquestra-ai
-          chmod +x ./orquestra-linux-x86_64 ./orquestra-ai
-          sha256sum orquestra-ai orquestra-linux-x86_64 > SHA256SUMS.txt
+          mkdir -p bin-out
+          if [ "${{ matrix.platform.is_linux }}" = "true" ]; then
+            cp target/release/orquestra-ai bin-out/orquestra-linux-x86_64
+            cp target/release/orquestra-ai bin-out/orquestra-ai
+            chmod +x bin-out/orquestra-linux-x86_64 bin-out/orquestra-ai
+          else
+            cp target/release/orquestra-ai bin-out/${{ matrix.platform.bin_name }}
+            chmod +x bin-out/${{ matrix.platform.bin_name }}
+          fi
+          cd bin-out
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum * > SHA256SUMS.txt
+          else
+            shasum -a 256 * > SHA256SUMS.txt
+          fi
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: orquestra-linux-x86_64
-          path: |
-            ./orquestra-linux-x86_64
-            ./SHA256SUMS.txt
+          name: ${{ matrix.platform.artifact }}
+          path: bin-out/*
           retention-days: 14
 
-      - name: Create GitHub Release (if tagged or requested)
-        if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Unified Release Directory & Checksums
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f ! -name "SHA256SUMS.txt" -exec cp {} release-assets/ \;
+          cd release-assets
+          chmod +x *
+          sha256sum * > SHA256SUMS.txt
+          echo "=== Unified SHA256 Checksums ==="
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./orquestra-ai
-            ./orquestra-linux-x86_64
-            ./SHA256SUMS.txt
+            release-assets/*
           generate_release_notes: true
