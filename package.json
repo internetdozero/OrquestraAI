@@ -12,6 +12,7 @@
     "dev:tauri": "tauri dev",
     "check:ui": "node scripts/check-card-motion.mjs",
     "test": "node --test scripts",
+    "test:visual": "node scripts/visual-snapshots.mjs",
     "test:all": "node --test scripts && cargo test",
     "preview": "vite preview",
     "tauri": "tauri"

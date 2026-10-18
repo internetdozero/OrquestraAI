@@ -89,6 +89,7 @@ export const sessions: TranslationSchema["sessions"] = {
   fixturesBanner:
     "Fixture mode · 9 simulated harness transcripts for visual review (development only)",
   copyMessage: "Copy message",
+  copyCode: "Copy code",
   copied: "Copied to clipboard",
   searchMessages: "Search messages…",
   exportMarkdown: "Export Markdown",

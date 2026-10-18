@@ -3,6 +3,7 @@ import { Copy, Download, Loader2, MessagesSquare, Search, X } from "lucide-react
 import { useI18n } from "../../hooks/useI18n";
 import { getSessionTranscript, type TranscriptTurn } from "../../lib/sessions";
 import { cn } from "../../lib/utils";
+import { MarkdownTurn } from "./MarkdownTurn";
 
 export interface TranscriptMetadata {
   harness: string;
@@ -43,7 +44,7 @@ function Turn({ turn }: { turn: TranscriptTurn }) {
     >
       <div
         className={cn(
-          "relative max-w-[92%] rounded-xl border px-2.5 py-1.5",
+          "relative min-w-0 max-w-[92%] rounded-xl border px-2.5 py-1.5",
           isUser
             ? "border-emerald-500/25 bg-emerald-500/[0.08]"
             : "border-white/[0.07] bg-white/[0.025]",
@@ -63,9 +64,7 @@ function Turn({ turn }: { turn: TranscriptTurn }) {
             </span>
           )}
         </p>
-        <p className="selectable-text font-sans text-[12px] leading-relaxed whitespace-pre-wrap text-zinc-200">
-          {turn.content}
-        </p>
+        <MarkdownTurn content={turn.content} role={turn.role} />
         <button
           type="button"
           title={s.copyMessage}

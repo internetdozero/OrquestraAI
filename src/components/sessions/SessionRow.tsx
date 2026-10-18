@@ -26,7 +26,11 @@ export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: 
   const s = t.sessions;
 
   return (
-    <article className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/30 px-3 py-2.5 transition hover:border-white/[0.12]">
+    <article
+      data-session-harness={session.harness}
+      data-session-id={session.id}
+      className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/30 px-3 py-2.5 transition hover:border-white/[0.12]"
+    >
       <span
         className={cn(
           "shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-medium",
