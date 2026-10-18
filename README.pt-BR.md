@@ -109,7 +109,7 @@ cargo test --lib
 ## ⚡ Instalação Rápida
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/internetdozero/OrquestraAI/main/install.sh | bash
+curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash
 ```
 
 ---
