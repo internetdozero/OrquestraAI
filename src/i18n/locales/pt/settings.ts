@@ -59,6 +59,17 @@ export const settings = {
     copyDiag: "Copiar diagnóstico do sistema",
     copied: "Diagnóstico copiado para a área de transferência",
     copyFailed: (detail: string) => `Não foi possível copiar: ${detail}`,
+    updatesTitle: "Atualizações",
+    autoCheckAppTitle: "Verificar atualizações do app ao iniciar",
+    autoCheckAppDesc:
+      "Verifica automaticamente no GitHub por novas versões do OrquestraAI para desktop.",
+    autoCheckExtTitle: "Verificar atualizações das extensões oficiais",
+    autoCheckExtDesc:
+      "Busca melhorias do upstream para as skills oficiais e MCPs instalados.",
+    checkNow: "Verificar atualizações agora",
+    checking: "Verificando…",
+    upToDate: (version: string) =>
+      `Você está na versão mais recente — v${version}`,
   },
   sidebarAction: "Configurações",
   sidebarHint: "Preferências, idioma, retenção e sobre",

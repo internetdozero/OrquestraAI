@@ -10,6 +10,8 @@ export interface AppSettings {
   ramAlertThreshold: number;
   tmpWatchEnabled: boolean;
   accentColor: AccentColor;
+  autoCheckAppUpdates: boolean;
+  autoCheckExtensionUpdates: boolean;
 }
 
 const STORAGE_KEY = "orquestra_settings";
@@ -20,6 +22,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ramAlertThreshold: 85,
   tmpWatchEnabled: true,
   accentColor: "emerald",
+  autoCheckAppUpdates: true,
+  autoCheckExtensionUpdates: true,
 };
 
 function clampRam(value: number): number {
@@ -82,11 +86,27 @@ export function useAppSettings() {
     [setLocale],
   );
 
+  const setAutoCheckAppUpdates = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, autoCheckAppUpdates: enabled }));
+  }, []);
+
+  const setAutoCheckExtensionUpdates = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, autoCheckExtensionUpdates: enabled }));
+  }, []);
+
   const resetDefaults = useCallback(() => {
     setSettings(DEFAULT_SETTINGS);
   }, []);
 
-  return { settings, updateSetting, resetDefaults, locale, setLanguage };
+  return {
+    settings,
+    updateSetting,
+    setAutoCheckAppUpdates,
+    setAutoCheckExtensionUpdates,
+    resetDefaults,
+    locale,
+    setLanguage,
+  };
 }
 
 export type AppSettingsState = ReturnType<typeof useAppSettings>;

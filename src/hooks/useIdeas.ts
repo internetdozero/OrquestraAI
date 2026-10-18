@@ -106,6 +106,7 @@ export function useIdeas(options: {
     if (!isTauri) return;
 
     const interval = window.setInterval(() => {
+      if (document.hidden) return;
       void refreshAll();
     }, 12_000);
 

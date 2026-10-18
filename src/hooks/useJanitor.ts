@@ -6,10 +6,12 @@ export function useJanitor(options: {
   isTauri: boolean;
   /** Gates the sweep-completion toast; errors always surface. */
   notifyOnPurge: boolean;
+  /** Polls only while true (e.g. the Janitor modal is open). Defaults to false. */
+  active?: boolean;
   onToast: (message: string) => void;
   onError: (message: string) => void;
 }) {
-  const { isTauri, notifyOnPurge, onToast, onError } = options;
+  const { isTauri, notifyOnPurge, active = false, onToast, onError } = options;
   const { t } = useI18n();
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,11 +31,14 @@ export function useJanitor(options: {
   }, [isTauri, onError, t]);
 
   useEffect(() => {
-    if (!isTauri) return;
+    if (!isTauri || !active) return;
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 5_000);
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void refresh();
+    }, 5_000);
     return () => window.clearInterval(timer);
-  }, [isTauri, refresh]);
+  }, [isTauri, active, refresh]);
 
   const sweep = useCallback(async () => {
     if (!isTauri || sweeping) return;

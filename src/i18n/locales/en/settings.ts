@@ -61,6 +61,17 @@ export const settings: TranslationSchema["settings"] = {
     copyDiag: "Copy system diagnostics",
     copied: "Diagnostics copied to clipboard",
     copyFailed: (detail: string) => `Could not copy: ${detail}`,
+    updatesTitle: "Updates",
+    autoCheckAppTitle: "Check for app updates on launch",
+    autoCheckAppDesc:
+      "Automatically check GitHub for new OrquestraAI desktop releases.",
+    autoCheckExtTitle: "Check for official extension updates",
+    autoCheckExtDesc:
+      "Check for upstream improvements to installed official skills and MCPs.",
+    checkNow: "Check for updates now",
+    checking: "Checking…",
+    upToDate: (version: string) =>
+      `You are on the latest version — v${version}`,
   },
   sidebarAction: "Settings",
   sidebarHint: "Preferences, language, retention and about",
