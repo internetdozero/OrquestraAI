@@ -1,8 +1,17 @@
 import { useState } from "react";
-import { CheckCircle2, ClipboardCopy, Loader2, Orbit, RefreshCw } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardCopy,
+  ExternalLink,
+  Loader2,
+  Orbit,
+  RefreshCw,
+} from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { HARNESSES } from "../../lib/harnesses";
 import type { CoreStatus } from "../../lib/tauri";
+import { openExternalUrl } from "../../lib/tauri";
+import { checkLatestRelease, type ReleaseCheckResult } from "../../lib/updater";
 import { cn } from "../../lib/utils";
 
 interface AboutSettingsTabProps {
@@ -30,8 +39,18 @@ export function AboutSettingsTab({
   const { t } = useI18n();
   const a = t.settings.about;
   const [checking, setChecking] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [result, setResult] = useState<ReleaseCheckResult | null>(null);
   const version = status?.version ?? "0.1.0";
+
+  const checkNow = async () => {
+    setChecking(true);
+    setResult(null);
+    try {
+      setResult(await checkLatestRelease(version));
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const copyDiagnostics = async () => {
     const lines = [
@@ -145,14 +164,7 @@ export function AboutSettingsTab({
           <button
             type="button"
             disabled={checking}
-            onClick={() => {
-              setChecking(true);
-              setChecked(false);
-              window.setTimeout(() => {
-                setChecking(false);
-                setChecked(true);
-              }, 900);
-            }}
+            onClick={() => void checkNow()}
             className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-zinc-200 transition hover:border-white/20 disabled:cursor-wait disabled:opacity-60"
           >
             {checking ? (
@@ -162,7 +174,7 @@ export function AboutSettingsTab({
             )}
             {checking ? a.checking : a.checkNow}
           </button>
-          {checked && !checking && (
+          {result && !checking && result.isLatest && (
             <span
               role="status"
               className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200"
@@ -170,6 +182,24 @@ export function AboutSettingsTab({
               <CheckCircle2 className="size-3" />
               {a.upToDate(version)}
             </span>
+          )}
+          {result && !checking && !result.isLatest && (
+            <div
+              role="status"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11.5px] font-medium text-amber-200"
+            >
+              <span>{a.newVersionAvailable(result.latestVersion)}</span>
+              {result.releaseUrl && (
+                <button
+                  type="button"
+                  onClick={() => void openExternalUrl(result.releaseUrl as string)}
+                  className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] transition hover:bg-amber-500/25"
+                >
+                  <ExternalLink className="size-3" />
+                  {a.viewRelease}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </section>
