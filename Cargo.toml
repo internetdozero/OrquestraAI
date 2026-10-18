@@ -14,8 +14,10 @@ incremental = true
 opt-level = 1
 
 [profile.release]
-codegen-units = 16
-lto = "thin"
-opt-level = "s"
+# 4 codegen units matches the 4 CPU threads (avoids thrashing the scheduler)
+codegen-units = 4
+# Turning LTO off saves ~60s of 100% CPU link-time churn and prevents thermal throttling
+lto = "off"
+opt-level = 2
 panic = "abort"
 strip = true

@@ -1,0 +1,71 @@
+name: Remote Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Publish as a GitHub Release?'
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies (WebKitGTK & Tauri prerequisites)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build OrquestraAI Release Binary
+        run: |
+          npx tauri build --no-bundle
+          cp target/release/orquestra-ai ./orquestra-linux-x86_64
+          chmod +x ./orquestra-linux-x86_64
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orquestra-linux-x86_64
+          path: ./orquestra-linux-x86_64
+          retention-days: 14
+
+      - name: Create GitHub Release (if tagged or requested)
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./orquestra-linux-x86_64
+          generate_release_notes: true
