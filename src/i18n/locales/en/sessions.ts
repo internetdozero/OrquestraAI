@@ -79,7 +79,13 @@ export const sessions: TranslationSchema["sessions"] = {
   diskSize: "Disk size",
   createdAt: "Created",
   updatedAt: "Updated",
-  transcriptTitle: "Transcript preview",
-  transcriptSoon: "Transcript preview will be available in Phase 2.",
+  transcriptTitle: "Transcript",
+  transcriptLoading: "Loading transcript…",
+  transcriptEmpty:
+    "No messages found or transcript parsing for this harness is in development.",
+  turnUser: "You",
+  turnAssistant: "Assistant",
+  turnSystem: "System",
+  copyMessage: "Copy message",
   copied: "Copied to clipboard",
 };

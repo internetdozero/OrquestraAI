@@ -9,7 +9,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use crate::sessions::types::{TranscriptTurn, UnifiedSession};
 
 use super::{fsops, utils, SessionAdapter};
 
@@ -162,6 +162,29 @@ impl SessionAdapter for Claude {
     /// are the whole store, so there is nothing to vacuum.
     fn optimize_storage(&self) -> Result<(), String> {
         Ok(())
+    }
+
+    /// Every conversation turn in `{session_id}.jsonl`, searched in
+    /// `projects/<slug>/` and the legacy `sessions/` folder. Corrupt lines
+    /// are skipped by the parser; a missing transcript is an empty feed.
+    fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        let store = self.store();
+
+        if let Ok(projects) = std::fs::read_dir(store.join("projects")) {
+            for project in projects.flatten() {
+                let candidate = project.path().join(format!("{session_id}.jsonl"));
+                if candidate.is_file() {
+                    return utils::read_transcript(&candidate);
+                }
+            }
+        }
+
+        let legacy = store.join("sessions").join(format!("{session_id}.jsonl"));
+        if legacy.is_file() {
+            return utils::read_transcript(&legacy);
+        }
+
+        Vec::new()
     }
 }
 

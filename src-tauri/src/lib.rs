@@ -25,8 +25,8 @@ use official::OfficialStore;
 use crate::paths::OrquestraPaths;
 use serde::Serialize;
 use sessions::{
-    estimate_purge, get_retention_policy, get_unified_sessions, purge_sessions,
-    save_retention_policy, toggle_pin_session,
+    estimate_purge, get_retention_policy, get_session_transcript, get_unified_sessions,
+    purge_sessions, save_retention_policy, toggle_pin_session,
 };
 use skills::{HarnessSummary, SkillItem};
 use tauri::Manager;
@@ -366,6 +366,7 @@ pub fn run() {
             post_blackboard_note,
             mark_note_read,
             get_unified_sessions,
+            get_session_transcript,
             toggle_pin_session,
             get_retention_policy,
             save_retention_policy,

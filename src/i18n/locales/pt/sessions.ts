@@ -77,7 +77,13 @@ export const sessions = {
   diskSize: "Tamanho em disco",
   createdAt: "Criada em",
   updatedAt: "Atualizada em",
-  transcriptTitle: "Prévia da transcrição",
-  transcriptSoon: "A prévia da transcrição estará disponível na Fase 2.",
+  transcriptTitle: "Transcrição",
+  transcriptLoading: "Carregando transcrição…",
+  transcriptEmpty:
+    "Nenhuma mensagem encontrada ou a leitura para este harness ainda está em desenvolvimento.",
+  turnUser: "Você",
+  turnAssistant: "Assistente",
+  turnSystem: "Sistema",
+  copyMessage: "Copiar mensagem",
   copied: "Copiado para a área de transferência",
 };

@@ -11,7 +11,9 @@ use serde_json::Value;
 
 use super::adapters::utils;
 use super::policy::{self, PolicyFile};
-use super::types::{PinnedSession, PurgeReport, RetentionPolicy, SessionFilter, UnifiedSession};
+use super::types::{
+    PinnedSession, PurgeReport, RetentionPolicy, SessionFilter, TranscriptTurn, UnifiedSession,
+};
 
 struct TestRoot(PathBuf);
 
@@ -366,4 +368,12 @@ fn session_payloads_match_the_frozen_ipc_contract() {
         frozen("PinnedSession")
     );
     assert_eq!(keys_of(&PurgeReport::default()), frozen("PurgeReport"));
+    assert_eq!(
+        keys_of(&TranscriptTurn {
+            role: "user".to_string(),
+            content: "hello".to_string(),
+            timestamp: None,
+        }),
+        frozen("TranscriptTurn")
+    );
 }

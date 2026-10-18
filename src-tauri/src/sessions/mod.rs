@@ -19,7 +19,9 @@ pub mod types;
 use std::collections::HashMap;
 
 use policy::pins;
-use types::{PurgeEstimate, PurgeFilter, PurgeReport, RetentionPolicy, UnifiedSession};
+use types::{
+    PurgeEstimate, PurgeFilter, PurgeReport, RetentionPolicy, TranscriptTurn, UnifiedSession,
+};
 
 /// Every session from every installed harness, newest first, with pin state
 /// applied from `~/.orquestra/sessions_policy.json`.
@@ -54,6 +56,25 @@ pub fn get_unified_sessions() -> Result<Vec<UnifiedSession>, String> {
     });
 
     Ok(sessions)
+}
+
+/// Conversation turns for the detail drawer's transcript feed.
+///
+/// Only `claude` and `antigravity` transcripts are parsed today; every other
+/// harness resolves to an empty feed so the UI can show its in-development
+/// note instead of an error. Runs async: transcripts run to megabytes and
+/// must not freeze the window mid-read.
+#[tauri::command(async)]
+pub fn get_session_transcript(
+    harness: String,
+    session_id: String,
+) -> Result<Vec<TranscriptTurn>, String> {
+    let home = adapters::home()?;
+    let turns = adapters::adapters_by_id(&home)
+        .get(harness.as_str())
+        .map(|adapter| adapter.read_transcript(&session_id))
+        .unwrap_or_default();
+    Ok(turns)
 }
 
 /// Pin or unpin one conversation. Returns the state after the toggle.
