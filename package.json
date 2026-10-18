@@ -7,8 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run check:ui && tsc --noEmit && vite build",
+    "build:fast": "npm run build && cd src-tauri && cargo build --features custom-protocol",
+    "build:release": "tauri build --no-bundle",
+    "dev:tauri": "tauri dev",
     "check:ui": "node scripts/check-card-motion.mjs",
     "test": "node --test scripts",
+    "test:all": "node --test scripts && cargo test",
     "preview": "vite preview",
     "tauri": "tauri"
   },

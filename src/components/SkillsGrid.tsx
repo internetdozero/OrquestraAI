@@ -25,13 +25,13 @@ function GridGroupLabel({
       <span
         className={cn(
           "size-1.5 shrink-0 rounded-full",
-          active ? "bg-emerald-400" : "bg-zinc-600",
+          active ? "accent-dot" : "bg-zinc-600",
         )}
       />
       <span
         className={cn(
           "text-[10.5px] font-medium tracking-[0.14em] uppercase",
-          active ? "text-emerald-300" : "text-zinc-500",
+          active ? "accent-text" : "text-zinc-500",
         )}
       >
         {label}
@@ -67,7 +67,7 @@ export function GroupedSkillGrid({
   return (
     <div className="space-y-5">
       {activeSkills.length > 0 && (
-        <section className="rounded-2xl border border-emerald-500/[0.12] bg-emerald-500/[0.02] p-3">
+        <section className="accent-border accent-bg-soft rounded-2xl border p-3">
           <GridGroupLabel label={t.skills.activeGroup} count={activeSkills.length} active />
           <VirtualCardGrid
             items={activeSkills}

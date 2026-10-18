@@ -41,6 +41,16 @@ pub(super) fn set_global(paths: &OrquestraPaths, id: &str, enabled: bool) -> Res
     }
 }
 
+/// Clear only the Global baseline link, leaving every harness projection
+/// untouched. Preset application uses this instead of `set_global(..., false)`
+/// so a skill dropped from a preset stays available in harnesses that
+/// project it, while the universal baseline converges on the preset.
+pub(super) fn clear_global_baseline(paths: &OrquestraPaths, id: &str) -> Result<(), String> {
+    // Rejects unknown ids and traversal attempts, mirroring `set_global`.
+    skill_directory(paths, id)?;
+    unlink_skill(&paths.global_dir(), id)
+}
+
 pub(super) fn set_scope(
     paths: &OrquestraPaths,
     id: &str,
@@ -113,11 +123,15 @@ fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
                 format!("failed to replace stale link {}: {error}", projection.display())
             })?;
         }
+        Ok(metadata) if metadata.is_dir() => {
+            fs::remove_dir_all(projection).map_err(|error| {
+                format!("failed to remove physical directory {}: {error}", projection.display())
+            })?;
+        }
         Ok(_) => {
-            return Err(format!(
-                "refusing to overwrite {}: it exists and is not a symlink",
-                projection.display()
-            ));
+            fs::remove_file(projection).map_err(|error| {
+                format!("failed to remove file {}: {error}", projection.display())
+            })?;
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => {}
         Err(error) => {
@@ -154,11 +168,15 @@ pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
                 format!("failed to unlink {}: {error}", projection.display())
             })?;
         }
+        Ok(metadata) if metadata.is_dir() => {
+            fs::remove_dir_all(&projection).map_err(|error| {
+                format!("failed to remove directory {}: {error}", projection.display())
+            })?;
+        }
         Ok(_) => {
-            return Err(format!(
-                "refusing to unlink {}: it exists and is not a symlink",
-                projection.display()
-            ));
+            fs::remove_file(&projection).map_err(|error| {
+                format!("failed to remove file {}: {error}", projection.display())
+            })?;
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => {}
         Err(error) => {

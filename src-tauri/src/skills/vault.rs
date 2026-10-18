@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use super::projection::is_projected;
 use super::{SkillItem, GLOBAL_SCOPE};
+use crate::official::is_official_skill;
 use crate::paths::OrquestraPaths;
 
 /// Folder name expected at the root of every skill in the vault.
@@ -64,6 +65,7 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
         };
 
         let category = categorize(&id, &name, &description).to_string();
+        let official = is_official_skill(&id);
 
         skills.push(SkillItem {
             id,
@@ -74,11 +76,65 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
             global_enabled,
             harness_enabled,
             inherited_from_global,
+            official,
         });
     }
 
     skills.sort_by_key(|skill| skill.name.to_lowercase());
     Ok(skills)
+}
+
+/// Read the raw `SKILL.md` of one vault skill, for the in-app editor.
+pub(super) fn read_skill_content(paths: &OrquestraPaths, id: &str) -> Result<String, String> {
+    let directory = skill_directory(paths, id)?;
+    let file = directory.join(SKILL_FILE);
+    fs::read_to_string(&file)
+        .map_err(|error| format!("failed to read {}: {error}", file.display()))
+}
+
+/// Replace a skill's `SKILL.md` atomically (tmp file + rename on the same
+/// filesystem). Blank content is refused: an empty definition would silently
+/// unlist the skill on the next scan.
+pub(super) fn save_skill_content(
+    paths: &OrquestraPaths,
+    id: &str,
+    content: &str,
+) -> Result<(), String> {
+    if content.trim().is_empty() {
+        return Err("skill content must not be empty".to_string());
+    }
+    let directory = skill_directory(paths, id)?;
+    let target = directory.join(SKILL_FILE);
+    let temporary = directory.join(format!(".{SKILL_FILE}.tmp-{}", std::process::id()));
+
+    fs::write(&temporary, content).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("failed to write {}: {error}", temporary.display())
+    })?;
+
+    fs::rename(&temporary, &target).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("failed to replace {}: {error}", target.display())
+    })
+}
+
+/// Remove a skill from the vault: unlink every projection, then delete the
+/// folder. A vault entry that is not a real directory (symlink, file) is
+/// refused so a malicious or broken entry can never escape the vault.
+pub(super) fn delete_skill(paths: &OrquestraPaths, id: &str) -> Result<(), String> {
+    let directory = skill_directory(paths, id)?;
+    let kind = fs::symlink_metadata(&directory)
+        .map_err(|error| format!("failed to inspect {}: {error}", directory.display()))?;
+    if !kind.file_type().is_dir() {
+        return Err(format!(
+            "refusing to delete {}: not a real directory",
+            directory.display()
+        ));
+    }
+
+    super::projection::set_global(paths, id, false)?;
+    fs::remove_dir_all(&directory)
+        .map_err(|error| format!("failed to remove {}: {error}", directory.display()))
 }
 
 pub(super) fn skill_directory(paths: &OrquestraPaths, id: &str) -> Result<PathBuf, String> {

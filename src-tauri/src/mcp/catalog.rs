@@ -11,8 +11,10 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use super::deploy::{deploy_current, write_config};
+use super::secrets::{mask_server, mask_value};
 use super::McpServer;
 use crate::harness::{self, GLOBAL_SCOPE};
+use crate::official::is_official_mcp;
 use crate::paths::OrquestraPaths;
 
 /// Master catalog file name inside `~/.orquestra`.
@@ -49,6 +51,10 @@ pub(super) struct SeedEntry {
     #[serde(default)]
     env: HashMap<String, String>,
     #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    headers: HashMap<String, String>,
+    #[serde(default)]
     enabled: bool,
 }
 
@@ -56,11 +62,58 @@ pub(super) struct SeedEntry {
 // Public API
 // ---------------------------------------------------------------------------
 
-/// Every server in the master catalog, seed included on first launch.
+/// Every server in the master catalog, seed included on first launch. The
+/// official flag is stamped here so catalogs written before the tier
+/// existed still report correctly.
 pub fn list_mcps() -> Result<Vec<McpServer>, String> {
     let paths = OrquestraPaths::resolve()?;
     let catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
-    Ok(catalog.mcps.into_values().collect())
+    Ok(catalog
+        .mcps
+        .into_values()
+        .map(|mut server| {
+            server.official = is_official_mcp(&server.id);
+            server
+        })
+        .collect())
+}
+
+/// Catalog values intended for the UI: plaintext secrets never cross IPC.
+pub fn list_mcps_masked() -> Result<Vec<McpServer>, String> {
+    let mut servers = list_mcps()?;
+    for server in &mut servers {
+        mask_server(server);
+    }
+    Ok(servers)
+}
+
+/// Return a single secret only after an explicit operator reveal action.
+pub fn reveal_mcp_secret(id: &str, key: &str) -> Result<String, String> {
+    let paths = OrquestraPaths::resolve()?;
+    let catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let server = catalog
+        .mcps
+        .get(id)
+        .ok_or_else(|| format!("unknown MCP server: {id}"))?;
+    if key == "url" {
+        return server
+            .url
+            .clone()
+            .ok_or_else(|| format!("unknown MCP secret: {id}.{key}"));
+    }
+    if let Some(index) = key.strip_prefix("arg:").and_then(|value| value.parse::<usize>().ok()) {
+        return server
+            .args
+            .get(index)
+            .cloned()
+            .ok_or_else(|| format!("unknown MCP secret: {id}.{key}"));
+    }
+    server
+        .env
+        .get(key)
+        .or_else(|| server.headers.get(key))
+        .cloned()
+        .ok_or_else(|| format!("unknown MCP secret: {id}.{key}"))
 }
 
 /// Project or un-project one server. `None` (or `global`) edits the baseline
@@ -99,26 +152,87 @@ pub fn set_mcp_state(id: &str, harness_id: Option<&str>, enabled: bool) -> Resul
     deploy_current(&paths)
 }
 
-/// Reconcile the whole catalog to exactly `enabled` global servers, clearing
-/// the per-harness opt-ins so every harness sees the same profile. Returns how
-/// many servers changed state. The caller deploys afterwards, once.
+/// Reconcile the Global baseline to exactly `enabled` servers. Per-harness
+/// opt-ins are operator territory: a preset sets `global_enabled` but never
+/// clears `enabled_harnesses`, so a harness that opted into a server keeps
+/// it even when the preset drops it globally. Returns how many servers
+/// changed global state. The caller deploys afterwards, once.
 pub fn apply_global_selection(enabled: &[String]) -> Result<usize, String> {
     let paths = OrquestraPaths::resolve()?;
-    let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    apply_global_selection_at(&paths, enabled)
+}
+
+/// `apply_global_selection` against explicit paths, for tests and callers
+/// that already resolved the storage locations.
+pub fn apply_global_selection_at(
+    paths: &OrquestraPaths,
+    enabled: &[String],
+) -> Result<usize, String> {
+    let mut catalog = load_catalog(paths, Path::new(SEED_CATALOG))?;
     let wanted: BTreeSet<&str> = enabled.iter().map(String::as_str).collect();
     let mut changed = 0usize;
 
     for server in catalog.mcps.values_mut() {
         let should_enable = wanted.contains(server.id.as_str());
-        if server.global_enabled != should_enable || !server.enabled_harnesses.is_empty() {
+        if server.global_enabled != should_enable {
             changed += 1;
         }
         server.global_enabled = should_enable;
-        server.enabled_harnesses.clear();
     }
 
     if changed > 0 {
-        save_catalog(&paths, &catalog)?;
+        save_catalog(paths, &catalog)?;
+    }
+
+    Ok(changed)
+}
+
+/// Reconcile per-harness opt-ins to exactly `harness_mcps`
+/// (`harness_id -> server ids`). Authoritative per harness: a server kept
+/// out of a harness list is removed from that harness. Unknown harness ids
+/// are ignored. Returns how many servers changed harness state.
+pub fn apply_harness_selections(
+    harness_mcps: &HashMap<String, Vec<String>>,
+) -> Result<usize, String> {
+    let paths = OrquestraPaths::resolve()?;
+    apply_harness_selections_at(&paths, harness_mcps)
+}
+
+/// `apply_harness_selections` against explicit paths, for tests and callers
+/// that already resolved the storage locations.
+pub fn apply_harness_selections_at(
+    paths: &OrquestraPaths,
+    harness_mcps: &HashMap<String, Vec<String>>,
+) -> Result<usize, String> {
+    let mut catalog = load_catalog(paths, Path::new(SEED_CATALOG))?;
+    // Transpose to `server_id -> wanted harnesses`, keeping valid targets.
+    let mut wanted: HashMap<&str, BTreeSet<&str>> = HashMap::new();
+    for (harness, ids) in harness_mcps {
+        if !harness::is_mcp_target(harness) {
+            continue;
+        }
+        for id in ids {
+            wanted.entry(id.as_str()).or_default().insert(harness.as_str());
+        }
+    }
+
+    let mut changed = 0usize;
+    for server in catalog.mcps.values_mut() {
+        let mut next: Vec<String> = wanted
+            .get(server.id.as_str())
+            .map(|set| set.iter().map(|harness| harness.to_string()).collect())
+            .unwrap_or_default();
+        next.sort();
+        let mut current = server.enabled_harnesses.clone();
+        current.sort();
+        if current != next {
+            changed += 1;
+        }
+        server.enabled_harnesses = next;
+    }
+
+    if changed > 0 {
+        save_catalog(paths, &catalog)?;
     }
 
     Ok(changed)
@@ -132,13 +246,47 @@ pub fn save_mcp(server: McpServer) -> Result<(), String> {
     let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
 
     let mut server = server;
+    // Recompute: the flag is derived from the id, never client state.
+    server.official = is_official_mcp(&server.id);
     server.enabled_harnesses.retain(|harness| harness::is_mcp_target(harness));
     server.enabled_harnesses.sort();
     server.enabled_harnesses.dedup();
 
+    if let Some(previous) = catalog.mcps.get(&server.id) {
+        let mut masked_previous = previous.clone();
+        mask_server(&mut masked_previous);
+        restore_masked_values(&mut server.env, &previous.env);
+        restore_masked_values(&mut server.headers, &previous.headers);
+        for (index, incoming) in server.args.iter_mut().enumerate() {
+            if masked_previous.args.get(index) == Some(incoming) {
+                if let Some(original) = previous.args.get(index) {
+                    *incoming = original.clone();
+                }
+            }
+        }
+        if server.url == masked_previous.url {
+            server.url = previous.url.clone();
+        }
+    }
+
     catalog.mcps.insert(server.id.clone(), server);
     save_catalog(&paths, &catalog)?;
     deploy_current(&paths)
+}
+
+fn restore_masked_values(
+    incoming: &mut HashMap<String, String>,
+    previous: &HashMap<String, String>,
+) {
+    for (key, current) in incoming {
+        let Some(original) = previous.get(key) else {
+            continue;
+        };
+        let masked = mask_value(key, original);
+        if masked != original.as_str() && *current == masked {
+            *current = original.clone();
+        }
+    }
 }
 
 /// Drop a server from the catalog. It stays in `managedIds` long enough for the
@@ -198,12 +346,15 @@ pub(super) fn seed_catalog(seed: &Path) -> Result<Catalog, String> {
         catalog.mcps.insert(
             id.clone(),
             McpServer {
+                official: is_official_mcp(&id),
                 id,
                 name: entry.name,
                 description: entry.description,
                 command: entry.command,
                 args: entry.args,
                 env: entry.env,
+                url: entry.url,
+                headers: entry.headers,
                 global_enabled: entry.enabled,
                 enabled_harnesses: Vec::new(),
             },
@@ -244,7 +395,7 @@ pub(super) fn validate_server(server: &McpServer) -> Result<(), String> {
         return Err("an MCP server needs a name".to_string());
     }
 
-    if server.command.trim().is_empty() {
+    if server.url.is_none() && server.command.trim().is_empty() {
         return Err("an MCP server needs a command".to_string());
     }
 

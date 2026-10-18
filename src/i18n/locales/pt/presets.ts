@@ -1,0 +1,75 @@
+/** Mission presets: bar, save modal and edit modal. */
+export const presets = {
+  title: "Presets de Missão",
+  save: "Salvar",
+  saveTitle: "Salvar a configuração atual como preset",
+  saveHeading: "Salvar configuração atual",
+  saveBody:
+    "Nomeia as skills e os servidores MCP ativos agora para restaurá-los em um clique.",
+  nameLabel: "Nome",
+  descriptionLabel: "Descrição",
+  optional: "(opcional)",
+  saveAction: "Salvar preset",
+  cancel: "Cancelar",
+  saved: (name: string) => `Preset “${name}” salvo`,
+  applyFailed: (name: string, detail: string) =>
+    `Não foi possível aplicar “${name}”: ${detail}`,
+  deleteTitle: (name: string) => `Excluir ${name}`,
+  deleted: (name: string) => `Preset “${name}” excluído`,
+  editHeading: "Editar Preset",
+  editBody: "Modifique as propriedades, skills e servidores MCP deste preset.",
+  editAction: "Salvar alterações",
+  editTitle: (name: string) => `Editar ${name}`,
+  resetToDefault: "Restaurar padrão",
+  resetConfirm: (name: string) => `Restaurar o preset “${name}” às configurações de fábrica?`,
+  resetSuccess: (name: string) => `Preset “${name}” restaurado às configurações de fábrica`,
+  resetFailed: (name: string, detail: string) => `Não foi possível restaurar “${name}”: ${detail}`,
+  updateSuccess: (name: string) => `Preset “${name}” atualizado`,
+  updateFailed: (name: string, detail: string) => `Não foi possível atualizar “${name}”: ${detail}`,
+  iconLabel: "Ícone",
+  filterItems: "Filtrar skills ou MCPs…",
+  allSkillsSwitch: "Todas as skills",
+  allMcpsSwitch: "Todos os MCPs",
+  builtinBadge: "Padrão",
+  harnessScopesKept: "Escopos por harness mantidos",
+  everySkill: "todas as skills",
+  skillCount: (count: number) => (count === 1 ? "1 skill" : `${count} skills`),
+  everyMcp: "todos os MCPs",
+  mcpCount: (count: number) => (count === 1 ? "1 MCP" : `${count} MCPs`),
+  applied: (name: string, skills: number, mcps: number) =>
+    `${name} aplicado · ${skills} skills · ${mcps} MCPs`,
+  readFailed: (detail: string) =>
+    `Não foi possível ler os presets: ${detail}`,
+  saveFailed: (detail: string) =>
+    `Não foi possível salvar o preset: ${detail}`,
+  deleteFailed: (name: string, detail: string) =>
+    `Não foi possível excluir “${name}”: ${detail}`,
+  namePlaceholder: "Dev de jogos",
+  descriptionPlaceholder: "Trabalho de engine, sem ferramentas de nuvem",
+  warnSkillMissing: (id: string) => `a skill “${id}” não está no cofre`,
+  warnMcpMissing: (id: string) => `o servidor MCP “${id}” não está no catálogo`,
+  warnDeploy: (detail: string) => `implantação MCP incompleta: ${detail}`,
+  warnBridge: (detail: string) => `ponte de harnesses não atualizada: ${detail}`,
+  builtins: {
+    stealth: {
+      name: "Furtivo",
+      description:
+        "Perfil sem excesso: uma skill leve mais os MCPs essenciais, para um modelo com limite de taxa manter a janela de contexto.",
+    },
+    "rust-dev": {
+      name: "Dev Rust",
+      description:
+        "Trabalho de sistemas e baixo nível: servidores de repositório, módulo e conhecimento, sem as ferramentas de frontend ou design.",
+    },
+    "web-fullstack": {
+      name: "Web fullstack",
+      description:
+        "Trabalho de frontend e nuvem: geração de UI, automação de navegador, assets de design e a borda de deploy.",
+    },
+    "full-power": {
+      name: "Potência total",
+      description:
+        "Todas as skills do cofre e todos os servidores MCP do catálogo: nada fica de fora.",
+    },
+  },
+};

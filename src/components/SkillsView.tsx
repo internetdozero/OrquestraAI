@@ -10,14 +10,19 @@ import {
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { entryTokens } from "../lib/tokens";
 import { markSkillsCacheStale, projectSkillState } from "../lib/skillsCache";
-import { batchSetAll, setSkillState } from "../lib/tauri";
+import { batchSetAll, deleteSkill as deleteVaultSkill, setSkillState } from "../lib/tauri";
 import { useI18n } from "../hooks/useI18n";
 import { useSkillsCache } from "../hooks/useSkillsCache";
+import { useSkillStoreActions } from "../hooks/useSkillStoreActions";
 import { SkillCard } from "./SkillCard";
+import { EditSkillModal } from "./skills/EditSkillModal";
+import { ImportSkillModal } from "./skills/ImportSkillModal";
 import { FlatSkillGrid, GroupedSkillGrid } from "./SkillsGrid";
 import { SkillScopeSelector } from "./SkillScopeSelector";
 import { SkillsState, type SkillsStateKind } from "./SkillsStates";
 import { SkillsToolbar } from "./SkillsToolbar";
+import { OfficialStore } from "./OfficialStore";
+import { StoreTabs } from "./StoreTabs";
 import { ErrorBanner, SkeletonGrid } from "./ui";
 
 interface SkillsViewProps {
@@ -41,6 +46,8 @@ interface SkillsViewProps {
   /** Error raised outside the grid (for example by the bridge deploy). */
   externalError: string | null;
   onDismissExternalError: () => void;
+  /** Shell toast for import success and other one-shot notices. */
+  onToast?: (message: string) => void;
 }
 
 function toMessage(cause: unknown, fallback: string): string {
@@ -74,6 +81,7 @@ export function SkillsView({
   onBusyChange,
   externalError,
   onDismissExternalError,
+  onToast,
 }: SkillsViewProps) {
   const { t } = useI18n();
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
@@ -89,11 +97,17 @@ export function SkillsView({
     invalidate,
   } = useSkillsCache(scope, isTauri);
 
+  const [importOpen, setImportOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
   const [batchPending, setBatchPending] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("active");
+  const [showStore, setShowStore] = useState(false);
   // Highlight the card that just changed. `follow` scrolls to it only when it
   // was enabled; disabling must leave the viewport where the user is.
   const [flash, setFlash] = useState<{
@@ -274,12 +288,51 @@ export function SkillsView({
     [t, isTauri, scope, skills.length, updateSkills, reload, setError, onSummaryStale],
   );
 
+  const handleDeleteSkill = useCallback(
+    async (id: string) => {
+      const current = skills.find((skill) => skill.id === id);
+      if (!current || !isTauri) return;
+      if (!window.confirm(t.skills.deleteConfirm(current.name))) return;
+      setDeletingIds((ids) => new Set(ids).add(id));
+      try {
+        await deleteVaultSkill(id);
+        onSummaryStale();
+        await invalidate();
+        onToast?.(t.skills.deleteDeleted(current.name));
+      } catch (cause) {
+        setError(t.skills.deleteFailed(toMessage(cause, t.common.unexpected)));
+      } finally {
+        setDeletingIds((ids) => {
+          const remaining = new Set(ids);
+          remaining.delete(id);
+          return remaining;
+        });
+      }
+    },
+    [t, skills, isTauri, invalidate, onSummaryStale, onToast, setError],
+  );
+
+  const { statusOf: storeStatusOf, actionFor: storeActionFor } =
+    useSkillStoreActions(skills, {
+      toggleSkill,
+      invalidate,
+      onSummaryStale,
+      onToast,
+    });
+
+  const editingSkill = editingId
+    ? (skills.find((skill) => skill.id === editingId) ?? null)
+    : null;
+
   const renderSkillCard = (skill: SkillItem) => (
     <SkillCard
       key={skill.id}
       skill={skill}
       onToggle={(id) => void toggleSkill(id)}
+      onEdit={(id) => setEditingId(id)}
+      onDelete={(id) => void handleDeleteSkill(id)}
       busy={batchPending || pendingIds.has(skill.id)}
+      deleteBusy={deletingIds.has(skill.id)}
       flash={flash?.id === skill.id}
     />
   );
@@ -313,6 +366,8 @@ export function SkillsView({
         installedIds={installedHarnessIds}
       />
 
+      <StoreTabs showStore={showStore} onChange={setShowStore} />
+
       <SkillsToolbar
         scope={scope}
         activeCount={activeCount}
@@ -326,6 +381,7 @@ export function SkillsView({
         canBatch={canBatch}
         batchPending={batchPending}
         onApplyAll={(enabled) => void applyAll(enabled)}
+        onImport={() => setImportOpen(true)}
       />
 
       {banner && hasSkills && (
@@ -339,7 +395,7 @@ export function SkillsView({
       )}
 
       {/* Only a scope that has never been evaluated shows the skeleton. */}
-      {loading && !hasSkills ? (
+      {!showStore && (loading && !hasSkills ? (
         <SkeletonGrid />
       ) : stateKind ? (
         <SkillsState
@@ -361,6 +417,43 @@ export function SkillsView({
           skills={visibleSkills}
           renderCard={renderSkillCard}
           focusKey={flash?.follow ? flash.id : null}
+        />
+      ))}
+
+      {showStore && (
+        <OfficialStore
+          kind="skill"
+          statusOf={storeStatusOf}
+          actionFor={storeActionFor}
+        />
+      )}
+
+      {editingSkill && (
+        <EditSkillModal
+          skillId={editingSkill.id}
+          skillName={editingSkill.name}
+          onClose={() => setEditingId(null)}
+          onSaved={(name) => {
+            onSummaryStale();
+            void invalidate();
+            onToast?.(t.skills.editSaved(name));
+          }}
+          onError={(message) => setError(message)}
+        />
+      )}
+
+      {importOpen && (
+        <ImportSkillModal
+          isTauri={isTauri}
+          onClose={() => setImportOpen(false)}
+          onError={(message) => setError(message)}
+          onImported={(skill) => {
+            onSummaryStale();
+            void invalidate();
+            onDismissExternalError();
+            setError(null);
+            onToast?.(t.skills.import.success(skill.name));
+          }}
         />
       )}
 

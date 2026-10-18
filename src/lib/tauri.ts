@@ -65,8 +65,112 @@ export function batchSetAll(
   return invoke<void>("batch_set_all", { harnessId, enabled });
 }
 
+/** Raw `SKILL.md` of one vault skill, for the in-app editor. */
+export function readSkillContent(id: string): Promise<string> {
+  return invoke<string>("read_skill_content", { id });
+}
+
+/** Atomically replace a skill's `SKILL.md`. */
+export function saveSkillContent(id: string, content: string): Promise<void> {
+  return invoke<void>("save_skill_content", { id, content });
+}
+
+/** Unlink a skill everywhere and remove its vault folder. */
+export function deleteSkill(id: string): Promise<void> {
+  return invoke<void>("delete_skill", { id });
+}
+
 export function harnessSummary(): Promise<HarnessSummary[]> {
   return invoke<HarnessSummary[]>("harness_summary");
+}
+
+/** Copy an external skill folder into the vault; rejects traversal and dupes. */
+export function importSkill(sourcePath: string): Promise<SkillItem> {
+  return invoke<SkillItem>("import_skill", { sourcePath });
+}
+
+/** Shallow-clone a git URL and import the skill it holds. */
+export function importSkillFromGit(url: string): Promise<SkillItem> {
+  return invoke<SkillItem>("import_skill_from_git", { url });
+}
+
+/** One curated skill in the Official Store. `repoUrl` is absent for reserved
+ * slots with no published repo yet. */
+export interface OfficialSkillEntry {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  repoUrl?: string;
+}
+
+/** One curated MCP server. `command`/`args` pre-fill a disabled catalog
+ * entry the operator enables after installing the package. */
+export interface OfficialMcpEntry {
+  id: string;
+  name: string;
+  description: string;
+  repoUrl?: string;
+  command: string;
+  args: string[];
+}
+
+/** Curated Personal Store payload behind `list_official_store`. */
+export interface OfficialStore {
+  skills: OfficialSkillEntry[];
+  mcps: OfficialMcpEntry[];
+}
+
+/** Fetch the curated Official Store (static data, never fails to exist). */
+export function listOfficialStore(): Promise<OfficialStore> {
+  return invoke<OfficialStore>("list_official_store");
+}
+
+/** Native OS folder picker; `null` means the user cancelled. */
+export function pickFolder(): Promise<string | null> {
+  return invoke<string | null>("pick_folder");
+}
+
+/**
+ * Push the window-close behavior to the Rust core: `true` hides to the
+ * system tray on close, `false` exits the process. The shell calls this on
+ * startup and on every `minimizeToTray` toggle.
+ */
+export function setMinimizeToTray(enabled: boolean): Promise<void> {
+  return invoke<void>("set_minimize_to_tray", { enabled });
+}
+
+/** Reveal a `~/.orquestra` location in the native file manager. */
+export function openInFileManager(path: string): Promise<void> {
+  return invoke<void>("open_in_file_manager", { path });
+}
+
+/**
+ * Snapshot `~/.orquestra` into `backups/orquestra_backup_<stamp>.tar.gz`.
+ * Resolves to the archive path so the UI can toast the real destination.
+ */
+export function createOrquestraBackup(): Promise<string> {
+  return invoke<string>("create_orquestra_backup");
+}
+
+/** True inside the Tauri webview; false in a plain browser preview. */
+export function isTauri(): boolean {
+  return detectTauriRuntime();
+}
+
+/**
+ * Open an external link in the default system browser. The Tauri webview
+ * blocks `<a target="_blank">`, so desktop goes through the `open_url`
+ * command; browser previews fall back to `window.open`. A trailing `.git`
+ * is stripped for clean web browsing (`repo.git` → `repo`).
+ */
+export async function openExternalUrl(url: string): Promise<void> {
+  const webUrl = url.endsWith(".git") ? url.slice(0, -4) : url;
+  if (isTauri()) {
+    await invoke<void>("open_url", { url: webUrl });
+  } else {
+    window.open(webUrl, "_blank", "noreferrer,noopener");
+  }
 }
 
 export function readMasterAgentsMd(): Promise<string> {

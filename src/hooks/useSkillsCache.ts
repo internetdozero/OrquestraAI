@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "./useI18n";
 import type { SkillItem } from "../lib/skills";
 import {
-  dropSkillsCache,
   hasSkillsCache,
   isSkillsCacheStale,
+  markSkillsCacheStale,
   readSkillsCache,
   writeSkillsCache,
 } from "../lib/skillsCache";
@@ -106,7 +106,7 @@ export function useSkillsCache(scope: string, isTauri: boolean) {
    * while the fresh one loads — a rescan should not blank the grid either.
    */
   const invalidate = useCallback(async () => {
-    dropSkillsCache();
+    markSkillsCacheStale();
     await reload(false);
   }, [reload]);
 

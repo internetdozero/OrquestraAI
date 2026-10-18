@@ -1,0 +1,92 @@
+/** MCP registry: catalog states, cards, form and smart-paste flow. */
+export const mcps = {
+  registryTitle: "Registro MCP",
+  headerChip: "Registro MCP",
+  subtitle:
+    "Um catálogo em ~/.orquestra/mcps.json, compilado no dialeto de cada harness. O Global é a linha de base; um harness pode aderir por cima dele.",
+  active: "Ativos",
+  addServer: "Adicionar servidor MCP",
+  recompile: "Recompilar os arquivos de configuração de todos os harnesses",
+  reading: "Lendo o catálogo…",
+  emptyTitle: "Nenhum servidor MCP ainda",
+  emptyBody:
+    "Adicione o primeiro servidor e o OrquestraAI o compilará em cada harness instalado que tenha um adaptador.",
+  targets: "Destinos",
+  unavailableBody:
+    "O registro MCP é compilado pelo núcleo em Rust na configuração de cada harness. Abra o aplicativo desktop para ler ou alterar.",
+  readFailed: (detail: string) =>
+    `Não foi possível ler o catálogo MCP: ${detail}`,
+  toggled: (name: string, verb: string, scope: string) =>
+    `${name} ${verb} · ${scope}`,
+  enabledVerb: "ativado",
+  disabledVerb: "desativado",
+  deletedFromConfigs: (name: string) =>
+    `${name} excluído de todos os arquivos de configuração`,
+  deleteFailed: (name: string, detail: string) =>
+    `Não foi possível excluir ${name}: ${detail}`,
+  savedDeployed: (name: string) => `${name} salvo e implantado`,
+  alreadyMatches: "Todos os arquivos de configuração já batem com o catálogo",
+  recompiled: (count: number) =>
+    count === 1
+      ? "Recompilado 1 arquivo de configuração"
+      : `Recompilados ${count} arquivos de configuração`,
+  recompileFailed: (detail: string) => `Falha ao recompilar: ${detail}`,
+  noAdapters: "nenhum adaptador resolvido",
+  notInstalledMark: "(não instalado)",
+  inactive: "Inativo",
+  onElsewhere: "ativo em outro lugar",
+  noDescription: "Sem descrição",
+  inspect: "Comando, argumentos e ambiente",
+  deleteConfirm: (name: string) =>
+    `Excluir “${name}” de todos os arquivos de configuração?`,
+  deleteAria: (name: string) => `Excluir ${name}`,
+  inheritedShort: "herdada",
+  inScope: (label: string) => `em ${label}`,
+  toggleInherited: (label: string) => `${label} é herdada do Global`,
+  toggleEnable: (label: string) => `Ativar ${label}`,
+  toggleDisable: (label: string) => `Desativar ${label}`,
+  revealValue: "Revelar valor",
+  closeDetails: "Fechar detalhes de execução",
+  detailsAria: (name: string) => `Detalhes de execução de ${name}`,
+  executionDetails: "Detalhes de execução",
+  scopeOf: (label: string) => `escopo ${label}`,
+  command: "Comando",
+  environment: "Ambiente",
+  headers: "Cabeçalhos",
+  arguments: "Argumentos",
+  noneDeclared: "Nenhum declarado",
+  enabledIn: "Ativo em",
+  globalBadge: "global",
+  nowhereYet: "em lugar nenhum ainda",
+  editServer: "Editar servidor",
+  editTitle: (name: string) => `Editar ${name}`,
+  formBlurb:
+    "Uma definição, compilada em cada formato de harness em que estiver ativa.",
+  fieldName: "Nome",
+  fieldId: "Id",
+  fieldDescription: "Descrição",
+  argsHint: "um por linha",
+  envHint: "KEY=VALUE por linha",
+  envNote:
+    "Os valores são gravados na configuração do harness como estão; arquivos que os guardam ficam com permissão 0600.",
+  enableGlobally: "Ativar globalmente",
+  enableGloballyHint: "todo harness com adaptador herda",
+  nameRequired: "Um nome de exibição é obrigatório.",
+  idRequired: "Um id é obrigatório.",
+  idCharset:
+    "O id deve ter letras minúsculas, dígitos, pontos, traços ou sublinhados.",
+  idTaken: (id: string) => `“${id}” já existe no catálogo.`,
+  commandRequired: "Um comando de inicialização é obrigatório.",
+  addServerAction: "Adicionar servidor",
+  saveChanges: "Salvar alterações",
+  descriptionPlaceholder: "O que este servidor expõe ao modelo",
+  smartPasteTitle: "Auto-preenchimento inteligente",
+  smartPasteHint:
+    "Cole o comando do terminal (ex: npx -y …) ou um bloco JSON do Claude, ou toque num preset.",
+  smartPastePlaceholder:
+    "npx -y @modelcontextprotocol/server-github  ou  { \"command\": … }",
+  smartPasteAction: "Preencher campos",
+  smartPasteApplied: "Campos preenchidos — revise e salve.",
+  smartPasteFailed:
+    "Não reconheci esse texto. Cole um comando CLI ou um JSON com \"command\".",
+};

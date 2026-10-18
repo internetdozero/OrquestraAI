@@ -1,14 +1,18 @@
-import { Globe, Link2, Lock, Unlink2 } from "lucide-react";
+import { Globe, Link2, Loader2, Lock, Pencil, Trash2, Unlink2 } from "lucide-react";
 import { skillIcon, type SkillItem } from "../lib/skills";
 import { entryTokens } from "../lib/tokens";
 import { cn } from "../lib/utils";
 import { useI18n } from "../hooks/useI18n";
+import { OfficialBadge } from "./OfficialBadge";
 import { TokenPair } from "./TokenPair";
 
 interface SkillCardProps {
   skill: SkillItem;
   onToggle: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
   busy?: boolean;
+  deleteBusy?: boolean;
   /** Briefly highlights a card that just crossed between the grid sections. */
   flash?: boolean;
 }
@@ -44,7 +48,7 @@ function Toggle({
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 focus-visible:outline-none",
         checked
-          ? "border-emerald-400/50 bg-emerald-500/90"
+          ? "border-[var(--accent-ring)] bg-[var(--accent-solid)]"
           : "border-white/10 bg-zinc-800 hover:bg-zinc-700",
         disabled && "cursor-wait opacity-60",
         locked && "cursor-not-allowed",
@@ -63,7 +67,10 @@ function Toggle({
 export function SkillCard({
   skill,
   onToggle,
+  onEdit,
+  onDelete,
   busy = false,
+  deleteBusy = false,
   flash = false,
 }: SkillCardProps) {
   const { t } = useI18n();
@@ -89,14 +96,14 @@ export function SkillCard({
         // or a flash cannot cascade into its grid siblings.
         "transform-gpu [backface-visibility:hidden] [contain:content]",
         active
-          ? "border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.045] to-zinc-900/40 hover:border-emerald-500/35"
+          ? "accent-border bg-gradient-to-b from-[var(--accent-bg)] to-zinc-900/40 hover:border-[var(--accent-ring)]"
           : "border-white/[0.07] bg-zinc-900/30 hover:border-white/15 hover:bg-zinc-900/50",
-        flash && "border-emerald-400/60 shadow-[0_0_0_3px_rgba(52,211,153,0.16)]",
+        flash && "accent-border shadow-[0_0_0_3px_var(--accent-ring)]",
         busy && "opacity-80",
       )}
     >
       {active && (
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-glow)] to-transparent" />
       )}
 
       <div className="flex items-start gap-3">
@@ -104,7 +111,7 @@ export function SkillCard({
           className={cn(
             "grid size-9 shrink-0 place-items-center rounded-lg border transition-colors",
             active
-              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+              ? "accent-border accent-bg-soft accent-text"
               : "border-white/[0.07] bg-white/[0.03] text-zinc-500",
           )}
         >
@@ -122,14 +129,15 @@ export function SkillCard({
             <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-px text-[10px] font-medium tracking-wide text-zinc-400 uppercase">
               {skill.category}
             </span>
+            {skill.official === true && <OfficialBadge />}
             {inherited ? (
-              <span className="flex items-center gap-1 text-[9.5px] font-medium text-emerald-300/90">
+              <span className="accent-text flex items-center gap-1 text-[9.5px] font-medium opacity-90">
                 <Lock className="size-2.5" />
                 {t.skills.inheritedFromGlobal}
               </span>
             ) : active ? (
-              <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400">
-                <span className="size-1 rounded-full bg-emerald-400" />
+              <span className="accent-text flex items-center gap-1 text-[10px] font-medium">
+                <span className="accent-dot size-1 rounded-full" />
                 {t.skills.activePill}
               </span>
             ) : (
@@ -141,13 +149,39 @@ export function SkillCard({
           </div>
         </div>
 
-        <Toggle
-          checked={active}
-          onChange={() => onToggle(skill.id)}
-          label={skill.name}
-          disabled={busy}
-          locked={inherited}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onEdit(skill.id)}
+            disabled={busy}
+            title={t.skills.editSkill}
+            aria-label={`${t.skills.editSkill}: ${skill.name}`}
+            className="rounded-md p-1.5 text-zinc-500 transition hover:bg-white/[0.06] hover:text-zinc-200 disabled:opacity-40"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(skill.id)}
+            disabled={busy || deleteBusy}
+            title={t.skills.deleteSkill}
+            aria-label={`${t.skills.deleteSkill}: ${skill.name}`}
+            className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+          >
+            {deleteBusy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
+          </button>
+          <Toggle
+            checked={active}
+            onChange={() => onToggle(skill.id)}
+            label={skill.name}
+            disabled={busy}
+            locked={inherited}
+          />
+        </div>
       </div>
 
       <p className="line-clamp-2 text-[12.5px] leading-relaxed text-zinc-400">
@@ -163,7 +197,7 @@ export function SkillCard({
         <span
           className={cn(
             "flex items-center gap-1.5",
-            active ? "text-emerald-400/80" : "text-zinc-600",
+            active ? "accent-text opacity-80" : "text-zinc-600",
           )}
         >
           {inherited ? (

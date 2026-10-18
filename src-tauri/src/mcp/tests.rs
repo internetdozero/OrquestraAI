@@ -107,8 +107,11 @@ mod tests {
             command: command.to_string(),
             args: args.iter().map(|arg| arg.to_string()).collect(),
             env: HashMap::new(),
+            url: None,
+            headers: HashMap::new(),
             global_enabled: true,
             enabled_harnesses: Vec::new(),
+            official: false,
         }
     }
 
@@ -478,6 +481,47 @@ enabled = true
         let fresh = test.home.join("fresh.json");
         write_config(&fresh, "{\"a\":1}", true).unwrap();
         assert_eq!(mode_of(&fresh), 0o600);
+
+        test.cleanup();
+    }
+
+    #[test]
+    fn global_selection_sets_the_baseline_but_keeps_harness_opt_ins() {
+        let test = TestHome::new("global-select");
+        test.paths.ensure_layout().unwrap();
+        let seed = test.seed_file();
+
+        let mut catalog = load_catalog(&test.paths, &seed).unwrap();
+        catalog.mcps.get_mut("github").unwrap().enabled_harnesses =
+            vec!["codex".to_string()];
+        save_catalog(&test.paths, &catalog).unwrap();
+
+        // A preset that drops everything disables the Global baseline but
+        // must not wipe the harness opt-in.
+        assert_eq!(apply_global_selection_at(&test.paths, &[]).unwrap(), 2);
+
+        let reloaded = load_catalog(&test.paths, &seed).unwrap();
+        for server in reloaded.mcps.values() {
+            assert!(!server.global_enabled, "{} should be off globally", server.id);
+        }
+        assert_eq!(
+            reloaded.mcps["github"].enabled_harnesses,
+            vec!["codex".to_string()],
+            "the codex opt-in survives the preset"
+        );
+
+        // Re-enabling one server reports exactly one change and still
+        // leaves the opt-in alone.
+        assert_eq!(
+            apply_global_selection_at(&test.paths, &["headroom".to_string()]).unwrap(),
+            1
+        );
+        let reloaded = load_catalog(&test.paths, &seed).unwrap();
+        assert!(reloaded.mcps["headroom"].global_enabled);
+        assert_eq!(
+            reloaded.mcps["github"].enabled_harnesses,
+            vec!["codex".to_string()]
+        );
 
         test.cleanup();
     }

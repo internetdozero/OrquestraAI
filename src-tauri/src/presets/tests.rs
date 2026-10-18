@@ -2,6 +2,7 @@
 //! that decides what an apply will project.
 
 use super::apply::{plan_mcps, plan_skills};
+use super::scopes::{normalize_scope_map, plan_scope_map, union_unique};
 use super::builtins;
 use super::store::*;
 use super::*;
@@ -127,6 +128,75 @@ mod tests {
     }
 
     #[test]
+    fn legacy_presets_without_scope_maps_still_load() {
+        // Old presets.json has no harnessSkills/harnessMcps keys: serde
+        // defaults them to empty maps and nothing breaks.
+        let legacy = serde_json::json!({
+            "id": "old",
+            "name": "Old",
+            "skills": ["rtk"],
+            "mcps": ["github"]
+        });
+        let preset: Preset = serde_json::from_value(legacy).unwrap();
+        assert_eq!(preset.skills, vec!["rtk"]);
+        assert!(preset.harness_skills.is_empty());
+        assert!(preset.harness_mcps.is_empty());
+    }
+
+    #[test]
+    fn scope_maps_normalize_to_known_harnesses_only() {
+        let raw: std::collections::HashMap<String, Vec<String>> = [
+            ("antigravity".to_string(), vec!["rtk".to_string(), "rtk".to_string()]),
+            ("claude".to_string(), vec!["surgical-patch".to_string()]),
+            ("ghost-harness".to_string(), vec!["rtk".to_string()]),
+            ("codex".to_string(), Vec::new()),
+            ("grok".to_string(), vec!["../escape".to_string()]),
+        ]
+        .into_iter()
+        .collect();
+
+        let cleaned = normalize_scope_map(&raw);
+        assert_eq!(cleaned.get("antigravity"), Some(&vec!["rtk".to_string()]));
+        assert_eq!(cleaned.get("claude"), Some(&vec!["surgical-patch".to_string()]));
+        assert!(!cleaned.contains_key("ghost-harness"));
+        assert!(!cleaned.contains_key("codex"), "empty lists are dropped");
+        assert!(!cleaned.contains_key("grok"), "path-shaped ids are dropped");
+    }
+
+    #[test]
+    fn scope_maps_plan_against_installed_ids() {
+        let map: std::collections::HashMap<String, Vec<String>> = [
+            ("antigravity".to_string(), vec!["rtk".to_string(), "missing".to_string()]),
+            ("claude".to_string(), vec!["gone".to_string()]),
+        ]
+        .into_iter()
+        .collect();
+
+        let known = vec!["rtk".to_string()];
+        let (planned, warnings) = plan_scope_map(&map, &known, "skill");
+        assert_eq!(planned.len(), 1);
+        assert!(planned["antigravity"].contains("rtk"));
+        assert_eq!(warnings.len(), 2);
+        assert!(warnings.iter().any(|w| w.contains("missing")));
+        assert!(warnings.iter().any(|w| w.contains("gone")));
+    }
+
+    #[test]
+    fn report_union_counts_global_and_harness_sets_once() {
+        let global: std::collections::BTreeSet<String> =
+            ["rtk".to_string()].into_iter().collect();
+        let per_harness: std::collections::HashMap<String, std::collections::BTreeSet<String>> = [(
+            "antigravity".to_string(),
+            ["rtk".to_string(), "github".to_string()].into_iter().collect(),
+        )]
+        .into_iter()
+        .collect();
+
+        let all = union_unique(&global, &per_harness);
+        assert_eq!(all.len(), 2, "rtk is counted once across scopes");
+    }
+
+    #[test]
     fn store_roundtrips_custom_presets_and_the_active_flag() {
         let root = temp_root("store");
 
@@ -142,6 +212,10 @@ mod tests {
             icon: "custom".to_string(),
             skills: vec!["rtk".to_string()],
             mcps: vec!["github".to_string()],
+            harness_skills: [("antigravity".to_string(), vec!["github".to_string()])]
+                .into_iter()
+                .collect(),
+            harness_mcps: Default::default(),
             all_skills: false,
             all_mcps: false,
             builtin: false,
@@ -150,6 +224,7 @@ mod tests {
         let file = PresetFile {
             custom: vec![custom.clone()],
             active: Some("game-dev".to_string()),
+            overrides: Vec::new(),
         };
         save_to(&root, &file).unwrap();
 
@@ -181,6 +256,59 @@ mod tests {
             .filter(|entry| entry.file_name().to_string_lossy().contains(".tmp-"))
             .count();
         assert_eq!(leftovers, 0);
+
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn overrides_builtin_and_resets_cleanly() {
+        let root = temp_root("overrides");
+
+        // Initially no overrides
+        let empty = load_from(&root).unwrap();
+        assert!(empty.overrides().is_empty());
+        let default_stealth = builtin("stealth");
+        assert_eq!(default_stealth.name, "Stealth");
+        assert_eq!(default_stealth.skills, vec!["rtk"]);
+
+        // Simulate an override written to disk
+        let mut overridden_stealth = default_stealth.clone();
+        overridden_stealth.name = "Custom Stealth".to_string();
+        overridden_stealth.skills = vec!["rtk".to_string(), "github".to_string()];
+        overridden_stealth.icon = "zap".to_string();
+
+        let file = PresetFile {
+            custom: Vec::new(),
+            active: Some("stealth".to_string()),
+            overrides: vec![overridden_stealth.clone()],
+        };
+        save_to(&root, &file).unwrap();
+
+        let reloaded = load_from(&root).unwrap();
+        assert_eq!(reloaded.overrides().len(), 1);
+
+        let listed = merged(&reloaded);
+        let merged_stealth = listed.iter().find(|p| p.id == "stealth").unwrap();
+        assert_eq!(merged_stealth.name, "Custom Stealth");
+        assert_eq!(merged_stealth.skills, vec!["rtk", "github"]);
+        assert_eq!(merged_stealth.icon, "zap");
+        assert!(merged_stealth.builtin, "must retain builtin: true");
+        assert!(merged_stealth.active, "active flag matches active ID");
+
+        // Clear override (simulate reset)
+        let reset_file = PresetFile {
+            custom: Vec::new(),
+            active: Some("stealth".to_string()),
+            overrides: Vec::new(),
+        };
+        save_to(&root, &reset_file).unwrap();
+
+        let reset_reloaded = load_from(&root).unwrap();
+        let reset_listed = merged(&reset_reloaded);
+        let restored_stealth = reset_listed.iter().find(|p| p.id == "stealth").unwrap();
+        assert_eq!(restored_stealth.name, "Stealth");
+        assert_eq!(restored_stealth.skills, vec!["rtk"]);
+        assert_eq!(restored_stealth.icon, "shield");
 
         fs::remove_dir_all(&root).unwrap();
     }

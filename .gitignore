@@ -7,8 +7,18 @@ dist-ssr/
 *.local
 
 # Rust / Tauri
+# Cargo resolves this repo as a workspace, so artifacts land in the root
+# `target/` — not only `src-tauri/target/`. Both must be ignored, otherwise
+# every git status and Tailwind content scan walks ~20 GB of build output.
+/target/
 src-tauri/target/
 src-tauri/gen/schemas/
+
+# Agent scratch state (scratch files, session logs) — never source. Only the
+# scratch subfolders: `.freebuff/evidence/` and `project-id` are tracked on
+# purpose, and ignoring the whole tree would silently drop that evidence.
+/.freebuff/tmp/
+/.freebuff/logs/
 
 # Editors
 .vscode/*
@@ -24,4 +34,18 @@ src-tauri/gen/schemas/
 # Logs
 logs/
 *.log
-npm-debug.log*
+npm-debug.log* 
+# Environment, secrets, and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.sqlite
+*.sqlite3
+*.db
+secrets.json
+mcp_config.json
+*.tar.gz
+PRD.md

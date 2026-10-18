@@ -19,6 +19,7 @@ import {
 } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
 import { useMcpCatalog } from "../hooks/useMcpCatalog";
+import { useMcpStoreActions } from "../hooks/useMcpStoreActions";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { sumMcpTokens } from "../lib/tokens";
 import { cn, formatTokens } from "../lib/utils";
@@ -28,6 +29,8 @@ import { McpDetailDrawer } from "./McpDetailDrawer";
 import { McpFormModal } from "./McpFormModal";
 import { McpScopeSelector } from "./McpScopeSelector";
 import { VirtualCardGrid } from "./VirtualCardGrid";
+import { OfficialStore } from "./OfficialStore";
+import { StoreTabs } from "./StoreTabs";
 
 interface McpViewProps {
   isTauri: boolean;
@@ -62,6 +65,7 @@ export function McpView({
   const [deploying, setDeploying] = useState(false);
   // Server whose execution details are open in the inspector drawer.
   const [inspecting, setInspecting] = useState<McpServer | null>(null);
+  const [showStore, setShowStore] = useState(false);
 
   const activeServers = useMemo(
     () =>
@@ -183,6 +187,15 @@ export function McpView({
     }
   };
 
+  const { statusOf: storeStatusOf, actionFor: storeActionFor } =
+    useMcpStoreActions(servers, {
+      scope,
+      toggle,
+      save,
+      reload: load,
+      onToast,
+    });
+
   if (!isTauri) {
     return (
       <div className="flex h-full items-center justify-center px-6">
@@ -213,12 +226,12 @@ export function McpView({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2">
-              <Plug className="size-3.5 text-emerald-300" />
-              <span className="text-[11.5px] font-medium text-emerald-300">
+            <div className="accent-border accent-bg-soft flex items-center gap-2 rounded-lg border px-3 py-2">
+              <Plug className="accent-text size-3.5" />
+              <span className="accent-text text-[11.5px] font-medium">
                 {t.mcps.active}
               </span>
-              <span className="font-mono text-[11.5px] text-emerald-200/70">
+              <span className="accent-text font-mono text-[11.5px] opacity-70">
                 {activeServers.length}/{servers.length}
               </span>
             </div>
@@ -249,6 +262,8 @@ export function McpView({
         {/* The toggle writes to whichever scope is chosen here. */}
         <McpScopeSelector scope={scope} targets={targets} onSelect={setScope} />
 
+          <StoreTabs showStore={showStore} onChange={setShowStore} />
+
         {error && (
           <div
             role="alert"
@@ -266,7 +281,7 @@ export function McpView({
           </div>
         )}
 
-        {loading ? (
+        {!showStore && (loading ? (
           <div className="flex items-center justify-center gap-2 py-16 text-[12px] text-zinc-500">
             <Loader2 className="size-4 animate-spin" />
             {t.mcps.reading}
@@ -304,6 +319,14 @@ export function McpView({
                 onDelete={(item) => void remove(item)}
               />
             )}
+          />
+        ))}
+
+        {showStore && (
+          <OfficialStore
+            kind="mcp"
+            statusOf={storeStatusOf}
+            actionFor={storeActionFor}
           />
         )}
 

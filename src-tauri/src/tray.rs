@@ -21,8 +21,51 @@ use tauri::{
 
 use crate::bridge;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 /// Tray id, so the icon can be addressed without keeping a handle around.
 pub const TRAY_ID: &str = "orquestra-tray";
+
+/// Window-close behavior synced from the frontend's `minimizeToTray` setting.
+/// Defaults to hidden-to-tray so the retention daemon survives a close;
+/// the frontend pushes its stored preference on every startup and toggle.
+pub struct AppConfigState {
+    minimize_to_tray: AtomicBool,
+}
+
+impl Default for AppConfigState {
+    fn default() -> Self {
+        Self { minimize_to_tray: AtomicBool::new(true) }
+    }
+}
+
+/// Remember whether closing the window should hide to the tray instead of
+/// exiting. Called by the settings UI on startup and on every toggle.
+#[tauri::command]
+pub fn set_minimize_to_tray(state: tauri::State<'_, AppConfigState>, enabled: bool) {
+    state.minimize_to_tray.store(enabled, Ordering::SeqCst);
+}
+
+/// Close-request routing: hide to the tray when the operator asked for it,
+/// otherwise clean up and exit as before. The tray menu's Show/Hide entry
+/// brings a hidden window back.
+pub fn on_close_requested<R: Runtime>(
+    window: &tauri::Window<R>,
+    api: &tauri::CloseRequestApi,
+) {
+    let hide = window
+        .app_handle()
+        .try_state::<AppConfigState>()
+        .map(|state| state.minimize_to_tray.load(Ordering::SeqCst))
+        .unwrap_or(true);
+    if hide {
+        api.prevent_close();
+        let _ = window.hide();
+    } else {
+        crate::single_instance::cleanup();
+        window.app_handle().exit(0);
+    }
+}
 
 /// Label of the window the tray shows and hides.
 const MAIN_WINDOW: &str = "main";

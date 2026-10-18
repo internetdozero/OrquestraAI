@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "src-tauri",
+]
+
+# Fast rebuilds for our own crates (incremental), while dependencies stay at
+# opt-level 1 so debug runs are usable on a small machine without paying for
+# full codegen of Tauri/GTK/Serde.
+[profile.dev]
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 1
+
+[profile.release]
+codegen-units = 16
+lto = "thin"
+opt-level = "s"
+panic = "abort"
+strip = true

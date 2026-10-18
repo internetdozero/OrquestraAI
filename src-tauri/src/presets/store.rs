@@ -16,7 +16,7 @@ use crate::paths::OrquestraPaths;
 /// Custom preset file inside `~/.orquestra`.
 const PRESETS_FILE: &str = "presets.json";
 
-/// On-disk shape: the operator's profiles and the applied one.
+/// On-disk shape: the operator's profiles, overrides for built-ins, and the applied one.
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct PresetFile {
@@ -24,12 +24,19 @@ pub(super) struct PresetFile {
     pub(super) custom: Vec<Preset>,
     #[serde(default)]
     pub(super) active: Option<String>,
+    #[serde(default)]
+    pub(super) overrides: Vec<Preset>,
 }
 
 impl PresetFile {
     #[cfg(test)]
     pub(super) fn custom(&self) -> &[Preset] {
         &self.custom
+    }
+
+    #[cfg(test)]
+    pub(super) fn overrides(&self) -> &[Preset] {
+        &self.overrides
     }
 
     pub(super) fn active(&self) -> Option<&str> {
@@ -56,7 +63,7 @@ pub fn save_preset(name: String, description: Option<String>) -> Result<Preset, 
 
     let root = root()?;
     let mut file = load_from(&root)?;
-    let (skills, mcps) = capture_live_state()?;
+    let (skills, mcps, harness_skills, harness_mcps) = capture_live_state()?;
     let id = unique_id(&name, &file);
 
     let preset = Preset {
@@ -66,6 +73,8 @@ pub fn save_preset(name: String, description: Option<String>) -> Result<Preset, 
         icon: "custom".to_string(),
         skills,
         mcps,
+        harness_skills,
+        harness_mcps,
         all_skills: false,
         all_mcps: false,
         builtin: false,
@@ -101,6 +110,67 @@ pub fn delete_preset(id: &str) -> Result<(), String> {
     save_to(&root, &file)
 }
 
+/// Update an existing preset.
+///
+/// If `preset.id` matches a built-in profile, user customizations are saved to
+/// `file.overrides` while keeping `builtin: true`.
+/// If `preset.id` is custom, it is updated in `file.custom`.
+pub fn update_preset(mut preset: Preset) -> Result<Preset, String> {
+    validate_id(&preset.id)?;
+    let name = preset.name.trim().to_string();
+    if name.is_empty() {
+        return Err("a preset needs a name".to_string());
+    }
+    preset.name = name;
+    preset.description = preset.description.trim().to_string();
+    // Normalize scope maps so hand-edited payloads cannot store unknown
+    // harnesses, empties, or path-shaped ids; the edit modal spreads the
+    // preset, so untouched per-harness scopes survive an update as-is.
+    preset.harness_skills = super::scopes::normalize_scope_map(&preset.harness_skills);
+    preset.harness_mcps = super::scopes::normalize_scope_map(&preset.harness_mcps);
+
+    let root = root()?;
+    let mut file = load_from(&root)?;
+
+    let is_builtin = builtins::all().iter().any(|b| b.id == preset.id);
+    if is_builtin {
+        preset.builtin = true;
+        file.overrides.retain(|existing| existing.id != preset.id);
+        file.overrides.push(preset.clone());
+    } else {
+        preset.builtin = false;
+        let before = file.custom.len();
+        file.custom.retain(|existing| existing.id != preset.id);
+        if file.custom.len() == before {
+            return Err(format!("unknown preset: {}", preset.id));
+        }
+        file.custom.push(preset.clone());
+    }
+
+    save_to(&root, &file)?;
+
+    // Return preset with accurate active flag
+    preset.active = file.active.as_deref() == Some(preset.id.as_str());
+    Ok(preset)
+}
+
+/// Reset a built-in preset to its factory defaults by discarding its override.
+pub fn reset_preset(id: &str) -> Result<Preset, String> {
+    let original = builtins::all()
+        .into_iter()
+        .find(|b| b.id == id)
+        .ok_or_else(|| format!("“{id}” is not a built-in preset"))?;
+
+    let root = root()?;
+    let mut file = load_from(&root)?;
+    file.overrides.retain(|existing| existing.id != id);
+    save_to(&root, &file)?;
+
+    let mut preset = original;
+    preset.active = file.active.as_deref() == Some(id);
+    Ok(preset)
+}
+
 // ---------------------------------------------------------------------------
 // Storage
 // ---------------------------------------------------------------------------
@@ -109,12 +179,26 @@ pub(super) fn load_current() -> Result<PresetFile, String> {
     load_from(&root()?)
 }
 
-/// Built-ins first, then custom profiles, with `active` recomputed from the
-/// stored id so the flag can never drift from what was actually applied.
+/// Built-ins (with overrides applied) first, then custom profiles, with `active`
+/// recomputed from the stored id so the flag can never drift from what was actually applied.
 pub(super) fn merged(file: &PresetFile) -> Vec<Preset> {
     let active = file.active();
 
     let mut presets = builtins::all();
+    for builtin in presets.iter_mut() {
+        if let Some(ov) = file.overrides.iter().find(|o| o.id == builtin.id) {
+            builtin.name = ov.name.clone();
+            builtin.description = ov.description.clone();
+            builtin.icon = ov.icon.clone();
+            builtin.skills = ov.skills.clone();
+            builtin.mcps = ov.mcps.clone();
+            builtin.harness_skills = ov.harness_skills.clone();
+            builtin.harness_mcps = ov.harness_mcps.clone();
+            builtin.all_skills = ov.all_skills;
+            builtin.all_mcps = ov.all_mcps;
+        }
+    }
+
     for stored in &file.custom {
         let mut preset = stored.clone();
         preset.builtin = false;
@@ -196,27 +280,69 @@ pub(super) fn save_to(root: &Path, file: &PresetFile) -> Result<(), String> {
 // Capture and naming
 // ---------------------------------------------------------------------------
 
-/// The skills enabled in any scope and the MCPs enabled anywhere, which is the
-/// combination the operator currently sees when they hit "save".
-fn capture_live_state() -> Result<(Vec<String>, Vec<String>), String> {
-    let mut skill_ids = std::collections::BTreeSet::new();
-    let scopes = std::iter::once(None).chain(crate::harness::harness_ids().map(Some));
+/// The Global baseline plus per-harness specialization, as the operator
+/// currently sees it. Skills use the Global baseline for `skills` and only
+/// harness-only links (enabled in a harness but not global) for
+/// `harness_skills`; MCPs split `global_enabled` from `enabled_harnesses`.
+/// A loose union would bundle orphan links as ghost entries.
+fn capture_live_state() -> Result<
+    (
+        Vec<String>,
+        Vec<String>,
+        std::collections::HashMap<String, Vec<String>>,
+        std::collections::HashMap<String, Vec<String>>,
+    ),
+    String,
+> {
+    use std::collections::{BTreeSet, HashMap};
 
-    for scope in scopes {
-        for skill in crate::skills::list_skills(scope.map(str::to_string))? {
-            if skill.harness_enabled {
-                skill_ids.insert(skill.id);
-            }
+    let mut global_skills = BTreeSet::new();
+    for skill in crate::skills::list_skills(None)? {
+        if skill.global_enabled {
+            global_skills.insert(skill.id);
         }
     }
 
-    let mcps = crate::mcp::list_mcps()?
-        .into_iter()
-        .filter(|server| server.global_enabled || !server.enabled_harnesses.is_empty())
-        .map(|server| server.id)
-        .collect();
+    // Harness-only links per harness, excluding anything Global already
+    // projects (inherited skills belong to the baseline, not the harness).
+    let mut harness_skills: HashMap<String, Vec<String>> = HashMap::new();
+    for harness in crate::harness::harness_ids() {
+        let mut only: Vec<String> = crate::skills::list_skills(Some(harness.to_string()))?
+            .into_iter()
+            .filter(|skill| skill.harness_enabled && !skill.global_enabled)
+            .map(|skill| skill.id)
+            .collect();
+        only.sort();
+        only.dedup();
+        if !only.is_empty() {
+            harness_skills.insert(harness.to_string(), only);
+        }
+    }
 
-    Ok((skill_ids.into_iter().collect(), mcps))
+    let mut global_mcps = BTreeSet::new();
+    let mut harness_mcps: HashMap<String, Vec<String>> = HashMap::new();
+    for server in crate::mcp::list_mcps()? {
+        if server.global_enabled {
+            global_mcps.insert(server.id.clone());
+        }
+        for harness in &server.enabled_harnesses {
+            harness_mcps
+                .entry(harness.clone())
+                .or_insert_with(Vec::new)
+                .push(server.id.clone());
+        }
+    }
+    for ids in harness_mcps.values_mut() {
+        ids.sort();
+        ids.dedup();
+    }
+
+    Ok((
+        global_skills.into_iter().collect(),
+        global_mcps.into_iter().collect(),
+        harness_skills,
+        harness_mcps,
+    ))
 }
 
 /// `Game Dev` → `game-dev`; runs of punctuation collapse to one dash and a

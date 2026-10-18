@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Compass, Loader2, Plus, X } from "lucide-react";
+import { Compass, Loader2, Pencil, Plus, X } from "lucide-react";
 import { presentPreset, summarizePreset } from "../i18n/presetCopy";
 import { presetIcon, type Preset } from "../lib/presets";
 import { cn } from "../lib/utils";
 import { useI18n } from "../hooks/useI18n";
 import { PresetSaveModal } from "./PresetSaveModal";
+import { PresetEditModal } from "./PresetEditModal";
 
 interface PresetBarProps {
   presets: Preset[];
@@ -14,6 +15,8 @@ interface PresetBarProps {
   saving: boolean;
   onApply: (preset: Preset) => void;
   onSave: (name: string, description: string) => Promise<boolean>;
+  onUpdate: (preset: Preset) => Promise<boolean>;
+  onReset: (id: string) => Promise<boolean>;
   onDelete: (preset: Preset) => void;
 }
 
@@ -21,11 +24,13 @@ function PresetPill({
   preset,
   busy,
   onApply,
+  onEdit,
   onDelete,
 }: {
   preset: Preset;
   busy: boolean;
   onApply: (preset: Preset) => void;
+  onEdit: (preset: Preset) => void;
   onDelete: (preset: Preset) => void;
 }) {
   const { t } = useI18n();
@@ -37,7 +42,7 @@ function PresetPill({
       className={cn(
         "group flex shrink-0 items-center rounded-lg border transition-colors",
         preset.active
-          ? "border-emerald-500/40 bg-emerald-500/[0.12] shadow-[0_0_18px_-6px_rgba(16,185,129,0.55)]"
+          ? "accent-border accent-bg-soft accent-glow border"
           : "border-white/10 bg-white/[0.02] hover:border-white/20",
       )}
     >
@@ -48,7 +53,7 @@ function PresetPill({
         title={`${copy.name} — ${copy.description} (${summarizePreset(t, preset)})`}
         className={cn(
           "flex items-center gap-1.5 rounded-lg py-1.5 pr-2.5 pl-2.5 text-[11.5px] font-medium transition-colors disabled:cursor-wait",
-          preset.active ? "text-emerald-200" : "text-zinc-300 hover:text-zinc-100",
+          preset.active ? "accent-text" : "text-zinc-300 hover:text-zinc-100",
         )}
       >
         {busy ? (
@@ -57,14 +62,24 @@ function PresetPill({
           <Icon
             className={cn(
               "size-3.5",
-              preset.active ? "text-emerald-300" : "text-zinc-400",
+              preset.active ? "accent-text" : "text-zinc-400",
             )}
           />
         )}
         <span className="whitespace-nowrap">{copy.name}</span>
         {preset.active && !busy && (
-          <span className="size-1.5 rounded-full bg-emerald-400" />
+          <span className="accent-dot size-1.5 rounded-full" />
         )}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onEdit(preset)}
+        title={t.presets.editTitle(copy.name)}
+        aria-label={t.presets.editTitle(copy.name)}
+        className="grid h-5 w-0 place-items-center overflow-hidden rounded text-zinc-500 opacity-0 transition-[width,opacity] group-hover:mr-0.5 group-hover:w-5 group-hover:opacity-100 focus-visible:mr-0.5 focus-visible:w-5 focus-visible:opacity-100 hover:text-emerald-300"
+      >
+        <Pencil className="size-3" />
       </button>
 
       {!preset.builtin && (
@@ -73,7 +88,7 @@ function PresetPill({
           onClick={() => onDelete(preset)}
           title={t.presets.deleteTitle(copy.name)}
           aria-label={t.presets.deleteTitle(copy.name)}
-          className="mr-1 grid size-5 place-items-center rounded text-zinc-600 opacity-0 transition-colors hover:text-rose-300 focus-visible:opacity-100 group-hover:opacity-100"
+          className="grid h-5 w-0 place-items-center overflow-hidden rounded text-zinc-600 opacity-0 transition-[width,opacity] group-hover:mr-1 group-hover:w-5 group-hover:opacity-100 focus-visible:mr-1 focus-visible:w-5 focus-visible:opacity-100 hover:text-rose-300"
         >
           <X className="size-3" />
         </button>
@@ -94,10 +109,13 @@ export function PresetBar({
   saving,
   onApply,
   onSave,
+  onUpdate,
+  onReset,
   onDelete,
 }: PresetBarProps) {
   const { t } = useI18n();
   const [saveOpen, setSaveOpen] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
   const showSkeleton = loading && presets.length === 0;
 
   return (
@@ -122,6 +140,7 @@ export function PresetBar({
                   preset={preset}
                   busy={busyId === preset.id}
                   onApply={onApply}
+                  onEdit={setEditingPreset}
                   onDelete={onDelete}
                 />
               ))}
@@ -143,6 +162,15 @@ export function PresetBar({
           saving={saving}
           onClose={() => setSaveOpen(false)}
           onSave={onSave}
+        />
+      )}
+
+      {editingPreset && (
+        <PresetEditModal
+          preset={editingPreset}
+          onClose={() => setEditingPreset(null)}
+          onUpdate={onUpdate}
+          onReset={onReset}
         />
       )}
     </div>

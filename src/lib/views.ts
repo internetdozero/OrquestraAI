@@ -1,11 +1,18 @@
-import { FileText, Layers, Plug, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  History,
+  Layers,
+  Lightbulb,
+  Plug,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * Top-level navigation of the shell. Harness scopes are *not* views: they are
  * tabs inside the skills view, the same way the MCP registry already presents
  * Global and the harnesses as one screen with an inner scope selector.
  */
-export type ActiveView = "skills" | "mcps" | "agents";
+export type ActiveView = "skills" | "mcps" | "agents" | "sessions" | "ideas";
 
 export interface ViewDefinition {
   id: ActiveView;
@@ -32,5 +39,17 @@ export const VIEWS: ViewDefinition[] = [
     label: "AGENTS.md",
     icon: FileText,
     hint: "Master rules projected into every harness",
+  },
+  {
+    id: "sessions",
+    label: "Sessions",
+    icon: History,
+    hint: "Unified chat history across every harness",
+  },
+  {
+    id: "ideas",
+    label: "Ideas",
+    icon: Lightbulb,
+    hint: "Idea vault and inter-agent blackboard",
   },
 ];

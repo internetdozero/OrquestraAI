@@ -1,0 +1,100 @@
+//! Unified session and chat-history management.
+//!
+//! Phase 1: a read-only catalog of every conversation the nine harnesses keep
+//! on disk, plus the pin and retention sidecar in `~/.orquestra`. Listing never
+//! writes to a harness store — a harness that is broken, locked or absent is
+//! reported on stderr and skipped, so one bad database cannot empty the tab.
+//!
+//! Purge execution and the auto-purge daemon live in `purge` and `scheduler`;
+//! the React view is still to come.
+
+pub mod adapters;
+mod policy;
+pub mod purge;
+mod scheduler;
+#[cfg(test)]
+mod tests;
+pub mod types;
+
+use std::collections::HashMap;
+
+use policy::pins;
+use types::{PurgeEstimate, PurgeFilter, PurgeReport, RetentionPolicy, UnifiedSession};
+
+/// Every session from every installed harness, newest first, with pin state
+/// applied from `~/.orquestra/sessions_policy.json`.
+///
+/// Runs on the async runtime rather than the main thread: sizing Freebuff
+/// worktrees walks their `node_modules` folders and measures ~3.6 s on a real
+/// machine, which would otherwise freeze the window mid-scan.
+#[tauri::command(async)]
+pub fn get_unified_sessions() -> Result<Vec<UnifiedSession>, String> {
+    let mut sessions = adapters::list_all()?;
+    let pins: HashMap<(String, String), Option<String>> = pins()?
+        .into_iter()
+        .map(|pin| ((pin.harness, pin.session_id), pin.label))
+        .collect();
+
+    for session in &mut sessions {
+        let key = (session.harness.clone(), session.id.clone());
+        if let Some(label) = pins.get(&key) {
+            session.is_pinned = true;
+            session.pin_label = label.clone();
+        }
+    }
+
+    // ISO 8601 UTC sorts chronologically as text. Ids break ties so the order
+    // a harness happened to return is never visible in the UI.
+    sessions.sort_by(|left, right| {
+        right
+            .updated_at
+            .cmp(&left.updated_at)
+            .then_with(|| left.harness.cmp(&right.harness))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+
+    Ok(sessions)
+}
+
+/// Pin or unpin one conversation. Returns the state after the toggle.
+#[tauri::command]
+pub fn toggle_pin_session(
+    harness: String,
+    session_id: String,
+    label: Option<String>,
+) -> Result<bool, String> {
+    policy::toggle_pin(&harness, &session_id, label)
+}
+
+/// Current retention rules, with defaults on first run.
+#[tauri::command]
+pub fn get_retention_policy() -> Result<RetentionPolicy, String> {
+    policy::get_policy()
+}
+
+/// Replace the retention rules; the pin list is preserved.
+#[tauri::command]
+pub fn save_retention_policy(policy: RetentionPolicy) -> Result<(), String> {
+    policy::save_policy(policy)
+}
+
+/// Dry run: what `purge_sessions` would delete for this filter, in sessions
+/// and bytes. Nothing on disk is touched.
+#[tauri::command(async)]
+pub fn estimate_purge(filter: PurgeFilter) -> Result<PurgeEstimate, String> {
+    purge::estimate(&purge::Store::system()?, &filter)
+}
+
+/// Delete every session the filter matches. Pinned sessions are kept unless
+/// the filter explicitly asks for them, and a session a running agent holds
+/// open is always skipped and reported.
+#[tauri::command(async)]
+pub fn purge_sessions(filter: PurgeFilter) -> Result<PurgeReport, String> {
+    purge::execute(&purge::Store::system()?, &filter)
+}
+
+/// Start the retention daemon. Called once from app setup; it lives until the
+/// process exits.
+pub fn start_scheduler() {
+    scheduler::spawn();
+}

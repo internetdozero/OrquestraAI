@@ -16,7 +16,7 @@ export function StatTile({
   accent = false,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   hint: string;
   icon: LucideIcon;
   accent?: boolean;
@@ -25,11 +25,11 @@ export function StatTile({
     <div
       className={cn(
         "relative overflow-hidden rounded-xl border border-white/[0.06] bg-zinc-900/30 p-3.5",
-        accent && "border-emerald-500/20 bg-emerald-500/[0.04]",
+        accent && "accent-border accent-bg-soft",
       )}
     >
       {accent && (
-        <div className="pointer-events-none absolute -top-10 -right-10 size-24 rounded-full bg-emerald-500/10 blur-2xl" />
+        <div className="accent-bg-soft pointer-events-none absolute -top-10 -right-10 size-24 rounded-full blur-2xl" />
       )}
       <div className="flex items-center justify-between">
         <span className="truncate text-[10.5px] font-medium tracking-wider text-zinc-500 uppercase">
@@ -38,7 +38,7 @@ export function StatTile({
         <Icon
           className={cn(
             "size-3.5 shrink-0",
-            accent ? "text-emerald-400" : "text-zinc-600",
+            accent ? "accent-text" : "text-zinc-600",
           )}
         />
       </div>

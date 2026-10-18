@@ -13,12 +13,17 @@ use std::collections::HashMap;
 
 mod catalog;
 mod deploy;
+mod secrets;
 mod serializers;
 #[cfg(test)]
 mod tests;
 
-pub use catalog::{apply_global_selection, delete_mcp, list_mcps, save_mcp, set_mcp_state};
+pub use catalog::{
+    apply_global_selection, apply_harness_selections, delete_mcp, list_mcps, list_mcps_masked,
+    reveal_mcp_secret, save_mcp, set_mcp_state,
+};
 pub use deploy::{deploy_mcps, deploy_mcps_reporting, list_targets};
+pub use secrets::mask_secret;
 
 /// One MCP server as the operator defines it, independent of any harness.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,12 +38,46 @@ pub struct McpServer {
     pub args: Vec<String>,
     #[serde(default)]
     pub env: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub headers: HashMap<String, String>,
     /// Projected into every harness that has an adapter.
     #[serde(default)]
     pub global_enabled: bool,
     /// Harnesses that opt in on top of the global baseline.
     #[serde(default)]
     pub enabled_harnesses: Vec<String>,
+    /// Computed official tier (see `crate::official`); stamped on the way
+    /// out and recomputed on save, never operator state.
+    #[serde(default)]
+    pub official: bool,
+}
+
+impl McpServer {
+    pub(super) fn resolved(&self, dotenv: &HashMap<String, String>) -> Self {
+        let mut resolved = self.clone();
+        resolved.args = self
+            .args
+            .iter()
+            .map(|value| secrets::interpolate(value, dotenv))
+            .collect();
+        resolved.env = self
+            .env
+            .iter()
+            .map(|(key, value)| (key.clone(), secrets::interpolate(value, dotenv)))
+            .collect();
+        resolved.url = self
+            .url
+            .as_ref()
+            .map(|value| secrets::interpolate(value, dotenv));
+        resolved.headers = self
+            .headers
+            .iter()
+            .map(|(key, value)| (key.clone(), secrets::interpolate(value, dotenv)))
+            .collect();
+        resolved
+    }
 }
 
 impl McpServer {

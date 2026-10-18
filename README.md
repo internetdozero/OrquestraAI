@@ -34,13 +34,15 @@ cargo check --manifest-path src-tauri/Cargo.toml   # Rust-only check
 cargo test --manifest-path src-tauri/Cargo.toml --lib  # scope, symlink, bridge, AGENTS.md tests
 
 # Headless bridge (same code the UI calls)
-./src-tauri/target/release/orquestra-ai --bridge-status   # JSON link state per harness
-./src-tauri/target/release/orquestra-ai --bridge-deploy   # back up + fuse every harness
+./target/release/orquestra-ai --bridge-status   # JSON link state per harness
+./target/release/orquestra-ai --bridge-deploy   # back up + fuse every harness
 ```
 
 `npm run build && cargo build --release --manifest-path src-tauri/Cargo.toml`
-produces `src-tauri/target/release/orquestra-ai`; `~/.local/bin/orquestra` is a
-symlink to it, so `orquestra &` launches the control plane from anywhere.
+produces `target/release/orquestra-ai` at the repo root: this is a Cargo
+workspace, so artifacts go to the workspace target directory, not
+`src-tauri/target/`. `~/.local/bin/orquestra` is a symlink to it, so
+`orquestra &` launches the control plane from anywhere.
 
 ## Storage layout
 

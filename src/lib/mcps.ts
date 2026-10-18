@@ -8,8 +8,12 @@ export interface McpServer {
   command: string;
   args: string[];
   env: Record<string, string>;
+  url?: string;
+  headers?: Record<string, string>;
   globalEnabled: boolean;
   enabledHarnesses: string[];
+  /** Computed official tier from the Rust core; absent in older payloads. */
+  official?: boolean;
 }
 
 /** Mirrors the Rust `McpTargetStatus` struct. */
@@ -52,7 +56,17 @@ export function isLockedByGlobal(
 
 /** Environment keys whose values are masked in the drawer by default. */
 export function isSecretKey(key: string): boolean {
-  return /(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|COOKIE|AUTH)/i.test(key);
+  return /(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|COOKIE|AUTH|BEARER)/i.test(key);
+}
+
+export function isSecretValue(value: string): boolean {
+  return /^(?:sk-|ghp_|cf_|\*{4}|•{4})/i.test(value);
+}
+
+export function isEnvironmentTemplate(value: string): boolean {
+  return /\$(?:\{[A-Za-z_][A-Za-z0-9_]*(?::-.*?)?\}|[A-Za-z_][A-Za-z0-9_]*)/.test(
+    value,
+  );
 }
 
 /** Full command line as the harness will execute it. */
@@ -120,6 +134,11 @@ export function saveMcp(server: McpServer): Promise<void> {
 
 export function deleteMcp(id: string): Promise<void> {
   return invoke<void>("delete_mcp", { id });
+}
+
+/** Fetch a single value only after the operator explicitly requests reveal. */
+export function revealMcpSecret(id: string, key: string): Promise<string> {
+  return invoke<string>("reveal_mcp_secret", { id, key });
 }
 
 /** Re-compile every harness config; resolves with the changed file paths. */
