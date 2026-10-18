@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript-typescript' ]
+        language: [ 'javascript-typescript', 'rust' ]
 
     steps:
     - name: Checkout repository
@@ -31,7 +31,24 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
+    # System deps so the Rust build works under CodeQL compiler interception.
+    - name: System deps for Rust CodeQL build
+      if: matrix.language == 'rust'
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          libwebkit2gtk-4.1-dev build-essential libssl-dev \
+          libayatana-appindicator3-dev librsvg2-dev
+        rm -f .cargo/config.toml
+        npm ci
+
+    # Manual build for Rust so CodeQL can intercept compiler invocations.
+    - name: Cargo build (CodeQL compiler interception)
+      if: matrix.language == 'rust'
+      run: cargo build
+
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
+        build-type: manual

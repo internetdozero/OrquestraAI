@@ -130,7 +130,7 @@ fn worktrees(root: &Path) -> Vec<UnifiedSession> {
     entries
         .flatten()
         .filter(|entry| entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false))
-        .filter_map(|entry| {
+        .map(|entry| {
             let path = entry.path();
             let id = entry.file_name().to_string_lossy().into_owned();
             let meta = thread_metadata(&path);
@@ -154,7 +154,7 @@ fn worktrees(root: &Path) -> Vec<UnifiedSession> {
                 .map(utils::iso8601_from_secs);
             session.size_bytes = utils::dir_size(&path);
 
-            Some(session)
+            session
         })
         .collect()
 }
@@ -216,7 +216,7 @@ fn manicode_chats(root: &Path) -> Vec<UnifiedSession> {
             let mut session = UnifiedSession::new(
                 HARNESS,
                 id.clone(),
-                title.unwrap_or_else(|| format!("Chat {}", &chat_name)),
+                title.unwrap_or_else(|| format!("Chat {}", chat_name)),
             );
             session.turns_count = user_turns;
             session.size_bytes = utils::file_size(&log);

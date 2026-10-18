@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Safety rails: the guards that stop a purge from removing something a
 //! running agent still holds, or from reaching outside a harness store.
 

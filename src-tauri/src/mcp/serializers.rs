@@ -309,7 +309,7 @@ pub(super) fn render_codex_toml(
         if !server.env.is_empty() {
             if entry
                 .get("env")
-                .is_none_or(|item| item.as_table().is_none())
+                .map_or(true, |item| item.as_table().is_none())
             {
                 entry.insert("env", toml_edit::Item::Table(toml_edit::Table::new()));
             }

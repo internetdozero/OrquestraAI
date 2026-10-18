@@ -129,7 +129,7 @@ pub fn list_all() -> Result<Vec<UnifiedSession>, String> {
     let (sessions, warnings) = collect(&home);
 
     for warning in &warnings {
-        eprintln!("[orquestra] sessions: skipped {warning}");
+        crate::log_warn!("sessions: skipped {warning}");
     }
 
     Ok(sessions)

@@ -23,20 +23,20 @@ const BACKUP_PREFIX: &str = "pre-mcp";
 /// Harness configs OrquestraAI can compile MCP servers into.
 pub fn list_targets() -> Result<Vec<McpTargetStatus>, String> {
     let home = bridge::home_dir()?;
-    Ok(harness::mcp_targets()
-        .map(|spec| {
+    harness::mcp_targets()
+        .map(|spec| -> Result<McpTargetStatus, String> {
             let mcp = spec
                 .mcp
                 .as_ref()
-                .expect("mcp_targets yields adapters only");
-            McpTargetStatus {
+                .ok_or_else(|| format!("harness {:?} has no MCP spec; bug", spec.id))?;
+            Ok(McpTargetStatus {
                 id: spec.id.to_string(),
                 label: spec.label.to_string(),
                 config_path: home.join(mcp.rel).to_string_lossy().into_owned(),
                 installed: harness::is_installed(spec, &home),
-            }
+            })
         })
-        .collect())
+        .collect::<Result<Vec<_>, _>>()
 }
 
 /// Compile the catalog into every installed harness's own format.

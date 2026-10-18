@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Adapter discovery tests.
 //!
 //! Every fixture lives under `/var/tmp/testing` and mimics the real store

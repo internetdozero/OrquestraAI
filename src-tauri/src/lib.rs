@@ -1,3 +1,9 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
+
+pub(crate) mod log;
 pub mod bridge;
 mod desktop;
 pub mod harness;
@@ -287,23 +293,23 @@ pub fn deploy_mcp_json() -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    if let Err(error) = tauri::Builder::default()
         .setup(|app| {
             match OrquestraPaths::resolve().and_then(|paths| paths.bootstrap()) {
                 Ok(()) => {}
-                Err(error) => eprintln!("[orquestra] storage bootstrap failed: {error}"),
+                Err(error) => crate::log_error!("storage bootstrap failed: {error}"),
             }
 
             // Panel presence. A host without a tray must still get a window,
             // so a failure here is reported and the app carries on.
             if let Err(error) = tray::setup_tray(app.handle()) {
-                eprintln!("[orquestra] system tray unavailable: {error}");
+                crate::log_warn!("system tray unavailable: {error}");
             }
 
             // Single instance listener: ensures subsequent launches focus this window
             // rather than spawning duplicate processes and duplicate tray icons.
             if let Err(error) = single_instance::start_listener(app.handle().clone()) {
-                eprintln!("[orquestra] single-instance listener failed: {error}");
+                crate::log_warn!("single-instance listener failed: {error}");
             }
 
             // Retention daemon. It enforces nothing unless the operator enabled
@@ -374,5 +380,7 @@ pub fn run() {
             purge_sessions
         ])
         .run(tauri::generate_context!())
-        .expect("error while running OrquestraAI");
+    {
+        crate::log_error!("error while running OrquestraAI: {error}");
+    }
 }

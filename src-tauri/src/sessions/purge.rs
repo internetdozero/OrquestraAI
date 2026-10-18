@@ -189,7 +189,7 @@ fn select(store: &Store, filter: &PurgeFilter) -> Result<Selection, String> {
 fn select_with(store: &Store, rules: &Rules<'_>) -> Result<Selection, String> {
     let (sessions, warnings) = adapters::collect(&store.home);
     for warning in warnings {
-        eprintln!("[orquestra] sessions: skipped {warning}");
+        crate::log_warn!("sessions: skipped {warning}");
     }
 
     let pins: HashSet<(String, String)> = policy::load_from(&store.root)?

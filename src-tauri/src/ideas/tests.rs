@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 //! Unit tests against an in-memory vault: no scratch files, no HOME needed.
 
 use std::path::Path;

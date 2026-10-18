@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust-tests:
+    # Rust test job: runs the Tauri/Rust workspace tests and Clippy.
+    name: Rust tests
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      # Check out the repository.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Node.js (needed for npm ci; debug cargo test does not embed UI).
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Install frontend dependencies so Tauri build scripts resolve.
+      - name: Install Node dependencies
+        run: npm ci
+
+      # Install WebKitGTK and Tauri system prerequisites (mirrors build.yml).
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            clang \
+            mold
+
+      # Remove the local-only cargo config that forces machine-local paths.
+      - name: Configure runner cargo environment
+        run: rm -f .cargo/config.toml
+
+      # Install the stable Rust toolchain.
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Cache Rust build artifacts for faster reruns.
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Run the full Rust workspace test suite.
+      - name: Run cargo tests
+        run: cargo test --workspace
+
+      # Deny all Clippy warnings across the workspace.
+      - name: Run Clippy
+        run: cargo clippy --workspace -- -D warnings
+
+  node-tests:
+    # Node test job: runs frontend unit tests and the TS typecheck.
+    name: Node tests
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      # Check out the repository.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Node.js with npm caching.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Install frontend dependencies.
+      - name: Install Node dependencies
+        run: npm ci
+
+      # Run the Node test suite.
+      - name: Run npm tests
+        run: npm test
+
+      # Typecheck the frontend without emitting output.
+      - name: Typecheck frontend
+        run: npx tsc --noEmit

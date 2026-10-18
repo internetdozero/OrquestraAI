@@ -15,7 +15,7 @@ pub(super) fn normalize_scope_map(map: &HashMap<String, Vec<String>>) -> HashMap
         if crate::harness::find(harness).is_none() {
             continue;
         }
-        let mut sorted: Vec<String> = ids.iter().cloned().collect();
+        let mut sorted: Vec<String> = ids.to_vec();
         sorted.sort();
         sorted.dedup();
         // Skills/MCP ids with path syntax can never resolve; drop them here

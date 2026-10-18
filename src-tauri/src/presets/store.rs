@@ -328,7 +328,7 @@ fn capture_live_state() -> Result<
         for harness in &server.enabled_harnesses {
             harness_mcps
                 .entry(harness.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(server.id.clone());
         }
     }

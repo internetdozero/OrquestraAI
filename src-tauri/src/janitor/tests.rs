@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 use super::{health::*, sweep::*};
 use serde_json::Value;
 use std::collections::BTreeSet;

@@ -1,6 +1,8 @@
 // Prevents an additional console window on Windows in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+pub(crate) mod log;
+
 fn main() {
     // Headless operator entry points: the same bridge code the UI invokes,
     // usable from a terminal so fusion can be scripted or verified over SSH.
@@ -10,7 +12,7 @@ fn main() {
             match orquestra_ai_lib::bridge_status_json() {
                 Ok(json) => println!("{json}"),
                 Err(error) => {
-                    eprintln!("orquestra: {error}");
+                    crate::log_error!("{error}");
                     std::process::exit(1);
                 }
             }
@@ -22,7 +24,7 @@ fn main() {
                     println!("{report}");
                 }
                 Err(error) => {
-                    eprintln!("orquestra: {error}");
+                    crate::log_error!("{error}");
                     std::process::exit(1);
                 }
             }
@@ -32,7 +34,7 @@ fn main() {
             match orquestra_ai_lib::mcp_status_json() {
                 Ok(json) => println!("{json}"),
                 Err(error) => {
-                    eprintln!("orquestra: {error}");
+                    crate::log_error!("{error}");
                     std::process::exit(1);
                 }
             }
@@ -43,7 +45,7 @@ fn main() {
             let (Some(id), Some(scope), Some(state)) =
                 (args.get(2), args.get(3), args.get(4))
             else {
-                eprintln!("usage: orquestra --mcp-set <id> <global|harness> <on|off>");
+                crate::log_error!("usage: orquestra --mcp-set <id> <global|harness> <on|off>");
                 std::process::exit(2);
             };
 
@@ -51,7 +53,7 @@ fn main() {
                 "on" | "true" | "enable" => true,
                 "off" | "false" | "disable" => false,
                 other => {
-                    eprintln!("orquestra: expected on|off, got {other}");
+                    crate::log_error!("expected on|off, got {other}");
                     std::process::exit(2);
                 }
             };
@@ -59,7 +61,7 @@ fn main() {
             match orquestra_ai_lib::set_mcp_state_cli(id, scope, enabled) {
                 Ok(json) => println!("{json}"),
                 Err(error) => {
-                    eprintln!("orquestra: {error}");
+                    crate::log_error!("{error}");
                     std::process::exit(1);
                 }
             }
@@ -68,14 +70,14 @@ fn main() {
         Some("--preset") => {
             // --preset <id> (e.g. --preset stealth)
             let Some(id) = args.get(2) else {
-                eprintln!("usage: orquestra --preset <id>");
+                crate::log_error!("usage: orquestra --preset <id>");
                 std::process::exit(2);
             };
 
             match orquestra_ai_lib::apply_preset_json(id) {
                 Ok(report) => println!("{report}"),
                 Err(error) => {
-                    eprintln!("orquestra: {error}");
+                    crate::log_error!("{error}");
                     std::process::exit(1);
                 }
             }
@@ -87,7 +89,7 @@ fn main() {
                     println!("{report}");
                 }
                 Err(error) => {
-                    eprintln!("orquestra: {error}");
+                    crate::log_error!("{error}");
                     std::process::exit(1);
                 }
             }
