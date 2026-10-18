@@ -9,15 +9,17 @@
 //! shapes it serializes.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 mod apply;
 mod builtins;
+mod scopes;
 mod store;
 #[cfg(test)]
 mod tests;
 
 pub use apply::apply_preset;
-pub use store::{delete_preset, list_presets, save_preset};
+pub use store::{delete_preset, list_presets, reset_preset, save_preset, update_preset};
 
 /// One named profile of active skills and MCP servers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +38,13 @@ pub struct Preset {
     /// MCP server ids to enable globally.
     #[serde(default)]
     pub mcps: Vec<String>,
+    /// Per-harness skill specialization: `harness_id -> skill ids` enabled
+    /// only in that harness (on top of the Global baseline).
+    #[serde(default)]
+    pub harness_skills: HashMap<String, Vec<String>>,
+    /// Per-harness MCP specialization: `harness_id -> server ids`.
+    #[serde(default)]
+    pub harness_mcps: HashMap<String, Vec<String>>,
     /// Ignore `skills` and project the whole vault.
     #[serde(default)]
     pub all_skills: bool,

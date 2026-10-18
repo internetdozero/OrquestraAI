@@ -1,0 +1,192 @@
+//! SQLite plumbing for the native Idea Vault: path resolution, connection
+//! setup, the canonical schema and the validation rules shared with the
+//! Python MCP. Query logic lives in `ideas_repo` and `notes_repo` so this
+//! file stays a thin foundation.
+
+/// Canonical schema, kept identical to the Python MCP's `SCHEMA`.
+const SCHEMA: &str = "
+CREATE TABLE IF NOT EXISTS ideas (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project     TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    description TEXT,
+    category    TEXT NOT NULL DEFAULT 'feature',
+    priority    TEXT NOT NULL DEFAULT 'medium',
+    tags        TEXT,
+    status      TEXT NOT NULL DEFAULT 'open',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS blackboard_notes (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project     TEXT NOT NULL,
+    topic       TEXT NOT NULL,
+    sender      TEXT NOT NULL,
+    target      TEXT NOT NULL DEFAULT 'all',
+    note        TEXT NOT NULL,
+    is_read     BOOLEAN NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ideas_project_status ON ideas (project, status);
+CREATE INDEX IF NOT EXISTS idx_ideas_category ON ideas (category);
+CREATE INDEX IF NOT EXISTS idx_notes_project_topic ON blackboard_notes (project, topic, is_read);
+";
+
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use rusqlite::{Connection, Row};
+
+use super::types::{BlackboardNote, IdeaItem};
+
+/// Database path, honoring `IDEA_VAULT_DB_PATH` and `XDG_DATA_HOME`.
+pub fn resolve_db_path() -> Result<PathBuf, String> {
+    let trimmed = std::env::var("IDEA_VAULT_DB_PATH")
+        .map(|raw| raw.trim().to_string())
+        .unwrap_or_default();
+    if !trimmed.is_empty() {
+        return Ok(PathBuf::from(trimmed));
+    }
+
+    let data_home = std::env::var("XDG_DATA_HOME")
+        .map(|raw| raw.trim().to_string())
+        .unwrap_or_default();
+    if !data_home.is_empty() {
+        return Ok(PathBuf::from(data_home).join("idea-vault/ideas.sqlite3"));
+    }
+
+    std::env::var_os("HOME")
+        .map(|home| PathBuf::from(home).join(".local/share/idea-vault/ideas.sqlite3"))
+        .ok_or_else(|| "HOME is not set; cannot locate the idea vault".to_string())
+}
+
+/// Open the vault: create parents, wait on writers, enable WAL, ensure schema.
+pub fn connect_at(path: &Path) -> Result<Connection, String> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)
+                .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
+        }
+    }
+
+    let connection = Connection::open(path)
+        .map_err(|error| format!("cannot open {}: {error}", path.display()))?;
+    connection
+        .busy_timeout(Duration::from_secs(5))
+        .map_err(|error| format!("cannot set a busy timeout: {error}"))?;
+    connection
+        .execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")
+        .map_err(|error| format!("cannot enable WAL: {error}"))?;
+    connection
+        .execute_batch(SCHEMA)
+        .map_err(|error| format!("cannot initialize the schema: {error}"))?;
+
+    Ok(connection)
+}
+
+/// Open the vault at its resolved path.
+pub fn connect() -> Result<Connection, String> {
+    connect_at(&resolve_db_path()?)
+}
+
+// ---------------------------------------------------------------------------
+// Validation (same rules as the MCP)
+// ---------------------------------------------------------------------------
+
+pub(super) fn require_text(value: &str, field: &str) -> Result<String, String> {
+    let text = value.trim();
+    if text.is_empty() {
+        return Err(format!("{field} must be a non-empty string"));
+    }
+    Ok(text.to_string())
+}
+
+pub(super) fn require_choice(value: &str, allowed: &[&str], field: &str) -> Result<String, String> {
+    let text = value.trim().to_lowercase();
+    if allowed.contains(&text.as_str()) {
+        Ok(text)
+    } else {
+        Err(format!("{field} must be one of: {}", allowed.join(", ")))
+    }
+}
+
+/// `None`, `""` and `"all"` mean no filter; anything else must be valid.
+pub(super) fn optional_filter(
+    value: Option<&str>,
+    allowed: &[&str],
+    field: &str,
+) -> Result<Option<String>, String> {
+    match value {
+        None => Ok(None),
+        Some(raw) => {
+            let text = raw.trim().to_lowercase();
+            if text.is_empty() || text == "all" {
+                Ok(None)
+            } else if allowed.contains(&text.as_str()) {
+                Ok(Some(text))
+            } else {
+                Err(format!("{field} must be one of: {}", allowed.join(", ")))
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Row mapping
+// ---------------------------------------------------------------------------
+
+pub(super) fn idea_from_row(row: &Row) -> Result<IdeaItem, rusqlite::Error> {
+    Ok(IdeaItem {
+        id: row.get("id")?,
+        project: row.get("project")?,
+        title: row.get("title")?,
+        description: row.get("description")?,
+        category: row.get("category")?,
+        priority: row.get("priority")?,
+        tags: row.get("tags")?,
+        status: row.get("status")?,
+        created_at: row.get("created_at")?,
+        updated_at: row.get("updated_at")?,
+    })
+}
+
+pub(super) fn note_from_row(row: &Row) -> Result<BlackboardNote, rusqlite::Error> {
+    Ok(BlackboardNote {
+        id: row.get("id")?,
+        project: row.get("project")?,
+        topic: row.get("topic")?,
+        sender: row.get("sender")?,
+        target: row.get("target")?,
+        note: row.get("note")?,
+        is_read: row.get::<_, i64>("is_read")? != 0,
+        created_at: row.get("created_at")?,
+    })
+}
+
+pub(super) fn db_error(error: rusqlite::Error) -> String {
+    format!("idea vault query failed: {error}")
+}
+
+pub(super) fn get_idea(connection: &Connection, id: i64) -> Result<IdeaItem, String> {
+    connection
+        .query_row("SELECT * FROM ideas WHERE id = ?1", [id], idea_from_row)
+        .map_err(|error| match error {
+            rusqlite::Error::QueryReturnedNoRows => format!("idea #{id} not found"),
+            other => db_error(other),
+        })
+}
+
+pub(super) fn get_note(connection: &Connection, id: i64) -> Result<BlackboardNote, String> {
+    connection
+        .query_row(
+            "SELECT * FROM blackboard_notes WHERE id = ?1",
+            [id],
+            note_from_row,
+        )
+        .map_err(|error| match error {
+            rusqlite::Error::QueryReturnedNoRows => format!("note #{id} not found"),
+            other => db_error(other),
+        })
+}

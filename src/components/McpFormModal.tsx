@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Save, X } from "lucide-react";
+import { Loader2, Plus, Save, Sparkles, X } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import {
   formatEnv,
@@ -7,7 +7,11 @@ import {
   slugify,
   type McpServer,
 } from "../lib/mcps";
+import { type McpPreset } from "../lib/mcpPresets";
+import { parseSmartMcpCommand } from "../lib/smartCommandParser";
 import { cn } from "../lib/utils";
+import { McpConnectionFields } from "./McpConnectionFields";
+import { McpPresetSelector } from "./McpPresetSelector";
 
 interface McpFormModalProps {
   /** `null` opens the modal in create mode. */
@@ -43,10 +47,14 @@ export function McpFormModal({
   const [command, setCommand] = useState(server?.command ?? "");
   const [args, setArgs] = useState((server?.args ?? []).join("\n"));
   const [env, setEnv] = useState(formatEnv(server?.env ?? {}));
+  const [url, setUrl] = useState(server?.url ?? "");
+  const [headers, setHeaders] = useState(server?.headers ?? {});
   const [globalEnabled, setGlobalEnabled] = useState(
     server?.globalEnabled ?? false,
   );
   const [localError, setLocalError] = useState<string | null>(null);
+  const [smartPaste, setSmartPaste] = useState("");
+  const [smartNotice, setSmartNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -87,6 +95,8 @@ export function McpFormModal({
         .map((line) => line.trim())
         .filter(Boolean),
       env: parseEnv(env),
+      url: url.trim() || undefined,
+      headers,
       globalEnabled,
       enabledHarnesses: server?.enabledHarnesses ?? [],
     });
@@ -127,6 +137,62 @@ export function McpFormModal({
         </div>
 
         <div className="max-h-[62vh] space-y-3.5 overflow-y-auto px-5 py-4">
+          {creating && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-200">
+                <Sparkles className="size-3.5" />
+                {t.mcps.smartPasteTitle}
+              </p>
+              <p className="mt-0.5 text-[10.5px] text-zinc-500">{t.mcps.smartPasteHint}</p>
+              <div className="mt-2">
+                <McpPresetSelector
+                  onPick={(preset: McpPreset) => {
+                    setName(preset.name);
+                    setDescription(preset.description);
+                    setCommand(preset.command);
+                    setArgs(preset.args.join("\n"));
+                    setEnv(preset.envTemplate);
+                    setSmartNotice(null);
+                    setLocalError(null);
+                  }}
+                />
+              </div>
+              <textarea
+                value={smartPaste}
+                onChange={(event) => setSmartPaste(event.target.value)}
+                rows={2}
+                spellCheck={false}
+                placeholder={t.mcps.smartPastePlaceholder}
+                className={cn(inputClass, "mt-2 h-auto resize-y py-2 leading-relaxed")}
+              />
+              <button
+                type="button"
+                disabled={!smartPaste.trim()}
+                onClick={() => {
+                  const parsed = parseSmartMcpCommand(smartPaste);
+                  if (!parsed) {
+                    setSmartNotice(t.mcps.smartPasteFailed);
+                    return;
+                  }
+                  setCommand(parsed.command);
+                  setArgs(parsed.args.join("\n"));
+                  if (Object.keys(parsed.env).length > 0) {
+                    setEnv(formatEnv(parsed.env));
+                  }
+                  if (parsed.url) setUrl(parsed.url);
+                  setSmartPaste("");
+                  setSmartNotice(t.mcps.smartPasteApplied);
+                  setLocalError(null);
+                }}
+                className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-[11.5px] font-medium text-emerald-200 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t.mcps.smartPasteAction}
+              </button>
+              {smartNotice && (
+                <p className="mt-1.5 text-[11px] text-emerald-200/80">{smartNotice}</p>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="mcp-name">
@@ -223,6 +289,13 @@ export function McpFormModal({
               {t.mcps.envNote}
             </p>
           </div>
+
+          <McpConnectionFields
+            url={url}
+            headers={headers}
+            onUrlChange={setUrl}
+            onHeadersChange={setHeaders}
+          />
 
           <label className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
             <input

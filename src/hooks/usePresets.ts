@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { localizePresetWarning, presentPreset } from "../i18n/presetCopy";
+import { refreshMcpCatalog } from "../lib/mcpCache";
+import { dropSkillsCache } from "../lib/skillsCache";
 import { useI18n } from "./useI18n";
 import {
   applyPreset,
   deletePreset,
   listPresets,
+  resetPreset,
   savePreset,
+  updatePreset,
   type Preset,
   type PresetReport,
 } from "../lib/presets";
@@ -72,6 +76,10 @@ export function usePresets({
 
       try {
         const report = await applyPreset(preset.id);
+        // Flush UI caches before re-render so the grid paints the newly
+        // activated preset instead of stale-while-revalidate entries.
+        dropSkillsCache();
+        await refreshMcpCatalog().catch(() => undefined);
         const shown = presentPreset(t, preset);
         onToast(
           t.presets.applied(shown.name, report.skillsEnabled, report.mcpsEnabled),
@@ -139,5 +147,57 @@ export function usePresets({
     [onToast, onError, t],
   );
 
-  return { presets, loading, busyId, saving, apply, save, remove, reload: load };
+  const update = useCallback(
+    async (presetToUpdate: Preset): Promise<boolean> => {
+      try {
+        const updated = await updatePreset(presetToUpdate);
+        setPresets((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
+        onToast(t.presets.updateSuccess(presentPreset(t, updated).name));
+        return true;
+      } catch (cause) {
+        onError(
+          t.presets.updateFailed(
+            presentPreset(t, presetToUpdate).name,
+            toMessage(cause, t.common.unexpected),
+          ),
+        );
+        return false;
+      }
+    },
+    [onToast, onError, t],
+  );
+
+  const reset = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        const restored = await resetPreset(id);
+        setPresets((current) =>
+          current.map((item) => (item.id === restored.id ? restored : item)),
+        );
+        onToast(t.presets.resetSuccess(presentPreset(t, restored).name));
+        return true;
+      } catch (cause) {
+        const found = presets.find((p) => p.id === id);
+        const name = found ? presentPreset(t, found).name : id;
+        onError(t.presets.resetFailed(name, toMessage(cause, t.common.unexpected)));
+        return false;
+      }
+    },
+    [onToast, onError, t, presets],
+  );
+
+  return {
+    presets,
+    loading,
+    busyId,
+    saving,
+    apply,
+    save,
+    update,
+    reset,
+    remove,
+    reload: load,
+  };
 }

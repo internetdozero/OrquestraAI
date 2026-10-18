@@ -9,13 +9,25 @@ function isBuiltinId(id: string): id is BuiltinId {
   return (BUILTIN_IDS as readonly string[]).includes(id);
 }
 
-/** Built-in profiles keep stable ids in Rust; the bar shows the active locale. */
+/** Built-in profiles keep stable ids in Rust; the bar shows the active locale unless customized. */
 export function presentPreset(
   t: TranslationSchema,
   preset: Pick<Preset, "id" | "name" | "description" | "builtin">,
 ): { name: string; description: string } {
   if (preset.builtin && isBuiltinId(preset.id)) {
-    return t.presets.builtins[preset.id];
+    const defaultCopy = t.presets.builtins[preset.id];
+    // Check if user has overridden the name or description away from factory English defaults
+    const originalNames: Record<BuiltinId, string> = {
+      stealth: "Stealth",
+      "rust-dev": "Rust Dev",
+      "web-fullstack": "Web Fullstack",
+      "full-power": "Full Power",
+    };
+    const isCustomName = preset.name !== originalNames[preset.id];
+    return {
+      name: isCustomName ? preset.name : defaultCopy.name,
+      description: preset.description || defaultCopy.description,
+    };
   }
   return { name: preset.name, description: preset.description };
 }

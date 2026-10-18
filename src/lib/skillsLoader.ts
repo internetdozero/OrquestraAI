@@ -1,6 +1,4 @@
 import {
-  hasSkillsCache,
-  readSkillsCache,
   skillsCacheGeneration,
   writeSkillsCache,
   writeSkillsCacheStale,
@@ -17,8 +15,9 @@ const inflight = new Map<
  * One evaluation per scope, shared by the grid and the background preload.
  * A mutation bumps the cache generation, so a refresh starts a new read
  * instead of reusing the reply that was already on the way.
- * A late reply never overwrites an optimistic list; it is kept only when
- * the scope had nothing else to show, and then marked stale.
+ * When the generation moved while this request was in flight, the freshly
+ * resolved items are stored as stale and returned directly, avoiding
+ * empty or stale cached fallbacks.
  */
 export function loadSkillsScope(scope: string): Promise<SkillItem[]> {
   const pending = inflight.get(scope);
@@ -28,8 +27,8 @@ export function loadSkillsScope(scope: string): Promise<SkillItem[]> {
   const promise = listSkills(scope)
     .then((items) => {
       if (skillsCacheGeneration() !== current) {
-        if (!hasSkillsCache(scope)) writeSkillsCacheStale(scope, items);
-        return readSkillsCache(scope) ?? items;
+        writeSkillsCacheStale(scope, items);
+        return items;
       }
       writeSkillsCache(scope, items);
       return items;

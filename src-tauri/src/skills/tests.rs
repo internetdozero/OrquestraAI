@@ -1,7 +1,8 @@
 //! Unit tests for the vault, the projections and the instruction file.
 
 use super::agents::{read_agents, write_agents};
-use super::projection::{batch_from, set_global, set_scope, unlink_skill};
+use super::projection::{batch_from, clear_global_baseline, set_global, set_scope, unlink_skill};
+use super::vault::{delete_skill, read_skill_content, save_skill_content};
 use super::vault::{
     categorize, estimate_tokens, list_from, normalize_description, split_frontmatter,
     validate_id, Frontmatter,
@@ -200,11 +201,116 @@ mod tests {
     }
 
     #[test]
-    fn refuses_to_unlink_real_directories() {
+    fn clearing_the_global_baseline_preserves_harness_links() {
+        let paths = setup_two_skills();
+
+        // Global ON propagates everywhere; codex additionally opts in.
+        set_global(&paths, "alpha", true).unwrap();
+        set_scope(&paths, "alpha", "codex", true).unwrap();
+
+        // The preset path clears only the baseline link.
+        clear_global_baseline(&paths, "alpha").unwrap();
+
+        assert!(fs::symlink_metadata(paths.global_dir().join("alpha")).is_err());
+        for harness in crate::harness::harness_ids() {
+            assert!(
+                fs::symlink_metadata(paths.projection_dir(harness).join("alpha")).is_ok(),
+                "missing {harness} link"
+            );
+        }
+
+        // Read model: baseline off, harness projection still effective.
+        let global_list = list_from(&paths, GLOBAL_SCOPE).unwrap();
+        let global = skill_in(&global_list, "alpha");
+        assert!(!global.global_enabled && !global.harness_enabled);
+        let codex_list = list_from(&paths, "codex").unwrap();
+        let codex = skill_in(&codex_list, "alpha");
+        assert!(!codex.global_enabled);
+        assert!(codex.harness_enabled);
+        assert!(!codex.inherited_from_global);
+
+        // Unknown ids still error instead of silently passing.
+        assert!(clear_global_baseline(&paths, "../escape").is_err());
+        assert!(clear_global_baseline(&paths, "missing").is_err());
+
+        fs::remove_dir_all(&paths.root).unwrap();
+    }
+
+    #[test]
+    fn skill_content_roundtrips_and_rejects_blanks() {
+        let paths = setup_two_skills();
+
+        let original = read_skill_content(&paths, "alpha").unwrap();
+        assert!(original.contains("Alpha"));
+        assert!(read_skill_content(&paths, "../escape").is_err());
+        assert!(read_skill_content(&paths, "missing").is_err());
+
+        let updated = "---\nname: Alpha\ndescription: Edited.\n---\n\nNew body.\n";
+        save_skill_content(&paths, "alpha", updated).unwrap();
+        assert_eq!(read_skill_content(&paths, "alpha").unwrap(), updated);
+        // No tmp files leak, and the edited skill still indexes.
+        assert!(fs::read_dir(paths.vault.join("alpha"))
+            .unwrap()
+            .flatten()
+            .all(|entry| !entry.file_name().to_string_lossy().contains(".tmp-")));
+        let listed = list_from(&paths, GLOBAL_SCOPE).unwrap();
+        assert_eq!(skill_in(&listed, "alpha").description, "Edited.");
+
+        assert!(save_skill_content(&paths, "alpha", "   \n").is_err());
+        assert!(save_skill_content(&paths, "../escape", updated).is_err());
+
+        fs::remove_dir_all(&paths.root).unwrap();
+    }
+
+    #[test]
+    fn delete_skill_unlinks_everywhere_and_never_escapes_the_vault() {
+        let paths = setup_two_skills();
+        set_global(&paths, "alpha", true).unwrap();
+        set_scope(&paths, "alpha", "codex", true).unwrap();
+
+        delete_skill(&paths, "alpha").unwrap();
+        assert!(!paths.vault.join("alpha").exists());
+        for scope in std::iter::once(GLOBAL_SCOPE).chain(crate::harness::harness_ids()) {
+            assert!(fs::symlink_metadata(paths.projection_dir(scope).join("alpha")).is_err());
+        }
+        // The sibling skill is untouched.
+        assert!(paths.vault.join("beta").join(SKILL_FILE).is_file());
+        assert!(delete_skill(&paths, "alpha").is_err());
+        assert!(delete_skill(&paths, "../escape").is_err());
+
+        // A symlink entry is refused: the link target must survive.
+        let outside = paths.root.join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join(SKILL_FILE), "stale\n").unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&outside, paths.vault.join("linked")).unwrap();
+        #[cfg(unix)]
+        {
+            assert!(delete_skill(&paths, "linked").is_err());
+            assert!(outside.join(SKILL_FILE).is_file());
+        }
+
+        fs::remove_dir_all(&paths.root).unwrap();
+    }
+
+    #[test]
+    fn unlinks_and_replaces_real_directories() {
         let paths = setup_two_skills();
         fs::create_dir_all(paths.global_dir().join("beta")).unwrap();
 
-        assert!(unlink_skill(&paths.global_dir(), "beta").is_err());
+        assert!(unlink_skill(&paths.global_dir(), "beta").is_ok());
+        assert!(!paths.global_dir().join("beta").exists());
+
+        // Test ensure_link / set_global replaces real directory with symlink
+        fs::create_dir_all(paths.global_dir().join("beta")).unwrap();
+        assert!(set_global(&paths, "beta", true).is_ok());
+        assert!(
+            fs::symlink_metadata(paths.global_dir().join("beta"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+
         assert!(set_global(&paths, "../alpha", true).is_err());
         assert!(set_skill_state("alpha", "../codex", true).is_err());
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { FileText, Orbit, Plug, RefreshCw, Search } from "lucide-react";
+import { FileText, History, Orbit, Plug, RefreshCw, Search } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import type { ActiveView } from "../lib/views";
 import { cn } from "../lib/utils";
@@ -49,14 +49,14 @@ export function Header({
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-4 sm:px-6">
         {/* Brand */}
         <div className="flex min-w-0 items-center gap-3">
-          <div className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-400/20 via-emerald-500/10 to-cyan-500/10 ring-1 ring-emerald-400/25">
-            <div className="absolute inset-0 rounded-xl bg-emerald-500/10 blur-md" />
-            <Orbit className="relative size-[18px] text-emerald-300" />
+          <div className="accent-bg-soft accent-border relative grid size-9 shrink-0 place-items-center rounded-xl border">
+            <div className="accent-bg-soft absolute inset-0 rounded-xl blur-md" />
+            <Orbit className="accent-text relative size-[18px]" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate text-[15px] font-semibold tracking-tight text-zinc-100">
-                Orquestra<span className="text-emerald-400">AI</span>
+                Orquestra<span className="accent-text">AI</span>
               </h1>
               <span className="hidden rounded border border-white/10 bg-white/[0.03] px-1.5 py-px font-mono text-[10px] text-zinc-500 sm:inline">
                 v0.1.0
@@ -90,15 +90,15 @@ export function Header({
 
             {/* Active skills badge + refresh */}
             <div className="flex shrink-0 items-center gap-2">
-              <div className="hidden items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2 md:flex">
+              <div className="accent-bg-soft accent-border hidden items-center gap-2 rounded-lg border px-3 py-2 md:flex">
                 <span className="relative flex size-2">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+                  <span className="accent-dot absolute inline-flex size-full animate-ping rounded-full opacity-60" />
+                  <span className="accent-dot relative inline-flex size-2 rounded-full" />
                 </span>
-                <span className="text-xs font-medium text-emerald-300">
+                <span className="accent-text text-xs font-medium">
                   {t.common.activeSkills}
                 </span>
-                <span className="font-mono text-xs text-emerald-200/70">
+                <span className="accent-text font-mono text-xs opacity-70">
                   {activeCount}/{totalCount}
                 </span>
               </div>
@@ -121,6 +121,14 @@ export function Header({
             <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
               <Plug className="size-3 text-emerald-400/80" />
               {t.mcps.headerChip}
+            </span>
+          </>
+        ) : mode === "sessions" ? (
+          <>
+            <div className="flex-1" />
+            <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
+              <History className="size-3 text-emerald-400/80" />
+              {t.sessions.title}
             </span>
           </>
         ) : (

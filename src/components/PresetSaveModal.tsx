@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, Save, X } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 
@@ -33,8 +34,17 @@ export function PresetSaveModal({ saving, onClose, onSave }: PresetSaveModalProp
     if (await onSave(name.trim(), description)) onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) onClose();
+      }}
+    >
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -111,6 +121,7 @@ export function PresetSaveModal({ saving, onClose, onSave }: PresetSaveModalProp
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

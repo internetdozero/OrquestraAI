@@ -10,7 +10,7 @@ function CountPill({ value, active }: { value: number; active: boolean }) {
       className={cn(
         "rounded px-1 py-px font-mono text-[9px] tabular-nums",
         active
-          ? "bg-emerald-500/20 text-emerald-200"
+          ? "accent-bg-soft accent-text"
           : "bg-white/[0.05] text-zinc-500",
       )}
     >

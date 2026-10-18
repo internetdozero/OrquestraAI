@@ -14,6 +14,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Type-check caching: `npm run build` runs tsc before every Vite build. */
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

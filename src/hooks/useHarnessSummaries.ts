@@ -9,6 +9,7 @@ import { harnessSummary } from "../lib/tauri";
 export function useHarnessSummaries(
   isTauri: boolean,
   onError: (message: string) => void,
+  reloadToken = 0,
 ) {
   const [summaries, setSummaries] = useState<HarnessSummary[]>([]);
 
@@ -28,7 +29,7 @@ export function useHarnessSummaries(
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, reloadToken]);
 
   const counts = useMemo(
     () =>

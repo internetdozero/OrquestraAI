@@ -11,6 +11,7 @@ use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use super::catalog::{load_catalog, save_catalog, SEED_CATALOG};
+use super::secrets::parse_dotenv;
 use super::serializers::{render_codex_toml, render_jsonc_block, render_mcp_servers};
 use super::{McpServer, McpTargetStatus};
 use crate::bridge;
@@ -63,6 +64,12 @@ pub(super) fn deploy_current(paths: &OrquestraPaths) -> Result<(), String> {
 
 pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Result<Vec<String>, String> {
     let mut catalog = load_catalog(paths, seed)?;
+    let dotenv_path = paths.root.join(".env");
+    let dotenv = match fs::read_to_string(&dotenv_path) {
+        Ok(content) => parse_dotenv(&content),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Default::default(),
+        Err(error) => return Err(format!("failed to read {}: {error}", dotenv_path.display())),
+    };
     let mut changed = Vec::new();
     let mut failed = Vec::new();
     let mut backup_dir: Option<PathBuf> = None;
@@ -90,7 +97,7 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Res
             .mcps
             .values()
             .filter(|server| server.covers(spec.id))
-            .cloned()
+            .map(|server| server.resolved(&dotenv))
             .collect();
         let stale: BTreeSet<String> = catalog
             .managed_ids
@@ -125,7 +132,11 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Res
             continue;
         }
 
-        let secret = active.iter().any(|server| !server.env.is_empty());
+        let secret = active
+            .iter()
+            .any(|server| {
+                !server.env.is_empty() || !server.headers.is_empty() || server.url.is_some()
+            });
 
         let result = if existing.trim().is_empty() {
             Ok(())

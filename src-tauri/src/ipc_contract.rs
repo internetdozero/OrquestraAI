@@ -5,21 +5,19 @@
 //! the two sides. These tests read the same files the client does — the
 //! `invoke_handler!` list, the CLI `match` arms and a snapshot of every payload
 //! shape in `src-tauri/tests/fixtures/ipc-contract.json` — so a refactor that
-//! renames a command, drops a flag or changes a field casing fails here instead
-//! of in the shipped app.
+//! renames a command, drops a flag or changes field casing fails here instead of in the shipped app.
 //!
 //! Test-only: nothing in this module is compiled into the binary.
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
-    use std::fs;
-    use std::path::PathBuf;
+    use std::{collections::BTreeSet, fs, path::PathBuf};
 
     use serde::Serialize;
     use serde_json::Value;
 
     use crate::bridge::{BridgeReport, HarnessStatus, SecondaryAction, SecondaryStatus};
+    use crate::ideas::types::{BlackboardNote, IdeaItem};
     use crate::mcp::{McpServer, McpTargetStatus};
     use crate::presets::{Preset, PresetReport};
     use crate::skills::{HarnessSummary, SkillItem};
@@ -150,6 +148,7 @@ mod tests {
             global_enabled: true,
             harness_enabled: true,
             inherited_from_global: false,
+            official: false,
         }
     }
 
@@ -202,6 +201,9 @@ mod tests {
             "src/lib/mcps.ts",
             "src/lib/bridge.ts",
             "src/lib/presets.ts",
+            "src/lib/sessions.ts",
+            "src/lib/janitor.ts",
+            "src/lib/ideas.ts",
         ] {
             invoked.extend(invoked_commands(&read(&format!("../{file}"))));
         }
@@ -259,8 +261,11 @@ mod tests {
                 env: [("GITHUB_TOKEN".to_string(), "ghp_test".to_string())]
                     .into_iter()
                     .collect(),
+                url: None,
+                headers: Default::default(),
                 global_enabled: false,
                 enabled_harnesses: vec!["codex".to_string()],
+                official: false,
             }),
             frozen("McpServer"),
         );
@@ -283,6 +288,10 @@ mod tests {
                 icon: "shield".to_string(),
                 skills: vec!["rtk".to_string()],
                 mcps: vec!["headroom".to_string()],
+                harness_skills: [("antigravity".to_string(), vec!["rtk".to_string()])]
+                    .into_iter()
+                    .collect(),
+                harness_mcps: Default::default(),
                 all_skills: false,
                 all_mcps: false,
                 builtin: true,
@@ -310,6 +319,36 @@ mod tests {
             frozen("SecondaryStatus"),
         );
         assert_keys("HarnessStatus", keys_of(&harness_status()), frozen("HarnessStatus"));
+        assert_keys(
+            "IdeaItem",
+            keys_of(&IdeaItem {
+                id: 1,
+                project: "vault".to_string(),
+                title: "Native module".to_string(),
+                description: None,
+                category: "feature".to_string(),
+                priority: "medium".to_string(),
+                tags: None,
+                status: "open".to_string(),
+                created_at: "2026-10-18 12:00:00".to_string(),
+                updated_at: "2026-10-18 12:00:00".to_string(),
+            }),
+            frozen("IdeaItem"),
+        );
+        assert_keys(
+            "BlackboardNote",
+            keys_of(&BlackboardNote {
+                id: 1,
+                project: "vault".to_string(),
+                topic: "handoff".to_string(),
+                sender: "builder".to_string(),
+                target: "all".to_string(),
+                note: "Phase 1 is green.".to_string(),
+                is_read: false,
+                created_at: "2026-10-18 12:00:00".to_string(),
+            }),
+            frozen("BlackboardNote"),
+        );
         assert_keys(
             "BridgeReport",
             keys_of(&BridgeReport {

@@ -1,20 +1,37 @@
 pub mod bridge;
+mod desktop;
 pub mod harness;
+pub mod ideas;
+pub mod janitor;
 #[cfg(test)]
 mod ipc_contract;
 pub mod mcp;
+mod official;
 pub mod paths;
 pub mod presets;
+pub mod sessions;
 pub mod single_instance;
 mod skills;
 mod tray;
 
 use bridge::{BridgeReport, HarnessStatus};
+use ideas::{
+    create_idea, delete_idea, list_blackboard_notes, list_idea_projects, list_ideas,
+    mark_note_read, post_blackboard_note, update_idea, update_idea_status,
+};
+use janitor::{get_system_health, sweep_system_caches};
 use mcp::{McpServer, McpTargetStatus};
+use official::OfficialStore;
 use crate::paths::OrquestraPaths;
 use serde::Serialize;
+use sessions::{
+    estimate_purge, get_retention_policy, get_unified_sessions, purge_sessions,
+    save_retention_policy, toggle_pin_session,
+};
 use skills::{HarnessSummary, SkillItem};
 use tauri::Manager;
+use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
+use tray::set_minimize_to_tray;
 
 /// Runtime identity of the native core, surfaced in the UI footer so the
 /// frontend can prove the IPC bridge is alive.
@@ -59,6 +76,42 @@ fn batch_set_all(harness_id: String, enabled: bool) -> Result<(), String> {
     skills::batch_set_all(harness_id, enabled)
 }
 
+/// Read the raw `SKILL.md` of one vault skill, for the in-app editor.
+#[tauri::command]
+fn read_skill_content(id: String) -> Result<String, String> {
+    skills::read_skill_content(id)
+}
+
+/// Atomically replace a skill's `SKILL.md`.
+#[tauri::command]
+fn save_skill_content(id: String, content: String) -> Result<(), String> {
+    skills::save_skill_content(id, content)
+}
+
+/// Unlink a skill from every scope and remove its vault folder.
+#[tauri::command]
+fn delete_skill(id: String) -> Result<(), String> {
+    skills::delete_skill(id)
+}
+
+/// Copy an external skill folder into the vault and return its item.
+#[tauri::command]
+fn import_skill(source_path: String) -> Result<SkillItem, String> {
+    skills::import_skill(source_path)
+}
+
+/// Shallow-clone a git URL and import the skill it holds.
+#[tauri::command]
+fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
+    skills::import_skill_from_git(url)
+}
+
+/// Open a native OS folder picker; `None` means the user cancelled.
+#[tauri::command]
+async fn pick_folder() -> Result<Option<String>, String> {
+    skills::pick_folder().await
+}
+
 /// Active-skill counters for Global and every harness tab.
 #[tauri::command]
 fn harness_summary() -> Result<Vec<HarnessSummary>, String> {
@@ -80,7 +133,20 @@ fn write_master_agents_md(content: String) -> Result<(), String> {
 /// Every MCP server in the master catalog, seeded on first launch.
 #[tauri::command]
 fn list_mcps() -> Result<Vec<McpServer>, String> {
-    mcp::list_mcps()
+    mcp::list_mcps_masked()
+}
+
+/// Curated Official Store: designated skills and MCP servers with install
+/// sources. Static data, so infallible by construction.
+#[tauri::command]
+fn list_official_store() -> OfficialStore {
+    official::official_store()
+}
+
+/// Reveal one stored MCP environment/header value after an explicit UI action.
+#[tauri::command]
+fn reveal_mcp_secret(id: String, key: String) -> Result<String, String> {
+    mcp::reveal_mcp_secret(&id, &key)
 }
 
 /// Harness configs the MCP serializer can write.
@@ -144,6 +210,18 @@ fn delete_preset(id: String) -> Result<(), String> {
     presets::delete_preset(&id)
 }
 
+/// Update an existing preset (custom or built-in override).
+#[tauri::command]
+fn update_preset(preset: presets::Preset) -> Result<presets::Preset, String> {
+    presets::update_preset(preset)
+}
+
+/// Reset a built-in preset to original factory defaults.
+#[tauri::command]
+fn reset_preset(id: String) -> Result<presets::Preset, String> {
+    presets::reset_preset(&id)
+}
+
 /// Live link state for every known harness, used by the footer indicator.
 #[tauri::command]
 fn get_bridge_status() -> Result<Vec<HarnessStatus>, String> {
@@ -170,7 +248,7 @@ pub fn deploy_bridge_json() -> Result<String, String> {
 
 /// JSON snapshot of the MCP catalog for the headless `--mcp-status` flag.
 pub fn mcp_status_json() -> Result<String, String> {
-    serde_json::to_string_pretty(&mcp::list_mcps()?)
+    serde_json::to_string_pretty(&mcp::list_mcps_masked()?)
         .map_err(|error| format!("failed to serialize MCP catalog: {error}"))
 }
 
@@ -228,25 +306,45 @@ pub fn run() {
                 eprintln!("[orquestra] single-instance listener failed: {error}");
             }
 
+            // Retention daemon. It enforces nothing unless the operator enabled
+            // auto-purge, and it never touches a pinned or open session.
+            sessions::start_scheduler();
+
+            // Close behavior the settings UI keeps in sync (`minimizeToTray`).
+            app.manage(tray::AppConfigState::default());
+
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                single_instance::cleanup();
-                window.app_handle().exit(0);
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                tray::on_close_requested(window, api);
             }
         })
         .invoke_handler(tauri::generate_handler![
             core_status,
+            get_system_health,
+            sweep_system_caches,
             list_skills,
             set_skill_state,
             batch_set_all,
+            read_skill_content,
+            save_skill_content,
+            delete_skill,
+            import_skill,
+            import_skill_from_git,
+            pick_folder,
+            open_url,
+            open_in_file_manager,
+            create_orquestra_backup,
+            set_minimize_to_tray,
             harness_summary,
             read_master_agents_md,
             write_master_agents_md,
             get_bridge_status,
             deploy_harness_bridge,
             list_mcps,
+            list_official_store,
+            reveal_mcp_secret,
             mcp_targets,
             set_mcp_state,
             save_mcp,
@@ -255,7 +353,24 @@ pub fn run() {
             list_presets,
             apply_preset,
             save_preset,
-            delete_preset
+            delete_preset,
+            update_preset,
+            reset_preset,
+            list_ideas,
+            list_idea_projects,
+            create_idea,
+            update_idea,
+            update_idea_status,
+            delete_idea,
+            list_blackboard_notes,
+            post_blackboard_note,
+            mark_note_read,
+            get_unified_sessions,
+            toggle_pin_session,
+            get_retention_policy,
+            save_retention_policy,
+            estimate_purge,
+            purge_sessions
         ])
         .run(tauri::generate_context!())
         .expect("error while running OrquestraAI");

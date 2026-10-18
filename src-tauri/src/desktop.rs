@@ -1,0 +1,120 @@
+//! Native desktop actions: opening URLs and folders in the system browser /
+//! file manager, and snapshotting `~/.orquestra` into a real backup archive.
+//!
+//! The webview blocks `<a target="_blank">`, so external links and folder
+//! reveals go through these commands. Every path is resolved against `HOME`
+//! and validated before anything launches: `open_in_file_manager` only
+//! reveals locations inside `~/.orquestra`, and non-`http(s)` URLs are
+//! rejected so a crafted string can never escape into a local handler.
+
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Root everything here is confined to.
+fn orquestra_root() -> Result<PathBuf, String> {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "HOME is not set; cannot locate ~/.orquestra".to_string())?;
+    Ok(home.join(".orquestra"))
+}
+
+/// Open an external HTTP(S) URL in the default system browser.
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+    let trimmed = url.trim();
+    if !trimmed.starts_with("https://") && !trimmed.starts_with("http://") {
+        return Err("Only http/https URLs are permitted".to_string());
+    }
+    #[cfg(target_os = "linux")]
+    let opener: (&str, Vec<&str>) = ("xdg-open", vec![trimmed]);
+    #[cfg(target_os = "macos")]
+    let opener: (&str, Vec<&str>) = ("open", vec![trimmed]);
+    #[cfg(target_os = "windows")]
+    let opener: (&str, Vec<&str>) = ("cmd", vec!["/C", "start", "", trimmed]);
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    return Err("Opening URLs is not supported on this platform".to_string());
+    std::process::Command::new(opener.0).args(&opener.1).spawn().map(|_| ())
+        .map_err(|error| format!("Failed to open browser: {error}"))
+}
+
+/// Reveal a directory inside `~/.orquestra` in the native file manager.
+/// `~` prefixes resolve against `HOME`; anything outside the root or that
+/// does not exist is refused. Files reveal their parent folder.
+#[tauri::command]
+pub fn open_in_file_manager(path: String) -> Result<(), String> {
+    let root = orquestra_root()?;
+    let expanded = if let Some(rest) = path.strip_prefix("~/") {
+        let home = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or_else(|| "HOME is not set".to_string())?;
+        home.join(rest)
+    } else {
+        PathBuf::from(path)
+    };
+
+    let target = expanded
+        .canonicalize()
+        .map_err(|_| format!("Path does not exist: {}", expanded.display()))?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|_| format!("{} does not exist yet", root.display()))?;
+    if !target.starts_with(&canonical_root) {
+        return Err("Only paths inside ~/.orquestra can be opened".to_string());
+    }
+
+    // Revealing means showing the folder: a file resolves to its parent.
+    let reveal = if target.is_file() {
+        target.parent().map(PathBuf::from).unwrap_or(target)
+    } else {
+        target
+    };
+
+    #[cfg(target_os = "linux")]
+    let opener: (&str, Vec<&str>) = ("xdg-open", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
+    #[cfg(target_os = "macos")]
+    let opener: (&str, Vec<&str>) = ("open", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
+    #[cfg(target_os = "windows")]
+    let opener: (&str, Vec<&str>) = ("explorer", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    return Err("Revealing folders is not supported on this platform".to_string());
+    std::process::Command::new(opener.0).args(&opener.1).spawn().map(|_| ())
+        .map_err(|error| format!("Failed to launch file manager: {error}"))
+}
+
+/// Snapshot `~/.orquestra` (configs, presets, vault, projections) into a
+/// `tar.gz` under `~/.orquestra/backups/`, excluding previous backups.
+/// Returns the archive path so the UI can toast the real destination.
+#[tauri::command]
+pub fn create_orquestra_backup() -> Result<String, String> {
+    let root = orquestra_root()?;
+    if !root.is_dir() {
+        return Err(format!("{} does not exist yet", root.display()));
+    }
+    let backups = root.join("backups");
+    std::fs::create_dir_all(&backups)
+        .map_err(|error| format!("failed to create {}: {error}", backups.display()))?;
+
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0);
+    let archive = backups.join(format!("orquestra_backup_{stamp}.tar.gz"));
+
+    // Arg vector, no shell: nothing here is ever interpreted.
+    let status = std::process::Command::new("tar")
+        .args([
+            "-czf",
+            archive.to_str().ok_or("Unrepresentable backup path")?,
+            "-C",
+            root.to_str().ok_or("Unrepresentable root path")?,
+            "--exclude=backups",
+            ".",
+        ])
+        .status()
+        .map_err(|error| format!("Tar execution failed: {error}"))?;
+    if !status.success() {
+        return Err("Failed to create archive".to_string());
+    }
+
+    Ok(archive.to_string_lossy().to_string())
+}

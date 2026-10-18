@@ -15,6 +15,7 @@ import {
 } from "../lib/mcps";
 import { listingTokens, mcpCatalogTokens } from "../lib/tokens";
 import { cn } from "../lib/utils";
+import { OfficialBadge } from "./OfficialBadge";
 import { TokenPair } from "./TokenPair";
 
 /** Badge for the execution kind derived from the command. */
@@ -69,7 +70,7 @@ export function McpToggle({
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 focus-visible:outline-none",
         checked
-          ? "border-emerald-400/50 bg-emerald-500/90"
+          ? "border-[var(--accent-ring)] bg-[var(--accent-solid)]"
           : "border-white/10 bg-zinc-800 hover:bg-zinc-700",
         busy && "cursor-wait opacity-60",
         locked && "cursor-not-allowed",
@@ -125,13 +126,13 @@ export function McpCard({
         "hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.9)]",
         "transform-gpu [backface-visibility:hidden] [contain:content]",
         active
-          ? "border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.045] to-zinc-900/40 hover:border-emerald-500/35"
+          ? "accent-border bg-gradient-to-b from-[var(--accent-bg)] to-zinc-900/40 hover:border-[var(--accent-ring)]"
           : "border-white/[0.07] bg-zinc-900/30 hover:border-white/15 hover:bg-zinc-900/50",
         busy && "opacity-80",
       )}
     >
       {active && (
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-glow)] to-transparent" />
       )}
 
       <div className="flex items-start gap-3">
@@ -139,7 +140,7 @@ export function McpCard({
           className={cn(
             "grid size-9 shrink-0 place-items-center rounded-lg border transition-colors",
             active
-              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+              ? "accent-border accent-bg-soft accent-text"
               : "border-white/[0.07] bg-white/[0.03] text-zinc-500",
           )}
         >
@@ -155,13 +156,14 @@ export function McpCard({
           </h3>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <KindPill kind={kind} />
+            {server.official === true && <OfficialBadge />}
             {locked ? (
-              <span className="text-[9.5px] font-medium text-emerald-300/90">
+              <span className="accent-text text-[9.5px] font-medium opacity-90">
                 {t.skills.inheritedFromGlobal}
               </span>
             ) : active ? (
-              <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400">
-                <span className="size-1 rounded-full bg-emerald-400" />
+              <span className="accent-text flex items-center gap-1 text-[10px] font-medium">
+                <span className="accent-dot size-1 rounded-full" />
                 {t.skills.activePill}
               </span>
             ) : (
@@ -257,7 +259,7 @@ export function McpCard({
             <span
               className={cn(
                 "flex items-center gap-1.5 font-mono text-[10px]",
-                active ? "text-emerald-400/80" : "text-zinc-600",
+                active ? "accent-text opacity-80" : "text-zinc-600",
               )}
             >
               {locked ? (

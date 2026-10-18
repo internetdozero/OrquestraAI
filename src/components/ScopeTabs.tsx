@@ -52,7 +52,7 @@ export function ScopeTabs({
             className={cn(
               "flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition",
               active
-                ? "bg-emerald-500/15 text-emerald-200"
+                ? "accent-bg-soft accent-text"
                 : tab.dimmed
                   ? "text-zinc-700 hover:text-zinc-500"
                   : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300",
@@ -62,7 +62,7 @@ export function ScopeTabs({
               <Icon
                 className={cn(
                   "size-3 shrink-0",
-                  active ? "text-emerald-300" : "text-zinc-600",
+                  active ? "accent-text" : "text-zinc-600",
                 )}
               />
             )}

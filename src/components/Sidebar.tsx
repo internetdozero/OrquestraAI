@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Lock, Settings } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import { HARNESSES } from "../lib/harnesses";
 import { VIEWS, type ActiveView, type ViewDefinition } from "../lib/views";
@@ -10,6 +10,7 @@ interface SidebarProps {
   /** Active skills in whichever scope the skills view is showing. */
   skillStats: { active: number; total: number };
   mcpCount: number;
+  onOpenSettings: () => void;
 }
 
 function CountBadge({ value, active }: { value: number; active: boolean }) {
@@ -18,7 +19,7 @@ function CountBadge({ value, active }: { value: number; active: boolean }) {
       className={cn(
         "min-w-6 rounded px-1.5 py-0.5 text-center font-mono text-[10px] tabular-nums",
         active
-          ? "bg-emerald-500/15 text-emerald-300"
+          ? "accent-bg-soft accent-text"
           : value > 0
             ? "bg-white/[0.05] text-zinc-400"
             : "bg-white/[0.03] text-zinc-600",
@@ -55,24 +56,24 @@ function ViewButton({
       className={cn(
         "group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[12.5px] transition-colors",
         active
-          ? "bg-emerald-500/[0.09] text-emerald-100"
+          ? "accent-bg-soft accent-text"
           : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200",
       )}
     >
       {active && (
-        <span className="absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-emerald-400" />
+        <span className="accent-dot absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-r-full" />
       )}
       <Icon
         className={cn(
           "size-4 shrink-0 transition-colors",
           active
-            ? "text-emerald-300"
+            ? "accent-text"
             : "text-zinc-500 group-hover:text-zinc-300",
         )}
       />
       <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
       {count === null ? (
-        active && <span className="size-1.5 rounded-full bg-emerald-400" />
+        active && <span className="accent-dot size-1.5 rounded-full" />
       ) : (
         <CountBadge value={count} active={active} />
       )}
@@ -84,12 +85,14 @@ function ViewButton({
  * Platform navigation. Harness scopes live *inside* the skills and MCP views as
  * inner scope tabs, so this list stays at the three things the app manages.
  */
-export function Sidebar({ view, onSelect, skillStats, mcpCount }: SidebarProps) {
+export function Sidebar({ view, onSelect, skillStats, mcpCount, onOpenSettings }: SidebarProps) {
   const { t } = useI18n();
   const counts: Record<ActiveView, number | null> = {
     skills: skillStats.active,
     mcps: mcpCount,
     agents: null,
+    sessions: null,
+    ideas: null,
   };
 
   return (
@@ -130,6 +133,19 @@ export function Sidebar({ view, onSelect, skillStats, mcpCount }: SidebarProps) 
             {t.sidebar.inheritance.body}
           </p>
         </div>
+      </div>
+      <div className="flex shrink-0 items-center justify-between border-t border-white/[0.06] px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          title={t.settings.sidebarHint}
+          aria-label={t.settings.sidebarAction}
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
+        >
+          <Settings className="size-4" />
+          {t.settings.sidebarAction}
+        </button>
+        <span className="font-mono text-[10px] text-zinc-600">v0.1.0</span>
       </div>
     </aside>
   );

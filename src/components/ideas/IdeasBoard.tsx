@@ -1,0 +1,187 @@
+import { useState } from "react";
+import { ChevronDown, ChevronRight, Inbox } from "lucide-react";
+import { useI18n } from "../../hooks/useI18n";
+import type { IdeaItem } from "../../lib/ideas";
+import { StatePanel } from "../ui";
+import { cn } from "../../lib/utils";
+import { IdeaCard } from "./IdeaCard";
+
+interface IdeasBoardProps {
+  ideas: IdeaItem[];
+  loading: boolean;
+  onAdvance: (idea: IdeaItem) => void;
+  onEdit: (idea: IdeaItem) => void;
+  onDelete: (idea: IdeaItem) => void;
+  onOpen: (idea: IdeaItem) => void;
+  onDropIdea: (ideaId: number, status: string) => void;
+}
+
+const COLUMNS = [
+  { status: "open", titleKey: "colOpen" },
+  { status: "in_progress", titleKey: "colInProgress" },
+  { status: "completed", titleKey: "colCompleted" },
+  { status: "archived", titleKey: "colArchived" },
+] as const;
+
+/** Completed columns page at this many cards before offering more. */
+const COMPLETED_PAGE = 5;
+
+/**
+ * Kanban board: collapsible columns, HTML5 drop targets with highlight, and
+ * demand paging for the completed column so it never stretches forever.
+ */
+export function IdeasBoard({
+  ideas,
+  loading,
+  onAdvance,
+  onEdit,
+  onDelete,
+  onOpen,
+  onDropIdea,
+}: IdeasBoardProps) {
+  const { t } = useI18n();
+  const s = t.ideas;
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
+    () => new Set(["archived"]),
+  );
+  const [expandedCompleted, setExpandedCompleted] = useState(false);
+  const [dropStatus, setDropStatus] = useState<string | null>(null);
+
+  if (!loading && ideas.length === 0) {
+    return <StatePanel icon={Inbox} title={s.empty} description={s.emptyHint} />;
+  }
+
+  const toggle = (status: string) =>
+    setCollapsed((previous) => {
+      const next = new Set(previous);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+
+  return (
+    <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:flex">
+      {COLUMNS.map((column) => {
+        const rows = ideas.filter((idea) => idea.status === column.status);
+        if (column.status === "archived" && rows.length === 0) return null;
+        const isCollapsed = collapsed.has(column.status);
+        const isCompleted = column.status === "completed";
+        const shown =
+          isCompleted && !expandedCompleted ? rows.slice(0, COMPLETED_PAGE) : rows;
+        const hidden = rows.length - shown.length;
+
+        if (isCollapsed) {
+          return (
+            <section
+              key={column.status}
+              aria-label={s[column.titleKey]}
+              className="rounded-xl border border-white/[0.05] bg-black/20 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]"
+            >
+              <button
+                type="button"
+                onClick={() => toggle(column.status)}
+                title={s.expandColumn}
+                aria-label={`${s.expandColumn}: ${s[column.titleKey]}`}
+                aria-expanded={false}
+                className="flex h-full min-h-64 w-full cursor-pointer flex-col items-center gap-3 py-3 xl:w-11"
+              >
+                <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold text-zinc-300 tabular-nums">
+                  {rows.length}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="mt-4 text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap text-zinc-400 uppercase"
+                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                >
+                  {s[column.titleKey]}
+                </span>
+              </button>
+            </section>
+          );
+        }
+
+        return (
+          <section
+            key={column.status}
+            aria-label={s[column.titleKey]}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setDropStatus(column.status);
+            }}
+            onDragLeave={() =>
+              setDropStatus((current) => (current === column.status ? null : current))
+            }
+            onDrop={(event) => {
+              event.preventDefault();
+              setDropStatus(null);
+              const raw = event.dataTransfer.getData("text/idea-id");
+              const id = Number.parseInt(raw, 10);
+              if (Number.isInteger(id)) onDropIdea(id, column.status);
+            }}
+            className={cn(
+              "flex min-w-0 flex-col gap-2 rounded-xl border bg-black/20 p-2.5 transition-colors xl:min-w-0 xl:flex-1",
+              dropStatus === column.status
+                ? "border-amber-500/50 bg-amber-500/[0.04]"
+                : "border-white/[0.05]",
+            )}
+          >
+            <header className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={() => toggle(column.status)}
+                title={s.collapseColumn}
+                aria-label={`${s.collapseColumn}: ${s[column.titleKey]}`}
+                aria-expanded
+                className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition hover:bg-white/[0.04]"
+              >
+                <ChevronDown className="size-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+                <h3 className="truncate text-[11px] font-semibold tracking-[0.1em] text-zinc-400 uppercase">
+                  {s[column.titleKey]}
+                </h3>
+              </button>
+              <span className="rounded bg-white/[0.05] px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 tabular-nums">
+                {rows.length}
+              </span>
+            </header>
+            {shown.map((idea) => (
+              <IdeaCard
+                key={idea.id}
+                idea={idea}
+                compact={isCompleted}
+                onAdvance={onAdvance}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onOpen={onOpen}
+              />
+            ))}
+            {rows.length === 0 && (
+                  <p className="rounded-lg border border-dashed border-white/[0.07] px-3 py-6 text-center text-[11px] text-zinc-600">
+                    —
+                  </p>
+                )}
+                {isCompleted && hidden > 0 && !expandedCompleted && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCompleted(true)}
+                    className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2 py-1.5 text-[11px] font-medium text-zinc-400 transition hover:border-amber-500/30 hover:text-amber-200"
+                  >
+                    {s.showMoreCompleted(hidden)}
+                  </button>
+                )}
+            {isCompleted && expandedCompleted && rows.length > COMPLETED_PAGE && (
+              <button
+                type="button"
+                onClick={() => setExpandedCompleted(false)}
+                className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2 py-1.5 text-[11px] font-medium text-zinc-400 transition hover:text-zinc-200"
+              >
+                {s.showLess}
+              </button>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}

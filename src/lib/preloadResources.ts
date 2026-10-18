@@ -1,6 +1,7 @@
 import { ensureAgentsText } from "./agentsCache";
 import { HARNESSES, GLOBAL_SCOPE } from "./harnesses";
 import { ensureMcpCatalog } from "./mcpCache";
+import { ensureUnifiedSessions } from "./sessions";
 import { loadSkillsScope } from "./skillsLoader";
 
 /** What the first screen needs before the shell is shown. */
@@ -22,6 +23,11 @@ export async function preloadBackground(
   if (isCancelled()) return;
 
   await ensureAgentsText().catch(() => undefined);
+  if (isCancelled()) return;
+
+  // Index the session catalog while the user is still on the first screen,
+  // so opening Sessions paints from memory (see `peekWarmedSessions`).
+  await ensureUnifiedSessions().catch(() => undefined);
 
   for (const harness of HARNESSES) {
     if (isCancelled()) return;

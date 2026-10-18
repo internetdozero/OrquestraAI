@@ -1,6 +1,7 @@
 import {
   ArrowUpDown,
   CircleSlash,
+  FolderDown,
   Layers,
   Loader2,
   Power,
@@ -58,6 +59,7 @@ interface SkillsToolbarProps {
   canBatch: boolean;
   batchPending: boolean;
   onApplyAll: (enabled: boolean) => void;
+  onImport: () => void;
 }
 
 /**
@@ -81,6 +83,7 @@ export function SkillsToolbar({
   canBatch,
   batchPending,
   onApplyAll,
+  onImport,
 }: SkillsToolbarProps) {
   const { t } = useI18n();
   const isGlobal = scope === GLOBAL_SCOPE.id;
@@ -134,7 +137,7 @@ export function SkillsToolbar({
             className={cn(
               "grid size-10 shrink-0 place-items-center rounded-xl border",
               isGlobal
-                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+                ? "accent-border accent-bg-soft accent-text"
                 : "border-white/[0.08] bg-white/[0.03] text-zinc-300",
             )}
           >
@@ -158,6 +161,15 @@ export function SkillsToolbar({
           <span className="font-mono text-[10.5px] whitespace-nowrap text-zinc-500">
             {t.skills.shownCount(visibleCount)}
           </span>
+          <button
+            type="button"
+            onClick={onImport}
+            className={actionButtonClass}
+            title={t.skills.import.title}
+          >
+            <FolderDown className="mr-1 inline size-3" />
+            {t.skills.importAction}
+          </button>
           <button
             type="button"
             onClick={() => onApplyAll(true)}

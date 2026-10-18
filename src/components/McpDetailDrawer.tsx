@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, X } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import {
   commandLine,
+  isEnvironmentTemplate,
   executionKind,
   isSecretKey,
+  isSecretValue,
+  revealMcpSecret,
   type McpServer,
 } from "../lib/mcps";
 import { cn } from "../lib/utils";
 import { KindPill } from "./McpCard";
+import { OfficialBadge } from "./OfficialBadge";
 
 interface McpDetailDrawerProps {
   server: McpServer;
@@ -19,36 +23,62 @@ interface McpDetailDrawerProps {
 }
 
 /** One environment entry, with secret values masked until revealed. */
-function EnvRow({ name, value }: { name: string; value: string }) {
+function EnvRow({
+  id,
+  name,
+  value,
+  revealKey = name,
+}: {
+  id: string;
+  name: string;
+  value: string;
+  revealKey?: string;
+}) {
   const { t } = useI18n();
-  const secret = isSecretKey(name);
-  const [revealed, setRevealed] = useState(false);
-  const hidden = secret && !revealed;
+  const templated = isEnvironmentTemplate(value);
+  const secret = !templated && (isSecretKey(name) || isSecretValue(value));
+  const [revealed, setRevealed] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const shown = revealed ?? value;
 
   return (
     <div className="flex min-w-0 items-start justify-between gap-3 border-t border-white/[0.04] py-1.5 first:border-t-0">
-      <span className="shrink-0 font-mono text-[10.5px] text-zinc-500">
+      <span className="flex shrink-0 items-center gap-1.5 font-mono text-[10.5px] text-zinc-500">
         {name}
-      </span>
-      <span
-        role={secret ? "button" : undefined}
-        tabIndex={secret ? 0 : undefined}
-        onClick={() => secret && setRevealed((current) => !current)}
-        onKeyDown={(event) => {
-          if (!secret) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            setRevealed((current) => !current);
-          }
-        }}
-        title={secret ? t.mcps.revealValue : undefined}
-        className={cn(
-          "selectable-text min-w-0 truncate font-mono text-[10.5px] text-zinc-300",
-          secret && "cursor-pointer decoration-dotted hover:text-emerald-300",
-          !secret && "cursor-text",
+        {templated && (
+          <span className="rounded border border-cyan-500/20 bg-cyan-500/[0.06] px-1 text-[8px] text-cyan-300">
+            ENV
+          </span>
         )}
-      >
-        {hidden ? "••••••••••" : value}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="selectable-text min-w-0 truncate font-mono text-[10.5px] text-zinc-300">
+          {shown}
+        </span>
+        {secret && (
+          <button
+            type="button"
+            aria-label={t.mcps.revealValue}
+            aria-pressed={revealed !== null}
+            title={t.mcps.revealValue}
+            onClick={async () => {
+              if (revealed !== null) {
+                setRevealed(null);
+                return;
+              }
+              setError(null);
+              try {
+                setRevealed(await revealMcpSecret(id, revealKey));
+              } catch (cause) {
+                setError(cause instanceof Error ? cause.message : String(cause));
+              }
+            }}
+            className="grid size-5 shrink-0 place-items-center rounded text-zinc-600 hover:text-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
+          >
+            {revealed === null ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
+          </button>
+        )}
+        {error && <span className="text-[9px] text-red-300">{error}</span>}
       </span>
     </div>
   );
@@ -82,7 +112,7 @@ export function McpDetailDrawer({
   // Portalled to the body: the app shell and `main` both create stacking
   // contexts, so an in-place overlay would slide in under the header.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[100] flex justify-end">
       <button
         type="button"
         aria-label={t.mcps.closeDetails}
@@ -108,6 +138,7 @@ export function McpDetailDrawer({
             </h2>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <KindPill kind={executionKind(server.command)} />
+              {server.official === true && <OfficialBadge />}
               <span className="font-mono text-[9.5px] text-zinc-600">
                 {t.mcps.scopeOf(scopeLabel)}
               </span>
@@ -145,11 +176,35 @@ export function McpDetailDrawer({
                 </p>
               ) : (
                 envKeys.map((key) => (
-                  <EnvRow key={key} name={key} value={server.env[key]} />
+                  <EnvRow id={server.id} key={key} name={key} value={server.env[key]} />
                 ))
               )}
             </div>
           </section>
+
+          {server.url && (
+            <section>
+              <p className="text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase">
+                URL
+              </p>
+              <div className="mt-1 rounded border border-white/[0.06] bg-black/30 px-2.5 py-1">
+                <EnvRow id={server.id} name="url" value={server.url} />
+              </div>
+            </section>
+          )}
+
+          {Object.keys(server.headers ?? {}).length > 0 && (
+            <section>
+              <p className="text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase">
+                {t.mcps.headers}
+              </p>
+              <div className="mt-1 rounded border border-white/[0.06] bg-black/30 px-2.5 py-1">
+                {Object.entries(server.headers ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => (
+                  <EnvRow id={server.id} key={key} name={key} value={value} />
+                ))}
+              </div>
+            </section>
+          )}
 
           <section>
             <button
@@ -172,16 +227,16 @@ export function McpDetailDrawer({
                   <p className="text-[10.5px] text-zinc-600">{t.mcps.noneDeclared}</p>
                 ) : (
                   args.map((arg, index) => (
-                    <code
+                    <div
                       key={`${index}-${arg}`}
-                      className="block truncate font-mono text-[10.5px] text-zinc-400"
-                      title={arg}
                     >
-                      <span className="mr-1.5 text-zinc-700">
-                        {String(index).padStart(2, "0")}
-                      </span>
-                      {arg}
-                    </code>
+                      <EnvRow
+                        id={server.id}
+                        name={`arg ${String(index).padStart(2, "0")}`}
+                        value={arg}
+                        revealKey={`arg:${index}`}
+                      />
+                    </div>
                   ))
                 )}
               </div>

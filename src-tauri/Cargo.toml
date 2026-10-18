@@ -7,9 +7,12 @@ edition = "2021"
 rust-version = "1.77.2"
 
 # The `_lib` suffix avoids a name collision with the binary on Windows.
+# `rlib` only: the desktop binary links this statically. `staticlib`/`cdylib`
+# exist for mobile targets and would emit an extra ~850 MB of .a/.so output
+# plus a second full codegen pass per crate.
 [lib]
 name = "orquestra_ai_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 # Passed by `tauri build`, and by `cargo build --release --features custom-protocol`.
@@ -26,6 +29,7 @@ tauri-build = { version = "2", features = [] }
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }
 serde = { version = "1", features = ["derive"] }
+libc = "0.2"
 # `preserve_order` keeps the key order of the configs we edit, so a harness
 # whose config is already correct is left byte-identical instead of being
 # rewritten just to reorder its keys.
@@ -36,10 +40,10 @@ json5 = "0.4"
 # blocks inside a hand-maintained config.toml, and losing its comments, key
 # order or unrelated sections would be unacceptable.
 toml_edit = "0.22"
+# Every harness keeps its chat history in SQLite. `bundled` ships the engine
+# inside the binary so a release build never depends on a system libsqlite3,
+# and sessions are opened read-only so a running agent keeps its locks.
+rusqlite = { version = "0.31", features = ["bundled"] }
 
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = "s"
-panic = "abort"
-strip = true
+# Release profiles live in the workspace root `Cargo.toml`; Cargo ignores (and
+# warns about) profiles declared by a non-root workspace member.

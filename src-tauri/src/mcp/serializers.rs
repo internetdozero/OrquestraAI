@@ -78,6 +78,17 @@ pub(super) fn merge_entry(
         object.insert(env_key.to_string(), merged);
     }
 
+    if !server.headers.is_empty() {
+        let mut headers = match object.get("headers") {
+            Some(JsonValue::Object(map)) => map.clone(),
+            _ => JsonMap::new(),
+        };
+        for (key, value) in &server.headers {
+            headers.insert(key.clone(), JsonValue::String(value.clone()));
+        }
+        object.insert("headers".to_string(), JsonValue::Object(headers));
+    }
+
     JsonValue::Object(object)
 }
 
@@ -138,10 +149,18 @@ pub(super) fn render_mcp_servers(
         for server in active {
             let mut fields: Vec<(&str, JsonValue)> = Vec::new();
             if let Some(kind) = entry_type {
+                let kind = if server.url.is_some() { "http" } else { kind };
                 fields.push(("type", JsonValue::String(kind.to_string())));
             }
-            fields.push(("command", JsonValue::String(server.command.clone())));
-            fields.push(("args", json_args(server)));
+            if let Some(url) = &server.url {
+                fields.push(("url", JsonValue::String(url.clone())));
+                fields.push(("command", JsonValue::Null));
+                fields.push(("args", JsonValue::Null));
+            } else {
+                fields.push(("url", JsonValue::Null));
+                fields.push(("command", JsonValue::String(server.command.clone())));
+                fields.push(("args", json_args(server)));
+            }
             fields.push(("env", JsonValue::Null));
 
             let merged = merge_entry(servers.get(&server.id), "env", &fields, server);
@@ -191,13 +210,22 @@ pub(super) fn render_jsonc_block(
             command.push(JsonValue::String(server.command.clone()));
             command.extend(server.args.iter().cloned().map(JsonValue::String));
 
-            let fields: Vec<(&str, JsonValue)> = vec![
-                ("type", JsonValue::String("local".to_string())),
-                ("command", JsonValue::Array(command)),
+            let mut fields: Vec<(&str, JsonValue)> = vec![
+                (
+                    "type",
+                    JsonValue::String(if server.url.is_some() { "remote" } else { "local" }.to_string()),
+                ),
                 ("enabled", JsonValue::Bool(true)),
                 ("environment", JsonValue::Null),
                 ("args", JsonValue::Null),
             ];
+            if let Some(url) = &server.url {
+                fields.push(("url", JsonValue::String(url.clone())));
+                fields.push(("command", JsonValue::Null));
+            } else {
+                fields.push(("url", JsonValue::Null));
+                fields.push(("command", JsonValue::Array(command)));
+            }
 
             let merged = merge_entry(servers.get(&server.id), "environment", &fields, server);
             servers.insert(server.id.clone(), merged);
@@ -251,13 +279,32 @@ pub(super) fn render_codex_toml(
 
         // Only the keys OrquestraAI owns are set, so `startup_timeout_sec` and
         // other hand-tuned fields stay on the entry.
-        entry.insert("command", toml_edit::value(server.command.as_str()));
+        if let Some(url) = &server.url {
+            entry.insert("url", toml_edit::value(url.as_str()));
+            entry.remove("command");
+            entry.remove("args");
+        } else {
+            entry.remove("url");
+            entry.insert("command", toml_edit::value(server.command.as_str()));
 
-        let mut args = toml_edit::Array::new();
-        for arg in &server.args {
-            args.push(arg.as_str());
+            let mut args = toml_edit::Array::new();
+            for arg in &server.args {
+                args.push(arg.as_str());
+            }
+            entry.insert("args", toml_edit::value(args));
         }
-        entry.insert("args", toml_edit::value(args));
+
+        if !server.headers.is_empty() {
+            let headers = entry
+                .entry("headers")
+                .or_insert(toml_edit::Item::Table(toml_edit::Table::new()));
+            let Some(headers) = headers.as_table_mut() else {
+                return Err(format!("[{CODEX_TABLE}.{}.headers] is not a table", server.id));
+            };
+            for (key, value) in &server.headers {
+                headers.insert(key, toml_edit::value(value.as_str()));
+            }
+        }
 
         if !server.env.is_empty() {
             if entry

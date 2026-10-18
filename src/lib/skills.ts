@@ -29,6 +29,8 @@ export interface SkillItem {
   harnessEnabled: boolean;
   /** Forced ON because the skill is enabled in Global. */
   inheritedFromGlobal: boolean;
+  /** Computed official tier from the Rust core; absent in older payloads. */
+  official?: boolean;
 }
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {

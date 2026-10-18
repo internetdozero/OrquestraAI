@@ -1,9 +1,9 @@
-import { AlertTriangle, FolderTree, Link2, Loader2, PlugZap, Radio } from "lucide-react";
+import { Activity, AlertTriangle, FolderTree, Link2, Loader2, PlugZap, Radio } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import type { HarnessStatus } from "../lib/bridge";
 import type { CoreStatus } from "../lib/tauri";
+import type { SystemHealth } from "../lib/janitor";
 import { cn } from "../lib/utils";
-import { LanguageToggle } from "./LanguageToggle";
 
 interface StatusFooterProps {
   status: CoreStatus | null;
@@ -11,6 +11,10 @@ interface StatusFooterProps {
   bridgeStatuses: HarnessStatus[];
   bridgeDeploying: boolean;
   onManageBridge: () => void;
+  janitorHealth: SystemHealth | null;
+  /** Operator's RAM threshold: the chip turns amber past it, not just on the core's fixed alert. */
+  ramAlertThreshold: number;
+  onOpenJanitor: () => void;
 }
 
 export function StatusFooter({
@@ -19,7 +23,13 @@ export function StatusFooter({
   bridgeStatuses,
   bridgeDeploying,
   onManageBridge,
+  janitorHealth,
+  ramAlertThreshold,
+  onOpenJanitor,
 }: StatusFooterProps) {
+  const ramElevated =
+    janitorHealth != null && janitorHealth.ram.usedPercent > ramAlertThreshold;
+  const janitorAlert = janitorHealth?.alert === true || ramElevated;
   const { t } = useI18n();
   const online = isTauri && status !== null;
 
@@ -80,14 +90,29 @@ export function StatusFooter({
         </div>
 
         <div className="flex items-center gap-2">
-          <LanguageToggle />
-
+          {isTauri && (
+            <button
+              type="button"
+              onClick={onOpenJanitor}
+              title={t.janitor.title}
+              aria-label={t.janitor.title}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10.5px] transition focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none",
+                janitorAlert
+                  ? "border-amber-500/25 bg-amber-500/[0.08] text-amber-300 hover:border-amber-500/40"
+                  : "border-cyan-500/20 bg-cyan-500/[0.05] text-cyan-200 hover:border-cyan-500/40",
+              )}
+            >
+              <Activity className="size-3" />
+              {janitorHealth ? `${Math.round(janitorHealth.ram.usedPercent)}%` : "—"}
+            </button>
+          )}
           {isTauri && pending > 0 && (
             <button
               type="button"
               onClick={onManageBridge}
               disabled={bridgeDeploying}
-              className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/[0.12] px-2 py-1 text-[10.5px] font-semibold text-emerald-200 transition hover:border-emerald-400/50 hover:bg-emerald-500/20 disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
+              className="accent-border accent-bg-soft accent-text flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10.5px] font-semibold transition hover:border-[var(--accent-ring)] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
             >
               {bridgeDeploying ? (
                 <Loader2 className="size-3 animate-spin" />
@@ -106,7 +131,7 @@ export function StatusFooter({
             className={cn(
               "flex items-center gap-1.5 rounded-md border px-2 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none",
               tone === "emerald" &&
-                "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300 hover:border-emerald-500/40",
+                "accent-border accent-bg-soft accent-text hover:border-[var(--accent-ring)]",
               tone === "amber" &&
                 "border-amber-500/25 bg-amber-500/[0.07] text-amber-300 hover:border-amber-500/40",
               tone === "zinc" &&

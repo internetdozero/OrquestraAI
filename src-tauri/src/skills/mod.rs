@@ -12,6 +12,7 @@ use crate::harness::{self, harness_ids, GLOBAL_SCOPE};
 use crate::paths::{open_paths, OrquestraPaths};
 
 mod agents;
+mod import;
 mod projection;
 mod vault;
 #[cfg(test)]
@@ -19,9 +20,10 @@ mod tests;
 
 pub(crate) use agents::{read_agents, write_agents, DEFAULT_AGENTS};
 pub use agents::{read_master_agents_md, write_master_agents_md};
+pub use import::{import_skill, import_skill_from_git};
 pub(crate) use vault::SKILL_FILE;
 
-use projection::{batch_from, is_projected, set_global, set_scope};
+use projection::{batch_from, clear_global_baseline, is_projected, set_global, set_scope};
 use vault::{list_from, skill_directories};
 
 /// A skill discovered in the master vault, evaluated for one selected scope.
@@ -33,6 +35,10 @@ pub struct SkillItem {
     pub description: String,
     pub category: String,
     pub tokens: usize,
+    /// Computed official tier (see `crate::official`); recomputed on every
+    /// listing, never operator state.
+    #[serde(default)]
+    pub official: bool,
     /// Whether the skill is projected in the universal baseline.
     pub global_enabled: bool,
     /// Effective state for the selected harness tab.
@@ -122,6 +128,86 @@ pub fn batch_set_all(harness_id: String, enabled: bool) -> Result<(), String> {
     let paths = open_paths()?;
     validate_scope(&harness_id)?;
     batch_from(&paths, &harness_id, enabled)
+}
+
+/// Open a native OS folder picker and return the chosen directory.
+/// `Ok(None)` means the user cancelled. Linux tries `zenity`, then
+/// `kdialog`; when neither exists an `Err` tells the UI to fall back to
+/// the typed path instead of failing silently.
+pub async fn pick_folder() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(run_folder_picker)
+        .await
+        .map_err(|error| format!("folder picker task failed: {error}"))?
+}
+
+fn run_folder_picker() -> Result<Option<String>, String> {
+    const TITLE: &str = "Selecione a pasta da Skill";
+
+    // Owned args per backend: zenity first, then kdialog.
+    let owned: Vec<(String, Vec<String>)> = vec![
+        (
+            "zenity".to_string(),
+            vec![
+                "--file-selection".to_string(),
+                "--directory".to_string(),
+                format!("--title={TITLE}"),
+            ],
+        ),
+        (
+            "kdialog".to_string(),
+            vec![
+                "--getexistingdirectory".to_string(),
+                ".".to_string(),
+                "--title".to_string(),
+                TITLE.to_string(),
+            ],
+        ),
+    ];
+    for (program, args) in &owned {
+        let output = match std::process::Command::new(program).args(args).output() {
+            Ok(output) => output,
+            // Backend missing: try the next one.
+            Err(_) => continue,
+        };
+        // Non-zero exit is the user cancelling the dialog.
+        if !output.status.success() {
+            return Ok(None);
+        }
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if path.is_empty() {
+            return Ok(None);
+        }
+        return Ok(Some(path));
+    }
+
+    Err("no folder picker available (tried zenity, kdialog); type or paste the path instead".to_string())
+}
+
+/// Clear only the Global baseline link for one skill, preserving harness
+/// projections. Kept for harness-specific workflows; preset reconciliation
+/// now disables globally so orphan harness links are swept too.
+#[allow(dead_code)]
+pub fn clear_global_baseline_for_preset(id: &str) -> Result<(), String> {
+    let paths = open_paths()?;
+    clear_global_baseline(&paths, id)
+}
+
+/// Read the raw `SKILL.md` of one vault skill, for the in-app editor.
+pub fn read_skill_content(id: String) -> Result<String, String> {
+    let paths = open_paths()?;
+    vault::read_skill_content(&paths, &id)
+}
+
+/// Atomically replace a skill's `SKILL.md`.
+pub fn save_skill_content(id: String, content: String) -> Result<(), String> {
+    let paths = open_paths()?;
+    vault::save_skill_content(&paths, &id, &content)
+}
+
+/// Unlink a skill from every scope and remove its vault folder.
+pub fn delete_skill(id: String) -> Result<(), String> {
+    let paths = open_paths()?;
+    vault::delete_skill(&paths, &id)
 }
 
 fn validate_scope(scope: &str) -> Result<(), String> {
