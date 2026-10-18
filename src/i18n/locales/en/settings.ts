@@ -72,6 +72,9 @@ export const settings: TranslationSchema["settings"] = {
     checking: "Checking…",
     upToDate: (version: string) =>
       `You are on the latest version — v${version}`,
+    newVersionAvailable: (version: string) =>
+      `New version v${version} available!`,
+    viewRelease: "View release",
   },
   sidebarAction: "Settings",
   sidebarHint: "Preferences, language, retention and about",

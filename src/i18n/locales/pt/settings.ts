@@ -70,6 +70,9 @@ export const settings = {
     checking: "Verificando…",
     upToDate: (version: string) =>
       `Você está na versão mais recente — v${version}`,
+    newVersionAvailable: (version: string) =>
+      `Nova versão v${version} disponível!`,
+    viewRelease: "Ver release",
   },
   sidebarAction: "Configurações",
   sidebarHint: "Preferências, idioma, retenção e sobre",
