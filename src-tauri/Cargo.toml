@@ -43,7 +43,7 @@ toml_edit = "0.22"
 # Every harness keeps its chat history in SQLite. `bundled` ships the engine
 # inside the binary so a release build never depends on a system libsqlite3,
 # and sessions are opened read-only so a running agent keeps its locks.
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 # Release profiles live in the workspace root `Cargo.toml`; Cargo ignores (and
 # warns about) profiles declared by a non-root workspace member.
