@@ -183,14 +183,17 @@ fn tmp_stats(path: &Path, is_tmpfs: bool) -> Result<TmpStats, String> {
     }
     // SAFETY: statvfs initialized the structure when it returned success.
     let stats = unsafe { stats.assume_init() };
+    #[allow(clippy::unnecessary_cast)]
     let block_size = if stats.f_frsize == 0 {
-        stats.f_bsize
+        stats.f_bsize as u64
     } else {
-        stats.f_frsize
+        stats.f_frsize as u64
     };
-    let total_bytes = block_size.saturating_mul(stats.f_blocks);
+    #[allow(clippy::unnecessary_cast)]
+    let total_bytes = block_size.saturating_mul(stats.f_blocks as u64);
+    #[allow(clippy::unnecessary_cast)]
     let free_bytes = block_size
-        .saturating_mul(stats.f_bavail)
+        .saturating_mul(stats.f_bavail as u64)
         .min(total_bytes);
     let used_bytes = total_bytes.saturating_sub(free_bytes);
     let total_mb = total_bytes / 1_048_576;
