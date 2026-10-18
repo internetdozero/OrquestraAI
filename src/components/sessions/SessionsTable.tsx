@@ -10,7 +10,8 @@ const PAGE_SIZE = 25;
 interface SessionsTableProps {
   sessions: UnifiedSession[];
   loading: boolean;
-  isTauri: boolean;
+  /** True when a real core or the dev fixture store can serve sessions. */
+  enabled: boolean;
   pendingIds: ReadonlySet<string>;
   onTogglePin: (harness: string, sessionId: string) => void;
   onDelete: (harness: string, sessionId: string) => void;
@@ -25,7 +26,7 @@ interface SessionsTableProps {
 export function SessionsTable({
   sessions,
   loading,
-  isTauri,
+  enabled,
   pendingIds,
   onTogglePin,
   onDelete,
@@ -39,7 +40,7 @@ export function SessionsTable({
     setPageSize(PAGE_SIZE);
   }, [sessions]);
 
-  if (!isTauri) {
+  if (!enabled) {
     return (
       <StatePanel icon={History} title={s.empty} description={s.unavailable} />
     );

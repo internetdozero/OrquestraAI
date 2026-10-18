@@ -23,6 +23,7 @@ mod tests;
 mod transcript_tests;
 pub mod time;
 mod transcript;
+mod transcript_sanitize;
 pub mod utils;
 
 use std::collections::BTreeMap;

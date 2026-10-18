@@ -37,7 +37,10 @@ function Turn({ turn }: { turn: TranscriptTurn }) {
   const isUser = turn.role === "user";
 
   return (
-    <div className={cn("group flex", isUser ? "justify-end" : "justify-start")}>
+    <div
+      data-turn-role={turn.role}
+      className={cn("group flex", isUser ? "justify-end" : "justify-start")}
+    >
       <div
         className={cn(
           "relative max-w-[92%] rounded-xl border px-2.5 py-1.5",
@@ -48,11 +51,12 @@ function Turn({ turn }: { turn: TranscriptTurn }) {
       >
         <p
           className={cn(
-            "mb-1 font-mono text-[9px] font-semibold tracking-[0.12em] uppercase",
+            // `pr-5` keeps the timestamp clear of the hover copy button.
+            "mb-1 pr-5 font-mono text-[9px] font-semibold tracking-[0.12em] uppercase",
             isUser ? "text-right text-emerald-400/80" : "text-zinc-600",
           )}
         >
-          {isUser ? s.turnUser : turn.role === "system" ? s.turnSystem : s.turnAssistant}
+          {isUser ? s.turnUser : s.turnAssistant}
           {turn.timestamp && (
             <span className="ml-1.5 font-normal tracking-normal normal-case opacity-70">
               {turn.timestamp}
@@ -104,7 +108,11 @@ export function TranscriptFeed({
     setQuery("");
     void getSessionTranscript(harness, sessionId)
       .then((feed) => {
-        if (!cancelled) setTurns(feed);
+        // Defense in depth: the core already refuses system scaffolding, but
+        // an older payload must never paint a system prompt as a chat bubble.
+        if (!cancelled) {
+          setTurns(feed.filter((turn) => turn.role === "user" || turn.role === "assistant"));
+        }
       })
       .catch(() => {
         if (!cancelled) setTurns([]);
