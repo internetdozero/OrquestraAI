@@ -86,4 +86,10 @@ export const sessions = {
   turnSystem: "Sistema",
   copyMessage: "Copiar mensagem",
   copied: "Copiado para a área de transferência",
+  searchMessages: "Buscar mensagens…",
+  exportMarkdown: "Exportar Markdown",
+  copyAll: "Copiar tudo",
+  copiedAll: "Conversa copiada para a área de transferência",
+  matchesCount: (count: number) => `${count} resultados`,
+  noSearchMatches: "Nenhuma mensagem corresponde à busca",
 };

@@ -177,6 +177,8 @@ export function SessionDetailDrawer({
                 key={`${session.harness}:${session.id}`}
                 harness={session.harness}
                 sessionId={session.id}
+                title={session.title || undefined}
+                onToast={onToast}
               />
             </div>
           </section>
