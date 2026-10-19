@@ -36,11 +36,13 @@ No entanto, cada ferramenta isola suas próprias pastas de skills, configuraçõ
 
 O **OrquestraAI** resolve essa fragmentação através de uma aplicação desktop em **Tauri v2 + Rust + React** e CLI headless de alto desempenho:
 1. **Cofre Universal de Skills e Projeções:** Mantenha um repositório central (`~/.orquestra/skills-library`) e projete skills dinamicamente (via symlinks atômicos ou injeção em configurações JSONC) em qualquer harness sem duplicar arquivos no disco.
-2. **Catálogo de Servidores MCP Global e por Harness:** Ative, desative e configure servidores do Model Context Protocol (MCP) globalmente ou por agente individual.
-3. **Protocolo Master `AGENTS.md`:** Mantenha suas regras e instruções comportamentais unificadas entre todas as ferramentas sem precisar copiar e colar arquivos manualmente.
-4. **Telemetria de Sessões e Leitor de Transcripts Cross-Harness:** Acompanhe espaço em disco, contagem de turnos e feeds de conversa de todas as 9 IAs, com sanitização (limpeza de tags de raciocínio interno e extração limpa dos prompts do usuário).
-5. **Janitor (Guarda de Sistema e Memória):** Evita travamentos por falta de memória RAM (OOM Killer), varre processos órfãos de agentes e faz a limpeza segura de caches transitórios.
-6. **Idea Vault e Quadro Inter-Agentes:** Bloco de notas e ponte de comunicação assíncrona para fluxos de múltiplos agentes.
+2. **Hub Oficial de Extensões e Comunidade:** Descoberta e instalação em 1 clique de skills e servidores MCP oficiais servidos a partir do monorepo [`internetdozero/orquestra-extensions`](https://github.com/internetdozero/orquestra-extensions), com auditoria estática automatizada de scripts executáveis.
+3. **Catálogo de Servidores MCP Global e por Harness:** Ative, desative e configure servidores do Model Context Protocol (MCP) globalmente ou por agente individual.
+4. **Protocolo Master `AGENTS.md`:** Mantenha suas regras e instruções comportamentais unificadas entre todas as ferramentas sem precisar copiar e colar arquivos manualmente.
+5. **Telemetria de Sessões e Leitor de Transcripts Cross-Harness:** Acompanhe espaço em disco, contagem de turnos e feeds de conversa de todas as 9 IAs, com sanitização (limpeza de tags de raciocínio interno e extração limpa dos prompts do usuário).
+6. **Janitor (Guarda de Sistema e Memória):** Evita travamentos por falta de memória RAM (OOM Killer), varre processos órfãos de agentes e faz a limpeza segura de caches transitórios.
+7. **Idea Vault e Quadro de Produtividade Inter-Agentes:** Bloco de notas persistente, ordenação estilo Notion, geração de prompt em 1 clique para agentes de IA e métricas de atividade.
+8. **Auto-Atualizador Integrado:** Detector de releases em background e fluxo de atualização com 1 clique nas Configurações.
 
 ---
 

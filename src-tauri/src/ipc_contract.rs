@@ -20,6 +20,7 @@ mod tests {
     use serde_json::Value;
 
     use crate::bridge::{BridgeReport, HarnessStatus, SecondaryAction, SecondaryStatus};
+    use crate::ideas::productivity::{DayActivity, ProductivityMetrics, WeeklyVelocity};
     use crate::ideas::types::{BlackboardNote, IdeaItem};
     use crate::mcp::{McpServer, McpTargetStatus};
     use crate::presets::{Preset, PresetReport};
@@ -337,8 +338,40 @@ mod tests {
                 status: "open".to_string(),
                 created_at: "2026-10-18 12:00:00".to_string(),
                 updated_at: "2026-10-18 12:00:00".to_string(),
+                completed_at: None,
             }),
             frozen("IdeaItem"),
+        );
+        assert_keys(
+            "DayActivity",
+            keys_of(&DayActivity {
+                date: "2026-10-19".to_string(),
+                ideas_completed: 2,
+                intensity: 2,
+            }),
+            frozen("DayActivity"),
+        );
+        assert_keys(
+            "WeeklyVelocity",
+            keys_of(&WeeklyVelocity {
+                this_week: 2,
+                last_week: 1,
+            }),
+            frozen("WeeklyVelocity"),
+        );
+        assert_keys(
+            "ProductivityMetrics",
+            keys_of(&ProductivityMetrics {
+                daily_activity: Vec::new(),
+                current_streak: 3,
+                weekly_velocity: WeeklyVelocity {
+                    this_week: 2,
+                    last_week: 1,
+                },
+                avg_cycle_hours: Some(26.5),
+                project: None,
+            }),
+            frozen("ProductivityMetrics"),
         );
         assert_keys(
             "BlackboardNote",

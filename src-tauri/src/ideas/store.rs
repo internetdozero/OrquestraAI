@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS ideas (
     tags        TEXT,
     status      TEXT NOT NULL DEFAULT 'open',
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS blackboard_notes (
@@ -82,8 +83,32 @@ pub fn connect_at(path: &Path) -> Result<Connection, String> {
     connection
         .execute_batch(SCHEMA)
         .map_err(|error| format!("cannot initialize the schema: {error}"))?;
+    migrate_completed_at(&connection)?;
 
     Ok(connection)
+}
+
+/// Idempotent migration for vaults created before `completed_at` existed:
+/// `CREATE TABLE IF NOT EXISTS` never adds the column to an old table, so
+/// patch it here instead of failing reads written before the migration.
+fn migrate_completed_at(connection: &Connection) -> Result<(), String> {
+    let has_column: bool = connection
+        .prepare("SELECT 1 FROM pragma_table_info('ideas') WHERE name = 'completed_at'")
+        .and_then(|mut statement| statement.exists([]))
+        .map_err(|error| format!("cannot inspect the ideas schema: {error}"))?;
+    if !has_column {
+        connection
+            .execute_batch("ALTER TABLE ideas ADD COLUMN completed_at TIMESTAMP;")
+            .map_err(|error| format!("cannot migrate the ideas schema: {error}"))?;
+    }
+    // Backfill legacy completed/archived ideas so historical velocity & heatmap ignite
+    connection
+        .execute_batch(
+            "UPDATE ideas SET completed_at = updated_at \
+             WHERE status IN ('completed', 'archived') AND completed_at IS NULL;",
+        )
+        .map_err(|error| format!("cannot backfill completed_at: {error}"))?;
+    Ok(())
 }
 
 /// Open the vault at its resolved path.
@@ -149,6 +174,7 @@ pub(super) fn idea_from_row(row: &Row) -> Result<IdeaItem, rusqlite::Error> {
         status: row.get("status")?,
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
+        completed_at: row.get("completed_at")?,
     })
 }
 

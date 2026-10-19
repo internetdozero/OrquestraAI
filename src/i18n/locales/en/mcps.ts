@@ -35,6 +35,8 @@ export const mcps: TranslationSchema["mcps"] = {
   targets: "Targets",
   unavailableBody:
     "The MCP registry is compiled by the Rust core into each harness config. Run the desktop shell to read or change it.",
+  mockBanner:
+    "Browser demo mode: in-memory mock catalog, nothing is really compiled.",
   readFailed: (detail: string) => `Could not read the MCP catalog: ${detail}`,
   toggled: (name: string, verb: string, scope: string) =>
     `${name} ${verb} · ${scope}`,

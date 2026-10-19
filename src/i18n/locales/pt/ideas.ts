@@ -83,6 +83,8 @@ export const ideas = {
   emptyNotes: "Nenhum recado no quadro",
   emptyNotesHint: "Agentes postam recados via MCP; eles aparecem aqui.",
   unavailable: "Baú indisponível fora do app desktop.",
+  mockBanner:
+    "Modo demonstração no navegador: dados fictícios em memória, nada é salvo no Baú real.",
   noteFrom: "De",
   noteTo: "Para",
   markRead: "Marcar como lido",
@@ -110,4 +112,19 @@ export const ideas = {
   hUpdated: "Atualizada",
   copyForAi: "Copiar para IA",
   copied: "Copiado!",
+  productivity: {
+    title: "Produtividade",
+    pillIdle: "Produtividade: streak e velocity",
+    pillSummary: (streak: number, velocity: number) =>
+      `🔥 Streak: ${streak} dias · ⚡ Velocity: ${velocity} tarefas/sem`,
+    projectFilter: "Projeto",
+    allProjects: "Todos os projetos",
+    streak: "Streak atual",
+    streakValue: (days: number) => `${days} dias`,
+    velocity: "Velocity semanal",
+    velocityValue: (week: number, previous: number) => `${week} · ant. ${previous}`,
+    cycle: "Ciclo médio",
+    daysSuffix: "d",
+    hoursSuffix: "h",
+  },
 };

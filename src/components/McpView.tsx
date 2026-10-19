@@ -15,6 +15,7 @@ import {
   type McpSortMode,
 } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
+import { devMockMode } from "../lib/fixtures";
 import { useMcpCatalog } from "../hooks/useMcpCatalog";
 import { useMcpMutations } from "../hooks/useMcpMutations";
 import { useMcpStoreActions } from "../hooks/useMcpStoreActions";
@@ -53,6 +54,7 @@ export function McpView({
   onQueryChange,
 }: McpViewProps) {
   const { t } = useI18n();
+  const [mockMode] = useState(devMockMode);
   const { servers, targets, loading, error, setError, load, replaceServers } =
     useMcpCatalog(isTauri, reloadToken);
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
@@ -135,7 +137,7 @@ export function McpView({
       onToast,
     });
 
-  if (!isTauri) {
+  if (!isTauri && !mockMode) {
     return (
       <div className="flex h-full items-center justify-center px-6">
         <StatePanel icon={Unplug} title={t.skills.stateUnavailableTitle} description={t.mcps.unavailableBody}>
@@ -148,6 +150,14 @@ export function McpView({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-5 sm:px-6">
       <div className="mx-auto w-full max-w-[1400px]">
+        {mockMode && (
+          <p
+            role="status"
+            className="mb-3 rounded-lg border border-cyan-500/25 bg-cyan-500/[0.06] px-3 py-1.5 font-mono text-[10.5px] text-cyan-200/90"
+          >
+            {t.mcps.mockBanner}
+          </p>
+        )}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
@@ -217,7 +227,9 @@ export function McpView({
             totalCount={servers.length}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
-            canBatch={isTauri && servers.length > 0 && !batchPending && !loading}
+            canBatch={
+              (isTauri || mockMode) && servers.length > 0 && !batchPending && !loading
+            }
             batchPending={batchPending}
             onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
           />

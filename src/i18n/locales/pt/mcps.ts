@@ -33,6 +33,8 @@ export const mcps = {
   targets: "Destinos",
   unavailableBody:
     "O registro MCP é compilado pelo núcleo em Rust na configuração de cada harness. Abra o aplicativo desktop para ler ou alterar.",
+  mockBanner:
+    "Modo demonstração no navegador: catálogo fictício em memória, nada é compilado de verdade.",
   readFailed: (detail: string) =>
     `Não foi possível ler o catálogo MCP: ${detail}`,
   toggled: (name: string, verb: string, scope: string) =>

@@ -73,7 +73,7 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
         >
           {idea.title}
         </h4>
-        <div className="flex shrink-0 items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-150 delay-0 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 focus-within:opacity-100 focus-within:pointer-events-auto">
+        <div className="flex shrink-0 items-center gap-1 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
           <GripVertical className="size-3 text-zinc-600" aria-hidden="true" />
           <button
             type="button"

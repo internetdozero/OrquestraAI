@@ -46,7 +46,7 @@ function Turn({ turn, onToast }: { turn: TranscriptTurn; onToast: (message: stri
     >
       <div
         className={cn(
-          "relative min-w-0 max-w-[92%] rounded-xl border px-2.5 py-1.5",
+          "relative min-w-0 max-w-[92%] rounded-xl border px-2.5 py-1.5 break-words [overflow-wrap:anywhere]",
           isUser
             ? "border-emerald-500/25 bg-emerald-500/[0.08]"
             : "border-white/[0.07] bg-white/[0.025]",
@@ -76,7 +76,7 @@ function Turn({ turn, onToast }: { turn: TranscriptTurn; onToast: (message: stri
             if (ok) onToast(s.copied);
           }}
           className={cn(
-            "absolute top-1 right-1 grid size-5 place-items-center rounded bg-black/50 pointer-events-none transition-opacity duration-150 delay-0 group-hover:pointer-events-auto group-hover:delay-75 hover:text-emerald-300 focus-visible:pointer-events-auto",
+            "absolute top-1 right-1 grid size-5 place-items-center rounded bg-black/50 pointer-events-none group-hover:pointer-events-auto hover:text-emerald-300 focus-visible:pointer-events-auto",
             copied
               ? "text-emerald-300 opacity-100"
               : "text-zinc-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",

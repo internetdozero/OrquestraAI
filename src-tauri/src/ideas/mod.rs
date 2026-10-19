@@ -7,6 +7,7 @@
 
 pub mod ideas_repo;
 pub mod notes_repo;
+pub mod productivity;
 pub mod store;
 #[cfg(test)]
 mod tests;
@@ -57,6 +58,16 @@ pub fn update_idea_status(id: i64, status: String) -> Result<IdeaItem, String> {
 pub fn delete_idea(id: i64) -> Result<(), String> {
     let connection = store::connect()?;
     ideas_repo::delete_idea(&connection, id)
+}
+
+/// Developer velocity: vault completions plus local git commits per day.
+#[tauri::command]
+pub fn get_productivity_metrics(
+    project: Option<String>,
+    weeks: Option<u32>,
+) -> Result<productivity::ProductivityMetrics, String> {
+    let connection = store::connect()?;
+    productivity::metrics(&connection, project.as_deref(), weeks)
 }
 
 /// Blackboard notes oldest first, optionally unread only and/or one project.

@@ -119,14 +119,26 @@ pub fn update_idea(connection: &Connection, input: UpdateIdeaInput) -> Result<Id
     if let Some(raw) = input.tags {
         sets.push(("tags", raw.trim().to_string()));
     }
+    // `completed_at` follows the status: stamping a completion starts the
+    // delivery clock for the heatmap, reopening clears it, and archiving
+    // keeps whatever the idea held (a direct open -> archived jump was never
+    // a delivery).
+    let mut completion_stamp: Option<&str> = None;
     if let Some(raw) = input.status.as_deref() {
-        sets.push(("status", require_choice(raw, &STATUSES, "status")?));
+        let status = require_choice(raw, &STATUSES, "status")?;
+        completion_stamp = match status.as_str() {
+            "completed" => Some("completed_at = CURRENT_TIMESTAMP"),
+            "open" | "in_progress" => Some("completed_at = NULL"),
+            _ => None,
+        };
+        sets.push(("status", status));
     }
 
     let assignments = sets
         .iter()
         .map(|(column, _)| format!("{column} = ?"))
         .chain(std::iter::once("updated_at = CURRENT_TIMESTAMP".to_string()))
+        .chain(completion_stamp.into_iter().map(str::to_string))
         .collect::<Vec<_>>()
         .join(", ");
     let values: Vec<String> = sets.into_iter().map(|(_, value)| value).collect();

@@ -1,6 +1,6 @@
 [package]
 name = "orquestra-ai"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 description = "OrquestraAI — Universal AI Harness Administration Platform"
 authors = ["Operator"]
 edition = "2021"

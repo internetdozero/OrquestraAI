@@ -27,6 +27,9 @@ pub struct IdeaItem {
     pub status: String,
     pub created_at: String,
     pub updated_at: String,
+    /// When the idea last entered `completed`; NULL unless it is (or was)
+    /// completed. Drives the productivity heatmap.
+    pub completed_at: Option<String>,
 }
 
 /// One inter-agent blackboard note: the `blackboard_notes` row.

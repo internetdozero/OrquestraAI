@@ -36,11 +36,13 @@ However, each tool maintains its own isolated skill definitions, separate MCP se
 
 **OrquestraAI** solves this fragmentation with a high-performance **Tauri v2 + Rust + React** desktop application and headless CLI. It provides:
 1. **Universal Skills Vault & Projections:** Maintain one central skills repository (`~/.orquestra/skills-library`) and project skills dynamically (via symlinks or native JSONC config injection) into any harness with zero disk duplication.
-2. **Global & Harness-Scoped MCP Server Registry:** Enable, disable, and configure Model Context Protocol (MCP) servers globally or per individual AI harness.
-3. **Master `AGENTS.md` Protocol:** Keep your system-level rules and behavioral instructions unified across all tools without manual copy-pasting.
-4. **Cross-Harness Session Telemetry & Transcript Viewer:** Inspect disk footprint, turn counts, and full live conversation transcripts across all 9 harnesses with full sanitization (stripping thinking tags, extracting clean user prompts).
-5. **Janitor System & Memory Guard:** Prevent OOM kills on developer laptops, sweep orphan agent processes, and clean transient caches safely.
-6. **Idea Vault & Inter-Agent Blackboard:** Persistent scratchpad and communication bridge for multi-agent workflows.
+2. **Official Extensions & Community Hub:** 1-click in-app discovery and installer for official skills and MCP servers backed by the [`internetdozero/orquestra-extensions`](https://github.com/internetdozero/orquestra-extensions) monorepo, with automated static script security auditing.
+3. **Global & Harness-Scoped MCP Server Registry:** Enable, disable, and configure Model Context Protocol (MCP) servers globally or per individual AI harness.
+4. **Master `AGENTS.md` Protocol:** Keep your system-level rules and behavioral instructions unified across all tools without manual copy-pasting.
+5. **Cross-Harness Session Telemetry & Transcript Viewer:** Inspect disk footprint, turn counts, and full live conversation transcripts across all 9 harnesses with full sanitization (stripping thinking tags, extracting clean user prompts).
+6. **Janitor System & Memory Guard:** Prevent OOM kills on developer laptops, sweep orphan agent processes, and clean transient caches safely.
+7. **Idea Vault & Inter-Agent Blackboard:** Persistent scratchpad, Notion-style sorting, 1-click agent prompt copy, and productivity metrics.
+8. **In-App Auto-Updater:** Background release detector and 1-click update flow in Settings.
 
 ---
 

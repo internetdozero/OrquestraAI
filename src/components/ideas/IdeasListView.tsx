@@ -76,7 +76,11 @@ export function IdeasListView({
 }: IdeasListViewProps) {
   const { t } = useI18n();
   const s = t.ideas;
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  // Completed starts collapsed, mirroring the board: finished work stays one
+  // click away instead of stretching the list on load.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
+    () => new Set(["completed"]),
+  );
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<IdeaSortField | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
@@ -109,7 +113,7 @@ export function IdeasListView({
     <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/20">
       {/* Interactive column labels for wide screens; rows carry the same fields inline. */}
       <div
-        className="hidden grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_70px] items-center gap-3 border-b border-white/[0.08] px-3.5 py-2 text-[10.5px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid"
+        className="hidden grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_96px] items-center gap-3 border-b border-white/[0.08] px-3.5 py-2 text-[10.5px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid"
       >
         <SortHeader label={s.hTitle} field="title" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
         <SortHeader label={s.fieldProject} field="project" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
@@ -158,7 +162,7 @@ export function IdeasListView({
                   return (
                     <li
                       key={idea.id}
-                      className="grid min-h-[36px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-1.5 transition hover:bg-white/[0.02] lg:grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_70px]"
+                      className="grid min-h-[36px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-1.5 transition hover:bg-white/[0.02] lg:grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_96px]"
                     >
                       <div className="min-w-0">
                         <button

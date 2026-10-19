@@ -207,10 +207,10 @@ export function CustomDropdown<T extends string>({
         aria-label={ariaLabel}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] py-1.5 pr-2 pl-2 text-[11px] font-medium whitespace-nowrap text-zinc-300 transition hover:border-white/20 focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:outline-none"
+        className="flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] py-1.5 pr-2 pl-2 text-[11px] font-medium whitespace-nowrap text-zinc-300 transition hover:border-white/20 focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:outline-none"
       >
         {Icon && <Icon className="size-3 shrink-0 text-zinc-500" />}
-        <span>{current?.label}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{current?.label}</span>
         <ChevronDown
           className={cn(
             "size-3 shrink-0 text-zinc-500 transition-transform duration-150",

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Lightbulb } from "lucide-react";
 import { useIdeas } from "../../hooks/useIdeas";
 import { useI18n } from "../../hooks/useI18n";
+import { devMockMode } from "../../lib/fixtures";
 import type { IdeaItem } from "../../lib/ideas";
 import { ErrorBanner, StatePanel } from "../ui";
 import { ArchivedIdeasModal } from "./ArchivedIdeasModal";
@@ -10,6 +11,7 @@ import { IdeaDetailModal } from "./IdeaDetailModal";
 import { IdeaFormModal } from "./IdeaFormModal";
 import { IdeasBoard } from "./IdeasBoard";
 import { IdeasHeader, type BoardMode } from "./IdeasHeader";
+import { ProductivitySubPanel } from "./ProductivitySubPanel";
 import { IdeasListView } from "./IdeasListView";
 import { IdeasToolbar } from "./IdeasToolbar";
 import { PostNoteModal } from "./PostNoteModal";
@@ -26,6 +28,7 @@ interface IdeasViewProps {
  */
 export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
   const { t } = useI18n();
+  const [mockMode] = useState(devMockMode);
   const state = useIdeas({ isTauri, onToast, onError });
   const s = t.ideas;
   const [mode, setMode] = useState<BoardMode>("board");
@@ -59,7 +62,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
   };
   const archivedIdeas = state.ideas.filter((idea) => idea.status === "archived");
 
-  if (!isTauri) {
+  if (!isTauri && !mockMode) {
     return (
       <div className="w-full max-w-none px-4">
         <StatePanel icon={Lightbulb} title={s.title} description={s.unavailable} />
@@ -69,6 +72,14 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
 
   return (
     <div className="w-full max-w-none space-y-3 px-4">
+      {mockMode && (
+        <p
+          role="status"
+          className="rounded-lg border border-cyan-500/25 bg-cyan-500/[0.06] px-3 py-1.5 font-mono text-[10.5px] text-cyan-200/90"
+        >
+          {s.mockBanner}
+        </p>
+      )}
       <IdeasHeader
         loading={state.loading}
         activeTab={state.activeTab}
@@ -79,6 +90,8 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
         onNewNote={() => setNoteOpen(true)}
         onRefresh={() => void state.refreshAll()}
       />
+
+      <ProductivitySubPanel projects={state.projects} />
 
       {state.error && <ErrorBanner message={state.error} onDismiss={() => void state.refreshAll()} />}
 

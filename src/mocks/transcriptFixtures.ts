@@ -1,13 +1,13 @@
 import type { TranscriptTurn, UnifiedSession } from "../lib/sessions";
-import { ANTIGRAVITY_TURNS } from "./transcripts/antigravity";
-import { CLAUDE_TURNS } from "./transcripts/claude";
-import { CODEX_TURNS } from "./transcripts/codex";
-import { COPILOT_TURNS } from "./transcripts/copilot";
-import { FREEBUFF_TURNS } from "./transcripts/freebuff";
-import { GROK_TURNS } from "./transcripts/grok";
-import { HERMES_TURNS } from "./transcripts/hermes";
-import { KILO_TURNS } from "./transcripts/kilo";
-import { OPENCODE_TURNS } from "./transcripts/opencode";
+import { ANTIGRAVITY_TURNS } from "./transcripts/antigravity.ts";
+import { CLAUDE_TURNS } from "./transcripts/claude.ts";
+import { CODEX_TURNS } from "./transcripts/codex.ts";
+import { COPILOT_TURNS } from "./transcripts/copilot.ts";
+import { FREEBUFF_TURNS } from "./transcripts/freebuff.ts";
+import { GROK_TURNS } from "./transcripts/grok.ts";
+import { HERMES_TURNS } from "./transcripts/hermes.ts";
+import { KILO_TURNS } from "./transcripts/kilo.ts";
+import { OPENCODE_TURNS } from "./transcripts/opencode.ts";
 
 /**
  * Developer fixture gallery: representative multi-turn conversations for all

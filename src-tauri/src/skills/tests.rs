@@ -378,6 +378,8 @@ mod tests {
             "orquestra-smart-build-router",
             "modular-start",
             "agent-orchestrator",
+            "lean-screen",
+            "ux-best-practices",
         ] {
             assert!(is_official_skill(id), "{id} should be official");
         }

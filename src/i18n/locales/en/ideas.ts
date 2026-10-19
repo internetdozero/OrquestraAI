@@ -85,6 +85,8 @@ export const ideas: TranslationSchema["ideas"] = {
   emptyNotes: "No notes on the board",
   emptyNotesHint: "Agents post notes over MCP; they show up here.",
   unavailable: "Vault unavailable outside the desktop app.",
+  mockBanner:
+    "Browser demo mode: in-memory mock data, nothing is saved to the real Vault.",
   noteFrom: "From",
   noteTo: "To",
   markRead: "Mark as read",
@@ -112,4 +114,19 @@ export const ideas: TranslationSchema["ideas"] = {
   hUpdated: "Updated",
   copyForAi: "Copy for AI agent",
   copied: "Copied!",
+  productivity: {
+    title: "Productivity",
+    pillIdle: "Productivity: streak & velocity",
+    pillSummary: (streak: number, velocity: number) =>
+      `🔥 Streak: ${streak} days · ⚡ Velocity: ${velocity} tasks/wk`,
+    projectFilter: "Project",
+    allProjects: "All projects",
+    streak: "Current streak",
+    streakValue: (days: number) => `${days} days`,
+    velocity: "Weekly velocity",
+    velocityValue: (week: number, previous: number) => `${week} · prev ${previous}`,
+    cycle: "Avg cycle time",
+    daysSuffix: "d",
+    hoursSuffix: "h",
+  },
 };

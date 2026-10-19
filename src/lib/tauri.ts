@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import { devMockMode, fixtureOfficialStore } from "./fixtures.ts";
 import type { HarnessSummary } from "./harnesses";
 import type { SkillItem } from "./skills";
 
@@ -139,6 +140,7 @@ export interface OfficialStore {
 
 /** Fetch the curated Official Store (static data, never fails to exist). */
 export function listOfficialStore(): Promise<OfficialStore> {
+  if (devMockMode()) return Promise.resolve(fixtureOfficialStore());
   return invoke<OfficialStore>("list_official_store");
 }
 

@@ -25,8 +25,9 @@ mod updater;
 
 use bridge::{BridgeReport, HarnessStatus};
 use ideas::{
-    create_idea, delete_idea, list_blackboard_notes, list_idea_projects, list_ideas,
-    mark_note_read, post_blackboard_note, update_idea, update_idea_status,
+    create_idea, delete_idea, get_productivity_metrics, list_blackboard_notes,
+    list_idea_projects, list_ideas, mark_note_read, post_blackboard_note, update_idea,
+    update_idea_status,
 };
 use janitor::{get_system_health, sweep_system_caches};
 use mcp::{McpServer, McpTargetStatus};
@@ -378,6 +379,7 @@ pub fn run() {
             reset_preset,
             list_ideas,
             list_idea_projects,
+            get_productivity_metrics,
             create_idea,
             update_idea,
             update_idea_status,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { devMockMode } from "../lib/fixtures";
 import { useI18n } from "./useI18n";
 import {
   ensureMcpCatalog,
@@ -21,14 +22,18 @@ function toMessage(cause: unknown, fallback: string): string {
 export function useMcpCatalog(isTauri: boolean, reloadToken: number) {
   const { t } = useI18n();
   const cached = readMcpCache();
+  // Browser mock fixtures resolve through the same cache calls, so every
+  // guard below treats mock mode like a live core.
+  const [mockMode] = useState(devMockMode);
+  const active = isTauri || mockMode;
   const [servers, setServers] = useState<McpServer[]>(cached?.servers ?? []);
   const [targets, setTargets] = useState<McpTarget[]>(cached?.targets ?? []);
-  const [loading, setLoading] = useState(isTauri && cached === null);
+  const [loading, setLoading] = useState(active && cached === null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
     async (force = false) => {
-      if (!isTauri) {
+      if (!active) {
         setLoading(false);
         return;
       }
@@ -45,7 +50,7 @@ export function useMcpCatalog(isTauri: boolean, reloadToken: number) {
         setLoading(false);
       }
     },
-    [isTauri, t],
+    [active, t],
   );
 
   useEffect(() => {

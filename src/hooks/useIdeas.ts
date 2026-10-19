@@ -15,6 +15,7 @@ import {
   type PostNoteInput,
   type UpdateIdeaInput,
 } from "../lib/ideas";
+import { devMockMode } from "../lib/fixtures";
 import { useI18n } from "./useI18n";
 
 export type IdeasTab = "ideas" | "blackboard";
@@ -45,6 +46,10 @@ export function useIdeas(options: {
 }) {
   const { isTauri, onToast, onError } = options;
   const { t } = useI18n();
+  // Browser mock fixtures resolve through the same lib calls, so every
+  // guard below treats mock mode like a live core.
+  const [mockMode] = useState(devMockMode);
+  const active = isTauri || mockMode;
   const [ideas, setIdeas] = useState<IdeaItem[]>([]);
   const [projects, setProjects] = useState<string[]>([]);
   const [notes, setNotes] = useState<BlackboardNote[]>([]);
@@ -58,7 +63,7 @@ export function useIdeas(options: {
   const [saving, setSaving] = useState(false);
 
   const refreshIdeas = useCallback(async () => {
-    if (!isTauri) return;
+    if (!active) return;
     setError(null);
     try {
       const [rows, names] = await Promise.all([
@@ -72,10 +77,10 @@ export function useIdeas(options: {
       setError(message);
       onError(message);
     }
-  }, [isTauri, onError, t]);
+  }, [active, onError, t]);
 
   const refreshNotes = useCallback(async () => {
-    if (!isTauri) return;
+    if (!active) return;
     try {
       setNotes(await listBlackboardNotes(null, false));
     } catch (cause) {
@@ -83,17 +88,17 @@ export function useIdeas(options: {
       setError(message);
       onError(message);
     }
-  }, [isTauri, onError, t]);
+  }, [active, onError, t]);
 
   const refreshAll = useCallback(async () => {
-    if (!isTauri) return;
+    if (!active) return;
     setLoading(true);
     try {
       await Promise.all([refreshIdeas(), refreshNotes()]);
     } finally {
       setLoading(false);
     }
-  }, [isTauri, refreshIdeas, refreshNotes]);
+  }, [active, refreshIdeas, refreshNotes]);
 
   useEffect(() => {
     void refreshAll();
@@ -103,7 +108,7 @@ export function useIdeas(options: {
   // regains focus or becomes visible. The timer is module-agnostic and torn
   // down on unmount so tab switches never stack intervals.
   useEffect(() => {
-    if (!isTauri) return;
+    if (!active) return;
 
     const interval = window.setInterval(() => {
       if (document.hidden) return;
@@ -122,7 +127,7 @@ export function useIdeas(options: {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [isTauri, refreshAll]);
+  }, [active, refreshAll]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -151,7 +156,7 @@ export function useIdeas(options: {
 
   const mutate = useCallback(
     async (work: () => Promise<unknown>, toast: string) => {
-      if (!isTauri || saving) return;
+      if (!active || saving) return;
       setSaving(true);
       try {
         await work();
@@ -164,7 +169,7 @@ export function useIdeas(options: {
         setSaving(false);
       }
     },
-    [isTauri, saving, onToast, onError, refreshIdeas, t],
+    [active, saving, onToast, onError, refreshIdeas, t],
   );
 
   const create = useCallback(
@@ -190,7 +195,7 @@ export function useIdeas(options: {
 
   const postNote = useCallback(
     async (input: PostNoteInput) => {
-      if (!isTauri || saving) return;
+      if (!active || saving) return;
       setSaving(true);
       try {
         await postBlackboardNote(input);
@@ -203,12 +208,12 @@ export function useIdeas(options: {
         setSaving(false);
       }
     },
-    [isTauri, saving, onToast, onError, refreshNotes, t],
+    [active, saving, onToast, onError, refreshNotes, t],
   );
 
   const markRead = useCallback(
     async (id: number) => {
-      if (!isTauri) return;
+      if (!active) return;
       try {
         await markNoteReadCmd(id);
         setNotes((rows) => rows.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
@@ -217,7 +222,7 @@ export function useIdeas(options: {
         onError(t.ideas.saveFailed(toMessage(cause, t.common.unexpected)));
       }
     },
-    [isTauri, onToast, onError, t],
+    [active, onToast, onError, t],
   );
 
   return {

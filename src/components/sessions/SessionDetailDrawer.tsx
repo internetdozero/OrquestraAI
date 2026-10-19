@@ -104,7 +104,7 @@ export function SessionDetailDrawer({
       <aside
         role="dialog"
         aria-label={session.title || session.id}
-        className="relative flex h-full w-full max-w-md flex-col border-l border-white/[0.08] bg-[#0b0b0e]/95 shadow-[0_0_60px_-10px_rgba(0,0,0,0.9)]"
+        className="relative flex h-full w-full max-w-lg flex-col border-l border-white/[0.08] bg-[#0b0b0e]/95 shadow-[0_0_60px_-10px_rgba(0,0,0,0.9)] sm:max-w-xl lg:max-w-2xl"
       >
         <header className="flex items-start gap-3 border-b border-white/[0.06] px-4 py-3.5">
           <div className="min-w-0 flex-1">

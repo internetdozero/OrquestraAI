@@ -40,7 +40,7 @@ function PresetPill({
   return (
     <div
       className={cn(
-        "group flex shrink-0 items-center rounded-lg border transition-colors",
+        "group relative flex shrink-0 items-center rounded-lg border transition-colors",
         preset.active
           ? "accent-border accent-bg-soft accent-glow border"
           : "border-white/10 bg-white/[0.02] hover:border-white/20",
@@ -72,27 +72,32 @@ function PresetPill({
         )}
       </button>
 
-      <button
-        type="button"
-        onClick={() => onEdit(preset)}
-        title={t.presets.editTitle(copy.name)}
-        aria-label={t.presets.editTitle(copy.name)}
-        className="grid h-5 w-0 place-items-center overflow-hidden rounded text-zinc-500 opacity-0 pointer-events-none transition-[width,opacity] duration-150 delay-0 group-hover:mr-0.5 group-hover:w-5 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 hover:text-emerald-300 focus-visible:mr-0.5 focus-visible:w-5 focus-visible:opacity-100 focus-visible:pointer-events-auto"
-      >
-        <Pencil className="size-3" />
-      </button>
-
-      {!preset.builtin && (
+      {/* Floating overlay: out of flow, so revealing it never pushes sibling
+          pills around (that width shift was the sweep oscillation). Only
+          opacity animates, with no enter delay. */}
+      <div className="pointer-events-none absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5 rounded-md border border-white/10 bg-[#17171c] px-0.5 py-0.5 opacity-0 shadow-lg group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         <button
           type="button"
-          onClick={() => onDelete(preset)}
-          title={t.presets.deleteTitle(copy.name)}
-          aria-label={t.presets.deleteTitle(copy.name)}
-          className="grid h-5 w-0 place-items-center overflow-hidden rounded text-zinc-600 opacity-0 pointer-events-none transition-[width,opacity] duration-150 delay-0 group-hover:mr-1 group-hover:w-5 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 hover:text-rose-300 focus-visible:mr-1 focus-visible:w-5 focus-visible:opacity-100 focus-visible:pointer-events-auto"
+          onClick={() => onEdit(preset)}
+          title={t.presets.editTitle(copy.name)}
+          aria-label={t.presets.editTitle(copy.name)}
+          className="grid size-5 place-items-center rounded text-zinc-500 hover:text-emerald-300"
         >
-          <X className="size-3" />
+          <Pencil className="size-3" />
         </button>
-      )}
+
+        {!preset.builtin && (
+          <button
+            type="button"
+            onClick={() => onDelete(preset)}
+            title={t.presets.deleteTitle(copy.name)}
+            aria-label={t.presets.deleteTitle(copy.name)}
+            className="grid size-5 place-items-center rounded text-zinc-600 hover:text-rose-300"
+          >
+            <X className="size-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

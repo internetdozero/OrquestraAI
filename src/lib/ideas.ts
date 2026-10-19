@@ -1,4 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
+import {
+  devMockMode,
+  fixtureCreateIdea,
+  fixtureProductivity,
+  fixtureDeleteIdea,
+  fixtureListIdeaProjects,
+  fixtureListIdeas,
+  fixtureListNotes,
+  fixtureMarkNoteRead,
+  fixturePostNote,
+  fixtureUpdateIdea,
+  fixtureUpdateIdeaStatus,
+} from "./fixtures.ts";
 
 /** Closed vocabularies, mirroring the Rust core and the Python MCP. */
 export type IdeaCategory = "feature" | "architecture" | "bug" | "ux" | "idea";
@@ -18,6 +31,8 @@ export interface IdeaItem {
   status: string;
   createdAt: string;
   updatedAt: string;
+  /** When the idea last entered `completed`; null unless it is (or was) done. */
+  completedAt: string | null;
 }
 
 /** Mirrors the Rust `BlackboardNote` struct. */
@@ -71,6 +86,7 @@ export function listIdeas(
   project?: string | null,
   status?: string | null,
 ): Promise<IdeaItem[]> {
+  if (devMockMode()) return Promise.resolve(fixtureListIdeas(project, status));
   return invoke<IdeaItem[]>("list_ideas", {
     project: project ?? null,
     status: status ?? null,
@@ -79,26 +95,31 @@ export function listIdeas(
 
 /** Distinct project names for the filter dropdown. */
 export function listIdeaProjects(): Promise<string[]> {
+  if (devMockMode()) return Promise.resolve(fixtureListIdeaProjects());
   return invoke<string[]>("list_idea_projects");
 }
 
 /** Record one idea; resolves to the stored row. */
 export function createIdea(input: CreateIdeaInput): Promise<IdeaItem> {
+  if (devMockMode()) return Promise.resolve(fixtureCreateIdea(input));
   return invoke<IdeaItem>("create_idea", { input });
 }
 
 /** Partial update; resolves to the stored row. */
 export function updateIdea(input: UpdateIdeaInput): Promise<IdeaItem> {
+  if (devMockMode()) return Promise.resolve(fixtureUpdateIdea(input));
   return invoke<IdeaItem>("update_idea", { input });
 }
 
 /** Move one idea to a new status; resolves to the stored row. */
 export function updateIdeaStatus(id: number, status: string): Promise<IdeaItem> {
+  if (devMockMode()) return Promise.resolve(fixtureUpdateIdeaStatus(id, status));
   return invoke<IdeaItem>("update_idea_status", { id, status });
 }
 
 /** Delete one idea; rejects on an unknown id. */
 export function deleteIdea(id: number): Promise<void> {
+  if (devMockMode()) return Promise.resolve(fixtureDeleteIdea(id));
   return invoke<void>("delete_idea", { id });
 }
 
@@ -107,6 +128,8 @@ export function listBlackboardNotes(
   project?: string | null,
   unreadOnly?: boolean,
 ): Promise<BlackboardNote[]> {
+  if (devMockMode())
+    return Promise.resolve(fixtureListNotes(project, unreadOnly));
   return invoke<BlackboardNote[]>("list_blackboard_notes", {
     project: project ?? null,
     unreadOnly: unreadOnly ?? true,
@@ -115,12 +138,52 @@ export function listBlackboardNotes(
 
 /** Post a note for other agents; resolves to the stored row. */
 export function postBlackboardNote(input: PostNoteInput): Promise<BlackboardNote> {
+  if (devMockMode()) return Promise.resolve(fixturePostNote(input));
   return invoke<BlackboardNote>("post_blackboard_note", { input });
 }
 
 /** Mark one note read; rejects on an unknown id. */
 export function markNoteRead(id: number): Promise<void> {
+  if (devMockMode()) return Promise.resolve(fixtureMarkNoteRead(id));
   return invoke<void>("mark_note_read", { id });
+}
+
+/** One heatmap cell: Idea Vault deliveries for a calendar day. */
+export interface DayActivity {
+  date: string;
+  ideasCompleted: number;
+  intensity: 0 | 1 | 2 | 3 | 4;
+}
+
+/** Ideas completed in the trailing 7 days versus the 7 before them. */
+export interface WeeklyVelocity {
+  thisWeek: number;
+  lastWeek: number;
+}
+
+/** Everything the productivity sub-panel renders in one round trip. */
+export interface ProductivityMetrics {
+  dailyActivity: DayActivity[];
+  currentStreak: number;
+  weeklyVelocity: WeeklyVelocity;
+  avgCycleHours: number | null;
+  project: string | null;
+}
+
+/**
+ * Developer velocity: Idea Vault completions per day. `weeks` defaults to
+ * 16 on the core side; `project` scopes the deliveries.
+ */
+export function getProductivityMetrics(
+  project?: string | null,
+  weeks?: number | null,
+): Promise<ProductivityMetrics> {
+  if (devMockMode())
+    return Promise.resolve(fixtureProductivity(project, weeks));
+  return invoke<ProductivityMetrics>("get_productivity_metrics", {
+    project: project ?? null,
+    weeks: weeks ?? null,
+  });
 }
 
 /**

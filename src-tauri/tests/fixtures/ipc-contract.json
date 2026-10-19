@@ -16,6 +16,7 @@
     "deploy_mcps",
     "estimate_purge",
     "get_bridge_status",
+    "get_productivity_metrics",
     "get_retention_policy",
     "get_session_transcript",
     "get_system_health",
@@ -188,6 +189,7 @@
     "PurgeReport": ["deletedCount", "errors", "failedCount", "reclaimedBytes"],
     "IdeaItem": [
       "category",
+      "completedAt",
       "createdAt",
       "description",
       "id",
@@ -197,6 +199,15 @@
       "tags",
       "title",
       "updatedAt"
+    ],
+    "DayActivity": ["date", "ideasCompleted", "intensity"],
+    "WeeklyVelocity": ["lastWeek", "thisWeek"],
+    "ProductivityMetrics": [
+      "avgCycleHours",
+      "currentStreak",
+      "dailyActivity",
+      "project",
+      "weeklyVelocity"
     ],
     "BlackboardNote": [
       "createdAt",
