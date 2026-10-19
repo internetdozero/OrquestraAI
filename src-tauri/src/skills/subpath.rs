@@ -62,7 +62,7 @@ pub(crate) fn sanitize_subpath(raw: &str) -> Option<String> {
 pub(crate) fn locate_skill_dir(staging: &Path, subpath: Option<&str>) -> Option<PathBuf> {
     if let Some(anchor) = subpath {
         let target = staging.join(anchor);
-        return target.is_dir().then(|| target).filter(|dir| {
+        return target.is_dir().then_some(target).filter(|dir| {
             dir.join(SKILL_FILE).is_file()
         });
     }
