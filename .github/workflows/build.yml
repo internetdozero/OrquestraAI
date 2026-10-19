@@ -33,11 +33,6 @@ jobs:
             artifact: orquestra-macos-arm64
             bin_name: orquestra-macos-arm64
             is_linux: false
-          - name: macOS Intel (x86_64)
-            os: macos-13
-            artifact: orquestra-macos-x86_64
-            bin_name: orquestra-macos-x86_64
-            is_linux: false
 
     steps:
       - name: Checkout repository
