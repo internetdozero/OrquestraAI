@@ -151,7 +151,7 @@ pub fn ensure_desktop_integration() {
     let icons_base = data_dir.join("icons/hicolor");
 
     let _ = std::fs::create_dir_all(&apps_dir);
-    for name in ["orquestra.desktop", "orquestra-ai.desktop"] {
+    for name in ["orquestra.desktop", "orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
         let dest = apps_dir.join(name);
         let needs_write = match std::fs::read_to_string(&dest) {
             Ok(existing) => existing != DESKTOP_ENTRY,
@@ -184,14 +184,32 @@ pub fn ensure_desktop_integration() {
         }
     }
 
-    let root_icon = data_dir.join("icons/orquestra.png");
-    let needs_root_write = match std::fs::read(&root_icon) {
-        Ok(existing) => existing != ICON_512,
-        Err(_) => true,
-    };
-    if needs_root_write {
-        let _ = std::fs::write(&root_icon, ICON_512);
+    // Clean up legacy 1024x1024 icons from early alpha builds that override theme colors
+    let legacy_1024 = icons_base.join("1024x1024/apps");
+    let _ = std::fs::remove_file(legacy_1024.join("orquestra.png"));
+    let _ = std::fs::remove_file(legacy_1024.join("orquestra-ai.png"));
+
+    for root_name in ["icons/orquestra.png", "icons/orquestra-ai.png"] {
+        let root_icon = data_dir.join(root_name);
+        let needs_root_write = match std::fs::read(&root_icon) {
+            Ok(existing) => existing != ICON_512,
+            Err(_) => true,
+        };
+        if needs_root_write {
+            let _ = std::fs::write(&root_icon, ICON_512);
+        }
     }
+
+    // Invalidate and refresh desktop environment icon cache so docks update immediately
+    let _ = std::process::Command::new("gtk-update-icon-cache")
+        .args(["-f", "-t", &icons_base.to_string_lossy()])
+        .output();
+    let _ = std::process::Command::new("update-desktop-database")
+        .arg(&apps_dir)
+        .output();
+    let _ = std::process::Command::new("kbuildsycoca6")
+        .arg("--noincremental")
+        .output();
 }
 
 #[cfg(not(target_os = "linux"))]
