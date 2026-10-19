@@ -49,5 +49,5 @@
     rtk gh run download -n orquestra-linux-x86_64
     chmod +x orquestra-linux-x86_64/orquestra-linux-x86_64
     ```
-- **Local Dev vs. Release:** For day-to-day code changes, use `npm run dev` or fast incremental builds (`cargo check`, `npm run build:fast`). Avoid running full local release builds (`build.sh`) consecutively to prevent hardware degradation.
+- **Local Dev vs. Release:** For day-to-day code changes, use `npm run dev` or fast incremental builds (`cargo check`, `npm run build:fast`). Avoid running full local release builds (`npm run build:release`) consecutively to prevent hardware degradation.
 

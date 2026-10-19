@@ -20,8 +20,6 @@ fn main() {
                 causes the release binary to fail at runtime with:\n\
                 'Could not connect to 127.0.0.1: Connection refused'.\n\n\
                 👉 To build the release executable, run:\n\
-                   ./build.sh\n\
-                   or\n\
                    npm run build:release\n\
                 ========================================================================\n\n"
             );
