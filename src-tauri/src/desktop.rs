@@ -120,6 +120,7 @@ pub fn create_orquestra_backup() -> Result<String, String> {
 }
 
 const ICON_512: &[u8] = include_bytes!("../icons/icon.png");
+const ICON_256: &[u8] = include_bytes!("../icons/128x128@2x.png");
 const ICON_128: &[u8] = include_bytes!("../icons/128x128.png");
 const ICON_64: &[u8] = include_bytes!("../icons/64x64.png");
 const ICON_32: &[u8] = include_bytes!("../icons/32x32.png");
@@ -152,7 +153,11 @@ pub fn ensure_desktop_integration() {
     let _ = std::fs::create_dir_all(&apps_dir);
     for name in ["orquestra.desktop", "orquestra-ai.desktop"] {
         let dest = apps_dir.join(name);
-        if !dest.is_file() {
+        let needs_write = match std::fs::read_to_string(&dest) {
+            Ok(existing) => existing != DESKTOP_ENTRY,
+            Err(_) => true,
+        };
+        if needs_write {
             let _ = std::fs::write(&dest, DESKTOP_ENTRY);
         }
     }
@@ -161,6 +166,7 @@ pub fn ensure_desktop_integration() {
         ("32x32/apps", ICON_32),
         ("64x64/apps", ICON_64),
         ("128x128/apps", ICON_128),
+        ("256x256/apps", ICON_256),
         ("512x512/apps", ICON_512),
     ];
     for (rel_dir, bytes) in icon_map {
@@ -168,14 +174,22 @@ pub fn ensure_desktop_integration() {
         let _ = std::fs::create_dir_all(&target_dir);
         for icon_name in ["orquestra.png", "orquestra-ai.png"] {
             let icon_file = target_dir.join(icon_name);
-            if !icon_file.is_file() {
+            let needs_write = match std::fs::read(&icon_file) {
+                Ok(existing) => existing != *bytes,
+                Err(_) => true,
+            };
+            if needs_write {
                 let _ = std::fs::write(&icon_file, bytes);
             }
         }
     }
 
     let root_icon = data_dir.join("icons/orquestra.png");
-    if !root_icon.is_file() {
+    let needs_root_write = match std::fs::read(&root_icon) {
+        Ok(existing) => existing != ICON_512,
+        Err(_) => true,
+    };
+    if needs_root_write {
         let _ = std::fs::write(&root_icon, ICON_512);
     }
 }
