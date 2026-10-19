@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Inbox, Pencil, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Copy, Inbox, Pencil, Trash2 } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import type { IdeaItem } from "../../lib/ideas";
+import { copyIdeaForAi } from "../../lib/ideas";
+import { cn } from "../../lib/utils";
 import { CustomDropdown } from "../CustomDropdown";
 import { StatePanel } from "../ui";
 
@@ -41,6 +43,7 @@ export function IdeasListView({
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
     () => new Set(["archived"]),
   );
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   if (!loading && ideas.length === 0) {
     return <StatePanel icon={Inbox} title={s.empty} description={s.emptyHint} />;
@@ -162,6 +165,31 @@ export function IdeasListView({
                         />
                       </span>
                       <span className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void copyIdeaForAi(idea).then((ok) => {
+                              if (!ok) return;
+                              setCopiedId(idea.id);
+                              window.setTimeout(() => setCopiedId(null), 1500);
+                            });
+                          }}
+                          title={copiedId === idea.id ? s.copied : s.copyForAi}
+                          aria-label={copiedId === idea.id ? s.copied : s.copyForAi}
+                          className={cn(
+                            "grid size-6.5 shrink-0 place-items-center rounded-md border transition",
+                            copiedId === idea.id
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                              : "border-white/10 text-zinc-500 hover:text-zinc-200",
+                          )}
+                        >
+                          {copiedId === idea.id ? (
+                            <Check className="size-3" />
+                          ) : (
+                            <Copy className="size-3" />
+                          )}
+                        </button>
                         <button
                           type="button"
                           onClick={() => onEdit(idea)}

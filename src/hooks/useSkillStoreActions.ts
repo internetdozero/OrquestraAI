@@ -8,6 +8,7 @@ import {
   type OfficialSkillEntry,
 } from "../lib/tauri";
 import type {
+  StoreEntry,
   StoreRowAction,
   StoreStatus,
 } from "../components/OfficialStore";
@@ -30,8 +31,13 @@ export function useSkillStoreActions(
   const { scope, toggleSkill, invalidate, onSummaryStale, onToast } = deps;
 
   const statusOf = useCallback(
-    (id: string): StoreStatus => {
-      const found = skills.find((skill) => skill.id === id);
+    (entry: StoreEntry): StoreStatus => {
+      // Legacy vault folders satisfy the unified entry: no ghost install
+      // button for skills imported under their pre-monorepo id.
+      const legacy = "legacyId" in entry ? entry.legacyId : undefined;
+      const found = skills.find(
+        (skill) => skill.id === entry.id || (legacy && skill.id === legacy),
+      );
       if (!found) return "missing";
       return found.harnessEnabled ? "active" : "idle";
     },
@@ -47,15 +53,28 @@ export function useSkillStoreActions(
         return { kind: "enable", run: () => toggleSkill(entry.id) };
       }
       if (status === "missing" && entry.repoUrl) {
-        const url = entry.repoUrl;
+        const urls = [
+          entry.repoUrl,
+          ...("fallbackRepoUrl" in entry && entry.fallbackRepoUrl
+            ? [entry.fallbackRepoUrl]
+            : []),
+        ];
         return {
           kind: "install",
-          // One-click install + instant projection: clone into the vault,
-          // then atomically symlink into the current scope so the skill is
+          // One-click install + instant projection: clone into the vault
+          // (monorepo anchor first, individual repo fallback), then
+          // atomically symlink into the current scope so the skill is
           // live instead of dormant. Summary counters refresh via the same
           // path as a manual toggle.
           run: async () => {
-            const imported = await importSkillFromGit(url);
+            // Monorepo anchor first; individual repo when it is unpublished.
+            let imported;
+            try {
+              imported = await importSkillFromGit(urls[0]);
+            } catch (primary) {
+              if (!urls[1]) throw primary;
+              imported = await importSkillFromGit(urls[1]);
+            }
             try {
               await setSkillState(imported.id, scope, true);
             } catch {

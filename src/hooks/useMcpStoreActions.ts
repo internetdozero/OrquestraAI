@@ -6,6 +6,7 @@ import type {
   OfficialSkillEntry,
 } from "../lib/tauri";
 import type {
+  StoreEntry,
   StoreRowAction,
   StoreStatus,
 } from "../components/OfficialStore";
@@ -27,8 +28,13 @@ export function useMcpStoreActions(
   const { scope, toggle, save, reload, onToast } = deps;
 
   const statusOf = useCallback(
-    (id: string): StoreStatus => {
-      const found = servers.find((server) => server.id === id);
+    (entry: StoreEntry): StoreStatus => {
+      // Legacy catalog ids satisfy the unified entry: no duplicate Add
+      // button for servers saved under their pre-monorepo id.
+      const legacy = "legacyId" in entry ? entry.legacyId : undefined;
+      const found = servers.find(
+        (server) => server.id === entry.id || (legacy && server.id === legacy),
+      );
       if (!found) return "missing";
       return coversHarness(found, scope) ? "active" : "idle";
     },
@@ -41,7 +47,10 @@ export function useMcpStoreActions(
       status: StoreStatus,
     ): StoreRowAction | null => {
       if (status === "idle") {
-        const found = servers.find((server) => server.id === entry.id);
+        const legacy = "legacyId" in entry ? entry.legacyId : undefined;
+        const found = servers.find(
+          (server) => server.id === entry.id || (legacy && server.id === legacy),
+        );
         if (!found) return null;
         return { kind: "enable", run: () => toggle(found) };
       }

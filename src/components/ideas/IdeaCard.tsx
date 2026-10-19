@@ -1,7 +1,9 @@
-import { ArrowRight, Boxes, Bug, GripVertical, Lightbulb, Palette, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Boxes, Bug, Check, Copy, GripVertical, Lightbulb, Palette, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { nextStatusOf } from "../../hooks/useIdeas";
 import type { IdeaItem } from "../../lib/ideas";
+import { copyIdeaForAi } from "../../lib/ideas";
 import { cn } from "../../lib/utils";
 
 const CATEGORY_STYLE: Record<string, { icon: typeof Bug; chip: string }> = {
@@ -37,6 +39,7 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
   const { t } = useI18n();
   const s = t.ideas;
   const next = nextStatusOf(idea.status);
+  const [copied, setCopied] = useState(false);
   const category = CATEGORY_STYLE[idea.category] ?? CATEGORY_STYLE.idea;
   const CategoryIcon = category.icon;
   const updated = new Date(idea.updatedAt.replace(" ", "T") + "Z");
@@ -72,6 +75,27 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
         </h4>
         <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
           <GripVertical className="size-3 text-zinc-600" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void copyIdeaForAi(idea).then((ok) => {
+                if (!ok) return;
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1500);
+              });
+            }}
+            title={copied ? s.copied : s.copyForAi}
+            aria-label={copied ? s.copied : s.copyForAi}
+            className={cn(
+              "grid size-6.5 place-items-center rounded-md border transition",
+              copied
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                : "border-white/10 text-zinc-500 hover:text-zinc-200",
+            )}
+          >
+            {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+          </button>
           <button
             type="button"
             onClick={(event) => {

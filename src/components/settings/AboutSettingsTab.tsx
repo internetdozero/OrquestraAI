@@ -2,11 +2,14 @@ import { useState } from "react";
 import {
   CheckCircle2,
   ClipboardCopy,
+  Download,
   ExternalLink,
   Loader2,
   Orbit,
   RefreshCw,
+  RotateCcw,
 } from "lucide-react";
+import { useAppUpdater } from "../../hooks/useAppUpdater";
 import { useI18n } from "../../hooks/useI18n";
 import { HARNESSES } from "../../lib/harnesses";
 import type { CoreStatus } from "../../lib/tauri";
@@ -41,6 +44,8 @@ export function AboutSettingsTab({
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<ReleaseCheckResult | null>(null);
   const version = status?.version ?? "0.1.0";
+  const { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart } =
+    useAppUpdater({ onToast, onError });
 
   const checkNow = async () => {
     setChecking(true);
@@ -163,6 +168,19 @@ export function AboutSettingsTab({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <button
             type="button"
+            disabled={syncing || !isTauri}
+            onClick={() => void syncExtensions()}
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-zinc-200 transition hover:border-white/20 disabled:cursor-wait disabled:opacity-60"
+          >
+            {syncing ? (
+              <Loader2 className="size-3.5 animate-spin text-emerald-400" />
+            ) : (
+              <Download className="size-3.5 text-emerald-400" />
+            )}
+            {syncing ? a.syncingExtensions : a.syncExtensions}
+          </button>
+          <button
+            type="button"
             disabled={checking}
             onClick={() => void checkNow()}
             className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-zinc-200 transition hover:border-white/20 disabled:cursor-wait disabled:opacity-60"
@@ -183,12 +201,42 @@ export function AboutSettingsTab({
               {a.upToDate(version)}
             </span>
           )}
-          {result && !checking && !result.isLatest && (
+          {updatedTo && !checking && (
+            <div
+              role="status"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11.5px] font-medium text-emerald-200"
+            >
+              <CheckCircle2 className="size-3.5" />
+              <span>{a.updateAppSuccess}</span>
+              <button
+                type="button"
+                onClick={restart}
+                className="flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-[11px] transition hover:bg-emerald-500/25"
+              >
+                <RotateCcw className="size-3" />
+                {a.restart}
+              </button>
+            </div>
+          )}
+          {result && !checking && !result.isLatest && !updatedTo && (
             <div
               role="status"
               className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11.5px] font-medium text-amber-200"
             >
               <span>{a.newVersionAvailable(result.latestVersion)}</span>
+              <button
+                type="button"
+                disabled={updatingApp || !isTauri}
+                onClick={() => void updateApp(result.latestVersion)}
+                className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] transition hover:bg-amber-500/25 disabled:cursor-wait disabled:opacity-60"
+              >
+                {updatingApp ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Download className="size-3" />
+                )}
+                {updatingApp ? a.updatingApp : a.updateNow}
+              </button>
               {result.releaseUrl && (
                 <button
                   type="button"

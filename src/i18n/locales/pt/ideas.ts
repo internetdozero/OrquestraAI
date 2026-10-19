@@ -103,4 +103,6 @@ export const ideas = {
   detailClose: "Fechar detalhes",
   hTitle: "Título",
   hUpdated: "Atualizada",
+  copyForAi: "Copiar para IA",
+  copied: "Copiado!",
 };

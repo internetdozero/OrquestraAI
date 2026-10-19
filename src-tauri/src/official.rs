@@ -11,28 +11,59 @@
 
 use serde::Serialize;
 
-/// Official skills maintained by OrquestraAI (verified repos at
-/// `github.com/internetdozero`). Exact match only: no prefix rule, so
-/// reserved `orquestra-*` names are never stamped official by accident.
-const OFFICIAL_SKILL_IDS: &[&str] = &["orquestra", "modular-start", "agent-orchestrator"];
+/// Monorepo consolidating the official suite.
+pub(crate) const MONOREPO: &str = "https://github.com/internetdozero/orquestra-extensions.git";
 
-/// MCP servers maintained by OrquestraAI.
-const OFFICIAL_MCP_IDS: &[&str] = &[
-    "idea-vault",
-    "session-relay",
-    "janitor",
-    "orquestra-core",
-    "cloudflare",
+/// Official skills (unified `orquestra-*` naming, served from the monorepo).
+const OFFICIAL_SKILL_IDS: &[&str] = &[
+    "orquestra",
+    "orquestra-modular-start",
+    "orquestra-agent-orchestrator",
+    "orquestra-smart-build-router",
 ];
 
-/// True when a vault skill id belongs to the official tier.
+
+/// Official MCP servers (unified naming).
+const OFFICIAL_MCP_IDS: &[&str] = &[
+    "orquestra-idea-vault",
+    "orquestra-session-relay",
+    "orquestra-janitor",
+    "orquestra-core",
+    "orquestra-cloudflare",
+];
+
+/// True when a vault skill id belongs to the official tier. Legacy
+/// pre-monorepo ids resolve through [`canonical_skill_id`] first, so
+/// existing projections keep their tier.
 pub(crate) fn is_official_skill(id: &str) -> bool {
-    OFFICIAL_SKILL_IDS.contains(&id)
+    OFFICIAL_SKILL_IDS.contains(&canonical_skill_id(id))
 }
 
-/// True when a catalog MCP id belongs to the official tier.
+/// Legacy vault id → canonical unified id; anything else passes through.
+pub(crate) fn canonical_skill_id(id: &str) -> &str {
+    match id {
+        "modular-start" => "orquestra-modular-start",
+        "agent-orchestrator" => "orquestra-agent-orchestrator",
+        _ => id,
+    }
+}
+
+/// True when a catalog MCP id belongs to the official tier. Legacy
+/// pre-monorepo ids resolve through [`canonical_mcp_id`] first; the
+/// `orquestra` substring keeps third-party bridges stamped.
 pub(crate) fn is_official_mcp(id: &str) -> bool {
-    OFFICIAL_MCP_IDS.contains(&id) || id.contains("orquestra")
+    OFFICIAL_MCP_IDS.contains(&canonical_mcp_id(id)) || id.contains("orquestra")
+}
+
+/// Legacy catalog id → canonical unified id; anything else passes through.
+pub(crate) fn canonical_mcp_id(id: &str) -> &str {
+    match id {
+        "idea-vault" => "orquestra-idea-vault",
+        "session-relay" => "orquestra-session-relay",
+        "janitor" => "orquestra-janitor",
+        "cloudflare" => "orquestra-cloudflare",
+        _ => id,
+    }
 }
 
 /// One curated skill in the Community & Official Hub.
@@ -58,9 +89,15 @@ pub struct OfficialSkillEntry {
     /// Static script hint for the security badge (true = contains helpers).
     #[serde(default)]
     pub has_scripts: bool,
+    /// Pre-monorepo vault id satisfied by this entry in status matching.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_id: Option<String>,
+    /// Individual repo used when the monorepo anchor is not yet published.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback_repo_url: Option<String>,
 }
 
-fn tags(values: &[&str]) -> Vec<String> {
+pub(crate) fn tags(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| value.to_string()).collect()
 }
 
@@ -70,6 +107,8 @@ fn official_skill(
     category: &str,
     repo_url: Option<&str>,
     tag_list: &[&str],
+    legacy_id: Option<&str>,
+    fallback_repo_url: Option<&str>,
 ) -> OfficialSkillEntry {
     OfficialSkillEntry {
         id: id.to_string(),
@@ -81,27 +120,8 @@ fn official_skill(
         tier: "official".to_string(),
         tags: tags(tag_list),
         has_scripts: false,
-    }
-}
-
-fn community_skill(
-    id: &str,
-    description: &str,
-    category: &str,
-    repo_url: Option<&str>,
-    tag_list: &[&str],
-    has_scripts: bool,
-) -> OfficialSkillEntry {
-    OfficialSkillEntry {
-        id: id.to_string(),
-        name: id.to_string(),
-        description: description.to_string(),
-        category: category.to_string(),
-        repo_url: repo_url.map(str::to_string),
-        official: false,
-        tier: "community".to_string(),
-        tags: tags(tag_list),
-        has_scripts,
+        legacy_id: legacy_id.map(str::to_string),
+        fallback_repo_url: fallback_repo_url.map(str::to_string),
     }
 }
 
@@ -119,6 +139,12 @@ pub struct OfficialMcpEntry {
     pub repo_url: Option<String>,
     pub command: String,
     pub args: Vec<String>,
+    /// Pre-monorepo catalog id satisfied by this entry in status matching.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_id: Option<String>,
+    /// Individual repo used when the monorepo anchor is not yet published.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback_repo_url: Option<String>,
 }
 
 /// The whole Personal Store payload behind `list_official_store`.
@@ -129,118 +155,51 @@ pub struct OfficialStore {
     pub mcps: Vec<OfficialMcpEntry>,
 }
 
-/// Curated registry: designated official skills plus vetted community picks.
-/// Community entries are prompt-first unless `has_scripts` is set; reserved
-/// slots carry `repo_url: None` so the UI shows `unpublished` gracefully.
+/// Curated registry: unified official suite (monorepo anchors with
+/// individual-repo fallbacks) plus vetted community picks.
 pub fn official_store() -> OfficialStore {
-    OfficialStore {
-        skills: vec![
+    let mut skills = vec![
             official_skill(
                 "orquestra",
                 "Operational guide for autonomous AI agents inside the OrquestraAI ecosystem: fleet topology, single-source-of-truth rules and safe control-plane interaction.",
                 "AI & Agents",
-                Some("https://github.com/internetdozero/orquestra.git"),
+                Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra"),
                 &["agents", "orchestration"],
+                None,
+                Some("https://github.com/internetdozero/orquestra.git"),
             ),
             official_skill(
-                "modular-start",
+                "orquestra-modular-start",
                 "Start a new project, empty repository or scaffold in any language: initialize git, set up a concise root AGENTS.md with file-size caps and a module map, and commit each coherent slice locally.",
                 "Infra",
-                Some("https://github.com/internetdozero/modular-start.git"),
+                Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-modular-start"),
                 &["scaffold", "infra"],
+                Some("modular-start"),
+                Some("https://github.com/internetdozero/modular-start.git"),
             ),
             official_skill(
-                "agent-orchestrator",
+                "orquestra-agent-orchestrator",
                 "Fleet orchestration for OrquestraAI agents: dispatch, supervise and coordinate multi-agent work.",
                 "AI & Agents",
-                Some("https://github.com/internetdozero/agent-orchestrator.git"),
+                Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-agent-orchestrator"),
                 &["agents", "fleet"],
+                Some("agent-orchestrator"),
+                Some("https://github.com/internetdozero/agent-orchestrator.git"),
             ),
-            community_skill(
-                "docker-helper",
-                "Community Docker helper: container, compose and image workflows with safe cleanup commands.",
-                "Infra",
-                Some("https://github.com/internetdozero/docker-helper.git"),
-                &["docker", "infra"],
-                true,
-            ),
-            community_skill(
-                "git-workflow-booster",
-                "Community Git workflow booster: branches, conventional commits and PR hygiene for small teams.",
-                "Infra",
-                Some("https://github.com/internetdozero/git-workflow-booster.git"),
-                &["git", "workflow"],
-                false,
-            ),
-            community_skill(
-                "pr-reviewer",
-                "Community PR reviewer: checklist-driven code review with testing and security prompts.",
-                "Testing",
-                Some("https://github.com/internetdozero/pr-reviewer.git"),
-                &["review", "testing"],
-                false,
-            ),
-            community_skill(
-                "python-debugger",
-                "Community Python debugger: traceback triage, pytest loops and REPL-driven fixes.",
-                "Testing",
-                Some("https://github.com/internetdozero/python-debugger.git"),
-                &["python", "debugging"],
-                true,
-            ),
-            community_skill(
-                "web-perf-guide",
-                "Reserved community slot: web performance playbook (no published repo yet).",
-                "Frontend",
+            official_skill(
+                "orquestra-smart-build-router",
+                "Route build and task dispatches to the cheapest capable lane: sketches, plans and execution with budget guards.",
+                "AI & Agents",
+                Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-smart-build-router"),
+                &["agents", "routing"],
                 None,
-                &["web-perf", "frontend"],
-                false,
+                None,
             ),
-        ],
-        mcps: vec![
-            OfficialMcpEntry {
-                id: "idea-vault".to_string(),
-                name: "Idea Vault".to_string(),
-                description: "Local SQLite idea vault and inter-agent blackboard MCP server (stdio).".to_string(),
-                repo_url: Some("https://github.com/internetdozero/idea-vault-mcp.git".to_string()),
-                command: "idea-vault".to_string(),
-                args: Vec::new(),
-            },
-            OfficialMcpEntry {
-                id: "session-relay".to_string(),
-                name: "Session Relay".to_string(),
-                description: "Session handoff briefs from the stores Codex, Claude, Antigravity, OpenCode, Freebuff and Grok already keep (stdio, no cloud).".to_string(),
-                repo_url: Some("https://github.com/internetdozero/session-relay-mcp.git".to_string()),
-                command: "session-relay".to_string(),
-                args: Vec::new(),
-            },
-            OfficialMcpEntry {
-                id: "janitor".to_string(),
-                name: "Janitor".to_string(),
-                description: "Linux system health, orphan-process sweeper and transient cache cleaner for agentic workspaces (stdio, no network).".to_string(),
-                repo_url: Some("https://github.com/internetdozero/janitor-mcp.git".to_string()),
-                command: "janitor".to_string(),
-                args: Vec::new(),
-            },
-            OfficialMcpEntry {
-                id: "orquestra-core".to_string(),
-                name: "Orquestra Core".to_string(),
-                description: "MCP control plane for OrquestraAI: project skills just in time, flip MCP servers, read the master AGENTS.md and check harness links.".to_string(),
-                repo_url: Some("https://github.com/internetdozero/orquestra-core-mcp.git".to_string()),
-                command: "orquestra-core".to_string(),
-                args: Vec::new(),
-            },
-            OfficialMcpEntry {
-                id: "cloudflare".to_string(),
-                name: "Cloudflare".to_string(),
-                description: "Cloudflare edge MCP server: Workers, KV, R2 and deployment tooling (stdio).".to_string(),
-                repo_url: Some("https://github.com/internetdozero/cloudflare-mcp.git".to_string()),
-                command: "cloudflare-mcp".to_string(),
-                args: Vec::new(),
-            },
-        ],
+        ];
+        skills.extend(crate::community::community_skills());
+        let mcps = crate::official_mcps::official_mcps();
+        OfficialStore { skills, mcps }
     }
-}
 
 #[cfg(test)]
 mod tests {
@@ -249,7 +208,14 @@ mod tests {
 
     #[test]
     fn skill_rule_matches_the_designated_set() {
-        for id in ["orquestra", "modular-start", "agent-orchestrator"] {
+        for id in [
+            "orquestra",
+            "orquestra-modular-start",
+            "orquestra-agent-orchestrator",
+            "orquestra-smart-build-router",
+            "modular-start",
+            "agent-orchestrator",
+        ] {
             assert!(is_official_skill(id), "{id} should be official");
         }
         for id in [
@@ -257,8 +223,6 @@ mod tests {
             "github",
             "modular",
             "modular-path",
-            "orquestra-core",
-            "orquestra-orchestrator",
             "orquestra-anything",
             "",
         ] {
@@ -267,12 +231,31 @@ mod tests {
     }
 
     #[test]
+    fn aliases_resolve_forward_and_stamp_official() {
+        assert_eq!(canonical_skill_id("modular-start"), "orquestra-modular-start");
+        assert_eq!(
+            canonical_skill_id("agent-orchestrator"),
+            "orquestra-agent-orchestrator"
+        );
+        assert_eq!(canonical_skill_id("orquestra"), "orquestra");
+        assert_eq!(canonical_skill_id("caveman"), "caveman");
+        assert_eq!(canonical_mcp_id("idea-vault"), "orquestra-idea-vault");
+        assert_eq!(canonical_mcp_id("janitor"), "orquestra-janitor");
+        assert_eq!(canonical_mcp_id("orquestra-core"), "orquestra-core");
+        assert_eq!(canonical_mcp_id("github"), "github");
+    }
+
+    #[test]
     fn mcp_rule_matches_the_designated_set() {
         for id in [
+            "orquestra-idea-vault",
+            "orquestra-session-relay",
+            "orquestra-janitor",
+            "orquestra-core",
+            "orquestra-cloudflare",
             "idea-vault",
             "session-relay",
             "janitor",
-            "orquestra-core",
             "cloudflare",
             "my-orquestra-bridge",
         ] {
@@ -280,6 +263,42 @@ mod tests {
         }
         for id in ["github", "papinho", "headroom", ""] {
             assert!(!is_official_mcp(id), "{id} should not be official");
+        }
+    }
+
+    #[test]
+    fn monorepo_anchors_have_https_fallbacks() {
+        let store = official_store();
+        for skill in store.skills.iter().filter(|skill| skill.official) {
+            let Some(url) = skill.repo_url.as_deref() else {
+                continue;
+            };
+            assert!(
+                url.starts_with("https://github.com/internetdozero/"),
+                "bad remote for {}",
+                skill.id
+            );
+            if let Some((_, anchor)) = url.split_once('#') {
+                assert!(!anchor.is_empty() && !anchor.contains(".."));
+                assert!(
+                    anchor.starts_with("skills/"),
+                    "skill anchor must live under skills/: {}",
+                    skill.id
+                );
+            }
+            if let Some(fallback) = skill.fallback_repo_url.as_deref() {
+                assert!(
+                    fallback.starts_with("https://github.com/") && !fallback.contains('#'),
+                    "bad fallback for {}",
+                    skill.id
+                );
+            }
+        }
+        for mcp in &store.mcps {
+            let url = mcp.repo_url.as_deref().expect("mcp remote");
+            let (_, anchor) = url.split_once('#').expect("mcp anchor");
+            assert!(anchor.starts_with("mcps/"), "mcp anchor for {}", mcp.id);
+            assert!(mcp.legacy_id.is_some(), "mcp legacy id for {}", mcp.id);
         }
     }
 
@@ -312,24 +331,6 @@ mod tests {
                 is_official_mcp(&mcp.id),
                 "registry MCP {} must satisfy the flag rule",
                 mcp.id
-            );
-        }
-    }
-
-    #[test]
-    fn community_hub_has_tags_and_tiers() {
-        let store = official_store();
-        let official_count = store.skills.iter().filter(|skill| skill.official).count();
-        let community_count = store.skills.iter().filter(|skill| !skill.official).count();
-        assert!(official_count >= 3, "official picks must remain");
-        assert!(community_count >= 4, "community picks must be present");
-        assert!(store.skills.iter().any(|skill| skill.has_scripts));
-        assert!(store.skills.iter().any(|skill| skill.repo_url.is_none()));
-        for skill in &store.skills {
-            assert!(
-                skill.tier == "official" || skill.tier == "community",
-                "bad tier for {}",
-                skill.id
             );
         }
     }

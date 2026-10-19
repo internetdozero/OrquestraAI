@@ -5,6 +5,8 @@
 
 pub(crate) mod log;
 pub mod bridge;
+mod community;
+mod official_mcps;
 mod desktop;
 pub mod harness;
 pub mod ideas;
@@ -19,6 +21,7 @@ pub mod sessions;
 pub mod single_instance;
 mod skills;
 mod tray;
+mod updater;
 
 use bridge::{BridgeReport, HarnessStatus};
 use ideas::{
@@ -38,6 +41,7 @@ use skills::{HarnessSummary, SkillItem};
 use tauri::Manager;
 use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
 use tray::set_minimize_to_tray;
+use updater::{apply_app_update, restart_app, sync_official_extensions};
 
 /// Runtime identity of the native core, surfaced in the UI footer so the
 /// frontend can prove the IPC bridge is alive.
@@ -380,7 +384,10 @@ pub fn run() {
             get_retention_policy,
             save_retention_policy,
             estimate_purge,
-            purge_sessions
+            purge_sessions,
+            apply_app_update,
+            sync_official_extensions,
+            restart_app
         ])
         .run(tauri::generate_context!())
     {

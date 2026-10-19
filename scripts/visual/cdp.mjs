@@ -110,7 +110,7 @@ export async function connectPage(port) {
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
     const resolver = message.id !== undefined ? pending.get(message.id) : undefined;
-    if (resolver) {
+    if (typeof resolver === "function") {
       pending.delete(message.id);
       resolver(message);
     }

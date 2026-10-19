@@ -321,6 +321,72 @@ mod tests {
     }
 
     #[test]
+    fn monorepo_url_fragments_extract_and_sanitize() {
+        use super::subpath::{sanitize_subpath, split_git_url};
+
+        let (repo, sub) = split_git_url(
+            "https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-modular-start",
+        );
+        assert_eq!(
+            repo,
+            "https://github.com/internetdozero/orquestra-extensions.git"
+        );
+        assert_eq!(sub.as_deref(), Some("skills/orquestra-modular-start"));
+
+        let (plain, none) = split_git_url("https://github.com/o/standalone.git");
+        assert!(none.is_none());
+        assert_eq!(plain, "https://github.com/o/standalone.git");
+
+        assert_eq!(sanitize_subpath("mcps/orquestra-janitor").as_deref(), Some("mcps/orquestra-janitor"));
+        for hostile in ["", "../escape", "a/../b", "a//b", ".", "a/./b"] {
+            assert!(sanitize_subpath(hostile).is_none(), "{hostile:?} must be refused");
+        }
+    }
+
+    #[test]
+    fn monorepo_skill_discovery_finds_nested_layouts() {
+        use super::subpath::locate_skill_dir;
+        use std::path::PathBuf;
+
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-tests-mono-{}",
+            std::process::id()
+        ));
+        if root.exists() {
+            fs::remove_dir_all(&root).unwrap();
+        }
+        let skill = root.join("skills").join("nested").join("demo");
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(skill.join(SKILL_FILE), "# Demo\n").unwrap();
+
+        let found = locate_skill_dir(&root, None).expect("nested skill");
+        assert_eq!(found, skill);
+        let anchored = locate_skill_dir(&root, Some("skills/nested/demo")).expect("anchor");
+        assert_eq!(anchored, skill);
+        assert!(locate_skill_dir(&root, Some("skills/missing")).is_none());
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn unified_naming_stamps_legacy_and_canonical_ids() {
+        use crate::official::{canonical_skill_id, is_official_skill};
+
+        for id in [
+            "orquestra",
+            "orquestra-modular-start",
+            "orquestra-agent-orchestrator",
+            "orquestra-smart-build-router",
+            "modular-start",
+            "agent-orchestrator",
+        ] {
+            assert!(is_official_skill(id), "{id} should be official");
+        }
+        assert_eq!(canonical_skill_id("modular-start"), "orquestra-modular-start");
+        assert_eq!(canonical_skill_id("orquestra"), "orquestra");
+        assert!(!is_official_skill("docker-helper"));
+    }
+
+    #[test]
     fn agents_file_defaults_and_roundtrips() {
         let paths = temp_paths("agents");
 

@@ -17,11 +17,12 @@ export interface StoreRowAction {
   run: () => Promise<void>;
 }
 
-type StoreEntry = OfficialSkillEntry | OfficialMcpEntry;
+export type StoreEntry = OfficialSkillEntry | OfficialMcpEntry;
 
 interface OfficialStoreProps {
   kind: "skill" | "mcp";
-  statusOf: (id: string) => StoreStatus;
+  /** Live install state; receives the entry so legacy ids match too. */
+  statusOf: (entry: StoreEntry) => StoreStatus;
   actionFor: (entry: StoreEntry, status: StoreStatus) => StoreRowAction | null;
   /** Current scope label for the install-and-project hint. */
   projectScope?: string;
@@ -137,7 +138,7 @@ export function OfficialStore({
 
       <ol className="divide-y divide-white/[0.04]">
         {visible.map((entry) => {
-          const status = statusOf(entry.id);
+          const status = statusOf(entry);
           const action = actionFor(entry, status);
           const meta =
             kind === "skill"

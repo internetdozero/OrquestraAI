@@ -15,7 +15,10 @@ mod agents;
 mod import;
 mod projection;
 mod security;
+mod subpath;
 mod vault;
+
+pub(crate) use subpath::refresh_skill_dir;
 #[cfg(test)]
 mod tests;
 

@@ -110,6 +110,10 @@ export interface OfficialSkillEntry {
   tier?: StoreTier;
   tags?: string[];
   hasScripts?: boolean;
+  /** Pre-monorepo vault id satisfied by this entry in status matching. */
+  legacyId?: string;
+  /** Individual repo tried when the monorepo anchor is not yet published. */
+  fallbackRepoUrl?: string;
 }
 
 /** One curated MCP server. `command`/`args` pre-fill a disabled catalog
@@ -121,6 +125,10 @@ export interface OfficialMcpEntry {
   repoUrl?: string;
   command: string;
   args: string[];
+  /** Pre-monorepo catalog id satisfied by this entry in status matching. */
+  legacyId?: string;
+  /** Individual repo tried when the monorepo anchor is not yet published. */
+  fallbackRepoUrl?: string;
 }
 
 /** Curated Personal Store payload behind `list_official_store`. */
@@ -132,6 +140,27 @@ export interface OfficialStore {
 /** Fetch the curated Official Store (static data, never fails to exist). */
 export function listOfficialStore(): Promise<OfficialStore> {
   return invoke<OfficialStore>("list_official_store");
+}
+
+/** Result of pulling upstream into installed official skills & MCPs. */
+export interface ExtensionSyncResult {
+  updatedSkills: string[];
+  updatedMcps: string[];
+}
+
+/** Download, verify and atomically install the desktop binary release. */
+export function applyAppUpdate(targetVersion: string): Promise<string> {
+  return invoke<string>("apply_app_update", { targetVersion });
+}
+
+/** Pull upstream into installed official skills; projections stay live. */
+export function syncOfficialExtensions(): Promise<ExtensionSyncResult> {
+  return invoke<ExtensionSyncResult>("sync_official_extensions");
+}
+
+/** Relaunch the app binary and exit this process. */
+export function restartApp(): Promise<void> {
+  return invoke<void>("restart_app");
 }
 
 /** Native OS folder picker; `null` means the user cancelled. */

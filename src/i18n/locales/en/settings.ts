@@ -75,6 +75,15 @@ export const settings: TranslationSchema["settings"] = {
     newVersionAvailable: (version: string) =>
       `New version v${version} available!`,
     viewRelease: "View release",
+    updateNow: "Update now",
+    updatingApp: "Downloading and installing update…",
+    updateAppSuccess: "Update installed! Restart OrquestraAI to apply.",
+    updateAppFailed: (detail: string) => `Update failed: ${detail}`,
+    restart: "Restart",
+    syncExtensions: "Sync official extensions",
+    syncingExtensions: "Syncing official skills & MCPs…",
+    syncExtensionsSuccess: (count: number) =>
+      `${count} extensions updated successfully.`,
   },
   sidebarAction: "Settings",
   sidebarHint: "Preferences, language, retention and about",

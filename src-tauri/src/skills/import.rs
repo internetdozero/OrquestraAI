@@ -8,6 +8,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::subpath::{clone_shallow, locate_skill_dir, split_git_url};
 use super::vault::{validate_id, SKILL_FILE};
 use super::{list_from, SkillItem, GLOBAL_SCOPE};
 use crate::paths::{copy_dir_all, open_paths, OrquestraPaths};
@@ -19,42 +20,38 @@ pub fn import_skill(source_path: String) -> Result<SkillItem, String> {
 }
 
 /// Clone a git URL shallowly into `/var/tmp/testing` and import the skill it
-/// holds (`SKILL.md` at the repo root or one level down).
+/// holds. A `#subpath` fragment targets a skill inside a monorepo (e.g.
+/// `repo.git#skills/foo`); without one, discovery checks the root, one
+/// level down, then monorepo layouts up to 3 levels deep.
 pub fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
     let url = url.trim().to_string();
     if url.is_empty() {
         return Err("empty git URL".to_string());
     }
-    if !(url.starts_with("https://") || url.starts_with("http://") || url.starts_with("git@")) {
+    // The `#subpath` anchor is stripped before scheme validation and cloning.
+    let (clone_url, subpath) = split_git_url(&url);
+    if !(clone_url.starts_with("https://")
+        || clone_url.starts_with("http://")
+        || clone_url.starts_with("git@"))
+    {
         return Err(format!("unsupported git URL: {url:?}"));
     }
 
     let staging = staging_dir()?;
-    let output = std::process::Command::new("git")
-        .arg("clone")
-        .arg("--depth")
-        .arg("1")
-        .arg(&url)
-        .arg(&staging)
-        .output()
-        .map_err(|error| {
-            let _ = fs::remove_dir_all(&staging);
-            format!("git is not available: {error}")
-        })?;
-
-    if !output.status.success() {
-        let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if let Err(error) = clone_shallow(&clone_url, &staging) {
         let _ = fs::remove_dir_all(&staging);
-        return Err(if detail.is_empty() {
-            format!("git clone failed for {url:?}")
-        } else {
-            format!("git clone failed: {detail}")
-        });
+        return Err(error);
     }
 
-    let source = locate_skill_dir(&staging).ok_or_else(|| {
+    let source = locate_skill_dir(&staging, subpath.as_deref()).ok_or_else(|| {
         let _ = fs::remove_dir_all(&staging);
-        "cloned repo holds no SKILL.md (checked the root and one level down)".to_string()
+        match subpath {
+            Some(anchor) => format!(
+                "cloned repo holds no SKILL.md under subpath {anchor:?} — \
+                 check the anchor or drop the #fragment for auto-discovery"
+            ),
+            None => "cloned repo holds no SKILL.md (checked the root, one level down and monorepo layouts)".to_string(),
+        }
     })?;
 
     let imported = import_dir(&source);
@@ -71,20 +68,6 @@ fn staging_dir() -> Result<PathBuf, String> {
     fs::create_dir_all(&staging)
         .map_err(|error| format!("failed to create {}: {error}", staging.display()))?;
     Ok(staging.join("repo"))
-}
-
-fn locate_skill_dir(staging: &Path) -> Option<PathBuf> {
-    if staging.join(SKILL_FILE).is_file() {
-        return Some(staging.to_path_buf());
-    }
-    let entries = fs::read_dir(staging).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() && path.join(SKILL_FILE).is_file() {
-            return Some(path);
-        }
-    }
-    None
 }
 
 fn import_dir(source: &Path) -> Result<SkillItem, String> {

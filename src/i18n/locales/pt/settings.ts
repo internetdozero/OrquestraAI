@@ -73,6 +73,15 @@ export const settings = {
     newVersionAvailable: (version: string) =>
       `Nova versão v${version} disponível!`,
     viewRelease: "Ver release",
+    updateNow: "Atualizar agora",
+    updatingApp: "Baixando e instalando atualização…",
+    updateAppSuccess: "Atualização instalada! Reinicie o OrquestraAI para aplicar.",
+    updateAppFailed: (detail: string) => `Falha ao atualizar: ${detail}`,
+    restart: "Reiniciar",
+    syncExtensions: "Sincronizar extensões oficiais",
+    syncingExtensions: "Sincronizando skills e MCPs oficiais…",
+    syncExtensionsSuccess: (count: number) =>
+      `${count} extensões atualizadas com sucesso.`,
   },
   sidebarAction: "Configurações",
   sidebarHint: "Preferências, idioma, retenção e sobre",

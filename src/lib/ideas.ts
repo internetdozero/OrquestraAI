@@ -122,3 +122,33 @@ export function postBlackboardNote(input: PostNoteInput): Promise<BlackboardNote
 export function markNoteRead(id: number): Promise<void> {
   return invoke<void>("mark_note_read", { id });
 }
+
+/**
+ * Format an idea as a markdown-structured prompt ready for AI agent dispatch.
+ */
+export function formatIdeaForAi(idea: IdeaItem): string {
+  const lines = [
+    `Task #${idea.id}: ${idea.title}`,
+    `Project: ${idea.project}`,
+    `Category: ${idea.category} | Priority: ${idea.priority} | Status: ${idea.status}`,
+  ];
+  if (idea.tags && idea.tags.trim()) {
+    lines.push(`Tags: ${idea.tags}`);
+  }
+  lines.push("\nDescription:");
+  lines.push(idea.description || "(No description provided)");
+  return lines.join("\n");
+}
+
+/**
+ * Copy the AI prompt for one idea. Resolves `true` on success, `false` when
+ * the clipboard denies permission — never throws.
+ */
+export async function copyIdeaForAi(idea: IdeaItem): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(formatIdeaForAi(idea));
+    return true;
+  } catch {
+    return false;
+  }
+}

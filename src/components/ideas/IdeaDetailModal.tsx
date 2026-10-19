@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, Check, Copy, X } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { nextStatusOf } from "../../hooks/useIdeas";
 import type { IdeaItem } from "../../lib/ideas";
+import { copyIdeaForAi } from "../../lib/ideas";
 import { cn } from "../../lib/utils";
 
 interface IdeaDetailModalProps {
@@ -24,6 +25,7 @@ export function IdeaDetailModal({ idea, onAdvance, onEdit, onDelete, onClose }: 
   const { t } = useI18n();
   const s = t.ideas;
   const next = nextStatusOf(idea.status);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -114,6 +116,31 @@ export function IdeaDetailModal({ idea, onAdvance, onEdit, onDelete, onClose }: 
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              void copyIdeaForAi(idea).then((ok) => {
+                if (!ok) return;
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1500);
+              });
+            }}
+            title={copied ? s.copied : s.copyForAi}
+            aria-label={copied ? s.copied : s.copyForAi}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition",
+              copied
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                : "border-white/10 text-zinc-300 hover:text-zinc-100",
+            )}
+          >
+            {copied ? (
+              <Check className="size-3.5" aria-hidden="true" />
+            ) : (
+              <Copy className="size-3.5" aria-hidden="true" />
+            )}
+            {copied ? s.copied : s.copyForAi}
+          </button>
           <button
             type="button"
             onClick={() => {

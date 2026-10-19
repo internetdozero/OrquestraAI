@@ -105,4 +105,6 @@ export const ideas: TranslationSchema["ideas"] = {
   detailClose: "Close details",
   hTitle: "Title",
   hUpdated: "Updated",
+  copyForAi: "Copy for AI agent",
+  copied: "Copied!",
 };
