@@ -41,7 +41,7 @@ export function IdeasBoard({
   const { t } = useI18n();
   const s = t.ideas;
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-    () => new Set(),
+    () => new Set(["completed"]),
   );
   // Columns the user explicitly opened: shields them from the auto-collapse
   // rule for empty columns below.
