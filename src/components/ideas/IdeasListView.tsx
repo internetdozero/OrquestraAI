@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, ChevronRight, Copy, Inbox, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronRight, Copy, Inbox, Pencil, Trash2 } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import type { IdeaItem } from "../../lib/ideas";
 import { copyIdeaForAi } from "../../lib/ideas";
@@ -24,6 +24,71 @@ const SECTIONS = [
 
 const STATUS_IDS = ["open", "in_progress", "completed", "archived"] as const;
 
+/** Notion-style sortable columns of the list header. */
+type SortField = "title" | "project" | "category" | "priority" | "updated";
+
+const PRIORITY_RANK: Record<string, number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+function compareIdeas(field: SortField, a: IdeaItem, b: IdeaItem): number {
+  switch (field) {
+    case "title":
+      return a.title.localeCompare(b.title);
+    case "project":
+      return a.project.localeCompare(b.project);
+    case "category":
+      return a.category.localeCompare(b.category);
+    case "priority":
+      return (PRIORITY_RANK[a.priority] ?? -1) - (PRIORITY_RANK[b.priority] ?? -1);
+    case "updated":
+      return (
+        Date.parse(a.updatedAt.replace(" ", "T") + "Z") -
+        Date.parse(b.updatedAt.replace(" ", "T") + "Z")
+      );
+  }
+}
+
+/** One clickable header cell with a direction indicator. */
+function SortHeader({
+  label,
+  field,
+  sortField,
+  sortAsc,
+  onSort,
+}: {
+  label: string;
+  field: SortField;
+  sortField: SortField | null;
+  sortAsc: boolean;
+  onSort: (field: SortField) => void;
+}) {
+  const active = sortField === field;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      title={label}
+      aria-label={active ? `${label} (${sortAsc ? "ascending" : "descending"})` : `Sort by ${label}`}
+      className="group/sort flex min-w-0 cursor-pointer items-center gap-1 truncate transition-colors hover:text-zinc-200"
+    >
+      <span className="truncate">{label}</span>
+      {active ? (
+        sortAsc ? (
+          <ArrowUp className="size-3 shrink-0 text-amber-300" aria-hidden="true" />
+        ) : (
+          <ArrowDown className="size-3 shrink-0 text-amber-300" aria-hidden="true" />
+        )
+      ) : (
+        <ArrowUpDown className="size-3 shrink-0 opacity-0 transition-opacity group-hover/sort:opacity-60" aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
 /**
  * Grouped list alternative to the kanban: collapsible status sections with
  * compact rows (title, project, category, priority, updated) and an inline
@@ -41,6 +106,17 @@ export function IdeasListView({
   const s = t.ideas;
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const sortBy = (field: SortField) => {
+    if (sortField === field) {
+      setSortAsc((asc) => !asc);
+    } else {
+      setSortField(field);
+      setSortAsc(true);
+    }
+  };
 
   if (!loading && ideas.length === 0) {
     return <StatePanel icon={Inbox} title={s.empty} description={s.emptyHint} />;
@@ -59,23 +135,27 @@ export function IdeasListView({
     // exact column template, padding and gap, so columns line up by
     // construction instead of by coincidence.
     <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/20">
-      {/* Column labels for wide screens; rows carry the same fields inline. */}
+      {/* Interactive column labels for wide screens; rows carry the same fields inline. */}
       <div
-        aria-hidden="true"
         className="hidden grid-cols-[minmax(0,1fr)_120px_100px_90px_100px_130px_70px] items-center gap-4 border-b border-white/[0.08] px-4 pt-2.5 pb-2 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid"
       >
-        <span className="truncate">{s.hTitle}</span>
-        <span className="truncate">{s.fieldProject}</span>
-        <span className="truncate">{s.fieldCategory}</span>
-        <span className="truncate">{s.fieldPriority}</span>
-        <span className="truncate">{s.hUpdated}</span>
+        <SortHeader label={s.hTitle} field="title" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
+        <SortHeader label={s.fieldProject} field="project" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
+        <SortHeader label={s.fieldCategory} field="category" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
+        <SortHeader label={s.fieldPriority} field="priority" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
+        <SortHeader label={s.hUpdated} field="updated" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
         <span className="truncate">{s.fieldStatus}</span>
         <span className="sr-only">actions</span>
       </div>
 
       {SECTIONS.map((section) => {
-        const rows = ideas.filter((idea) => idea.status === section.status);
-        if (rows.length === 0) return null;
+        const base = ideas.filter((idea) => idea.status === section.status);
+        if (base.length === 0) return null;
+        const rows = sortField
+          ? [...base].sort((a, b) =>
+              sortAsc ? compareIdeas(sortField, a, b) : -compareIdeas(sortField, a, b),
+            )
+          : base;
         const isCollapsed = collapsed.has(section.status);
 
         return (
