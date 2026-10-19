@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **xAI Grok Transcript Sanitization:** Filtered out `<user_info>` / `<rules>` environment scaffolding and `synthetic_reason` reminders, cleanly extracting `<user_query>` prompts.
 - **Fail-Closed Installer Security:** Strictly single-entry SHA-256 validation with fail-closed integrity checks in `install.sh`.
 - **Sanitized Freebuff Desktop Parsing:** Filter out internal `reasoning` and execution `tool` blocks from conversation turns, ensuring clean text-only bubbles in the chat drawer.
-- **Branded Install Pipeline:** Support for `curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash` with Cloudflare Edge Function redirect.
+- **Branded Install Pipeline:** Support for `curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash` with Cloudflare Edge Function redirect.
 - **Universal Transcript Parsers (#220):** Native transcript reader engines for all 9 AI harnesses:
   - Antigravity: unwraps `<USER_REQUEST>` prompt wrappers and maps `USER_EXPLICIT` / `MODEL`.
   - xAI Grok: recursive `chat_history.jsonl` scan with path traversal guards.
