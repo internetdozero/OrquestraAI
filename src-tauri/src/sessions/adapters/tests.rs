@@ -461,7 +461,7 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
     let relisted = adapter(&home.0, "freebuff")
         .list_sessions()
         .expect("relist");
-    assert_eq!(sessions.len(), 3, "thread, fallback and worktree sessions");
+    assert_eq!(sessions.len(), 2, "thread + fallback; same-id worktree is deduped");
     assert_eq!(
         relisted.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),
         [fallback.id.as_str()]
@@ -572,6 +572,75 @@ fn a_corrupt_harness_database_is_skipped_without_losing_the_others() {
         warnings[0].starts_with("antigravity:"),
         "the warning should name the failing harness, got {:?}",
         warnings[0]
+    );
+}
+
+#[test]
+fn freebuff_dedupes_prefix_worktrees_against_desktop_threads() {
+    let home = TestHome::new();
+    let thread = "cb07e0aa-1111-2222-3333-444444444444";
+    let slug = "Proj-abc";
+
+    home.write(
+        &format!(".config/freebuff-desktop/projects/{slug}/project.json"),
+        "{\"projectId\":\"abc\",\"projectPath\":\"/work/proj\"}",
+    );
+    home.database(
+        &format!(".config/freebuff-desktop/projects/{slug}/desktop-v2.db"),
+        &format!(
+            "CREATE TABLE threads (id TEXT PRIMARY KEY, project_id TEXT, project_path TEXT,\
+                                title TEXT, created_at INTEGER, updated_at INTEGER);\
+             CREATE TABLE messages (seq INTEGER PRIMARY KEY AUTOINCREMENT, thread_id TEXT,\
+                                role TEXT, parts_json TEXT DEFAULT '[]',\
+                                attachments_json TEXT DEFAULT '[]', ts INTEGER);\
+             INSERT INTO threads VALUES ('{thread}', 'abc', '/work/proj',\
+               'Prefix thread', 1792324543519, 1792324942904);\
+             INSERT INTO messages (thread_id, role, parts_json, attachments_json, ts) VALUES\
+               ('{thread}', 'user', '[12345]', '[]', 1792324544000);"
+        ),
+    );
+    let claimed = home.write(".freebuff/worktrees/cb07e0aa/payload.bin", "claimed-bytes");
+    let orphan = home.write(".freebuff/worktrees/deadbeef/payload.bin", "orphan-bytes!");
+
+    let sessions = adapter(&home.0, "freebuff").list_sessions().expect("list");
+    let desktop = sessions
+        .iter()
+        .find(|s| s.id == format!("desktop:{slug}:{thread}"))
+        .expect("desktop thread");
+    // Message payload (7) + attachments (2) plus the prefix worktree bytes.
+    assert_eq!(desktop.size_bytes, 7 + 2 + claimed);
+    assert!(
+        sessions.iter().all(|s| s.id != "cb07e0aa"),
+        "prefix worktree must not appear as a duplicate bare session"
+    );
+    assert!(
+        sessions.iter().any(|s| s.id == "deadbeef"),
+        "unassociated orphan worktrees stay listed for purging"
+    );
+    let orphan_session = sessions.iter().find(|s| s.id == "deadbeef").unwrap();
+    assert_eq!(orphan_session.size_bytes, orphan);
+
+    let freed = adapter(&home.0, "freebuff")
+        .delete_session(&desktop.id)
+        .expect("delete");
+    assert_eq!(freed, claimed, "prefix worktree bytes are reclaimed");
+    assert!(
+        !home.0.join(".freebuff/worktrees/cb07e0aa").exists(),
+        "the prefix worktree is unlinked"
+    );
+    assert!(
+        home.0.join(".freebuff/worktrees/deadbeef").exists(),
+        "the orphan worktree is untouched"
+    );
+
+    let relisted = adapter(&home.0, "freebuff").list_sessions().expect("relist");
+    assert!(
+        relisted.iter().any(|s| s.id == "deadbeef"),
+        "orphan survives the desktop delete"
+    );
+    assert!(
+        relisted.iter().all(|s| s.id != "cb07e0aa"),
+        "no ghost card returns for the reclaimed prefix"
     );
 }
 

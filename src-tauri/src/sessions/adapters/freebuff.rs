@@ -44,9 +44,19 @@ impl SessionAdapter for Freebuff {
     }
 
     fn list_sessions(&self) -> Result<Vec<UnifiedSession>, String> {
-        let mut sessions = worktrees(&self.root.join(WORKTREES_REL));
+        let desktop = freebuff_desktop::list(&self.root);
+        let thread_ids: Vec<String> = desktop
+            .iter()
+            .filter_map(|s| freebuff_desktop::parse_id(&s.id).map(|(_, t)| t))
+            .collect();
+        let worktrees_dir = self.root.join(WORKTREES_REL);
+        let claimed = freebuff_desktop::claimed_dir_names(&worktrees_dir, &thread_ids);
+        let mut sessions: Vec<UnifiedSession> = worktrees(&worktrees_dir)
+            .into_iter()
+            .filter(|s| !claimed.contains(&s.id))
+            .collect();
         sessions.extend(manicode_chats(&self.root.join(MANICODE_REL)));
-        sessions.extend(freebuff_desktop::list(&self.root));
+        sessions.extend(desktop);
         Ok(sessions)
     }
 

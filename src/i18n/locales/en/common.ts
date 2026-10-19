@@ -118,6 +118,19 @@ export const store: TranslationSchema["store"] = {
     `Could not load the official store: ${detail}`,
   viewRepo: "View repository",
   actionFailed: (detail: string) => `The store action failed: ${detail}`,
+  filterAll: "All",
+  filterOfficial: "Official",
+  filterCommunity: "Community",
+  verifiedOfficial: "Verified Official",
+  communityWithScripts: "Community • Contains executable scripts",
+  communityPromptOnly: "Community • Prompt only",
+  installAndProject: "Install & Project",
+  projected: "Projected",
+  projectHint: (scope: string) => `Projects into ${scope} right after install`,
+  scriptsWarning: (count: number) =>
+    `${count} executable script${count === 1 ? "" : "s"} — review before installing`,
+  communitySubtitle:
+    "Community curation with script audit and one-click projection.",
 };
 
 export const tokens: TranslationSchema["tokens"] = {

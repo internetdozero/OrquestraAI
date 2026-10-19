@@ -152,6 +152,8 @@ mod tests {
             harness_enabled: true,
             inherited_from_global: false,
             official: false,
+            has_scripts: false,
+            script_files: Vec::new(),
         }
     }
 

@@ -3,6 +3,7 @@ import { useI18n } from "./useI18n";
 import type { SkillItem } from "../lib/skills";
 import {
   importSkillFromGit,
+  setSkillState,
   type OfficialMcpEntry,
   type OfficialSkillEntry,
 } from "../lib/tauri";
@@ -12,19 +13,21 @@ import type {
 } from "../components/OfficialStore";
 
 interface SkillStoreDeps {
+  /** Currently selected scope (`global` or harness id) for instant projection. */
+  scope: string;
   toggleSkill: (id: string) => Promise<void>;
   invalidate: () => Promise<void>;
   onSummaryStale: () => void;
   onToast?: (message: string) => void;
 }
 
-/** Live status + one-click actions backing the skills store tab. */
+/** Live status + one-click install-and-project actions for the skills hub. */
 export function useSkillStoreActions(
   skills: SkillItem[],
   deps: SkillStoreDeps,
 ) {
   const { t } = useI18n();
-  const { toggleSkill, invalidate, onSummaryStale, onToast } = deps;
+  const { scope, toggleSkill, invalidate, onSummaryStale, onToast } = deps;
 
   const statusOf = useCallback(
     (id: string): StoreStatus => {
@@ -47,8 +50,17 @@ export function useSkillStoreActions(
         const url = entry.repoUrl;
         return {
           kind: "install",
+          // One-click install + instant projection: clone into the vault,
+          // then atomically symlink into the current scope so the skill is
+          // live instead of dormant. Summary counters refresh via the same
+          // path as a manual toggle.
           run: async () => {
             const imported = await importSkillFromGit(url);
+            try {
+              await setSkillState(imported.id, scope, true);
+            } catch {
+              // Inherited-from-global or missing scope: stay installed idle.
+            }
             onSummaryStale();
             await invalidate();
             onToast?.(t.skills.import.success(imported.name));
@@ -57,7 +69,7 @@ export function useSkillStoreActions(
       }
       return null;
     },
-    [t, toggleSkill, invalidate, onSummaryStale, onToast],
+    [t, scope, toggleSkill, invalidate, onSummaryStale, onToast],
   );
 
   return { statusOf, actionFor };

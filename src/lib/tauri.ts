@@ -94,14 +94,22 @@ export function importSkillFromGit(url: string): Promise<SkillItem> {
   return invoke<SkillItem>("import_skill_from_git", { url });
 }
 
-/** One curated skill in the Official Store. `repoUrl` is absent for reserved
- * slots with no published repo yet. */
+/** Tier badge for the Community & Official Hub. */
+export type StoreTier = "official" | "community";
+
+/** One curated skill in the Community Hub. `repoUrl` is absent for reserved
+ * slots with no published repo yet. `official`/`tier`/`tags` drive the
+ * filter chips; `hasScripts` drives the amber security badge. */
 export interface OfficialSkillEntry {
   id: string;
   name: string;
   description: string;
   category: string;
   repoUrl?: string;
+  official?: boolean;
+  tier?: StoreTier;
+  tags?: string[];
+  hasScripts?: boolean;
 }
 
 /** One curated MCP server. `command`/`args` pre-fill a disabled catalog

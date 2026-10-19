@@ -314,6 +314,7 @@ export function SkillsView({
 
   const { statusOf: storeStatusOf, actionFor: storeActionFor } =
     useSkillStoreActions(skills, {
+      scope,
       toggleSkill,
       invalidate,
       onSummaryStale,
@@ -425,6 +426,7 @@ export function SkillsView({
           kind="skill"
           statusOf={storeStatusOf}
           actionFor={storeActionFor}
+          projectScope={scope}
         />
       )}
 

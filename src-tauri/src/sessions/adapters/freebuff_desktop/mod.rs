@@ -22,8 +22,10 @@ use crate::sessions::types::UnifiedSession;
 use super::{fsops, utils};
 
 mod transcript;
+mod worktree;
 
 pub use transcript::transcript;
+pub use worktree::{claimed_dir_names, find_worktree};
 
 const HARNESS: &str = "freebuff";
 /// Prefix of every desktop-thread session id: `desktop:<slug>:<thread-id>`.
@@ -137,7 +139,9 @@ pub fn delete(home: &Path, slug: &str, thread: &str) -> Result<u64, String> {
     }
 
     let worktrees = home.join(WORKTREES_REL);
-    bytes += fsops::remove_path(&worktrees, &worktrees.join(thread))?;
+    if let Some(matched) = find_worktree(&worktrees, thread) {
+        bytes += fsops::remove_path(&worktrees, &matched)?;
+    }
 
     Ok(bytes)
 }
@@ -327,13 +331,16 @@ fn thread_dirs(home: &Path, thread: &str) -> Vec<PathBuf> {
 }
 
 /// Message payload bytes already counted in SQL, plus the thread folders and
-/// a same-id worktree on disk.
+/// the correlated worktree (exact UUID or 8-char prefix) on disk.
 fn extra_size(home: &Path, thread: &str) -> u64 {
     let mut bytes: u64 = thread_dirs(home, thread)
         .iter()
         .map(|folder| utils::dir_size(folder))
         .sum();
-    bytes += utils::dir_size(&home.join(WORKTREES_REL).join(thread));
+    let worktrees = home.join(WORKTREES_REL);
+    if let Some(matched) = find_worktree(&worktrees, thread) {
+        bytes += utils::dir_size(&matched);
+    }
     bytes
 }
 

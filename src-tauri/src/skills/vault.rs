@@ -9,6 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::projection::is_projected;
+use super::security::scan_skill_security;
 use super::{SkillItem, GLOBAL_SCOPE};
 use crate::official::is_official_skill;
 use crate::paths::OrquestraPaths;
@@ -66,6 +67,7 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
 
         let category = categorize(&id, &name, &description).to_string();
         let official = is_official_skill(&id);
+        let (has_scripts, script_files) = scan_skill_security(&directory);
 
         skills.push(SkillItem {
             id,
@@ -77,6 +79,8 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
             harness_enabled,
             inherited_from_global,
             official,
+            has_scripts,
+            script_files,
         });
     }
 

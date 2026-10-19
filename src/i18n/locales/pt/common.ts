@@ -124,6 +124,19 @@ export const store = {
     `Não foi possível carregar a loja oficial: ${detail}`,
   viewRepo: "Ver repositório",
   actionFailed: (detail: string) => `A ação da loja falhou: ${detail}`,
+  filterAll: "Todas",
+  filterOfficial: "Oficiais",
+  filterCommunity: "Comunidade",
+  verifiedOfficial: "Oficial verificada",
+  communityWithScripts: "Comunidade • Contém scripts executáveis",
+  communityPromptOnly: "Comunidade • Somente prompt",
+  installAndProject: "Instalar e projetar",
+  projected: "Projetada",
+  projectHint: (scope: string) => `Projeta em ${scope} logo após instalar`,
+  scriptsWarning: (count: number) =>
+    `${count} script${count === 1 ? "" : "s"} executável${count === 1 ? "" : "es"} — revise antes de instalar`,
+  communitySubtitle:
+    "Curadoria da comunidade com auditoria de scripts e projeção em um clique.",
 };
 
 export const tokens = {

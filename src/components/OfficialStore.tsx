@@ -1,20 +1,13 @@
-import { useEffect, useState } from "react";
-import {
-  Download,
-  ExternalLink,
-  Loader2,
-  Plus,
-  Power,
-  ShieldCheck,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import {
   listOfficialStore,
-  openExternalUrl,
   type OfficialMcpEntry,
   type OfficialSkillEntry,
 } from "../lib/tauri";
 import { useI18n } from "../hooks/useI18n";
-import { cn } from "../lib/utils";
+import { StoreCard } from "./StoreCard";
+import { StoreFilters, type StoreTierFilter } from "./StoreFilters";
 
 export type StoreStatus = "active" | "idle" | "missing";
 export type StoreActionKind = "install" | "enable" | "add";
@@ -28,30 +21,31 @@ type StoreEntry = OfficialSkillEntry | OfficialMcpEntry;
 
 interface OfficialStoreProps {
   kind: "skill" | "mcp";
-  /** Live install state per id, read from the parent's catalog data. */
   statusOf: (id: string) => StoreStatus;
-  /** Primary row action, or null when the entry has none. */
   actionFor: (entry: StoreEntry, status: StoreStatus) => StoreRowAction | null;
+  /** Current scope label for the install-and-project hint. */
+  projectScope?: string;
 }
 
-const ACTION_ICON = {
-  install: Download,
-  enable: Power,
-  add: Plus,
-} as const;
-
 /**
- * Curated Personal Store panel: the official entries fetched from the Rust
- * core, each with its live install state and a one-click primary action.
- * Row spinners are tracked here; the parent refreshes its catalog data
- * inside each action so `statusOf` re-evaluates on the next render.
+ * Community & Official Hub: curated entries with tier/category filters,
+ * security badges (via StoreCard) and one-click install-and-project.
+ * Row spinners live here; the parent refreshes catalog data inside each
+ * action so `statusOf` re-evaluates on the next render.
  */
-export function OfficialStore({ kind, statusOf, actionFor }: OfficialStoreProps) {
+export function OfficialStore({
+  kind,
+  statusOf,
+  actionFor,
+  projectScope,
+}: OfficialStoreProps) {
   const { t } = useI18n();
   const s = t.store;
   const [entries, setEntries] = useState<StoreEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [tier, setTier] = useState<StoreTierFilter>("all");
+  const [category, setCategory] = useState<string>("All");
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +67,26 @@ export function OfficialStore({ kind, statusOf, actionFor }: OfficialStoreProps)
     };
   }, [kind, s, t.common.unexpected]);
 
+  const categories = useMemo(() => {
+    if (!entries || kind !== "skill") return [];
+    const seen = new Set<string>();
+    for (const entry of entries as OfficialSkillEntry[]) seen.add(entry.category);
+    return [...seen].sort((a, b) => a.localeCompare(b));
+  }, [entries, kind]);
+
+  const visible = useMemo(() => {
+    if (!entries) return [];
+    return entries.filter((entry) => {
+      const skill = entry as OfficialSkillEntry;
+      const entryTier =
+        skill.tier ?? (skill.official === false ? "community" : "official");
+      if (kind === "skill" && tier !== "all" && entryTier !== tier) return false;
+      if (kind === "skill" && category !== "All" && skill.category !== category)
+        return false;
+      return true;
+    });
+  }, [entries, kind, tier, category]);
+
   if (error) {
     return (
       <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/[0.07] px-4 py-3 text-[12px] text-red-200">
@@ -90,100 +104,74 @@ export function OfficialStore({ kind, statusOf, actionFor }: OfficialStoreProps)
     );
   }
 
+  const scopeHint = projectScope ? s.projectHint(projectScope) : undefined;
+
   return (
     <div className="overflow-hidden rounded-xl border border-amber-500/[0.14] bg-black/20">
       <div className="flex items-center gap-2 border-b border-amber-500/10 px-4 py-3">
         <ShieldCheck className="size-4 shrink-0 text-amber-300" />
         <div className="min-w-0">
           <h3 className="text-[13px] font-semibold text-zinc-100">{s.title}</h3>
-          <p className="truncate text-[11px] text-zinc-500">{s.subtitle}</p>
+          <p className="truncate text-[11px] text-zinc-500">
+            {tier === "community" ? s.communitySubtitle : s.subtitle}
+          </p>
         </div>
       </div>
 
+      {kind === "skill" && (
+        <div className="border-b border-white/[0.05]">
+          <StoreFilters
+            tier={tier}
+            onTierChange={setTier}
+            categories={["All", ...categories]}
+            category={category}
+            onCategoryChange={setCategory}
+            labels={{
+              all: s.filterAll,
+              official: s.filterOfficial,
+              community: s.filterCommunity,
+            }}
+          />
+        </div>
+      )}
+
       <ol className="divide-y divide-white/[0.04]">
-        {entries.map((entry) => {
+        {visible.map((entry) => {
           const status = statusOf(entry.id);
           const action = actionFor(entry, status);
-          const ActionIcon = action ? ACTION_ICON[action.kind] : null;
           const meta =
             kind === "skill"
               ? (entry as OfficialSkillEntry).category
-              : [ (entry as OfficialMcpEntry).command, ...(entry as OfficialMcpEntry).args ].join(" ");
-          const busy = busyId === entry.id;
-
+              : [
+                  (entry as OfficialMcpEntry).command,
+                  ...(entry as OfficialMcpEntry).args,
+                ].join(" ");
           return (
-            <li key={entry.id} className="flex items-start gap-3 px-4 py-3 transition hover:bg-white/[0.02]">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="truncate font-mono text-[12.5px] font-medium text-zinc-100">
-                    {entry.name}
-                  </span>
-                  {status === "missing" ? (
-                    <span className="text-[10px] text-zinc-600">{t.common.notInstalled}</span>
-                  ) : (
-                    <span className="text-[10px] font-medium text-emerald-400">{s.installed}</span>
-                  )}
-                </div>
-                <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-zinc-400">
-                  {entry.description}
-                </p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] text-zinc-600">
-                  <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-px">
-                    {meta}
-                  </span>
-                  {entry.repoUrl ? (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void openExternalUrl(entry.repoUrl as string);
-                      }}
-                      className="flex items-center gap-1 text-zinc-500 transition hover:text-zinc-300"
-                    >
-                      <ExternalLink className="size-2.5" />
-                      {s.viewRepo}
-                    </button>
-                  ) : (
-                    <span className="italic">{s.unpublished}</span>
-                  )}
-                </div>
-              </div>
-
-              {action && ActionIcon && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusyId(entry.id);
-                    setError(null);
-                    try {
-                      await action.run();
-                    } catch (cause: unknown) {
-                      setError(
-                        s.actionFailed(
-                          cause instanceof Error ? cause.message : t.common.unexpected,
-                        ),
-                      );
-                    } finally {
-                      setBusyId(null);
-                    }
-                  }}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition disabled:cursor-wait disabled:opacity-60",
-                    action.kind === "enable"
-                      ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
-                      : "border-amber-500/30 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25",
-                  )}
-                >
-                  {busy ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <ActionIcon className="size-3.5" />
-                  )}
-                  {action.kind === "install" ? s.install : action.kind === "enable" ? s.enable : s.add}
-                </button>
-              )}
-            </li>
+            <StoreCard
+              key={entry.id}
+              entry={entry as OfficialSkillEntry & Record<string, unknown>}
+              meta={meta}
+              status={status}
+              action={action}
+              busy={busyId === entry.id}
+              scopeHint={scopeHint}
+              onRun={async () => {
+                if (!action) return;
+                setBusyId(entry.id);
+                setError(null);
+                try {
+                  await action.run();
+                } catch (cause: unknown) {
+                  setError(
+                    s.actionFailed(
+                      cause instanceof Error ? cause.message : t.common.unexpected,
+                    ),
+                  );
+                } finally {
+                  setBusyId(null);
+                }
+              }}
+            />
           );
         })}
       </ol>

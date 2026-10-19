@@ -63,8 +63,7 @@ pub fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
 }
 
 fn staging_dir() -> Result<PathBuf, String> {
-    let staging = PathBuf::from("/var/tmp/testing")
-        .join(format!("orquestra-git-import-{}", std::process::id()));
+    let staging = staging_root().join(format!("orquestra-git-import-{}", std::process::id()));
     if staging.exists() {
         fs::remove_dir_all(&staging)
             .map_err(|error| format!("failed to clear {}: {error}", staging.display()))?;
@@ -115,6 +114,12 @@ fn import_dir(source: &Path) -> Result<SkillItem, String> {
     finish(&paths, &folder, &destination)
 }
 
+/// Staging root for git clones. Always `/var/tmp/testing` (disk-backed);
+/// never memory-backed `/tmp`, so large clones cannot pressure RAM.
+fn staging_root() -> PathBuf {
+    PathBuf::from("/var/tmp/testing")
+}
+
 /// Remove a half-copied destination on failure, then evaluate the new skill.
 fn finish(paths: &OrquestraPaths, id: &str, destination: &Path) -> Result<SkillItem, String> {
     match list_from(paths, GLOBAL_SCOPE)
@@ -127,5 +132,33 @@ fn finish(paths: &OrquestraPaths, id: &str, destination: &Path) -> Result<SkillI
             let _ = fs::remove_dir_all(destination);
             Err(format!("imported {id:?} but it could not be read back"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn staging_stays_on_disk_backed_var_tmp() {
+        let root = staging_root();
+        assert_eq!(root, PathBuf::from("/var/tmp/testing"));
+        assert!(
+            !root.starts_with("/tmp"),
+            "staging must never use memory-backed /tmp"
+        );
+        let staged = staging_dir().expect("staging dir");
+        assert!(staged.starts_with("/var/tmp/testing"));
+        let _ = fs::remove_dir_all(root.join(format!(
+            "orquestra-git-import-{}",
+            std::process::id()
+        )));
+    }
+
+    #[test]
+    fn rejects_unsupported_git_urls() {
+        assert!(import_skill_from_git(String::new()).is_err());
+        assert!(import_skill_from_git("ftp://example.com/repo.git".to_string()).is_err());
+        assert!(import_skill_from_git("/var/tmp/testing/local".to_string()).is_err());
     }
 }

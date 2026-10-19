@@ -31,6 +31,10 @@ export interface SkillItem {
   inheritedFromGlobal: boolean;
   /** Computed official tier from the Rust core; absent in older payloads. */
   official?: boolean;
+  /** True when the vault folder holds helper scripts; absent in old payloads. */
+  hasScripts?: boolean;
+  /** Relative script paths from the security audit. */
+  scriptFiles?: string[];
 }
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {

@@ -69,10 +69,12 @@
       "description",
       "globalEnabled",
       "harnessEnabled",
+      "hasScripts",
       "id",
       "inheritedFromGlobal",
       "name",
       "official",
+      "scriptFiles",
       "tokens"
     ],
     "HarnessSummary": ["active", "id", "total"],

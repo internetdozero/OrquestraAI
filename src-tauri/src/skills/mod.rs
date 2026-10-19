@@ -14,6 +14,7 @@ use crate::paths::{open_paths, OrquestraPaths};
 mod agents;
 mod import;
 mod projection;
+mod security;
 mod vault;
 #[cfg(test)]
 mod tests;
@@ -39,6 +40,13 @@ pub struct SkillItem {
     /// listing, never operator state.
     #[serde(default)]
     pub official: bool,
+    /// Static security audit: true when the skill folder holds helper
+    /// scripts (`.sh`, `.py`, `.js`, …) or a `scripts/`/`bin/` payload.
+    #[serde(default)]
+    pub has_scripts: bool,
+    /// Repository-relative script paths, sorted for stable snapshots.
+    #[serde(default)]
+    pub script_files: Vec<String>,
     /// Whether the skill is projected in the universal baseline.
     pub global_enabled: bool,
     /// Effective state for the selected harness tab.
