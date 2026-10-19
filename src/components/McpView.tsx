@@ -208,6 +208,8 @@ export function McpView({
           }}
         />
 
+          <StoreTabs showStore={showStore} onChange={setShowStore} />
+
         <McpToolbar
           scope={scope}
           scopeLabel={scopeLabel}
@@ -219,8 +221,6 @@ export function McpView({
           batchPending={batchPending}
           onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
         />
-
-          <StoreTabs showStore={showStore} onChange={setShowStore} />
 
         {error && (
           <div

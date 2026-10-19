@@ -140,6 +140,35 @@ export function formatIdeaForAi(idea: IdeaItem): string {
   return lines.join("\n");
 }
 
+/** Notion-style sortable columns of the ideas list header. */
+export type IdeaSortField = "title" | "project" | "category" | "priority" | "updated";
+
+const PRIORITY_RANK: Record<string, number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+/** Row comparator for one list column. Unknown priorities sort below `low`. */
+export function compareIdeas(field: IdeaSortField, a: IdeaItem, b: IdeaItem): number {
+  switch (field) {
+    case "title":
+      return a.title.localeCompare(b.title);
+    case "project":
+      return a.project.localeCompare(b.project);
+    case "category":
+      return a.category.localeCompare(b.category);
+    case "priority":
+      return (PRIORITY_RANK[a.priority] ?? -1) - (PRIORITY_RANK[b.priority] ?? -1);
+    case "updated":
+      return (
+        Date.parse(a.updatedAt.replace(" ", "T") + "Z") -
+        Date.parse(b.updatedAt.replace(" ", "T") + "Z")
+      );
+  }
+}
+
 /**
  * Copy the AI prompt for one idea. Resolves `true` on success, `false` when
  * the clipboard denies permission — never throws.

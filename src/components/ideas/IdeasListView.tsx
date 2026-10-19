@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronRight, Copy, Inbox, Pencil, Trash2 } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
-import type { IdeaItem } from "../../lib/ideas";
-import { copyIdeaForAi } from "../../lib/ideas";
+import type { IdeaItem, IdeaSortField } from "../../lib/ideas";
+import { compareIdeas, copyIdeaForAi } from "../../lib/ideas";
 import { cn } from "../../lib/utils";
 import { CustomDropdown } from "../CustomDropdown";
 import { StatePanel } from "../ui";
@@ -24,34 +24,6 @@ const SECTIONS = [
 
 const STATUS_IDS = ["open", "in_progress", "completed", "archived"] as const;
 
-/** Notion-style sortable columns of the list header. */
-type SortField = "title" | "project" | "category" | "priority" | "updated";
-
-const PRIORITY_RANK: Record<string, number> = {
-  low: 0,
-  medium: 1,
-  high: 2,
-  critical: 3,
-};
-
-function compareIdeas(field: SortField, a: IdeaItem, b: IdeaItem): number {
-  switch (field) {
-    case "title":
-      return a.title.localeCompare(b.title);
-    case "project":
-      return a.project.localeCompare(b.project);
-    case "category":
-      return a.category.localeCompare(b.category);
-    case "priority":
-      return (PRIORITY_RANK[a.priority] ?? -1) - (PRIORITY_RANK[b.priority] ?? -1);
-    case "updated":
-      return (
-        Date.parse(a.updatedAt.replace(" ", "T") + "Z") -
-        Date.parse(b.updatedAt.replace(" ", "T") + "Z")
-      );
-  }
-}
-
 /** One clickable header cell with a direction indicator. */
 function SortHeader({
   label,
@@ -61,10 +33,10 @@ function SortHeader({
   onSort,
 }: {
   label: string;
-  field: SortField;
-  sortField: SortField | null;
+  field: IdeaSortField;
+  sortField: IdeaSortField | null;
   sortAsc: boolean;
-  onSort: (field: SortField) => void;
+  onSort: (field: IdeaSortField) => void;
 }) {
   const active = sortField === field;
   return (
@@ -106,10 +78,10 @@ export function IdeasListView({
   const s = t.ideas;
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortField, setSortField] = useState<IdeaSortField | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
 
-  const sortBy = (field: SortField) => {
+  const sortBy = (field: IdeaSortField) => {
     if (sortField === field) {
       setSortAsc((asc) => !asc);
     } else {
