@@ -137,7 +137,7 @@ export function IdeasListView({
     <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/20">
       {/* Interactive column labels for wide screens; rows carry the same fields inline. */}
       <div
-        className="hidden grid-cols-[minmax(0,1fr)_120px_100px_90px_100px_130px_70px] items-center gap-4 border-b border-white/[0.08] px-4 pt-2.5 pb-2 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid"
+        className="hidden grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_70px] items-center gap-3 border-b border-white/[0.08] px-3.5 py-2 text-[10.5px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid"
       >
         <SortHeader label={s.hTitle} field="title" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
         <SortHeader label={s.fieldProject} field="project" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
@@ -186,13 +186,13 @@ export function IdeasListView({
                   return (
                     <li
                       key={idea.id}
-                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-2 transition hover:bg-white/[0.02] lg:grid-cols-[minmax(0,1fr)_120px_100px_90px_100px_130px_70px]"
+                      className="grid min-h-[36px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-1.5 transition hover:bg-white/[0.02] lg:grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_70px]"
                     >
                       <div className="min-w-0">
                         <button
                           type="button"
                           onClick={() => onOpen(idea)}
-                          className="block w-full truncate text-left text-[12.5px] font-medium text-zinc-100 hover:text-amber-200"
+                          className="block w-full truncate text-left text-[12px] font-medium text-zinc-100 hover:text-amber-200"
                         >
                           {idea.title}
                         </button>
