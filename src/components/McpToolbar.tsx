@@ -70,7 +70,7 @@ export function McpToolbar({
   const isGlobal = scope === GLOBAL_SCOPE.id;
 
   return (
-    <div className="mb-4 flex min-w-0 flex-wrap items-center justify-end gap-2">
+    <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
       <SortSelect value={sortMode} onChange={onSortModeChange} />
       <span className="font-mono text-[10.5px] whitespace-nowrap text-zinc-500">
         {t.mcps.shownCount(visibleCount)}

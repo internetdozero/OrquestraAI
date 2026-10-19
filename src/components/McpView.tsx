@@ -208,19 +208,20 @@ export function McpView({
           }}
         />
 
-          <StoreTabs showStore={showStore} onChange={setShowStore} />
-
-        <McpToolbar
-          scope={scope}
-          scopeLabel={scopeLabel}
-          visibleCount={visibleServers.length}
-          totalCount={servers.length}
-          sortMode={sortMode}
-          onSortModeChange={setSortMode}
-          canBatch={isTauri && servers.length > 0 && !batchPending && !loading}
-          batchPending={batchPending}
-          onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
-        />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <StoreTabs showStore={showStore} onChange={setShowStore} className="mb-0" />
+          <McpToolbar
+            scope={scope}
+            scopeLabel={scopeLabel}
+            visibleCount={visibleServers.length}
+            totalCount={servers.length}
+            sortMode={sortMode}
+            onSortModeChange={setSortMode}
+            canBatch={isTauri && servers.length > 0 && !batchPending && !loading}
+            batchPending={batchPending}
+            onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
+          />
+        </div>
 
         {error && (
           <div
