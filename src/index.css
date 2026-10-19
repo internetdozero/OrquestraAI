@@ -176,31 +176,6 @@
  * the default and matches the previous hardcoded palette.
  */
 :root,
-[data-accent="emerald"] {
-  --accent-solid: #10b981;
-  --accent-fg: #34d399;
-  --accent-bg: rgb(16 185 129 / 0.12);
-  --accent-ring: rgb(16 185 129 / 0.4);
-  --accent-glow: rgb(16 185 129 / 0.55);
-}
-/*
- * `emerald-*` utilities were the old brand color and are still hardcoded all
- * over the shell. Point that scale at the active accent so a cyan/violet/amber
- * choice repaints them. Swatches in settings use literal colors, not these
- * variables, so the emerald chip stays green.
- */
-[data-accent="cyan"] {
-  --accent-solid: #06b6d4;
-  --accent-fg: #22d3ee;
-  --accent-bg: rgb(6 182 212 / 0.12);
-  --accent-ring: rgb(6 182 212 / 0.4);
-  --accent-glow: rgb(6 182 212 / 0.55);
-  --color-emerald-200: #a5f3fc;
-  --color-emerald-300: #67e8f9;
-  --color-emerald-400: #22d3ee;
-  --color-emerald-500: #06b6d4;
-  --color-emerald-600: #0891b2;
-}
 [data-accent="violet"] {
   --accent-solid: #8b5cf6;
   --accent-fg: #a78bfa;
@@ -212,6 +187,21 @@
   --color-emerald-400: #a78bfa;
   --color-emerald-500: #8b5cf6;
   --color-emerald-600: #7c3aed;
+}
+/*
+ * Legacy emerald-* utilities point at the active accent so a choice repaints them.
+ */
+[data-accent="emerald"] {
+  --accent-solid: #10b981;
+  --accent-fg: #34d399;
+  --accent-bg: rgb(16 185 129 / 0.12);
+  --accent-ring: rgb(16 185 129 / 0.4);
+  --accent-glow: rgb(16 185 129 / 0.55);
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
 }
 [data-accent="amber"] {
   --accent-solid: #f59e0b;

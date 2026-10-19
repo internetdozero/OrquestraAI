@@ -21,7 +21,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyOnPurge: true,
   ramAlertThreshold: 85,
   tmpWatchEnabled: true,
-  accentColor: "emerald",
+  accentColor: "violet",
   autoCheckAppUpdates: true,
   autoCheckExtensionUpdates: true,
 };

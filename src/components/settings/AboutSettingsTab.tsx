@@ -75,12 +75,12 @@ export function AboutSettingsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5">
-        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-400/20 via-emerald-500/10 to-cyan-500/10 ring-1 ring-emerald-400/25">
-          <Orbit className="size-5 text-emerald-300" />
+        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-400/20 via-purple-500/10 to-indigo-500/10 ring-1 ring-violet-400/25">
+          <Orbit className="size-5 text-violet-300" />
         </div>
         <div>
           <p className="text-[13px] font-semibold text-zinc-100">
-            Orquestra<span className="text-emerald-400">AI</span>
+            Orquestra<span className="text-violet-400">AI</span>
           </p>
           <p className="font-mono text-[10.5px] text-zinc-500">
             {a.version} {status?.version ?? "0.1.0"} · {a.platform}{" "}
