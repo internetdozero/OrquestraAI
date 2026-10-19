@@ -406,4 +406,52 @@ mod tests {
 
         fs::remove_dir_all(&paths.root).unwrap();
     }
+
+    #[test]
+    fn vault_cache_serves_stable_results_across_scopes() {
+        let paths = setup_two_skills();
+        let first = list_from(&paths, "global").expect("list the vault");
+        let second = list_from(&paths, "codex").expect("list the vault again");
+        assert_eq!(first.len(), 2);
+        assert_eq!(
+            first.iter().map(|skill| skill.id.clone()).collect::<Vec<_>>(),
+            second.iter().map(|skill| skill.id.clone()).collect::<Vec<_>>(),
+            "the cached parse must match a fresh one"
+        );
+        fs::remove_dir_all(&paths.root).unwrap();
+    }
+
+    #[test]
+    fn vault_cache_reflects_skill_edits() {
+        let paths = setup_two_skills();
+        assert_eq!(skill_in(&list_from(&paths, "global").unwrap(), "alpha").name, "Alpha");
+        // Different length on purpose: the fingerprint keys on mtime+size,
+        // so the edit is caught even on a coarse clock.
+        fs::write(
+            paths.vault.join("alpha").join(SKILL_FILE),
+            "---\nname: Alpha Renamed Longer\ndescription: Changed.\n---\n\nBody.\n",
+        )
+        .unwrap();
+        assert_eq!(
+            skill_in(&list_from(&paths, "global").unwrap(), "alpha").name,
+            "Alpha Renamed Longer"
+        );
+        fs::remove_dir_all(&paths.root).unwrap();
+    }
+
+    #[test]
+    fn vault_security_scan_stays_live() {
+        // The security walk is deliberately NOT cached: a helper script added
+        // without touching SKILL.md must still flip the badge on next list.
+        let paths = setup_two_skills();
+        assert!(!skill_in(&list_from(&paths, "global").unwrap(), "alpha").has_scripts);
+        let scripts = paths.vault.join("alpha").join("scripts");
+        fs::create_dir_all(&scripts).unwrap();
+        fs::write(scripts.join("hook.sh"), "#!/bin/sh\n").unwrap();
+        let relisted = list_from(&paths, "global").unwrap();
+        let alpha = skill_in(&relisted, "alpha");
+        assert!(alpha.has_scripts);
+        assert_eq!(alpha.script_files, vec!["scripts/hook.sh".to_string()]);
+        fs::remove_dir_all(&paths.root).unwrap();
+    }
 }

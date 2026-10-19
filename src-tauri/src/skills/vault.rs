@@ -8,10 +8,12 @@ use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use std::collections::HashSet;
+
 use super::projection::is_projected;
 use super::security::scan_skill_security;
+use super::vault_cache::{cached_content, prune_content_cache};
 use super::{SkillItem, GLOBAL_SCOPE};
-use crate::official::is_official_skill;
 use crate::paths::OrquestraPaths;
 
 /// Folder name expected at the root of every skill in the vault.
@@ -22,40 +24,17 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
     let scope_dir = paths.projection_dir(scope);
     let is_global = scope == GLOBAL_SCOPE;
     let mut skills = Vec::new();
+    let mut seen = HashSet::new();
 
     for (id, directory) in skill_directories(&paths.vault)? {
+        // File bytes and YAML parse come from the vault cache (validated by
+        // SKILL.md mtime+size); projection state and the security walk stay
+        // live, because neither may ever serve a stale answer.
         let skill_file = directory.join(SKILL_FILE);
-        let content = match fs::read_to_string(&skill_file) {
-            Ok(content) => content,
-            Err(_) => continue,
+        let Some(cached) = cached_content(&directory, &id, &skill_file) else {
+            continue;
         };
-
-        let (frontmatter, body) = split_frontmatter(&content);
-        let metadata = frontmatter
-            .and_then(|yaml| serde_yaml::from_str::<Frontmatter>(yaml).ok())
-            .unwrap_or_default();
-
-        let name = metadata
-            .name
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string)
-            .unwrap_or_else(|| id.clone());
-
-        let description = metadata
-            .description
-            .as_deref()
-            .map(normalize_description)
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| {
-                let fallback = first_paragraph(body);
-                if fallback.is_empty() {
-                    "No description provided.".to_string()
-                } else {
-                    fallback
-                }
-            });
+        seen.insert(directory.clone());
 
         let global_enabled = is_projected(&global_dir, &paths.vault, &id);
         let inherited_from_global = !is_global && global_enabled;
@@ -65,25 +44,24 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
             global_enabled || is_projected(&scope_dir, &paths.vault, &id)
         };
 
-        let category = categorize(&id, &name, &description).to_string();
-        let official = is_official_skill(&id);
         let (has_scripts, script_files) = scan_skill_security(&directory);
 
         skills.push(SkillItem {
             id,
-            name,
-            description,
-            category,
-            tokens: estimate_tokens(&content),
+            name: cached.name,
+            description: cached.description,
+            category: cached.category,
+            tokens: cached.tokens,
             global_enabled,
             harness_enabled,
             inherited_from_global,
-            official,
+            official: cached.official,
             has_scripts,
             script_files,
         });
     }
 
+    prune_content_cache(&seen);
     skills.sort_by_key(|skill| skill.name.to_lowercase());
     Ok(skills)
 }
@@ -228,7 +206,7 @@ pub(super) fn normalize_description(raw: &str) -> String {
     truncate(&collapsed, 320)
 }
 
-fn first_paragraph(body: &str) -> String {
+pub(super) fn first_paragraph(body: &str) -> String {
     let paragraph = body
         .lines()
         .map(str::trim)

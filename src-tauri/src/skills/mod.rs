@@ -17,6 +17,7 @@ mod projection;
 mod security;
 mod subpath;
 mod vault;
+mod vault_cache;
 
 pub(crate) use subpath::refresh_skill_dir;
 #[cfg(test)]
