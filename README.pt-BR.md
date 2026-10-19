@@ -23,7 +23,7 @@
 ## ⚡ Instalação Rápida
 
 ```bash
-curl -fsSL https://internetdozero.com.br/orquestra/install.sh | bash
+curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
 ```
 
 ---
