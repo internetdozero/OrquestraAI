@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Copy, Pin, Trash2, X } from "lucide-react";
+import { Check, Copy, Pin, Trash2, X } from "lucide-react";
 import { scopeLabel } from "../../lib/harnesses";
 import type { UnifiedSession } from "../../lib/sessions";
 import {
@@ -11,6 +11,7 @@ import {
 } from "../../lib/sessionFormat";
 import { cn } from "../../lib/utils";
 import { useI18n } from "../../hooks/useI18n";
+import { useClipboard } from "../../hooks/useClipboard";
 import { TranscriptFeed } from "./TranscriptFeed";
 
 interface SessionDetailDrawerProps {
@@ -21,19 +22,26 @@ interface SessionDetailDrawerProps {
   onToast: (message: string) => void;
 }
 
-/** Copy affordance for one metadata value. */
+/** Copy affordance for one metadata value, with a 1.5s checkmark. */
 function CopyButton({ value, label, onCopied }: { value: string; label: string; onCopied: () => void }) {
+  const { copied, copy } = useClipboard(1500);
   return (
     <button
       type="button"
-      title={label}
-      aria-label={label}
-      onClick={() => {
-        void navigator.clipboard.writeText(value).then(onCopied, () => undefined);
+      title={copied ? "Copied!" : label}
+      aria-label={copied ? "Copied!" : label}
+      onClick={async () => {
+        const ok = await copy(value);
+        if (ok) onCopied();
       }}
-      className="grid size-5 shrink-0 place-items-center rounded text-zinc-600 transition hover:text-emerald-300"
+      className={cn(
+        "grid size-5 shrink-0 place-items-center rounded transition",
+        copied
+          ? "text-emerald-400"
+          : "text-zinc-600 hover:text-emerald-300",
+      )}
     >
-      <Copy className="size-3" />
+      {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
     </button>
   );
 }

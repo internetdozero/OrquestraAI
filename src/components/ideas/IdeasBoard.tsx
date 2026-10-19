@@ -20,7 +20,6 @@ const COLUMNS = [
   { status: "open", titleKey: "colOpen" },
   { status: "in_progress", titleKey: "colInProgress" },
   { status: "completed", titleKey: "colCompleted" },
-  { status: "archived", titleKey: "colArchived" },
 ] as const;
 
 /** Completed columns page at this many cards before offering more. */
@@ -42,7 +41,7 @@ export function IdeasBoard({
   const { t } = useI18n();
   const s = t.ideas;
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-    () => new Set(["archived"]),
+    () => new Set(),
   );
   // Columns the user explicitly opened: shields them from the auto-collapse
   // rule for empty columns below.
@@ -127,7 +126,7 @@ export function IdeasBoard({
                 );
               }}
               className={cn(
-                "rounded-xl border bg-black/20 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]",
+                "w-full overflow-hidden rounded-xl border bg-black/20 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02] xl:w-11 xl:shrink-0",
                 dropStatus === column.status
                   ? "border-amber-500/50 bg-amber-500/[0.04]"
                   : "border-white/[0.05]",
@@ -139,15 +138,15 @@ export function IdeasBoard({
                 title={s.expandColumn}
                 aria-label={`${s.expandColumn}: ${s[column.titleKey]}`}
                 aria-expanded={false}
-                className="flex h-full min-h-64 w-full cursor-pointer flex-col items-center gap-3 py-3 xl:w-11"
+                className="flex h-full min-h-64 w-full cursor-pointer flex-col items-center gap-3 py-3 select-none"
               >
                 <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
-                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold text-zinc-300 tabular-nums">
+                <span className="pointer-events-none rounded-full bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold text-zinc-300 tabular-nums select-none">
                   {rows.length}
                 </span>
                 <span
                   aria-hidden="true"
-                  className="mt-4 text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap text-zinc-400 uppercase"
+                  className="pointer-events-none mt-4 text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap text-zinc-400 uppercase select-none"
                   style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
                 >
                   {s[column.titleKey]}

@@ -19,8 +19,8 @@ mod serializers;
 mod tests;
 
 pub use catalog::{
-    apply_global_selection, apply_harness_selections, delete_mcp, list_mcps, list_mcps_masked,
-    reveal_mcp_secret, save_mcp, set_mcp_state,
+    apply_global_selection, apply_harness_selections, batch_set_mcp_all, delete_mcp, list_mcps,
+    list_mcps_masked, reveal_mcp_secret, save_mcp, set_mcp_state,
 };
 pub use deploy::{deploy_mcps, deploy_mcps_reporting, list_targets};
 pub use secrets::mask_secret;

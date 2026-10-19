@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Download, Loader2, MessagesSquare, Search, X } from "lucide-react";
+import { Check, Copy, Download, Loader2, MessagesSquare, Search, X } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
+import { useClipboard } from "../../hooks/useClipboard";
 import { getSessionTranscript, type TranscriptTurn } from "../../lib/sessions";
 import { cn } from "../../lib/utils";
 import { MarkdownTurn } from "./MarkdownTurn";
@@ -32,9 +33,10 @@ export function formatTranscriptMarkdown(
 }
 
 /** One chat bubble with a hover copy affordance. */
-function Turn({ turn }: { turn: TranscriptTurn }) {
+function Turn({ turn, onToast }: { turn: TranscriptTurn; onToast: (message: string) => void }) {
   const { t } = useI18n();
   const s = t.sessions;
+  const { copied, copy } = useClipboard(1500);
   const isUser = turn.role === "user";
 
   return (
@@ -67,14 +69,20 @@ function Turn({ turn }: { turn: TranscriptTurn }) {
         <MarkdownTurn content={turn.content} role={turn.role} />
         <button
           type="button"
-          title={s.copyMessage}
-          aria-label={s.copyMessage}
-          onClick={() => {
-            void navigator.clipboard.writeText(turn.content).catch(() => undefined);
+          title={copied ? s.copied : s.copyMessage}
+          aria-label={copied ? s.copied : s.copyMessage}
+          onClick={async () => {
+            const ok = await copy(turn.content);
+            if (ok) onToast(s.copied);
           }}
-          className="absolute top-1 right-1 grid size-5 place-items-center rounded bg-black/50 text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:text-emerald-300 focus-visible:opacity-100"
+          className={cn(
+            "absolute top-1 right-1 grid size-5 place-items-center rounded bg-black/50 pointer-events-none transition-opacity duration-150 delay-0 group-hover:pointer-events-auto group-hover:delay-75 hover:text-emerald-300 focus-visible:pointer-events-auto",
+            copied
+              ? "text-emerald-300 opacity-100"
+              : "text-zinc-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          )}
         >
-          <Copy className="size-3" />
+          {copied ? <Check className="size-3 text-emerald-300" /> : <Copy className="size-3" />}
         </button>
       </div>
     </div>
@@ -100,6 +108,7 @@ export function TranscriptFeed({
   const s = t.sessions;
   const [turns, setTurns] = useState<TranscriptTurn[] | null>(null);
   const [query, setQuery] = useState("");
+  const { copied: copiedAll, copy: copyAllText } = useClipboard(1500);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,22 +198,20 @@ export function TranscriptFeed({
           </div>
           <button
             type="button"
-            title={s.copyAll}
-            aria-label={s.copyAll}
-            onClick={() => {
+            title={copiedAll ? s.copiedAll : s.copyAll}
+            aria-label={copiedAll ? s.copiedAll : s.copyAll}
+            onClick={async () => {
               const markdown = formatTranscriptMarkdown(turns, {
                 harness,
                 id: sessionId,
                 title,
               });
-              void navigator.clipboard
-                .writeText(markdown)
-                .then(() => onToast(s.copiedAll))
-                .catch(() => undefined);
+              const ok = await copyAllText(markdown);
+              if (ok) onToast(s.copiedAll);
             }}
             className="grid size-7.5 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
           >
-            <Copy className="size-3.5" />
+            {copiedAll ? <Check className="size-3.5 text-emerald-300" /> : <Copy className="size-3.5" />}
           </button>
           <button
             type="button"
@@ -224,7 +231,7 @@ export function TranscriptFeed({
       </div>
 
       {visible.map((turn, index) => (
-        <Turn key={`${index}-${turn.role}-${turn.content.length}`} turn={turn} />
+        <Turn key={`${index}-${turn.role}-${turn.content.length}`} turn={turn} onToast={onToast} />
       ))}
     </div>
   );

@@ -38,6 +38,48 @@ export function executionKind(command: string): ExecutionKind {
   return "binary";
 }
 
+/** How the MCP grid orders cards within the selected scope. */
+export type McpSortMode = "active" | "alpha" | "alphaDesc" | "official";
+
+/** Case-insensitive name order, with an id tie-break so ties never shuffle. */
+function compareMcpNames(left: McpServer, right: McpServer): number {
+  const byName = left.name.localeCompare(right.name, undefined, {
+    sensitivity: "base",
+  });
+  return byName !== 0 ? byName : left.id.localeCompare(right.id);
+}
+
+/**
+ * Order the grid. `active` floats every in-scope server above the rest (A–Z
+ * inside each band); `official` floats official servers first (A–Z inside).
+ */
+export function sortMcps(
+  servers: McpServer[],
+  mode: McpSortMode,
+  scope: string,
+): McpServer[] {
+  const ranked = [...servers];
+  switch (mode) {
+    case "alpha":
+      return ranked.sort(compareMcpNames);
+    case "alphaDesc":
+      return ranked.sort((left, right) => compareMcpNames(right, left));
+    case "official":
+      return ranked.sort((left, right) => {
+        const leftOfficial = left.official === true ? 0 : 1;
+        const rightOfficial = right.official === true ? 0 : 1;
+        return leftOfficial - rightOfficial || compareMcpNames(left, right);
+      });
+    case "active":
+    default:
+      return ranked.sort((left, right) => {
+        const leftActive = coversHarness(left, scope) ? 0 : 1;
+        const rightActive = coversHarness(right, scope) ? 0 : 1;
+        return leftActive - rightActive || compareMcpNames(left, right);
+      });
+  }
+}
+
 /** `global` or a harness that inherits the baseline on top of its own opt-ins. */
 export function coversHarness(server: McpServer, harnessId: string): boolean {
   if (harnessId === "global") return server.globalEnabled;
@@ -113,6 +155,17 @@ export function listMcpServers(): Promise<McpServer[]> {
 
 export function listMcpTargets(): Promise<McpTarget[]> {
   return invoke<McpTarget[]>("mcp_targets");
+}
+
+/** Enable or disable every server for one scope in a single atomic write. */
+export function batchSetMcpAll(
+  harnessId: string | null,
+  enabled: boolean,
+): Promise<void> {
+  return invoke<void>("batch_set_mcp_all", {
+    harnessId: harnessId === "global" ? null : harnessId,
+    enabled,
+  });
 }
 
 /** `harnessId` `null` (or `global`) edits the universal baseline. */

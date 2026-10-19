@@ -20,7 +20,6 @@ const SECTIONS = [
   { status: "open", titleKey: "colOpen" },
   { status: "in_progress", titleKey: "colInProgress" },
   { status: "completed", titleKey: "colCompleted" },
-  { status: "archived", titleKey: "colArchived" },
 ] as const;
 
 const STATUS_IDS = ["open", "in_progress", "completed", "archived"] as const;
@@ -40,9 +39,7 @@ export function IdeasListView({
 }: IdeasListViewProps) {
   const { t } = useI18n();
   const s = t.ideas;
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-    () => new Set(["archived"]),
-  );
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   if (!loading && ideas.length === 0) {

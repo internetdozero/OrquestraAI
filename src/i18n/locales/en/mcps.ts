@@ -7,6 +7,23 @@ export const mcps: TranslationSchema["mcps"] = {
   subtitle:
     "One catalog in ~/.orquestra/mcps.json compiled into each harness's own dialect. Global is the baseline; a harness can opt in on top of it.",
   active: "Active",
+  sortMcps: "Sort servers",
+  orderGrid: "Order the server grid",
+  sortOptions: {
+    active: "Active First",
+    alpha: "Alphabetical (A-Z)",
+    alphaDesc: "Alphabetical (Z-A)",
+    official: "Official First",
+  },
+  shownCount: (count: number) => `${count} shown`,
+  enableAll: "Enable all",
+  disableAll: "Disable all",
+  enableAllTitle: (label: string) => `Enable every server in ${label}`,
+  disableAllGlobal: "Disable every server in Global",
+  disableAllHarness: (label: string) => `Remove ${label} from every server`,
+  batchApplied: (enabled: boolean, scope: string) =>
+    enabled ? `Every server enabled in ${scope}` : `Every server disabled in ${scope}`,
+  batchFailed: (detail: string) => `Batch update failed: ${detail}`,
   addServer: "Add MCP Server",
   recompile: "Recompile every harness config from the catalog",
   reading: "Reading the catalog…",

@@ -152,6 +152,34 @@ pub fn set_mcp_state(id: &str, harness_id: Option<&str>, enabled: bool) -> Resul
     deploy_current(&paths)
 }
 
+/// Enable or disable every server for one scope in a single atomic write.
+/// `None` (or `global`) flips `global_enabled` on all servers; a harness id
+/// adds/removes that harness from every server's `enabled_harnesses` without
+/// touching `global_enabled` (so Global inheritance stays intact).
+pub fn batch_set_mcp_all(harness_id: Option<&str>, enabled: bool) -> Result<(), String> {
+    let paths = OrquestraPaths::resolve()?;
+    let scope = harness_id.unwrap_or(GLOBAL_SCOPE);
+
+    if scope != GLOBAL_SCOPE && !harness::is_mcp_target(scope) {
+        return Err(format!("{scope} has no MCP adapter yet"));
+    }
+
+    let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    for server in catalog.mcps.values_mut() {
+        if scope == GLOBAL_SCOPE {
+            server.global_enabled = enabled;
+        } else {
+            server.enabled_harnesses.retain(|harness| harness != scope);
+            if enabled {
+                server.enabled_harnesses.push(scope.to_string());
+            }
+        }
+    }
+
+    save_catalog(&paths, &catalog)?;
+    deploy_current(&paths)
+}
+
 /// Reconcile the Global baseline to exactly `enabled` servers. Per-harness
 /// opt-ins are operator territory: a preset sets `global_enabled` but never
 /// clears `enabled_harnesses`, so a harness that opted into a server keeps

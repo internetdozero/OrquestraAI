@@ -4,6 +4,7 @@
     "apply_app_update",
     "apply_preset",
     "batch_set_all",
+    "batch_set_mcp_all",
     "core_status",
     "create_idea",
     "delete_idea",

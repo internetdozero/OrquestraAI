@@ -60,7 +60,7 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
       role="button"
       aria-label={idea.title}
       className={cn(
-        "group flex cursor-grab flex-col gap-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 transition hover:border-white/[0.12] active:cursor-grabbing",
+        "group flex cursor-grab flex-col gap-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 transition hover:border-white/[0.12] active:cursor-grabbing transform-gpu [backface-visibility:hidden] [contain:content]",
         compact ? "p-2" : "p-3",
       )}
     >
@@ -73,7 +73,7 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
         >
           {idea.title}
         </h4>
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+        <div className="flex shrink-0 items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-150 delay-0 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 focus-within:opacity-100 focus-within:pointer-events-auto">
           <GripVertical className="size-3 text-zinc-600" aria-hidden="true" />
           <button
             type="button"

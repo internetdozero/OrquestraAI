@@ -1,4 +1,4 @@
-import { FolderGit2, Gauge, Search } from "lucide-react";
+import { Archive, FolderGit2, Gauge, Search } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { CustomDropdown } from "../CustomDropdown";
 import { cn } from "../../lib/utils";
@@ -13,6 +13,9 @@ interface IdeasToolbarProps {
   onCategoryChange: (value: string) => void;
   selectedPriority: string;
   onPriorityChange: (value: string) => void;
+  /** Archived ideas live in a dedicated modal; the badge counts them. */
+  archivedCount?: number;
+  onOpenArchived: () => void;
 }
 
 const CATEGORY_IDS = ["feature", "architecture", "bug", "ux", "idea"] as const;
@@ -32,6 +35,8 @@ export function IdeasToolbar({
   onCategoryChange,
   selectedPriority,
   onPriorityChange,
+  archivedCount = 0,
+  onOpenArchived,
   }: IdeasToolbarProps) {
   const { t } = useI18n();
   const s = t.ideas;
@@ -76,6 +81,20 @@ export function IdeasToolbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenArchived}
+          title={s.archivedModalTitle}
+          aria-label={s.archivedModalTitle}
+          className="relative grid size-8.5 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+        >
+          <Archive className="size-4" />
+          {archivedCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/20 font-mono text-[9px] font-semibold text-amber-300">
+              {archivedCount}
+            </span>
+          )}
+        </button>
         <CustomDropdown
           value={selectedProject}
           ariaLabel={s.projectAria}

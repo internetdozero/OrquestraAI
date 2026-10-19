@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Check,
   CheckCircle2,
   ClipboardCopy,
   Download,
@@ -10,6 +11,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useAppUpdater } from "../../hooks/useAppUpdater";
+import { useClipboard } from "../../hooks/useClipboard";
 import { useI18n } from "../../hooks/useI18n";
 import { HARNESSES } from "../../lib/harnesses";
 import type { CoreStatus } from "../../lib/tauri";
@@ -43,6 +45,7 @@ export function AboutSettingsTab({
   const a = t.settings.about;
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<ReleaseCheckResult | null>(null);
+  const { copied: copiedDiag, copy: copyDiagText } = useClipboard(1500);
   const version = status?.version ?? "0.1.0";
   const { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart } =
     useAppUpdater({ onToast, onError });
@@ -69,8 +72,8 @@ export function AboutSettingsTab({
       `- date: ${new Date().toISOString()}`,
     ];
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
-      onToast(a.copied);
+      const ok = await copyDiagText(lines.join("\n"));
+      if (ok) onToast(a.copied);
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
       onError(a.copyFailed(detail));
@@ -115,7 +118,7 @@ export function AboutSettingsTab({
         onClick={() => void copyDiagnostics()}
         className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-zinc-200 transition hover:border-white/20"
       >
-        <ClipboardCopy className="size-3.5 text-emerald-400" />
+        {copiedDiag ? <Check className="size-3.5 text-emerald-400" /> : <ClipboardCopy className="size-3.5 text-emerald-400" />}
         {a.copyDiag}
       </button>
 

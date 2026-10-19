@@ -286,6 +286,8 @@ export default function App() {
               onToast={showToast}
               onActiveCountChange={setMcpCount}
               reloadToken={reloadToken}
+              query={query}
+              onQueryChange={setQuery}
             />
           ) : (
             <SkillsView

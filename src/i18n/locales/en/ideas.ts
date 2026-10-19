@@ -41,6 +41,11 @@ export const ideas: TranslationSchema["ideas"] = {
   colInProgress: "In Progress",
   colCompleted: "Completed",
   colArchived: "Archived",
+  archivedModalTitle: "Archived Ideas",
+  archivedEmpty: "No archived ideas",
+  archivedEmptyHint: "Completed ideas you archive will wait here.",
+  restoreIdea: "Restore idea",
+  restoredToast: "Idea restored to Backlog",
   moveTo: (label: string) => `→ ${label}`,
   nextStatus: {
     open: "Start Progress",

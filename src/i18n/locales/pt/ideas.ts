@@ -39,6 +39,11 @@ export const ideas = {
   colInProgress: "Em Progresso",
   colCompleted: "Concluídas",
   colArchived: "Arquivadas",
+  archivedModalTitle: "Ideias Arquivadas",
+  archivedEmpty: "Nenhuma ideia arquivada",
+  archivedEmptyHint: "As ideias concluídas que você arquivar aguardam aqui.",
+  restoreIdea: "Restaurar ideia",
+  restoredToast: "Ideia restaurada para o Backlog",
   moveTo: (label: string) => `→ ${label}`,
   nextStatus: {
     open: "Em Progresso",

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { FileText, History, Orbit, Plug, RefreshCw, Search } from "lucide-react";
+import { FileText, History, Orbit, RefreshCw, Search } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import type { ActiveView } from "../lib/views";
 import { cn } from "../lib/utils";
@@ -26,10 +26,10 @@ export function Header({
 }: HeaderProps) {
   const { t } = useI18n();
   const searchRef = useRef<HTMLInputElement>(null);
-  const showSkills = mode === "skills";
+  const showSearch = mode === "skills" || mode === "mcps";
 
   useEffect(() => {
-    if (!showSkills) return;
+    if (!showSearch) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       const isShortcut = (event.metaKey || event.ctrlKey) && event.key === "k";
@@ -42,7 +42,7 @@ export function Header({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSkills]);
+  }, [showSearch]);
 
   return (
     <header className="relative z-20 shrink-0 border-b border-white/5 bg-[#0b0b0e]/85 backdrop-blur-xl">
@@ -68,7 +68,7 @@ export function Header({
           </div>
         </div>
 
-        {showSkills ? (
+        {showSearch ? (
           <>
             {/* Search */}
             <div className="relative mx-auto w-full max-w-md flex-1">
@@ -114,14 +114,6 @@ export function Header({
                 <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
               </button>
             </div>
-          </>
-        ) : mode === "mcps" ? (
-          <>
-            <div className="flex-1" />
-            <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
-              <Plug className="size-3 text-emerald-400/80" />
-              {t.mcps.headerChip}
-            </span>
           </>
         ) : mode === "sessions" ? (
           <>

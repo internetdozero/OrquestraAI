@@ -79,7 +79,7 @@ export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: 
           onClick={onInspect}
           title={s.inspectTitle}
           aria-label={s.inspectTitle}
-          className="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.02] text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:text-emerald-200 focus-visible:opacity-100"
+          className="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.02] text-zinc-500 opacity-0 pointer-events-none transition-opacity duration-150 delay-0 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 hover:text-emerald-200 focus-visible:opacity-100 focus-visible:pointer-events-auto"
         >
           <Eye className="size-3.5" />
         </button>

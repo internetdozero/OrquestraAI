@@ -175,6 +175,12 @@ fn set_mcp_state(
     mcp::set_mcp_state(&id, harness_id.as_deref(), enabled)
 }
 
+/// Enable or disable every MCP server for one scope in a single atomic write.
+#[tauri::command]
+fn batch_set_mcp_all(harness_id: Option<String>, enabled: bool) -> Result<(), String> {
+    mcp::batch_set_mcp_all(harness_id.as_deref(), enabled)
+}
+
 /// Create or replace one MCP server, then re-compile every harness config.
 #[tauri::command]
 fn save_mcp(mcp_server: McpServer) -> Result<(), String> {
@@ -360,6 +366,7 @@ pub fn run() {
             reveal_mcp_secret,
             mcp_targets,
             set_mcp_state,
+            batch_set_mcp_all,
             save_mcp,
             delete_mcp,
             deploy_mcps,

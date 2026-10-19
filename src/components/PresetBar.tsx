@@ -77,7 +77,7 @@ function PresetPill({
         onClick={() => onEdit(preset)}
         title={t.presets.editTitle(copy.name)}
         aria-label={t.presets.editTitle(copy.name)}
-        className="grid h-5 w-0 place-items-center overflow-hidden rounded text-zinc-500 opacity-0 transition-[width,opacity] group-hover:mr-0.5 group-hover:w-5 group-hover:opacity-100 focus-visible:mr-0.5 focus-visible:w-5 focus-visible:opacity-100 hover:text-emerald-300"
+        className="mr-0.5 grid h-5 w-5 place-items-center rounded text-zinc-500 opacity-0 pointer-events-none transition-opacity duration-150 delay-0 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 hover:text-emerald-300 focus-visible:opacity-100 focus-visible:pointer-events-auto"
       >
         <Pencil className="size-3" />
       </button>
@@ -88,7 +88,7 @@ function PresetPill({
           onClick={() => onDelete(preset)}
           title={t.presets.deleteTitle(copy.name)}
           aria-label={t.presets.deleteTitle(copy.name)}
-          className="grid h-5 w-0 place-items-center overflow-hidden rounded text-zinc-600 opacity-0 transition-[width,opacity] group-hover:mr-1 group-hover:w-5 group-hover:opacity-100 focus-visible:mr-1 focus-visible:w-5 focus-visible:opacity-100 hover:text-rose-300"
+          className="mr-1 grid h-5 w-5 place-items-center rounded text-zinc-600 opacity-0 pointer-events-none transition-opacity duration-150 delay-0 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:delay-75 hover:text-rose-300 focus-visible:opacity-100 focus-visible:pointer-events-auto"
         >
           <X className="size-3" />
         </button>

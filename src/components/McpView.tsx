@@ -10,14 +10,13 @@ import {
 } from "lucide-react";
 import {
   coversHarness,
-  deleteMcp,
-  deployMcps,
-  saveMcp,
-  setMcpState,
+  sortMcps,
   type McpServer,
+  type McpSortMode,
 } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
 import { useMcpCatalog } from "../hooks/useMcpCatalog";
+import { useMcpMutations } from "../hooks/useMcpMutations";
 import { useMcpStoreActions } from "../hooks/useMcpStoreActions";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { sumMcpTokens } from "../lib/tokens";
@@ -28,6 +27,7 @@ import { StatePanel } from "./ui";
 import { McpDetailDrawer } from "./McpDetailDrawer";
 import { McpFormModal } from "./McpFormModal";
 import { McpScopeSelector } from "./McpScopeSelector";
+import { McpToolbar } from "./McpToolbar";
 import { VirtualCardGrid } from "./VirtualCardGrid";
 import { OfficialStore } from "./OfficialStore";
 import { StoreTabs } from "./StoreTabs";
@@ -39,12 +39,9 @@ interface McpViewProps {
   onActiveCountChange?: (count: number) => void;
   /** Bumped when something outside the view (a preset) changed the catalog. */
   reloadToken?: number;
-}
-
-function toMessage(cause: unknown, fallback: string): string {
-  if (typeof cause === "string") return cause;
-  if (cause instanceof Error) return cause.message;
-  return fallback;
+  /** Live search text owned by the header input. */
+  query?: string;
+  onQueryChange?: (query: string) => void;
 }
 
 export function McpView({
@@ -52,17 +49,16 @@ export function McpView({
   onToast,
   onActiveCountChange,
   reloadToken = 0,
+  query = "",
+  onQueryChange,
 }: McpViewProps) {
   const { t } = useI18n();
   const { servers, targets, loading, error, setError, load, replaceServers } =
     useMcpCatalog(isTauri, reloadToken);
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
-  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<McpServer | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [deploying, setDeploying] = useState(false);
+  const [sortMode, setSortMode] = useState<McpSortMode>("active");
   // Server whose execution details are open in the inspector drawer.
   const [inspecting, setInspecting] = useState<McpServer | null>(null);
   const [showStore, setShowStore] = useState(false);
@@ -90,102 +86,45 @@ export function McpView({
       ? "Global"
       : (targets.find((target) => target.id === scope)?.label ?? scope);
 
-  const setPending = (id: string, pending: boolean) =>
-    setBusyIds((previous) => {
-      const next = new Set(previous);
-      if (pending) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-
-  const toggle = async (server: McpServer) => {
-    const harnessId = scope === GLOBAL_SCOPE.id ? null : scope;
-    const enabled = !coversHarness(server, scope);
-
-    // Optimistic: the switch moves now, the catalog catches up. The Rust side
-    // re-compiles every harness config before it resolves.
-    replaceServers((previous) =>
-      previous.map((item) => {
-        if (item.id !== server.id) return item;
-        if (harnessId === null) return { ...item, globalEnabled: enabled };
-        return {
-          ...item,
-          enabledHarnesses: enabled
-            ? [...new Set([...item.enabledHarnesses, harnessId])]
-            : item.enabledHarnesses.filter((id) => id !== harnessId),
-        };
-      }),
+  const filteredServers = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return servers;
+    return servers.filter((server) =>
+      [server.name, server.id, server.description, server.command].some(
+        (field) => field?.toLowerCase().includes(needle),
+      ),
     );
-    setPending(server.id, true);
-    setError(null);
+  }, [query, servers]);
 
-    try {
-      await setMcpState(server.id, harnessId, enabled);
-      onToast(
-        t.mcps.toggled(
-          server.name,
-          enabled ? t.mcps.enabledVerb : t.mcps.disabledVerb,
-          scopeLabel,
-        ),
-      );
-    } catch (cause) {
-      setError(toMessage(cause, t.common.unexpected));
-      await load();
-    } finally {
-      setPending(server.id, false);
-    }
-  };
+  const visibleServers = useMemo(
+    () => sortMcps(filteredServers, sortMode, scope),
+    [filteredServers, sortMode, scope],
+  );
 
-  const remove = async (server: McpServer) => {
-    setPending(server.id, true);
-    setError(null);
-
-    try {
-      await deleteMcp(server.id);
-      replaceServers((previous) => previous.filter((item) => item.id !== server.id));
-      onToast(t.mcps.deletedFromConfigs(server.name));
-    } catch (cause) {
-      setError(t.mcps.deleteFailed(server.name, toMessage(cause, t.common.unexpected)));
-    } finally {
-      setPending(server.id, false);
-    }
-  };
-
-  const save = async (server: McpServer) => {
-    setSaving(true);
-    setFormError(null);
-
-    try {
-      await saveMcp(server);
+  const {
+    busyIds,
+    saving,
+    formError,
+    setFormError,
+    deploying,
+    batchPending,
+    toggle,
+    applyAll,
+    remove,
+    save,
+    recompile,
+  } = useMcpMutations({
+    scope,
+    scopeLabel,
+    replaceServers,
+    load,
+    setError,
+    onToast,
+    onSaved: () => {
       setFormOpen(false);
       setEditing(null);
-      onToast(t.mcps.savedDeployed(server.name));
-      await load();
-    } catch (cause) {
-      setFormError(toMessage(cause, t.common.unexpected));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const recompile = async () => {
-    setDeploying(true);
-    setError(null);
-
-    try {
-      const changed = await deployMcps();
-      onToast(
-        changed.length === 0
-          ? t.mcps.alreadyMatches
-          : t.mcps.recompiled(changed.length),
-      );
-      await load();
-    } catch (cause) {
-      setError(t.mcps.recompileFailed(toMessage(cause, t.common.unexpected)));
-    } finally {
-      setDeploying(false);
-    }
-  };
+    },
+  });
 
   const { statusOf: storeStatusOf, actionFor: storeActionFor } =
     useMcpStoreActions(servers, {
@@ -237,7 +176,7 @@ export function McpView({
             </div>
             <button
               type="button"
-              onClick={recompile}
+              onClick={() => void recompile()}
               disabled={deploying || loading}
               title={t.mcps.recompile}
               className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 disabled:cursor-wait disabled:opacity-60"
@@ -260,7 +199,26 @@ export function McpView({
         </div>
 
         {/* The toggle writes to whichever scope is chosen here. */}
-        <McpScopeSelector scope={scope} targets={targets} onSelect={setScope} />
+        <McpScopeSelector
+          scope={scope}
+          targets={targets}
+          onSelect={(next) => {
+            setScope(next);
+            onQueryChange?.("");
+          }}
+        />
+
+        <McpToolbar
+          scope={scope}
+          scopeLabel={scopeLabel}
+          visibleCount={visibleServers.length}
+          totalCount={servers.length}
+          sortMode={sortMode}
+          onSortModeChange={setSortMode}
+          canBatch={isTauri && servers.length > 0 && !batchPending && !loading}
+          batchPending={batchPending}
+          onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
+        />
 
           <StoreTabs showStore={showStore} onChange={setShowStore} />
 
@@ -286,7 +244,7 @@ export function McpView({
             <Loader2 className="size-4 animate-spin" />
             {t.mcps.reading}
           </div>
-        ) : servers.length === 0 ? (
+        ) : visibleServers.length === 0 ? (
           <McpEmptyState
             onExploreStore={() => setShowStore(true)}
             onAddManual={() => {
@@ -297,7 +255,7 @@ export function McpView({
           />
         ) : (
           <VirtualCardGrid
-            items={servers}
+            items={visibleServers}
             keyOf={(server) => server.id}
             className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
             renderItem={(server) => (
@@ -330,7 +288,7 @@ export function McpView({
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[10.5px] text-zinc-600">
           <Waypoints className="size-3 shrink-0" />
           <span>
-            {t.mcps.targets}:{" "}
+            {t.mcps.targets}{" "}
             {targets.length === 0
               ? t.mcps.noAdapters
               : targets

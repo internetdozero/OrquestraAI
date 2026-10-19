@@ -5,6 +5,23 @@ export const mcps = {
   subtitle:
     "Um catálogo em ~/.orquestra/mcps.json, compilado no dialeto de cada harness. O Global é a linha de base; um harness pode aderir por cima dele.",
   active: "Ativos",
+  sortMcps: "Ordenar servidores",
+  orderGrid: "Ordenar a grade de servidores",
+  sortOptions: {
+    active: "Ativos Primeiro",
+    alpha: "Ordem Alfabética (A-Z)",
+    alphaDesc: "Ordem Alfabética (Z-A)",
+    official: "Oficiais Primeiro",
+  },
+  shownCount: (count: number) => `${count} exibidos`,
+  enableAll: "Ativar todos",
+  disableAll: "Desativar todos",
+  enableAllTitle: (label: string) => `Ativar todos os servidores em ${label}`,
+  disableAllGlobal: "Desativar todos os servidores no Global",
+  disableAllHarness: (label: string) => `Remover ${label} de todos os servidores`,
+  batchApplied: (enabled: boolean, scope: string) =>
+    enabled ? `Todos os servidores ativados em ${scope}` : `Todos os servidores desativados em ${scope}`,
+  batchFailed: (detail: string) => `Falha na atualização em lote: ${detail}`,
   addServer: "Adicionar servidor MCP",
   recompile: "Recompilar os arquivos de configuração de todos os harnesses",
   reading: "Lendo o catálogo…",

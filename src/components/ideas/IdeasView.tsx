@@ -4,6 +4,7 @@ import { useIdeas } from "../../hooks/useIdeas";
 import { useI18n } from "../../hooks/useI18n";
 import type { IdeaItem } from "../../lib/ideas";
 import { ErrorBanner, StatePanel } from "../ui";
+import { ArchivedIdeasModal } from "./ArchivedIdeasModal";
 import { BlackboardFeed } from "./BlackboardFeed";
 import { IdeaDetailModal } from "./IdeaDetailModal";
 import { IdeaFormModal } from "./IdeaFormModal";
@@ -32,6 +33,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
   const [editing, setEditing] = useState<IdeaItem | null>(null);
   const [detail, setDetail] = useState<IdeaItem | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
@@ -55,6 +57,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
   const confirmDelete = (idea: IdeaItem) => {
     if (window.confirm(s.deleteConfirm(idea.title))) void state.remove(idea.id);
   };
+  const archivedIdeas = state.ideas.filter((idea) => idea.status === "archived");
 
   if (!isTauri) {
     return (
@@ -91,6 +94,8 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
             onCategoryChange={state.setSelectedCategory}
             selectedPriority={state.selectedPriority}
             onPriorityChange={state.setSelectedPriority}
+            archivedCount={archivedIdeas.length}
+            onOpenArchived={() => setArchivedOpen(true)}
           />
 
           {mode === "board" ? (
@@ -116,6 +121,19 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
         </>
       ) : (
         <BlackboardFeed notes={state.notes} loading={state.loading} onMarkRead={(id) => void state.markRead(id)} />
+      )}
+
+      {archivedOpen && (
+        <ArchivedIdeasModal
+          ideas={archivedIdeas}
+          onClose={() => setArchivedOpen(false)}
+          onOpen={(idea) => {
+            setArchivedOpen(false);
+            setDetail(idea);
+          }}
+          onRestore={(id) => void state.changeStatus(id, "open")}
+          onDelete={confirmDelete}
+        />
       )}
 
       {detail && (
