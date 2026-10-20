@@ -64,6 +64,12 @@ impl SessionAdapter for Antigravity {
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
+        // `brain/<id>` and `conversations/<id>.db` are path joins. A directory
+        // symlink named `escape` plus id `escape/secret` deletes the outside
+        // child; `read_transcript` already refuses that id.
+        if !single_segment(session_id) {
+            return Ok(0);
+        }
         let mut bytes = 0;
 
         for store in self.stores() {
@@ -254,6 +260,10 @@ fn artifact_size(store: &Path, id: &str) -> u64 {
         0
     };
     folder + database
+}
+
+fn single_segment(id: &str) -> bool {
+    !id.is_empty() && !id.contains('/') && !id.contains('\\') && id != "." && id != ".."
 }
 
 fn real_dir(path: &Path) -> bool {

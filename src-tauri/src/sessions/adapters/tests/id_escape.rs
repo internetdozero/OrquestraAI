@@ -195,3 +195,25 @@ fn copilot_symlink_lock_is_not_an_active_session() {
         "a symlinked lock directory was followed"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn antigravity_delete_does_not_follow_a_brain_child_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-ag-delete");
+    fs::create_dir_all(outside.join("secret")).unwrap();
+    let secret = outside.join("secret/keep.txt");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let brain = home.0.join(".gemini/antigravity/brain");
+    fs::create_dir_all(&brain).unwrap();
+    std::os::unix::fs::symlink(&outside, brain.join("escape")).unwrap();
+
+    adapter(&home.0, "antigravity")
+        .delete_session("escape/secret")
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(&secret).unwrap(),
+        "ssh-private\n",
+        "delete_session followed brain/escape into the outside tree"
+    );
+}
