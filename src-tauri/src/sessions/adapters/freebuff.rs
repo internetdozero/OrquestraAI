@@ -185,16 +185,21 @@ fn thread_metadata(worktree: &Path) -> Option<Value> {
     };
 
     for entry in entries.flatten() {
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
         let path = entry.path();
 
-        if path.is_file() && path.to_string_lossy().ends_with(".thread.json") {
+        // `is_file` / `is_dir` follow symlinks. A nested link would load a
+        // `.thread.json` from outside the worktree.
+        if kind.is_file() && path.to_string_lossy().ends_with(".thread.json") {
             if let Some(meta) = utils::read_json(&path) {
                 return Some(meta);
             }
             continue;
         }
 
-        if path.is_dir() {
+        if kind.is_dir() {
             if let Some(meta) = thread_metadata(&path) {
                 return Some(meta);
             }
@@ -359,6 +364,37 @@ mod tests {
         assert!(adapter.read_transcript("linked/demo").is_empty());
         adapter.delete_session("linked/demo").unwrap();
         assert_eq!(fs::read_to_string(&secret).unwrap(), original);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn worktree_metadata_does_not_follow_a_directory_symlink() {
+        let root = scratch();
+        let home = root.join("home");
+        let outside = root.join("outside-meta");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(
+            outside.join("proj.thread.json"),
+            "{\"title\":\"ssh-private\",\"cwd\":\"/secret\"}",
+        )
+        .unwrap();
+        let worktree = home.join(".freebuff/worktrees/realwt");
+        fs::create_dir_all(&worktree).unwrap();
+        std::os::unix::fs::symlink(&outside, worktree.join("nested")).unwrap();
+
+        let sessions = Freebuff::new(&home).list_sessions().unwrap();
+        assert!(
+            sessions.iter().all(|session| {
+                !session.title.contains("ssh-private")
+                    && session.project_path.as_deref() != Some("/secret")
+            }),
+            "metadata walk followed the symlink: {sessions:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(outside.join("proj.thread.json")).unwrap(),
+            "{\"title\":\"ssh-private\",\"cwd\":\"/secret\"}"
+        );
         let _ = fs::remove_dir_all(&root);
     }
 }
