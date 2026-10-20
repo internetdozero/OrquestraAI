@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 mod apply;
 mod builtins;
+mod naming;
 mod scopes;
 mod store;
 #[cfg(test)]

@@ -325,4 +325,51 @@ mod tests {
 
         fs::remove_dir_all(&root).unwrap();
     }
+
+    #[test]
+    fn preset_store_does_not_follow_a_presets_symlink() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-presets-link-{}-{unique}",
+            std::process::id()
+        ));
+        let store = root.join("store");
+        fs::create_dir_all(&store).unwrap();
+        let outside = root.join("outside.json");
+        let original = "{\n  \"custom\": [{\n    \"id\": \"ssh-private\",\n    \"name\": \"Stolen\"\n  }],\n  \"active\": \"ssh-private\"\n}\n";
+        fs::write(&outside, original).unwrap();
+        let link = store.join("presets.json");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+        let loaded = load_from(&store);
+        assert!(
+            loaded.is_err(),
+            "preset store must not read through the symlink: {loaded:?}"
+        );
+
+        let saved = save_to(
+            &store,
+            &PresetFile {
+                custom: Vec::new(),
+                active: Some("full-power".to_string()),
+                overrides: Vec::new(),
+            },
+        );
+        assert!(
+            saved.is_err(),
+            "preset store must not replace the symlink: {saved:?}"
+        );
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the presets symlink must stay"
+        );
+        assert_eq!(fs::read_to_string(&outside).unwrap(), original);
+        let _ = fs::remove_dir_all(&root);
+    }
 }
