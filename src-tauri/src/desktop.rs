@@ -163,12 +163,22 @@ pub fn ensure_desktop_integration() {
         return;
     };
     let data_dir = home.join(".local/share");
+    install_linux_assets(&data_dir);
+    refresh_linux_desktop(&data_dir);
+}
+
+/// Write the launcher and icons under `data_dir` (`~/.local/share`).
+#[cfg(target_os = "linux")]
+fn install_linux_assets(data_dir: &std::path::Path) {
     let apps_dir = data_dir.join("applications");
     let icons_base = data_dir.join("icons/hicolor");
 
     let _ = std::fs::create_dir_all(&apps_dir);
     for name in ["orquestra.desktop", "orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
         let dest = apps_dir.join(name);
+        if is_symlink(&dest) {
+            continue;
+        }
         let needs_write = match std::fs::read_to_string(&dest) {
             Ok(existing) => existing != DESKTOP_ENTRY,
             Err(_) => true,
@@ -190,6 +200,9 @@ pub fn ensure_desktop_integration() {
         let _ = std::fs::create_dir_all(&target_dir);
         for icon_name in ["orquestra.png", "orquestra-ai.png"] {
             let icon_file = target_dir.join(icon_name);
+            if is_symlink(&icon_file) {
+                continue;
+            }
             let needs_write = match std::fs::read(&icon_file) {
                 Ok(existing) => existing != *bytes,
                 Err(_) => true,
@@ -207,6 +220,9 @@ pub fn ensure_desktop_integration() {
 
     for root_name in ["icons/orquestra.png", "icons/orquestra-ai.png"] {
         let root_icon = data_dir.join(root_name);
+        if is_symlink(&root_icon) {
+            continue;
+        }
         let needs_root_write = match std::fs::read(&root_icon) {
             Ok(existing) => existing != ICON_512,
             Err(_) => true,
@@ -215,8 +231,20 @@ pub fn ensure_desktop_integration() {
             let _ = std::fs::write(&root_icon, ICON_512);
         }
     }
+}
 
-    // Invalidate and refresh desktop environment icon cache so docks update immediately
+#[cfg(target_os = "linux")]
+fn is_symlink(path: &std::path::Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .ok()
+        .is_some_and(|metadata| metadata.file_type().is_symlink())
+}
+
+/// Ask the desktop environment to pick up new launchers and icons.
+#[cfg(target_os = "linux")]
+fn refresh_linux_desktop(data_dir: &std::path::Path) {
+    let icons_base = data_dir.join("icons/hicolor");
+    let apps_dir = data_dir.join("applications");
     let _ = std::process::Command::new("gtk-update-icon-cache")
         .args(["-f", "-t", &icons_base.to_string_lossy()])
         .output();
@@ -252,5 +280,39 @@ mod tests {
         assert!(browser_launch("linux", "file:///etc/passwd").is_err());
         assert!(browser_launch("windows", "https://example.com/\ncalc").is_err());
         assert!(browser_launch("haiku", "https://example.com").is_err());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn desktop_install_does_not_write_through_a_symlink() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-desktop-link-{}-{unique}",
+            std::process::id()
+        ));
+        let data = root.join("share");
+        std::fs::create_dir_all(data.join("applications")).unwrap();
+        let outside = root.join("outside.txt");
+        let original = "ssh-private\n";
+        std::fs::write(&outside, original).unwrap();
+        let link = data.join("applications/orquestra.desktop");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+        super::install_linux_assets(&data);
+
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the desktop entry symlink must stay"
+        );
+        assert_eq!(std::fs::read_to_string(&outside).unwrap(), original);
+        let regular = std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
+        assert!(regular.contains("Name=OrquestraAI"));
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
