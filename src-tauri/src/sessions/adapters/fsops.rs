@@ -213,7 +213,9 @@ pub fn remove_json_key(root: &Path, path: &Path, key: &str) -> Result<bool, Stri
 /// Open a harness database for writing, waiting a bounded time for a harness
 /// that is mid-write instead of failing immediately or hanging forever.
 pub fn open_writable(path: &Path) -> Result<Connection, String> {
-    if !path.is_file() {
+    // `is_file` follows symlinks. A store path that points at another database
+    // would take writes (DELETE, VACUUM) outside the harness.
+    if utils::regular_file_len(path).is_none() {
         return Err(format!("{} is missing", path.display()));
     }
 
@@ -265,7 +267,7 @@ pub fn enable_cascade(connection: &Connection) -> Result<(), String> {
 /// A locked database is reported as an error rather than retried forever: the
 /// rows are already gone, and the space can be reclaimed on the next run.
 pub fn vacuum(path: &Path) -> Result<(), String> {
-    if !path.is_file() {
+    if utils::regular_file_len(path).is_none() {
         return Ok(());
     }
 

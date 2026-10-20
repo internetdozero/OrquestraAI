@@ -328,3 +328,33 @@ fn claude_prefers_history_titles_and_transcript_cwd() {
     assert_eq!(sessions[0].updated_at, "2026-09-20T23:46:04Z");
 }
 
+#[cfg(unix)]
+#[test]
+fn sqlite_open_does_not_follow_a_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside.sqlite");
+    let real = Connection::open(&outside).unwrap();
+    real.execute_batch("CREATE TABLE t(id INTEGER); INSERT INTO t VALUES (1);")
+        .unwrap();
+    drop(real);
+    let link = home.0.join("state.vscdb");
+    std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+    assert!(super::fsops::open_writable(&link).is_err());
+    assert!(super::utils::open_readonly(&link).is_err());
+    assert!(super::fsops::vacuum(&link).is_ok());
+
+    let left: i64 = Connection::open(&outside)
+        .unwrap()
+        .query_row("SELECT id FROM t", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(left, 1);
+
+    let owned = home.0.join("owned.sqlite");
+    Connection::open(&owned)
+        .unwrap()
+        .execute_batch("CREATE TABLE t(id INTEGER);")
+        .unwrap();
+    assert!(super::fsops::open_writable(&owned).is_ok());
+}
+

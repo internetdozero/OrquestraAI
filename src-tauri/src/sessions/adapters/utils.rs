@@ -273,7 +273,9 @@ pub fn message_text(value: &Value) -> Option<String> {
 /// The URI flag plus `query_only` means a listing can run while the harness
 /// holds the database open; SQLite refuses any write this connection attempts.
 pub fn open_readonly(path: &Path) -> Result<Connection, String> {
-    if !path.is_file() {
+    // `is_file` follows symlinks. A store path that points at another database
+    // would list rows from outside the harness.
+    if regular_file_len(path).is_none() {
         return Err(format!("{} is missing", path.display()));
     }
 
