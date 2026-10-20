@@ -9,8 +9,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::status::{
-    is_link, is_linked_to, parent_is_dir, path_present, skill_folders,
-    statuses_at, PRIMARY_WALK, SECONDARY_WALK, Walk,
+    ancestor_is_symlink, is_link, is_linked_to, parent_is_dir, path_present, skill_folders,
+    statuses_at, Walk, PRIMARY_WALK, SECONDARY_WALK,
 };
 use super::BridgeReport;
 use crate::harness::{self, HarnessSpec, SecondaryAction};
@@ -18,13 +18,13 @@ use crate::paths::{copy_dir_all, OrquestraPaths};
 use crate::skills;
 
 mod fuse_io;
+pub(crate) use fuse_io::timestamp_label;
 use fuse_io::{
     backup_move, backup_slot, create_dir_all, ensure_config, ensure_symlink, link_instructions,
     move_entry, quarantine_dir,
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(super) use fuse_io::{format_timestamp, merge_skills_path};
-pub(crate) use fuse_io::timestamp_label;
 
 const BACKUP_PREFIX: &str = "pre-fusion";
 
@@ -112,15 +112,33 @@ fn fuse_harness(
 
     for rel in spec.skills_links {
         let source = home.join(rel);
-        link_skills(&source, &projection, &paths.vault, backup, spec, rel, adopted, warnings)?;
+        if ancestor_is_symlink(home, &source) {
+            continue;
+        }
+        link_skills(
+            &source,
+            &projection,
+            &paths.vault,
+            backup,
+            spec,
+            rel,
+            adopted,
+            warnings,
+        )?;
     }
 
     if let Some(rel) = spec.instructions_rel {
-        link_instructions(&home.join(rel), paths, backup, spec, rel, imported)?;
+        let source = home.join(rel);
+        if !ancestor_is_symlink(home, &source) {
+            link_instructions(&source, paths, backup, spec, rel, imported)?;
+        }
     }
 
     if let Some(rel) = spec.config_rel {
-        ensure_config(&home.join(rel), &projection, backup, spec, rel)?;
+        let source = home.join(rel);
+        if !ancestor_is_symlink(home, &source) {
+            ensure_config(&source, &projection, backup, spec, rel)?;
+        }
     }
 
     fuse_secondary(home, paths, backup, spec, adopted, quarantined, warnings)?;
@@ -199,7 +217,11 @@ fn import_visible_skills(source: &Path, vault: &Path, projection: &Path) -> Resu
         }
 
         std::os::unix::fs::symlink(&vault_item, &link).map_err(|error| {
-            format!("failed to project {} into {}: {error}", name, projection.display())
+            format!(
+                "failed to project {} into {}: {error}",
+                name,
+                projection.display()
+            )
         })?;
     }
 
@@ -255,6 +277,9 @@ fn fuse_secondary(
     for entry in spec.secondary {
         let source = home.join(entry.rel);
         let slot = backup_slot(backup, spec.id, entry.rel);
+        if ancestor_is_symlink(home, &source) {
+            continue;
+        }
 
         if !path_present(&source) {
             // Nothing to archive. A projectable folder still gains the link
@@ -273,12 +298,7 @@ fn fuse_secondary(
                 }
 
                 if source.is_dir() && !is_link(&source) {
-                    adopt_missing_skills(
-                        &source,
-                        &paths.vault,
-                        adopted,
-                        SECONDARY_WALK,
-                    )?;
+                    adopt_missing_skills(&source, &paths.vault, adopted, SECONDARY_WALK)?;
                 }
 
                 backup_move(&source, &slot)?;
@@ -293,12 +313,7 @@ fn fuse_secondary(
                 }
 
                 if source.is_dir() {
-                    adopt_missing_skills(
-                        &source,
-                        &paths.vault,
-                        adopted,
-                        SECONDARY_WALK,
-                    )?;
+                    adopt_missing_skills(&source, &paths.vault, adopted, SECONDARY_WALK)?;
 
                     let moved = quarantine_dir(&source, &slot)?;
                     if moved > 0 {
@@ -319,12 +334,7 @@ fn fuse_secondary(
             SecondaryAction::AdoptOnly => {
                 if source.is_dir() && !is_link(&source) {
                     let before = adopted.len();
-                    adopt_missing_skills(
-                        &source,
-                        &paths.vault,
-                        adopted,
-                        SECONDARY_WALK,
-                    )?;
+                    adopt_missing_skills(&source, &paths.vault, adopted, SECONDARY_WALK)?;
 
                     if adopted.len() > before {
                         warnings.push(format!(
@@ -341,8 +351,10 @@ fn fuse_secondary(
     Ok(())
 }
 
-
-fn import_instructions(paths: &OrquestraPaths, imported: &[(String, String)]) -> Result<(), String> {
+fn import_instructions(
+    paths: &OrquestraPaths,
+    imported: &[(String, String)],
+) -> Result<(), String> {
     let mut merged = skills::DEFAULT_AGENTS.to_string();
     let mut seen: Vec<String> = Vec::new();
 
@@ -362,4 +374,3 @@ fn import_instructions(paths: &OrquestraPaths, imported: &[(String, String)]) ->
 
     skills::write_agents(paths, &merged)
 }
-

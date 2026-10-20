@@ -1,9 +1,12 @@
 //! Secondary-discovery fusion tests, split out to stay under the file cap.
 
 use std::fs;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::super::*;
 use super::{assert_linked, TestHome};
+use crate::paths::OrquestraPaths;
 
 #[test]
 fn fusion_neutralises_secondary_discovery_paths() {
@@ -23,7 +26,10 @@ fn fusion_neutralises_secondary_discovery_paths() {
 
     // Codex: curated vendor checkout, two caches, and a skill buried five
     // folders deep inside a bundled marketplace plugin.
-    test.skill(".codex/vendor_imports/skills/skills/.curated", "curated-one");
+    test.skill(
+        ".codex/vendor_imports/skills/skills/.curated",
+        "curated-one",
+    );
     test.write(".codex/vendor_imports/skills/.gitignore", "/.tmp\n");
     test.skill(
         ".codex/.tmp/bundled-marketplaces/openai-bundled/plugins/latex/skills",
@@ -46,7 +52,10 @@ fn fusion_neutralises_secondary_discovery_paths() {
     );
 
     // Hermes: the optional repository nests category folders.
-    test.skill(".hermes/hermes-agent/optional-skills/security", "threat-model");
+    test.skill(
+        ".hermes/hermes-agent/optional-skills/security",
+        "threat-model",
+    );
 
     // Antigravity: vendor built-ins are archived but stay installable.
     test.skill(".gemini/antigravity/builtin/skills", "antigravity_guide");
@@ -171,7 +180,9 @@ fn fusion_neutralises_secondary_discovery_paths() {
         .quarantined
         .contains(&".codex/vendor_imports/skills".to_string()));
     assert!(report.quarantined.contains(&".agents/skills".to_string()));
-    assert!(report.quarantined.contains(&".grok/bundled/skills".to_string()));
+    assert!(report
+        .quarantined
+        .contains(&".grok/bundled/skills".to_string()));
     assert_eq!(
         report.bridged,
         report.total,
@@ -207,4 +218,48 @@ fn fusion_neutralises_secondary_discovery_paths() {
 fn config_merge_refuses_to_corrupt_invalid_jsonc() {
     let content = "{ this is not: valid ]\n";
     assert!(merge_skills_path(content, "/x").is_err());
+}
+
+#[cfg(unix)]
+#[test]
+fn fusion_does_not_adopt_through_a_builtin_directory_symlink() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let base = PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-bridge-builtin-link-{}-{unique}",
+        std::process::id()
+    ));
+    let home = base.join("home");
+    let root = base.join("orquestra");
+    let outside = base.join("outside");
+    fs::create_dir_all(home.join(".gemini/config")).unwrap();
+    fs::create_dir_all(home.join(".gemini/antigravity")).unwrap();
+    fs::create_dir_all(outside.join("skills/stolen")).unwrap();
+    fs::write(
+        outside.join("skills/stolen/SKILL.md"),
+        "---\nname: stolen\ndescription: stolen skill.\n---\n\nssh-private\n",
+    )
+    .unwrap();
+    std::os::unix::fs::symlink(&outside, home.join(".gemini/antigravity/builtin")).unwrap();
+
+    let paths = OrquestraPaths {
+        vault: root.join("skills-library"),
+        active: root.join("active"),
+        root,
+    };
+    let report = deploy_at(&home, &paths).unwrap();
+    let copied = paths.vault.join("stolen/SKILL.md");
+    assert!(
+        !copied.exists(),
+        "fusion copied the skill through the builtin symlink: {report:?}"
+    );
+    assert!(
+        fs::read_to_string(outside.join("skills/stolen/SKILL.md"))
+            .unwrap()
+            .contains("ssh-private"),
+        "the outside skill must stay put"
+    );
+    let _ = fs::remove_dir_all(&base);
 }

@@ -81,6 +81,7 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
                     let path = home.join(entry.rel);
                     SecondaryStatus {
                         cleared: secondary_cleared(
+                            home,
                             &path,
                             entry.action,
                             &projection,
@@ -181,6 +182,7 @@ pub(super) fn skill_folders(root: &Path, walk: Walk) -> Result<Vec<(String, Path
 /// True when a secondary location can no longer feed the harness unmanaged
 /// skills. A missing path counts as cleared: there is no backdoor to close.
 fn secondary_cleared(
+    home: &Path,
     source: &Path,
     action: SecondaryAction,
     projection: &Path,
@@ -188,6 +190,11 @@ fn secondary_cleared(
 ) -> bool {
     if !path_present(source) {
         return true;
+    }
+    // An ancestor symlink makes `source` look like a real directory. Walking
+    // it would list skill names that live outside the home.
+    if ancestor_is_symlink(home, source) {
+        return false;
     }
 
     match action {
@@ -231,6 +238,30 @@ fn regular_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// True when a directory strictly between `root` and `path` is a symlink.
+/// The last component is left to the caller: a skills folder that is itself
+/// a link is unlinked, not followed. `is_dir` and `read_dir` follow ancestors,
+/// so a real child on the far side would be copied out of the link.
+pub(super) fn ancestor_is_symlink(root: &Path, path: &Path) -> bool {
+    let Ok(relative) = path.strip_prefix(root) else {
+        return true;
+    };
+    let mut current = root.to_path_buf();
+    let mut components = relative.components().peekable();
+    while let Some(component) = components.next() {
+        if components.peek().is_none() {
+            break;
+        }
+        current.push(component);
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => return true,
+            Ok(_) => {}
+            Err(_) => return false,
+        }
+    }
+    false
+}
+
 /// Resolves without following the last component, so a dangling symlink still
 /// counts as present.
 pub(super) fn path_present(path: &Path) -> bool {
@@ -260,7 +291,11 @@ fn config_registers(config: &Path, projection: &Path) -> bool {
         .get("skills")
         .and_then(|skills| skills.get("paths"))
         .and_then(|paths| paths.as_array())
-        .map(|paths| paths.iter().any(|entry| entry.as_str() == Some(scope.as_ref())))
+        .map(|paths| {
+            paths
+                .iter()
+                .any(|entry| entry.as_str() == Some(scope.as_ref()))
+        })
         .unwrap_or(false)
 }
 
