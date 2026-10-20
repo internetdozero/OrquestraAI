@@ -146,13 +146,23 @@ fn split_offset(rest: &str) -> Option<(&str, i64)> {
 
 /// `±HHMM` / `±HH:MM`. Hours above 14 or minutes above 59 are not a zone.
 fn offset_secs(zone: &str) -> Option<i64> {
-    let digits: String = zone.chars().filter(char::is_ascii_digit).collect();
-    if digits.len() < 4 {
+    let (hours, minutes) = if let Some((hours, minutes)) = zone.split_once(':') {
+        if hours.len() != 2
+            || minutes.len() != 2
+            || !hours.chars().all(|ch| ch.is_ascii_digit())
+            || !minutes.chars().all(|ch| ch.is_ascii_digit())
+        {
+            return None;
+        }
+        (hours.parse::<i64>().ok()?, minutes.parse::<i64>().ok()?)
+    } else if zone.len() == 4 && zone.chars().all(|ch| ch.is_ascii_digit()) {
+        (
+            zone[..2].parse::<i64>().ok()?,
+            zone[2..].parse::<i64>().ok()?,
+        )
+    } else {
         return None;
-    }
-
-    let hours: i64 = digits[..2].parse().ok()?;
-    let minutes: i64 = digits[2..4].parse().ok()?;
+    };
     if !(0..=14).contains(&hours) || !(0..60).contains(&minutes) {
         return None;
     }
@@ -230,5 +240,15 @@ mod tests {
             timestamp_secs("2026-08-18T15:11:33Z")
         );
         assert!(timestamp_secs("2026-10-19T00:00:00+14:00").is_some());
+        assert_eq!(
+            timestamp_secs("2026-10-19T00:00:00+1400"),
+            timestamp_secs("2026-10-19T00:00:00+14:00")
+        );
+    }
+
+    #[test]
+    fn offset_letters_are_not_digits() {
+        assert_eq!(timestamp_secs("2026-10-19T00:00:00+0a3:00"), None);
+        assert_eq!(normalized_timestamp("2026-10-19T00:00:00+0a3:00"), "2026-10-19T00:00:00+0a3:00");
     }
 }
