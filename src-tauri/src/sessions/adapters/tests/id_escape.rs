@@ -68,3 +68,29 @@ fn hermes_list_does_not_size_a_directory_outside_sessions() {
         "listing sized a directory outside sessions/: {sessions:?}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn copilot_list_does_not_size_a_directory_outside_session_state() {
+    let home = TestHome::new();
+    fs::create_dir_all(home.0.join(".copilot/session-state")).unwrap();
+    let outside = home.0.join("outside-copilot");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("secret.bin"), vec![7u8; 4096]).unwrap();
+    home.database(
+        ".copilot/session-store.db",
+        "CREATE TABLE sessions (
+            id TEXT, cwd TEXT, repository TEXT, summary TEXT,
+            created_at TEXT, updated_at TEXT
+         );
+         INSERT INTO sessions VALUES (
+            '../../outside-copilot', NULL, NULL, 'x', NULL, NULL
+         );",
+    );
+
+    let sessions = adapter(&home.0, "copilot").list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.size_bytes == 0),
+        "listing sized a directory outside session-state/: {sessions:?}"
+    );
+}

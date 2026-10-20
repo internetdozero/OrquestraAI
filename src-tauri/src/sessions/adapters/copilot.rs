@@ -122,7 +122,13 @@ impl Copilot {
 
                 let (turns, content_bytes) = turn_summary.get(&id).copied().unwrap_or((0, 0));
                 let state_root = self.store().join("session-state");
-                let state = state_root.join(&id);
+                // `../outside` still names a real directory after the kernel
+                // resolves it, and `dir_size` would walk that tree.
+                let state_bytes = if real_dir(&state_root) && single_segment(&id) {
+                    utils::dir_size(&state_root.join(&id))
+                } else {
+                    0
+                };
 
                 let mut session = UnifiedSession::new(HARNESS, id.clone(), title(&id, summary));
                 session.project_path = cwd
@@ -135,10 +141,7 @@ impl Copilot {
                     .map(utils::normalized_timestamp)
                     .unwrap_or_default();
                 session.turns_count = turns;
-                session.size_bytes = content_bytes
-                    + real_dir(&state_root)
-                        .then(|| utils::dir_size(&state))
-                        .unwrap_or(0);
+                session.size_bytes = content_bytes + state_bytes;
 
                 Some(session)
             })
@@ -304,6 +307,10 @@ impl SessionAdapter for Copilot {
 
         Ok(sessions)
     }
+}
+
+fn single_segment(id: &str) -> bool {
+    !id.is_empty() && !id.contains('/') && !id.contains('\\') && id != "." && id != ".."
 }
 
 fn real_dir(path: &Path) -> bool {
