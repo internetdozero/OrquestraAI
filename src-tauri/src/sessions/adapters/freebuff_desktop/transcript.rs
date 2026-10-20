@@ -23,10 +23,13 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
         return Vec::new();
     }
     let projects = home.join(PROJECTS_REL);
-    if !real_dir(&projects) {
+    let project = projects.join(slug);
+    // `projects/<slug>` as a directory symlink makes `desktop-v2.db` a regular
+    // file, and the read would return turns from outside the store.
+    if !real_dir(&projects) || !real_dir(&project) {
         return Vec::new();
     }
-    let database = projects.join(slug).join(DB_NAME);
+    let database = project.join(DB_NAME);
     let Ok(connection) = utils::open_readonly(&database) else {
         return Vec::new();
     };

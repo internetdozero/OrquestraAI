@@ -133,8 +133,11 @@ pub fn delete(home: &Path, slug: &str, thread: &str) -> Result<u64, String> {
     }
 
     let projects = home.join(PROJECTS_REL);
-    let database = projects.join(slug).join(DB_NAME);
-    if real_dir(&projects) && database.is_file() {
+    let project = projects.join(slug);
+    let database = project.join(DB_NAME);
+    // `is_file` follows a symlinked project folder and `open_writable` would
+    // then delete rows in the outside database.
+    if real_dir(&projects) && real_dir(&project) && database.is_file() {
         delete_rows(&database, thread)?;
     }
 
