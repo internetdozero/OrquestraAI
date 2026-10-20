@@ -20,6 +20,7 @@ mod symlink_cases;
 mod grok_links;
 mod desktop_links;
 mod brain_links;
+mod id_escape;
 
 struct TestHome(PathBuf);
 

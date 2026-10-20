@@ -113,6 +113,17 @@ impl SessionAdapter for Antigravity {
     /// not nest the logs under `.system_generated`; a missing transcript is
     /// an empty feed.
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        // `brain/<id>` is joined as a path. `../` still stats as a real
+        // directory after the kernel resolves it, so the id has to be one
+        // segment before any transcript is opened.
+        if session_id.is_empty()
+            || session_id.contains('/')
+            || session_id.contains('\\')
+            || session_id == "."
+            || session_id == ".."
+        {
+            return Vec::new();
+        }
         for relative in STORES {
             let brain_root = self.root.join(relative).join("brain");
             if !real_dir(&brain_root) {
