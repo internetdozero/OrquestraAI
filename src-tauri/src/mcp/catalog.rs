@@ -276,6 +276,7 @@ fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
 /// Read the master catalog, seeding it from the audited dataset on first run.
 pub(super) fn load_catalog(paths: &OrquestraPaths, seed: &Path) -> Result<Catalog, String> {
     let path = catalog_path(paths);
+    refuse_catalog_symlink(&path, "read")?;
     match fs::read_to_string(&path) {
         Ok(content) if !content.trim().is_empty() => serde_json::from_str(&content)
             .map_err(|error| format!("failed to parse {}: {error}", path.display())),
@@ -331,12 +332,27 @@ pub(super) fn seed_catalog(seed: &Path) -> Result<Catalog, String> {
 }
 
 pub(super) fn save_catalog(paths: &OrquestraPaths, catalog: &Catalog) -> Result<(), String> {
+    let path = catalog_path(paths);
+    refuse_catalog_symlink(&path, "replace")?;
     let mut content = serde_json::to_string_pretty(catalog)
         .map_err(|error| format!("failed to serialize the MCP catalog: {error}"))?;
     content.push('\n');
 
     // The catalog carries API tokens, so it is always private.
-    write_config(&catalog_path(paths), &content, true).map(|_| ())
+    write_config(&path, &content, true).map(|_| ())
+}
+
+fn refuse_catalog_symlink(path: &Path, verb: &str) -> Result<(), String> {
+    if fs::symlink_metadata(path)
+        .ok()
+        .is_some_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to {verb} {}: not a regular file",
+            path.display()
+        ));
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

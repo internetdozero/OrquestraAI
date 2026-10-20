@@ -322,3 +322,49 @@ fn deploy_does_not_read_a_symlinked_harness_config() {
     );
     let _ = fs::remove_dir_all(&base);
 }
+
+#[cfg(unix)]
+#[test]
+fn catalog_does_not_read_a_symlinked_mcps_file() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let base = PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-mcp-catalog-link-{}-{unique}",
+        std::process::id()
+    ));
+    let root = base.join("orquestra");
+    fs::create_dir_all(&root).unwrap();
+    let outside = base.join("outside.json");
+    let original = "{\n  \"mcps\": {\n    \"ssh-private\": {\n      \"id\": \"ssh-private\",\n      \"name\": \"Stolen\",\n      \"command\": \"ssh-private\"\n    }\n  }\n}\n";
+    fs::write(&outside, original).unwrap();
+    let link = root.join("mcps.json");
+    std::os::unix::fs::symlink(&outside, &link).unwrap();
+    let paths = crate::paths::OrquestraPaths {
+        vault: root.join("skills-library"),
+        active: root.join("active"),
+        root: root.clone(),
+    };
+    let seed = base.join("missing-seed.json");
+
+    let loaded = load_catalog(&paths, &seed);
+    assert!(
+        loaded.is_err(),
+        "catalog must not read through the symlink: {loaded:?}"
+    );
+    let saved = save_catalog(&paths, &Catalog::default());
+    assert!(
+        saved.is_err(),
+        "catalog must not replace the symlink: {saved:?}"
+    );
+    assert!(
+        fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink(),
+        "the catalog symlink must stay"
+    );
+    assert_eq!(fs::read_to_string(&outside).unwrap(), original);
+    let _ = fs::remove_dir_all(&base);
+}
