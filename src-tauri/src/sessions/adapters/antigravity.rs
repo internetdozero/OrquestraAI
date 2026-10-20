@@ -77,8 +77,13 @@ impl SessionAdapter for Antigravity {
                 bytes += fsops::remove_path(&store, &brain)?;
             }
 
-            let conversation = store.join("conversations").join(format!("{session_id}.db"));
-            bytes += fsops::remove_sqlite(&store, &conversation)?;
+            let conversations = store.join("conversations");
+            let conversation = conversations.join(format!("{session_id}.db"));
+            // `conversations/` as a directory symlink makes `<id>.db` a regular
+            // file, and `remove_sqlite` would delete it outside the store.
+            if real_dir(&conversations) {
+                bytes += fsops::remove_sqlite(&store, &conversation)?;
+            }
 
             let database = store.join(SUMMARY_DATABASE);
             if database.is_file() {
@@ -221,7 +226,13 @@ fn artifact_size(store: &Path, id: &str) -> u64 {
     } else {
         0
     };
-    folder + utils::file_size(&store.join("conversations").join(format!("{id}.db")))
+    let conversations = store.join("conversations");
+    let database = if real_dir(&conversations) {
+        utils::file_size(&conversations.join(format!("{id}.db")))
+    } else {
+        0
+    };
+    folder + database
 }
 
 fn real_dir(path: &Path) -> bool {

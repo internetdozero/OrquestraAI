@@ -375,3 +375,22 @@ fn desktop_delete_does_not_follow_a_worktrees_directory_symlink() {
     assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
     assert!(folder.is_dir(), "the outside worktree must stay");
 }
+
+#[cfg(unix)]
+#[test]
+fn antigravity_does_not_delete_through_a_conversations_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-ag");
+    fs::create_dir_all(&outside).unwrap();
+    let secret = outside.join("abc.db");
+    fs::write(&secret, "ssh-private").unwrap();
+    let store = home.0.join(".gemini/antigravity");
+    fs::create_dir_all(&store).unwrap();
+    std::os::unix::fs::symlink(&outside, store.join("conversations")).unwrap();
+
+    adapter(&home.0, "antigravity")
+        .delete_session("abc")
+        .unwrap();
+    assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
+    assert!(secret.is_file(), "the outside database must stay");
+}
