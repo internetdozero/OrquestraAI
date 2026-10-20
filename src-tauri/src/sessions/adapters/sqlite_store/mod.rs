@@ -128,6 +128,11 @@ pub fn vacuum(root: &Path, db_rel: &str) -> Result<(), String> {
 /// Later releases moved them under `storage/`; older ones kept them at the
 /// store root, so both are returned and both are measured.
 fn artifact_dirs(root: &Path, storage_rel: &str, id: &str) -> Vec<PathBuf> {
+    // `session_diff/../../outside` still names a real directory after the
+    // kernel resolves it, and `dir_size` would walk that tree.
+    if id.is_empty() || id.contains('/') || id.contains('\\') || id == "." || id == ".." {
+        return Vec::new();
+    }
     let storage = root.join(storage_rel);
 
     ["session_diff", "tool-output", "snapshot"]

@@ -120,3 +120,24 @@ fn antigravity_list_does_not_size_a_directory_outside_brain() {
         "listing sized a directory outside brain/: {sessions:?}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn opencode_list_does_not_size_a_directory_outside_the_store() {
+    let home = TestHome::new();
+    fs::create_dir_all(home.0.join(".local/share/opencode/session_diff")).unwrap();
+    let outside = home.0.join("outside-oc");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("secret.bin"), vec![7u8; 4096]).unwrap();
+    home.database(
+        ".local/share/opencode/opencode.db",
+        "CREATE TABLE session (id TEXT);
+         INSERT INTO session VALUES ('../../../../outside-oc');",
+    );
+
+    let sessions = adapter(&home.0, "opencode").list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.size_bytes == 0),
+        "listing sized a directory outside the store: {sessions:?}"
+    );
+}
