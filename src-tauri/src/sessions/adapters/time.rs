@@ -83,7 +83,7 @@ fn parse_iso8601(raw: &str) -> Option<i64> {
     let month: i64 = date_parts.next()?.parse().ok()?;
     let day: i64 = date_parts.next()?.parse().ok()?;
 
-    let (time, offset) = split_offset(rest);
+    let (time, offset) = split_offset(rest)?;
     let mut time_parts = time.split(':');
     let hour: i64 = time_parts.next()?.parse().ok()?;
     let minute: i64 = time_parts.next()?.parse().ok()?;
@@ -124,35 +124,39 @@ fn is_leap(year: i64) -> bool {
 }
 
 /// Split the timezone suffix off a time-of-day string.
-fn split_offset(rest: &str) -> (&str, i64) {
+fn split_offset(rest: &str) -> Option<(&str, i64)> {
     if let Some(stripped) = rest.strip_suffix(['Z', 'z']) {
-        return (stripped, 0);
+        return Some((stripped, 0));
     }
 
     for (index, ch) in rest.char_indices() {
         if (ch == '+' || ch == '-') && index > 0 {
             let (time, zone) = rest.split_at(index);
-            let magnitude = offset_secs(&zone[1..]);
+            let magnitude = offset_secs(&zone[1..])?;
             // West of UTC must be added back. Dropping the sign made
             // `-03:00` look like `+03:00` and shifted the session by twice
             // the offset.
             let signed = if ch == '-' { -magnitude } else { magnitude };
-            return (time, signed);
+            return Some((time, signed));
         }
     }
 
-    (rest, 0)
+    Some((rest, 0))
 }
 
-fn offset_secs(zone: &str) -> i64 {
+/// `±HHMM` / `±HH:MM`. Hours above 14 or minutes above 59 are not a zone.
+fn offset_secs(zone: &str) -> Option<i64> {
     let digits: String = zone.chars().filter(char::is_ascii_digit).collect();
     if digits.len() < 4 {
-        return 0;
+        return None;
     }
 
-    let hours: i64 = digits[..2].parse().unwrap_or(0);
-    let minutes: i64 = digits[2..4].parse().unwrap_or(0);
-    hours * 3_600 + minutes * 60
+    let hours: i64 = digits[..2].parse().ok()?;
+    let minutes: i64 = digits[2..4].parse().ok()?;
+    if !(0..=14).contains(&hours) || !(0..60).contains(&minutes) {
+        return None;
+    }
+    Some(hours * 3_600 + minutes * 60)
 }
 
 /// Days since 1970-01-01 for a proleptic Gregorian date.
@@ -208,5 +212,23 @@ mod tests {
         }
         assert!(timestamp_secs("2024-02-29T00:00:00Z").is_some());
         assert!(timestamp_secs("2026-10-19T23:59:59Z").is_some());
+    }
+
+    #[test]
+    fn impossible_utc_offsets_are_not_a_timestamp() {
+        for raw in [
+            "2026-10-19T00:00:00+99:99",
+            "2026-10-19T00:00:00-99:00",
+            "2026-10-19T00:00:00+14:60",
+            "2026-10-19T00:00:00+15:00",
+        ] {
+            assert_eq!(timestamp_secs(raw), None, "{raw}");
+            assert_eq!(normalized_timestamp(raw), raw);
+        }
+        assert_eq!(
+            timestamp_secs("2026-08-18T12:11:33-03:00"),
+            timestamp_secs("2026-08-18T15:11:33Z")
+        );
+        assert!(timestamp_secs("2026-10-19T00:00:00+14:00").is_some());
     }
 }
