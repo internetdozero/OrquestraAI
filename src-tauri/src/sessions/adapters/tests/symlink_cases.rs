@@ -331,3 +331,27 @@ fn freebuff_does_not_follow_a_manicode_projects_symlink() {
     freebuff.delete_session("proj/demo").unwrap();
     assert_eq!(fs::read_to_string(&secret).unwrap(), original);
 }
+
+#[cfg(unix)]
+#[test]
+fn grok_does_not_follow_a_sessions_directory_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-grok");
+    let session = outside.join("proj/sess");
+    fs::create_dir_all(&session).unwrap();
+    let log = session.join("chat_history.jsonl");
+    let original = "{\"type\":\"user\",\"content\":\"ssh-private\",\"timestamp\":1791708904}\n";
+    fs::write(&log, original).unwrap();
+    fs::create_dir_all(home.0.join(".grok")).unwrap();
+    std::os::unix::fs::symlink(&outside, home.0.join(".grok/sessions")).unwrap();
+
+    let grok = adapter(&home.0, "grok");
+    let turns = grok.read_transcript("sess");
+    assert!(
+        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        "read_transcript followed the sessions symlink: {turns:?}"
+    );
+    grok.delete_session("sess").unwrap();
+    assert_eq!(fs::read_to_string(&log).unwrap(), original);
+    assert!(session.is_dir(), "the outside session folder must stay");
+}

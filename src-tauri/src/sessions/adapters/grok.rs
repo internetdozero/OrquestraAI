@@ -41,7 +41,11 @@ impl Grok {
     }
 
     fn indexed(&self) -> Result<HashMap<String, Indexed>, String> {
-        let database = self.store().join(DATABASE);
+        let store = self.store();
+        if !real_dir(&store) {
+            return Ok(HashMap::new());
+        }
+        let database = store.join(DATABASE);
         if !database.is_file() {
             return Ok(HashMap::new());
         }
@@ -108,7 +112,11 @@ impl Grok {
     /// `session_id -> (folder, bytes, encoded cwd)`.
     fn folders(&self) -> HashMap<String, (PathBuf, u64, String)> {
         let mut found = HashMap::new();
-        let Ok(projects) = std::fs::read_dir(self.store()) else {
+        let store = self.store();
+        if !real_dir(&store) {
+            return found;
+        }
+        let Ok(projects) = std::fs::read_dir(&store) else {
             return found;
         };
 
@@ -159,6 +167,10 @@ impl SessionAdapter for Grok {
 
         // The `session_docs` triggers keep `session_docs_fts` in step, so the
         // search index needs no separate cleanup here.
+        if !real_dir(&store) {
+            return Ok(0);
+        }
+
         let database = store.join(DATABASE);
         if database.is_file() {
             let connection = fsops::open_writable(&database)?;
@@ -187,7 +199,11 @@ impl SessionAdapter for Grok {
     }
 
     fn optimize_storage(&self) -> Result<(), String> {
-        fsops::vacuum(&self.store().join(DATABASE))
+        let store = self.store();
+        if !real_dir(&store) {
+            return Ok(());
+        }
+        fsops::vacuum(&store.join(DATABASE))
     }
 
     /// Conversation turns in `sessions/<encoded-cwd>/<id>/chat_history.jsonl`.
@@ -205,7 +221,11 @@ impl SessionAdapter for Grok {
         {
             return Vec::new();
         }
-        let Ok(projects) = std::fs::read_dir(self.store()) else {
+        let store = self.store();
+        if !real_dir(&store) {
+            return Vec::new();
+        }
+        let Ok(projects) = std::fs::read_dir(&store) else {
             return Vec::new();
         };
 
@@ -257,6 +277,12 @@ impl SessionAdapter for Grok {
 
         Ok(sessions)
     }
+}
+
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
 }
 
 fn title(id: &str, indexed: Option<String>) -> String {
