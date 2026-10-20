@@ -355,3 +355,23 @@ fn grok_does_not_follow_a_sessions_directory_symlink() {
     assert_eq!(fs::read_to_string(&log).unwrap(), original);
     assert!(session.is_dir(), "the outside session folder must stay");
 }
+
+#[cfg(unix)]
+#[test]
+fn desktop_delete_does_not_follow_a_worktrees_directory_symlink() {
+    let home = TestHome::new();
+    let thread = "11111111-2222-3333-4444-555555555555";
+    let outside = home.0.join("outside-desktop-wt");
+    let folder = outside.join(thread);
+    fs::create_dir_all(&folder).unwrap();
+    let secret = folder.join("secret.txt");
+    fs::write(&secret, "ssh-private").unwrap();
+    fs::create_dir_all(home.0.join(".freebuff")).unwrap();
+    std::os::unix::fs::symlink(&outside, home.0.join(".freebuff/worktrees")).unwrap();
+
+    adapter(&home.0, "freebuff")
+        .delete_session(&format!("desktop:slug:{thread}"))
+        .unwrap();
+    assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
+    assert!(folder.is_dir(), "the outside worktree must stay");
+}

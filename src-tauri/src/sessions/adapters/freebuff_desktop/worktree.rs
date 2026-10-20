@@ -22,6 +22,15 @@ pub fn find_worktree(worktrees_dir: &Path, thread_id: &str) -> Option<PathBuf> {
         return None;
     }
 
+    // `is_dir` and `read_dir` follow. A symlinked worktrees folder would
+    // resolve, and the desktop delete would remove that outside tree.
+    let real_dir = std::fs::symlink_metadata(worktrees_dir)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false);
+    if !real_dir {
+        return None;
+    }
+
     let exact = worktrees_dir.join(thread_id);
     if exact.is_dir() {
         return Some(exact);
