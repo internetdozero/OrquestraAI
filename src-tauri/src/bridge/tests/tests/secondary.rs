@@ -263,3 +263,42 @@ fn fusion_does_not_adopt_through_a_builtin_directory_symlink() {
     );
     let _ = fs::remove_dir_all(&base);
 }
+
+#[cfg(unix)]
+#[test]
+fn fusion_does_not_read_a_symlinked_opencode_config() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let base = PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-bridge-config-link-{}-{unique}",
+        std::process::id()
+    ));
+    let home = base.join("home");
+    let outside = base.join("outside.jsonc");
+    fs::create_dir_all(home.join(".config/opencode")).unwrap();
+    fs::write(&outside, "{\n  \"secret\": \"ssh-private\"\n}\n").unwrap();
+    let config = home.join(".config/opencode/opencode.jsonc");
+    std::os::unix::fs::symlink(&outside, &config).unwrap();
+
+    let paths = OrquestraPaths {
+        vault: base.join("orquestra/skills-library"),
+        active: base.join("orquestra/active"),
+        root: base.join("orquestra"),
+    };
+    deploy_at(&home, &paths).unwrap();
+    let kept = fs::read_to_string(&outside).unwrap();
+    assert!(
+        kept.contains("ssh-private"),
+        "the outside config must stay put"
+    );
+    assert!(
+        fs::symlink_metadata(&config)
+            .unwrap()
+            .file_type()
+            .is_symlink(),
+        "fusion must not replace the config symlink"
+    );
+    let _ = fs::remove_dir_all(&base);
+}

@@ -68,8 +68,20 @@ pub(super) fn ensure_config(
     rel: &str,
 ) -> Result<(), String> {
     let scope = projection.to_string_lossy().into_owned();
+    let metadata = fs::symlink_metadata(config).ok();
+    // `is_file` follows. A symlink config would be read from outside and then
+    // replaced, copying that content into the harness path.
+    if metadata
+        .as_ref()
+        .is_some_and(|meta| meta.file_type().is_symlink())
+    {
+        return Ok(());
+    }
 
-    if config.is_file() {
+    if metadata
+        .as_ref()
+        .is_some_and(|meta| meta.file_type().is_file())
+    {
         let content = fs::read_to_string(config)
             .map_err(|error| format!("failed to read {}: {error}", config.display()))?;
 
@@ -97,8 +109,8 @@ pub(super) fn ensure_config(
 /// Add `scope` to `skills.paths`, preserving comments and every other key.
 /// Returns `None` when the path is already registered.
 pub(crate) fn merge_skills_path(content: &str, scope: &str) -> Result<Option<String>, String> {
-    let value: serde_json::Value = json5::from_str(content)
-        .map_err(|error| format!("config is not valid JSONC: {error}"))?;
+    let value: serde_json::Value =
+        json5::from_str(content).map_err(|error| format!("config is not valid JSONC: {error}"))?;
 
     let root = value
         .as_object()
@@ -180,9 +192,8 @@ pub(super) fn ensure_symlink(link: &Path, target: &Path) -> Result<(), String> {
 
     if let Ok(metadata) = fs::symlink_metadata(link) {
         if metadata.file_type().is_symlink() || metadata.is_file() {
-            fs::remove_file(link).map_err(|error| {
-                format!("failed to clear {}: {error}", link.display())
-            })?;
+            fs::remove_file(link)
+                .map_err(|error| format!("failed to clear {}: {error}", link.display()))?;
         } else {
             return Err(format!(
                 "refusing to replace the directory {} with a symlink",
@@ -195,8 +206,13 @@ pub(super) fn ensure_symlink(link: &Path, target: &Path) -> Result<(), String> {
         create_dir_all(parent)?;
     }
 
-    std::os::unix::fs::symlink(target, link)
-        .map_err(|error| format!("failed to link {} -> {}: {error}", link.display(), target.display()))
+    std::os::unix::fs::symlink(target, link).map_err(|error| {
+        format!(
+            "failed to link {} -> {}: {error}",
+            link.display(),
+            target.display()
+        )
+    })
 }
 
 pub(super) fn backup_slot(backup: &Path, id: &str, rel: &str) -> PathBuf {
@@ -221,9 +237,8 @@ pub(super) fn move_entry(source: &Path, destination: &Path) -> Result<(), String
         let target = fs::read_link(source)
             .map_err(|error| format!("failed to read {}: {error}", source.display()))?;
         let _ = fs::remove_file(destination);
-        std::os::unix::fs::symlink(target, destination).map_err(|error| {
-            format!("failed to back up symlink {}: {error}", source.display())
-        })?;
+        std::os::unix::fs::symlink(target, destination)
+            .map_err(|error| format!("failed to back up symlink {}: {error}", source.display()))?;
         fs::remove_file(source)
             .map_err(|error| format!("failed to remove {}: {error}", source.display()))?;
         return Ok(());
@@ -278,7 +293,8 @@ pub(crate) fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
 }
 
 pub(crate) fn create_dir_all(path: &Path) -> Result<(), String> {
-    fs::create_dir_all(path).map_err(|error| format!("failed to create {}: {error}", path.display()))
+    fs::create_dir_all(path)
+        .map_err(|error| format!("failed to create {}: {error}", path.display()))
 }
 
 fn escape_json(value: &str) -> String {
@@ -309,7 +325,11 @@ pub(crate) fn format_timestamp(unix_seconds: u64) -> String {
 /// Howard Hinnant's days-from-civil algorithm, inverted.
 fn civil_from_days(days: i64) -> (i64, u32, u32) {
     let shifted = days + 719_468;
-    let era = if shifted >= 0 { shifted } else { shifted - 146_096 } / 146_097;
+    let era = if shifted >= 0 {
+        shifted
+    } else {
+        shifted - 146_096
+    } / 146_097;
     let day_of_era = (shifted - era * 146_097) as u64;
     let year_of_era =
         (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;

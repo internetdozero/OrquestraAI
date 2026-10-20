@@ -279,6 +279,12 @@ pub(super) fn dir_is_empty(path: &Path) -> bool {
 }
 
 fn config_registers(config: &Path, projection: &Path) -> bool {
+    let Ok(metadata) = fs::symlink_metadata(config) else {
+        return false;
+    };
+    if !metadata.file_type().is_file() {
+        return false;
+    }
     let Ok(content) = fs::read_to_string(config) else {
         return false;
     };
