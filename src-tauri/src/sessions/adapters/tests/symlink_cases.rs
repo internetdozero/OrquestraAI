@@ -110,3 +110,41 @@ fn copilot_does_not_follow_a_session_state_symlink() {
     );
     assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
 }
+
+#[cfg(unix)]
+#[test]
+fn antigravity_does_not_follow_a_brain_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside");
+    fs::create_dir_all(outside.join("conv/logs")).unwrap();
+    let secret = outside.join("conv/logs/transcript.jsonl");
+    fs::write(
+        &secret,
+        "{\"source\":\"USER_EXPLICIT\",\"type\":\"USER_INPUT\",\
+          \"content\":\"<USER_REQUEST>ssh-private</USER_REQUEST>\"}\n",
+    )
+    .unwrap();
+    let store = home.0.join(".gemini/antigravity");
+    fs::create_dir_all(&store).unwrap();
+    std::os::unix::fs::symlink(&outside, store.join("brain")).unwrap();
+
+    let antigravity = adapter(&home.0, "antigravity");
+    let sessions = antigravity.list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.id != "conv"),
+        "listing followed the brain symlink: {sessions:?}"
+    );
+    assert!(
+        antigravity
+            .read_transcript("conv")
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
+        "read_transcript followed the brain symlink"
+    );
+    antigravity.delete_session("conv").unwrap();
+    assert!(
+        secret.is_file(),
+        "delete must not remove the brain folder outside the store"
+    );
+    assert!(fs::read_to_string(&secret).unwrap().contains("ssh-private"));
+}

@@ -69,8 +69,11 @@ impl SessionAdapter for Antigravity {
         for store in self.stores() {
             // Artifacts first: a brain folder with no summary row is what shows
             // up as an orphan in Antigravity's sidebar, so it goes too.
-            let brain = store.join("brain").join(session_id);
-            if std::fs::symlink_metadata(&brain).is_ok() {
+            let brain_root = store.join("brain");
+            let brain = brain_root.join(session_id);
+            // `brain/` as a directory symlink makes `<id>` a real directory,
+            // and `remove_path` would delete that folder outside the store.
+            if real_dir(&brain_root) && std::fs::symlink_metadata(&brain).is_ok() {
                 bytes += fsops::remove_path(&store, &brain)?;
             }
 
@@ -106,9 +109,16 @@ impl SessionAdapter for Antigravity {
     /// an empty feed.
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
         for relative in STORES {
-            let brain = self.root.join(relative).join("brain").join(session_id);
+            let brain_root = self.root.join(relative).join("brain");
+            if !real_dir(&brain_root) {
+                continue;
+            }
+            let brain = brain_root.join(session_id);
             for candidate in [
-                brain.join(".system_generated").join("logs").join("transcript.jsonl"),
+                brain
+                    .join(".system_generated")
+                    .join("logs")
+                    .join("transcript.jsonl"),
                 brain.join("logs").join("transcript.jsonl"),
             ] {
                 if candidate.is_file() {
@@ -180,7 +190,11 @@ fn list_store(store: &Path) -> Result<Vec<UnifiedSession>, String> {
 /// Conversations whose summary row is gone but whose artifacts remain: without
 /// this the tab would hide bytes that are still on disk.
 fn fallback_from_brain(store: &Path) -> Vec<UnifiedSession> {
-    let Ok(entries) = std::fs::read_dir(store.join("brain")) else {
+    let brain = store.join("brain");
+    if !real_dir(&brain) {
+        return Vec::new();
+    }
+    let Ok(entries) = std::fs::read_dir(&brain) else {
         return Vec::new();
     };
 
@@ -201,8 +215,19 @@ fn fallback_from_brain(store: &Path) -> Vec<UnifiedSession> {
 
 /// `brain/<id>/` plus `conversations/<id>.db`, excluding the shared databases.
 fn artifact_size(store: &Path, id: &str) -> u64 {
-    utils::dir_size(&store.join("brain").join(id))
-        + utils::file_size(&store.join("conversations").join(format!("{id}.db")))
+    let brain = store.join("brain");
+    let folder = if real_dir(&brain) {
+        utils::dir_size(&brain.join(id))
+    } else {
+        0
+    };
+    folder + utils::file_size(&store.join("conversations").join(format!("{id}.db")))
+}
+
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
 }
 
 /// `workspace_uris` is a JSON array of `file:///path/` entries; the tab shows
