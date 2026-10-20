@@ -20,6 +20,7 @@ const OFFICIAL_SKILL_IDS: &[&str] = &[
     "orquestra-modular-start",
     "orquestra-agent-orchestrator",
     "orquestra-smart-build-router",
+    "orquestra-autonomous-audit",
     "lean-screen",
     "ux-best-practices",
 ];
@@ -45,6 +46,7 @@ pub(crate) fn canonical_skill_id(id: &str) -> &str {
     match id {
         "modular-start" => "orquestra-modular-start",
         "agent-orchestrator" => "orquestra-agent-orchestrator",
+        "autonomous-audit" => "orquestra-autonomous-audit",
         _ => id,
     }
 }
@@ -197,6 +199,15 @@ pub fn official_store() -> OfficialStore {
             None,
         ),
         official_skill(
+            "orquestra-autonomous-audit",
+            "Time-boxed autonomous code audit shift: continuous multi-scope sweeps, atomic 1-issue commits with reproduction tests, formal negative passes, and structured ledger persistence.",
+            "AI & Agents",
+            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-autonomous-audit"),
+            &["audit", "security", "testing", "autonomous"],
+            Some("autonomous-audit"),
+            None,
+        ),
+        official_skill(
             "lean-screen",
             "Stop the generic admin-dashboard screen on any product: bans obvious subtitles, decorative metric heroes, equal KPI cards, card-in-card, and squeezed center columns.",
             "Frontend",
@@ -243,6 +254,7 @@ mod tests {
     fn aliases_resolve_forward_and_stamp_official() {
         assert_eq!(canonical_skill_id("modular-start"), "orquestra-modular-start");
         assert_eq!(canonical_skill_id("agent-orchestrator"), "orquestra-agent-orchestrator");
+        assert_eq!(canonical_skill_id("autonomous-audit"), "orquestra-autonomous-audit");
         assert_eq!(canonical_skill_id("orquestra"), "orquestra");
         assert_eq!(canonical_skill_id("caveman"), "caveman");
         assert_eq!(canonical_mcp_id("idea-vault"), "orquestra-idea-vault");

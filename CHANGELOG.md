@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Official Autonomous Code Audit Skill (`orquestra-autonomous-audit` / `autonomous-audit`):** Time-boxed autonomous code audit and hardening shift protocol across the multi-harness fleet, supporting dynamic durations ($X$ minutes), 4 universal scopes (Security, Performance, Logic, DX), atomic reproduction tests, formal negative passes, and optional Idea Vault / Agent Board lifecycle.
+
 ### Security & Hardening
 - **Comprehensive Path & Symlink Traversal Protection Across Fleet Adapters:**
   - Hardened `delete_session`, `read_transcript`, and artifact sizing across all 9 session adapters (Antigravity, Claude Code, Codex, Copilot CLI, Freebuff/Manicode, Grok, Hermes Agent, OpenCode, Kilo).
