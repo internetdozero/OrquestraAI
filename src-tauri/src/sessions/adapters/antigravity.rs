@@ -236,6 +236,11 @@ fn fallback_from_brain(store: &Path) -> Vec<UnifiedSession> {
 
 /// `brain/<id>/` plus `conversations/<id>.db`, excluding the shared databases.
 fn artifact_size(store: &Path, id: &str) -> u64 {
+    // `brain/<id>` with `../outside` still names a real directory after the
+    // kernel resolves it, and `dir_size` would walk that tree.
+    if id.is_empty() || id.contains('/') || id.contains('\\') || id == "." || id == ".." {
+        return 0;
+    }
     let brain = store.join("brain");
     let folder = if real_dir(&brain) {
         utils::dir_size(&brain.join(id))

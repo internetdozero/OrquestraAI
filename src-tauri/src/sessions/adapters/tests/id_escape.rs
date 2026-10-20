@@ -94,3 +94,29 @@ fn copilot_list_does_not_size_a_directory_outside_session_state() {
         "listing sized a directory outside session-state/: {sessions:?}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn antigravity_list_does_not_size_a_directory_outside_brain() {
+    let home = TestHome::new();
+    fs::create_dir_all(home.0.join(".gemini/antigravity/brain")).unwrap();
+    let outside = home.0.join("outside-ag-size");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("secret.bin"), vec![7u8; 4096]).unwrap();
+    home.database(
+        ".gemini/antigravity/conversation_summaries.db",
+        "CREATE TABLE conversation_summaries (
+            conversation_id TEXT, title TEXT, preview TEXT, step_count INTEGER,
+            last_modified_time TEXT, workspace_uris TEXT
+         );
+         INSERT INTO conversation_summaries VALUES (
+            '../../../outside-ag-size', 'x', '', 0, NULL, NULL
+         );",
+    );
+
+    let sessions = adapter(&home.0, "antigravity").list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.size_bytes == 0),
+        "listing sized a directory outside brain/: {sessions:?}"
+    );
+}
