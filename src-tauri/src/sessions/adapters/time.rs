@@ -82,16 +82,24 @@ fn parse_iso8601(raw: &str) -> Option<i64> {
     let year: i64 = date_parts.next()?.parse().ok()?;
     let month: i64 = date_parts.next()?.parse().ok()?;
     let day: i64 = date_parts.next()?.parse().ok()?;
+    // `2026-10-19-99` still yields a real day if the tail is dropped.
+    if date_parts.next().is_some() {
+        return None;
+    }
 
     let (time, offset) = split_offset(rest)?;
     let mut time_parts = time.split(':');
     let hour: i64 = time_parts.next()?.parse().ok()?;
     let minute: i64 = time_parts.next()?.parse().ok()?;
-    let seconds: i64 = time_parts
-        .next()
-        .and_then(|field| field.split('.').next())
-        .and_then(|field| field.parse::<i64>().ok())
-        .unwrap_or(0);
+    // Seconds may be absent (`12:30Z`). A present field that is not an integer
+    // used to become 0, so `12:30:45abc` was stored as `12:30:00`.
+    let seconds: i64 = match time_parts.next() {
+        None => 0,
+        Some(field) => whole_seconds(field)?,
+    };
+    if time_parts.next().is_some() {
+        return None;
+    }
 
     // Hinnant's conversion normalizes month 13 and 31 February into a later
     // real day. An age purge would then treat that invented instant as known.
@@ -105,6 +113,25 @@ fn parse_iso8601(raw: &str) -> Option<i64> {
     }
 
     Some(days_from_civil(year, month, day) * 86_400 + hour * 3_600 + minute * 60 + seconds - offset)
+}
+
+/// Integer seconds plus an optional all-digit fraction. The fraction is not
+/// rounded; it only has to be numeric so `45.12a` cannot pass as `45`.
+fn whole_seconds(field: &str) -> Option<i64> {
+    let mut parts = field.split('.');
+    let whole = parts.next().unwrap_or("");
+    if let Some(fraction) = parts.next() {
+        if fraction.is_empty() || !fraction.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+    }
+    if parts.next().is_some()
+        || whole.is_empty()
+        || !whole.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+    whole.parse().ok()
 }
 
 fn days_in_month(year: i64, month: i64) -> Option<i64> {
@@ -250,5 +277,28 @@ mod tests {
     fn offset_letters_are_not_digits() {
         assert_eq!(timestamp_secs("2026-10-19T00:00:00+0a3:00"), None);
         assert_eq!(normalized_timestamp("2026-10-19T00:00:00+0a3:00"), "2026-10-19T00:00:00+0a3:00");
+    }
+
+    #[test]
+    fn trailing_garbage_is_not_a_timestamp() {
+        for raw in [
+            "2026-10-19T12:30:45abc",
+            "2026-10-19T12:30:45abcZ",
+            "2026-10-19T00:00:00Zjunk",
+            "2026-10-19T00:00:00.12aZ",
+            "2026-10-19-99T00:00:00Z",
+            "2026-10-19T12:30:45:01Z",
+        ] {
+            assert_eq!(timestamp_secs(raw), None, "{raw}");
+            assert_eq!(normalized_timestamp(raw), raw);
+        }
+        assert_eq!(
+            timestamp_secs("2026-10-19T12:30Z"),
+            timestamp_secs("2026-10-19T12:30:00Z")
+        );
+        assert_eq!(
+            timestamp_secs("2026-10-19T00:00:00.123Z"),
+            timestamp_secs("2026-10-19T00:00:00Z")
+        );
     }
 }
