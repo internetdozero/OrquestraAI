@@ -217,3 +217,25 @@ fn antigravity_delete_does_not_follow_a_brain_child_symlink() {
         "delete_session followed brain/escape into the outside tree"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn hermes_delete_does_not_follow_a_sessions_child_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-hermes-delete");
+    fs::create_dir_all(outside.join("secret")).unwrap();
+    let secret = outside.join("secret/keep.txt");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let logs = home.0.join(".hermes/sessions");
+    fs::create_dir_all(&logs).unwrap();
+    std::os::unix::fs::symlink(&outside, logs.join("escape")).unwrap();
+
+    adapter(&home.0, "hermes")
+        .delete_session("escape/secret")
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(&secret).unwrap(),
+        "ssh-private\n",
+        "delete_session followed sessions/escape into the outside tree"
+    );
+}
