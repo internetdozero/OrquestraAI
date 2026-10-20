@@ -321,17 +321,27 @@ fn delete_rows(database: &Path, thread: &str) -> Result<(), String> {
 fn thread_dirs(home: &Path, thread: &str) -> Vec<PathBuf> {
     let mut folders = Vec::new();
 
-    if let Ok(entries) = std::fs::read_dir(home.join(LOCAL_REL)) {
-        for entry in entries.flatten() {
-            let folder = entry.path().join("threads").join(thread);
-            if folder.is_dir() {
-                folders.push(folder);
+    let local = home.join(LOCAL_REL);
+    if real_dir(&local) {
+        if let Ok(entries) = std::fs::read_dir(&local) {
+            for entry in entries.flatten() {
+                if !entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
+                    continue;
+                }
+                // `threads/` itself can be a directory symlink. The session
+                // folder is then a real directory and `remove_path` follows it.
+                let threads = entry.path().join("threads");
+                let folder = threads.join(thread);
+                if real_dir(&threads) && folder.is_dir() {
+                    folders.push(folder);
+                }
             }
         }
     }
 
-    let orphan = home.join(NOFOLDER_REL).join(thread);
-    if orphan.is_dir() {
+    let threads = home.join(NOFOLDER_REL);
+    let orphan = threads.join(thread);
+    if real_dir(&threads) && orphan.is_dir() {
         folders.push(orphan);
     }
 

@@ -253,3 +253,26 @@ fn freebuff_does_not_follow_a_desktop_projects_symlink() {
         .unwrap();
     assert_eq!(left, "kept");
 }
+
+#[cfg(unix)]
+#[test]
+fn freebuff_does_not_delete_through_a_local_projects_symlink() {
+    let home = TestHome::new();
+    let thread = "11111111-2222-3333-4444-555555555555";
+    let outside = home.0.join("outside");
+    fs::create_dir_all(outside.join(format!("pid/threads/{thread}"))).unwrap();
+    let secret = outside.join(format!("pid/threads/{thread}/note.txt"));
+    fs::write(&secret, "ssh-private").unwrap();
+    let desktop = home.0.join(".config/freebuff-desktop");
+    fs::create_dir_all(&desktop).unwrap();
+    std::os::unix::fs::symlink(&outside, desktop.join("local-projects")).unwrap();
+
+    adapter(&home.0, "freebuff")
+        .delete_session(&format!("desktop:slug:{thread}"))
+        .unwrap();
+    assert!(
+        secret.is_file(),
+        "delete must not remove the thread folder outside the store"
+    );
+    assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
+}
