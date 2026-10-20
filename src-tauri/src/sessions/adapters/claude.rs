@@ -132,17 +132,20 @@ impl SessionAdapter for Claude {
         let mut bytes = 0;
         let mut projects = Vec::new();
 
-        if let Ok(entries) = std::fs::read_dir(store.join("projects")) {
-            for project in entries.flatten() {
-                // `read_dir` follows a directory symlink and would delete the
-                // transcript on the other side of the link.
-                if !real_dir(&project.path()) {
-                    continue;
-                }
-                let transcript = project.path().join(format!("{session_id}.jsonl"));
-                if transcript.is_file() {
-                    bytes += fsops::remove_path(&store, &transcript)?;
-                    projects.push(project.path());
+        // A symlink at `projects/` is followed by `read_dir`. Each child is
+        // then a real directory, so the per-project check does not stop it.
+        let projects_dir = store.join("projects");
+        if real_dir(&projects_dir) {
+            if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+                for project in entries.flatten() {
+                    if !real_dir(&project.path()) {
+                        continue;
+                    }
+                    let transcript = project.path().join(format!("{session_id}.jsonl"));
+                    if transcript.is_file() {
+                        bytes += fsops::remove_path(&store, &transcript)?;
+                        projects.push(project.path());
+                    }
                 }
             }
         }
@@ -180,14 +183,17 @@ impl SessionAdapter for Claude {
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
         let store = self.store();
 
-        if let Ok(projects) = std::fs::read_dir(store.join("projects")) {
-            for project in projects.flatten() {
-                if !real_dir(&project.path()) {
-                    continue;
-                }
-                let candidate = project.path().join(format!("{session_id}.jsonl"));
-                if candidate.is_file() {
-                    return transcript::read_transcript(&candidate);
+        let projects_dir = store.join("projects");
+        if real_dir(&projects_dir) {
+            if let Ok(projects) = std::fs::read_dir(&projects_dir) {
+                for project in projects.flatten() {
+                    if !real_dir(&project.path()) {
+                        continue;
+                    }
+                    let candidate = project.path().join(format!("{session_id}.jsonl"));
+                    if candidate.is_file() {
+                        return transcript::read_transcript(&candidate);
+                    }
                 }
             }
         }
@@ -209,25 +215,30 @@ impl SessionAdapter for Claude {
 fn transcripts(store: &Path) -> HashMap<String, (PathBuf, u64)> {
     let mut found = HashMap::new();
 
-    let Ok(projects) = std::fs::read_dir(store.join("projects")) else {
-        return found;
-    };
-
-    for project in projects.flatten() {
-        if !real_dir(&project.path()) {
-            continue;
+    let projects_dir = store.join("projects");
+    if !real_dir(&projects_dir) {
+        // Missing `projects/` still skips the legacy walk, as before. A
+        // symlink is present and must not be opened, but sessions/ still is.
+        if std::fs::symlink_metadata(&projects_dir).is_err() {
+            return found;
         }
-        let Ok(entries) = std::fs::read_dir(project.path()) else {
-            continue;
-        };
+    } else if let Ok(projects) = std::fs::read_dir(&projects_dir) {
+        for project in projects.flatten() {
+            if !real_dir(&project.path()) {
+                continue;
+            }
+            let Ok(entries) = std::fs::read_dir(project.path()) else {
+                continue;
+            };
 
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path
-                .extension()
-                .is_some_and(|extension| extension == "jsonl")
-            {
-                insert(&mut found, path);
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path
+                    .extension()
+                    .is_some_and(|extension| extension == "jsonl")
+                {
+                    insert(&mut found, path);
+                }
             }
         }
     }
