@@ -134,6 +134,11 @@ impl SessionAdapter for Claude {
 
         if let Ok(entries) = std::fs::read_dir(store.join("projects")) {
             for project in entries.flatten() {
+                // `read_dir` follows a directory symlink and would delete the
+                // transcript on the other side of the link.
+                if !real_dir(&project.path()) {
+                    continue;
+                }
                 let transcript = project.path().join(format!("{session_id}.jsonl"));
                 if transcript.is_file() {
                     bytes += fsops::remove_path(&store, &transcript)?;
@@ -172,6 +177,9 @@ impl SessionAdapter for Claude {
 
         if let Ok(projects) = std::fs::read_dir(store.join("projects")) {
             for project in projects.flatten() {
+                if !real_dir(&project.path()) {
+                    continue;
+                }
                 let candidate = project.path().join(format!("{session_id}.jsonl"));
                 if candidate.is_file() {
                     return transcript::read_transcript(&candidate);
@@ -198,6 +206,9 @@ fn transcripts(store: &Path) -> HashMap<String, (PathBuf, u64)> {
     };
 
     for project in projects.flatten() {
+        if !real_dir(&project.path()) {
+            continue;
+        }
         let Ok(entries) = std::fs::read_dir(project.path()) else {
             continue;
         };
@@ -266,7 +277,18 @@ fn insert(found: &mut HashMap<String, (PathBuf, u64)>, path: PathBuf) {
 }
 
 /// First user prompt and recorded `cwd`, read from the transcript header only.
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
+}
+
 fn scan_transcript(path: &Path) -> (Option<String>, Option<String>) {
+    // A transcript path reached through a symlink must not be opened: `File::open`
+    // follows and would take the title and cwd from outside the store.
+    if utils::regular_file_len(path).is_none() {
+        return (None, None);
+    }
     let Ok(file) = std::fs::File::open(path) else {
         return (None, None);
     };

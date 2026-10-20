@@ -358,3 +358,35 @@ fn sqlite_open_does_not_follow_a_symlink() {
     assert!(super::fsops::open_writable(&owned).is_ok());
 }
 
+#[cfg(unix)]
+#[test]
+fn claude_does_not_follow_a_project_directory_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    let secret = outside.join("abc.jsonl");
+    fs::write(
+        &secret,
+        "{\"type\":\"user\",\"cwd\":\"/secret\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"ssh-private\"}]}}\n",
+    )
+    .unwrap();
+    let projects = home.0.join(".claude/projects");
+    fs::create_dir_all(&projects).unwrap();
+    std::os::unix::fs::symlink(&outside, projects.join("linked")).unwrap();
+
+    let claude = adapter(&home.0, "claude");
+    let sessions = claude.list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| {
+            !session.title.contains("ssh-private") && session.project_path.as_deref() != Some("/secret")
+        }),
+        "listing followed the project symlink: {sessions:?}"
+    );
+    claude.delete_session("abc").unwrap();
+    assert!(
+        secret.is_file(),
+        "delete must not remove the transcript outside the store"
+    );
+    assert!(fs::read_to_string(&secret).unwrap().contains("ssh-private"));
+}
+
