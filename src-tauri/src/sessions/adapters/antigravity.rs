@@ -119,6 +119,11 @@ impl SessionAdapter for Antigravity {
                 continue;
             }
             let brain = brain_root.join(session_id);
+            // `brain/<id>` as a directory symlink makes `transcript.jsonl` a
+            // regular file, and the read would load it from outside the store.
+            if !real_dir(&brain) {
+                continue;
+            }
             for candidate in [
                 brain
                     .join(".system_generated")
