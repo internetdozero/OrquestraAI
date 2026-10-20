@@ -7,6 +7,7 @@ import { presets } from "./presets";
 import { bridge } from "./bridge";
 import { ideas } from "./ideas";
 import { janitor } from "./janitor";
+import { credentials } from "./credentials";
 
 /**
  * Master Portuguese dictionary.
@@ -31,6 +32,7 @@ export const pt = {
   janitor,
   footer,
   presets,
+  credentials,
 };
 
 export type TranslationSchema = typeof pt;

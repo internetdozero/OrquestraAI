@@ -22,6 +22,7 @@ pub mod sessions;
 pub mod single_instance;
 mod skills;
 mod tray;
+pub mod vault;
 mod updater;
 
 use bridge::{BridgeReport, HarnessStatus};
@@ -40,6 +41,11 @@ use sessions::{
     purge_sessions, save_retention_policy, toggle_pin_session,
 };
 use skills::{HarnessSummary, SkillItem};
+use vault::{
+    list_vault_presets, vault_delete_service, vault_exec, vault_http_request,
+    vault_list_services, vault_remove_key, vault_save_service, vault_set_primary,
+    vault_test_connection,
+};
 use tauri::Manager;
 use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
 use tray::set_minimize_to_tray;
@@ -351,7 +357,16 @@ pub fn run() {
             purge_sessions,
             apply_app_update,
             sync_official_extensions,
-            restart_app
+            restart_app,
+            list_vault_presets,
+            vault_list_services,
+            vault_save_service,
+            vault_delete_service,
+            vault_set_primary,
+            vault_http_request,
+            vault_exec,
+            vault_test_connection,
+            vault_remove_key
         ])
         .run(tauri::generate_context!())
     {

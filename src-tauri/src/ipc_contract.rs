@@ -210,6 +210,7 @@ mod tests {
             "src/lib/sessions.ts",
             "src/lib/janitor.ts",
             "src/lib/ideas.ts",
+            "src/lib/vault.ts",
         ] {
             invoked.extend(invoked_commands(&read(&format!("../{file}"))));
         }

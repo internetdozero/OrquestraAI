@@ -7,9 +7,9 @@
     "batch_set_mcp_all",
     "core_status",
     "create_idea",
+    "create_orquestra_backup",
     "delete_idea",
     "delete_mcp",
-    "create_orquestra_backup",
     "delete_preset",
     "delete_skill",
     "deploy_harness_bridge",
@@ -31,8 +31,9 @@
     "list_official_store",
     "list_presets",
     "list_skills",
-    "mcp_targets",
+    "list_vault_presets",
     "mark_note_read",
+    "mcp_targets",
     "open_in_file_manager",
     "open_url",
     "pick_folder",
@@ -56,6 +57,14 @@
     "update_idea",
     "update_idea_status",
     "update_preset",
+    "vault_delete_service",
+    "vault_exec",
+    "vault_http_request",
+    "vault_list_services",
+    "vault_remove_key",
+    "vault_save_service",
+    "vault_set_primary",
+    "vault_test_connection",
     "write_master_agents_md"
   ],
   "cliFlags": [
@@ -82,13 +91,47 @@
       "scriptFiles",
       "tokens"
     ],
-    "HarnessSummary": ["active", "id", "total"],
-    "MemoryStats": ["freeMb", "totalMb", "usedMb", "usedPercent"],
-    "CpuStats": ["cores", "loadPercent"],
-    "TmpStats": ["freeMb", "isTmpfs", "path", "totalMb", "usedMb", "usedPercent"],
-    "TopProcess": ["name", "pid", "rssMb"],
-    "SystemHealth": ["alert", "cpu", "ram", "swap", "tmp", "topProcesses"],
-    "SweepReport": ["reclaimedMb", "removedCount", "status"],
+    "HarnessSummary": [
+      "active",
+      "id",
+      "total"
+    ],
+    "MemoryStats": [
+      "freeMb",
+      "totalMb",
+      "usedMb",
+      "usedPercent"
+    ],
+    "CpuStats": [
+      "cores",
+      "loadPercent"
+    ],
+    "TmpStats": [
+      "freeMb",
+      "isTmpfs",
+      "path",
+      "totalMb",
+      "usedMb",
+      "usedPercent"
+    ],
+    "TopProcess": [
+      "name",
+      "pid",
+      "rssMb"
+    ],
+    "SystemHealth": [
+      "alert",
+      "cpu",
+      "ram",
+      "swap",
+      "tmp",
+      "topProcesses"
+    ],
+    "SweepReport": [
+      "reclaimedMb",
+      "removedCount",
+      "status"
+    ],
     "McpServer": [
       "args",
       "command",
@@ -100,7 +143,12 @@
       "name",
       "official"
     ],
-    "McpTargetStatus": ["configPath", "id", "installed", "label"],
+    "McpTargetStatus": [
+      "configPath",
+      "id",
+      "installed",
+      "label"
+    ],
     "Preset": [
       "active",
       "allMcps",
@@ -125,7 +173,12 @@
       "skillsEnabled",
       "warnings"
     ],
-    "SecondaryStatus": ["action", "cleared", "path", "rationale"],
+    "SecondaryStatus": [
+      "action",
+      "cleared",
+      "path",
+      "rationale"
+    ],
     "HarnessStatus": [
       "bridged",
       "configLinked",
@@ -155,7 +208,11 @@
       "total",
       "warnings"
     ],
-    "SecondaryAction": ["adoptOnly", "project", "quarantine"],
+    "SecondaryAction": [
+      "adoptOnly",
+      "project",
+      "quarantine"
+    ],
     "UnifiedSession": [
       "createdAt",
       "harness",
@@ -168,8 +225,17 @@
       "turnsCount",
       "updatedAt"
     ],
-    "SessionFilter": ["harness", "olderThanDays", "pinnedOnly", "search"],
-    "TranscriptTurn": ["content", "role", "timestamp"],
+    "SessionFilter": [
+      "harness",
+      "olderThanDays",
+      "pinnedOnly",
+      "search"
+    ],
+    "TranscriptTurn": [
+      "content",
+      "role",
+      "timestamp"
+    ],
     "RetentionPolicy": [
       "autoPurgeEnabled",
       "autoPurgeIntervalHours",
@@ -177,8 +243,18 @@
       "harnessOverrides",
       "lastRun"
     ],
-    "PinnedSession": ["harness", "label", "pinnedAt", "sessionId"],
-    "PurgeFilter": ["harness", "ignorePinned", "olderThanDays", "sessionIds"],
+    "PinnedSession": [
+      "harness",
+      "label",
+      "pinnedAt",
+      "sessionId"
+    ],
+    "PurgeFilter": [
+      "harness",
+      "ignorePinned",
+      "olderThanDays",
+      "sessionIds"
+    ],
     "PurgeEstimate": [
       "affectedHarnesses",
       "reclaimedBytes",
@@ -186,7 +262,12 @@
       "skippedActiveCount",
       "skippedPinnedCount"
     ],
-    "PurgeReport": ["deletedCount", "errors", "failedCount", "reclaimedBytes"],
+    "PurgeReport": [
+      "deletedCount",
+      "errors",
+      "failedCount",
+      "reclaimedBytes"
+    ],
     "IdeaItem": [
       "category",
       "completedAt",
@@ -200,8 +281,15 @@
       "title",
       "updatedAt"
     ],
-    "DayActivity": ["date", "ideasCompleted", "intensity"],
-    "WeeklyVelocity": ["lastWeek", "thisWeek"],
+    "DayActivity": [
+      "date",
+      "ideasCompleted",
+      "intensity"
+    ],
+    "WeeklyVelocity": [
+      "lastWeek",
+      "thisWeek"
+    ],
     "ProductivityMetrics": [
       "avgCycleHours",
       "currentStreak",

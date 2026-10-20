@@ -94,6 +94,7 @@ export function Sidebar({ view, onSelect, skillStats, mcpCount, onOpenSettings, 
     agents: null,
     sessions: null,
     ideas: null,
+    credentials: null,
   };
 
   return (

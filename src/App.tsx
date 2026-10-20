@@ -13,6 +13,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SessionsView } from "./components/sessions/SessionsView";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
+import { CredentialsView } from "./components/credentials/CredentialsView";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
@@ -291,6 +292,12 @@ export default function App() {
             <SessionsView
               isTauri={isTauri}
               notifyOnPurge={prefs.settings.notifyOnPurge}
+              onToast={showToast}
+              onError={setError}
+            />
+          ) : view === "credentials" ? (
+            <CredentialsView
+              isTauri={isTauri}
               onToast={showToast}
               onError={setError}
             />

@@ -57,6 +57,14 @@ export const sidebar = {
       label: "Ideias",
       hint: "Baú de ideias e quadro entre agentes",
     },
+    credentials: {
+      label: "Credenciais",
+      hint: "Cofre cego de chaves de API",
+    },
+  },
+  credentials: {
+    label: "Credenciais",
+    hint: "Cofre cego de chaves de API com failover",
   },
   inheritance: {
     title: "Herança",

@@ -54,6 +54,14 @@ export const sidebar: TranslationSchema["sidebar"] = {
       label: "Ideas",
       hint: "Idea vault and inter-agent blackboard",
     },
+    credentials: {
+      label: "Credentials",
+      hint: "Blind API key vault",
+    },
+  },
+  credentials: {
+    label: "Credentials",
+    hint: "Blind API key vault with failover",
   },
   inheritance: {
     title: "Inheritance",

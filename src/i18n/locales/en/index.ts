@@ -8,6 +8,7 @@ import { presets } from "./presets";
 import { bridge } from "./bridge";
 import { ideas } from "./ideas";
 import { janitor } from "./janitor";
+import { credentials } from "./credentials";
 
 /**
  * English dictionary. Annotating it with `TranslationSchema` makes a missing
@@ -29,6 +30,7 @@ const en: TranslationSchema = {
   janitor,
   footer,
   presets,
+  credentials,
 };
 
 export default en;
