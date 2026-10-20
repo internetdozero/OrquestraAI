@@ -181,6 +181,16 @@ impl SessionAdapter for Claude {
     /// `projects/<slug>/` and the legacy `sessions/` folder. Corrupt lines
     /// are skipped by the parser; a missing transcript is an empty feed.
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
+        // The id is joined onto `{id}.jsonl`. `../secret` still names a
+        // regular file after the kernel resolves it.
+        if session_id.is_empty()
+            || session_id.contains('/')
+            || session_id.contains('\\')
+            || session_id == "."
+            || session_id == ".."
+        {
+            return Vec::new();
+        }
         let store = self.store();
 
         let projects_dir = store.join("projects");

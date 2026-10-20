@@ -24,3 +24,21 @@ fn antigravity_read_does_not_escape_brain_with_parent_dirs() {
         "read_transcript climbed out of brain/: {turns:?}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn claude_read_does_not_escape_a_project_with_parent_dirs() {
+    let home = TestHome::new();
+    fs::create_dir_all(home.0.join(".claude/projects/slug")).unwrap();
+    fs::write(
+        home.0.join("secret.jsonl"),
+        "{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"ssh-private\"}]}}\n",
+    )
+    .unwrap();
+
+    let turns = adapter(&home.0, "claude").read_transcript("../../../secret");
+    assert!(
+        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        "read_transcript climbed out of projects/: {turns:?}"
+    );
+}
