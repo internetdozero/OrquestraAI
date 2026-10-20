@@ -173,10 +173,12 @@ fn install_linux_assets(data_dir: &std::path::Path) {
     let apps_dir = data_dir.join("applications");
     let icons_base = data_dir.join("icons/hicolor");
 
-    let _ = std::fs::create_dir_all(&apps_dir);
+    if !is_symlink(&apps_dir) {
+        let _ = std::fs::create_dir_all(&apps_dir);
+    }
     for name in ["orquestra.desktop", "orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
         let dest = apps_dir.join(name);
-        if is_symlink(&dest) {
+        if is_symlink(&apps_dir) || is_symlink(&dest) {
             continue;
         }
         let needs_write = match std::fs::read_to_string(&dest) {
@@ -197,6 +199,9 @@ fn install_linux_assets(data_dir: &std::path::Path) {
     ];
     for (rel_dir, bytes) in icon_map {
         let target_dir = icons_base.join(rel_dir);
+        if ancestor_is_symlink(data_dir, &target_dir) || is_symlink(&target_dir) {
+            continue;
+        }
         let _ = std::fs::create_dir_all(&target_dir);
         for icon_name in ["orquestra.png", "orquestra-ai.png"] {
             let icon_file = target_dir.join(icon_name);
@@ -215,12 +220,17 @@ fn install_linux_assets(data_dir: &std::path::Path) {
 
     // Clean up legacy 1024x1024 icons from early alpha builds that override theme colors
     let legacy_1024 = icons_base.join("1024x1024/apps");
-    let _ = std::fs::remove_file(legacy_1024.join("orquestra.png"));
-    let _ = std::fs::remove_file(legacy_1024.join("orquestra-ai.png"));
+    for legacy_name in ["orquestra.png", "orquestra-ai.png"] {
+        let legacy = legacy_1024.join(legacy_name);
+        if ancestor_is_symlink(data_dir, &legacy) || is_symlink(&legacy) {
+            continue;
+        }
+        let _ = std::fs::remove_file(&legacy);
+    }
 
     for root_name in ["icons/orquestra.png", "icons/orquestra-ai.png"] {
         let root_icon = data_dir.join(root_name);
-        if is_symlink(&root_icon) {
+        if ancestor_is_symlink(data_dir, &root_icon) || is_symlink(&root_icon) {
             continue;
         }
         let needs_root_write = match std::fs::read(&root_icon) {
@@ -231,6 +241,27 @@ fn install_linux_assets(data_dir: &std::path::Path) {
             let _ = std::fs::write(&root_icon, ICON_512);
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+fn ancestor_is_symlink(root: &std::path::Path, path: &std::path::Path) -> bool {
+    let Ok(relative) = path.strip_prefix(root) else {
+        return true;
+    };
+    let mut current = root.to_path_buf();
+    let mut components = relative.components().peekable();
+    while let Some(component) = components.next() {
+        if components.peek().is_none() {
+            break;
+        }
+        current.push(component);
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => return true,
+            Ok(_) => {}
+            Err(_) => return false,
+        }
+    }
+    false
 }
 
 #[cfg(target_os = "linux")]
@@ -313,6 +344,39 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&outside).unwrap(), original);
         let regular = std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
         assert!(regular.contains("Name=OrquestraAI"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn desktop_install_does_not_write_into_a_symlinked_applications_dir() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-desktop-dir-link-{}-{unique}",
+            std::process::id()
+        ));
+        let data = root.join("share");
+        let outside = root.join("outside");
+        std::fs::create_dir_all(&data).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        let link = data.join("applications");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+        super::install_linux_assets(&data);
+
+        assert!(
+            !outside.join("orquestra.desktop").exists(),
+            "install must not create a launcher in the symlink target"
+        );
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 }
