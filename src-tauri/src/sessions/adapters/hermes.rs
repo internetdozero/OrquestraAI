@@ -71,6 +71,10 @@ impl Hermes {
             sessions.join(id),
         ];
 
+        if !real_dir(&sessions) {
+            return 0;
+        }
+
         candidates
             .iter()
             .map(|path| {
@@ -107,12 +111,18 @@ impl SessionAdapter for Hermes {
         }
 
         for directory in LOG_DIRS {
+            let logs = store.join(directory);
+            // A symlink here is followed by the joined path: the log file is a
+            // regular file, so `remove_path` would delete it outside the store.
+            if !real_dir(&logs) {
+                continue;
+            }
             for name in [
                 format!("{session_id}.jsonl"),
                 format!("{session_id}.json"),
                 session_id.to_string(),
             ] {
-                let path = store.join(directory).join(name);
+                let path = logs.join(name);
                 if std::fs::symlink_metadata(&path).is_ok() {
                     bytes += fsops::remove_path(&store, &path)?;
                 }
@@ -259,6 +269,12 @@ impl SessionAdapter for Hermes {
 
         Ok(sessions)
     }
+}
+
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
 }
 
 fn title(id: &str, display: Option<String>, source: Option<String>) -> String {

@@ -148,3 +148,37 @@ fn antigravity_does_not_follow_a_brain_symlink() {
     );
     assert!(fs::read_to_string(&secret).unwrap().contains("ssh-private"));
 }
+
+#[cfg(unix)]
+#[test]
+fn hermes_does_not_delete_through_a_sessions_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    let secret = outside.join("abc.jsonl");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let hermes_dir = home.0.join(".hermes");
+    fs::create_dir_all(&hermes_dir).unwrap();
+    std::os::unix::fs::symlink(&outside, hermes_dir.join("sessions")).unwrap();
+    home.database(
+        ".hermes/state.db",
+        "CREATE TABLE sessions (
+            id TEXT, source TEXT, display_name TEXT,
+            started_at TEXT, ended_at TEXT, message_count INTEGER
+         );
+         INSERT INTO sessions VALUES ('abc', '', '', NULL, NULL, 0);",
+    );
+
+    let hermes = adapter(&home.0, "hermes");
+    let sessions = hermes.list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.size_bytes == 0),
+        "listing measured the log through the sessions symlink: {sessions:?}"
+    );
+    hermes.delete_session("abc").unwrap();
+    assert!(
+        secret.is_file(),
+        "delete must not remove the log outside the store"
+    );
+    assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private\n");
+}
