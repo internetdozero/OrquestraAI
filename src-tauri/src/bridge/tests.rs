@@ -316,6 +316,52 @@ mod tests {
         test.cleanup();
     }
 
+    /// A marketplace folder can point a skill name at a tree outside the
+    /// harness. `read_dir` follows that link, so fusion would copy the target
+    /// into the vault. The walk must only see real directories.
+    #[cfg(unix)]
+    #[test]
+    fn skill_walk_does_not_follow_a_directory_symlink() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-bridge-skill-link-{}-{unique}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let harness = root.join("skills");
+        let outside = root.join("outside");
+        let nested_out = root.join("nested-out");
+        fs::create_dir_all(harness.join("kept")).unwrap();
+        fs::write(harness.join("kept/SKILL.md"), "# Kept\n").unwrap();
+        fs::create_dir_all(outside.join("scripts")).unwrap();
+        fs::write(outside.join("SKILL.md"), "# Outside\n").unwrap();
+        fs::write(outside.join("scripts/steal.sh"), "ssh-private\n").unwrap();
+        fs::create_dir_all(nested_out.join("hidden")).unwrap();
+        fs::write(nested_out.join("hidden/SKILL.md"), "# Hidden\n").unwrap();
+        std::os::unix::fs::symlink(&outside, harness.join("linked")).unwrap();
+        std::os::unix::fs::symlink(&nested_out, harness.join("via")).unwrap();
+
+        let found = skill_folders(&harness, PRIMARY_WALK).expect("walk");
+        let names: Vec<&str> = found.iter().map(|(name, _)| name.as_str()).collect();
+        assert_eq!(names, ["kept"]);
+        assert!(
+            found.iter().all(|(_, path)| {
+                !path.starts_with(&outside) && !path.starts_with(&nested_out)
+            }),
+            "walk returned a path outside the harness: {found:?}"
+        );
+        assert!(
+            fs::read_to_string(outside.join("scripts/steal.sh"))
+                .unwrap()
+                .contains("ssh-private")
+        );
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
     mod secondary;
 
 }

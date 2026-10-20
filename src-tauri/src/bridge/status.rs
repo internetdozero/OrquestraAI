@@ -148,7 +148,13 @@ pub(super) fn skill_folders(root: &Path, walk: Walk) -> Result<Vec<(String, Path
             .map_err(|error| format!("failed to read {}: {error}", directory.display()))?;
 
         for entry in entries.flatten() {
-            if !entry.path().is_dir() {
+            // `Path::is_dir` follows symlinks. A marketplace entry that points
+            // outside the harness would be adopted, and `read_dir` on that
+            // link would copy the target into the vault.
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if !kind.is_dir() {
                 continue;
             }
 
@@ -158,7 +164,7 @@ pub(super) fn skill_folders(root: &Path, walk: Walk) -> Result<Vec<(String, Path
             // A dotted folder is harness bookkeeping rather than a skill, but
             // it can still contain one, so only the VCS folders are skipped
             // outright on a descending walk.
-            if !name.starts_with('.') && path.join(skills::SKILL_FILE).is_file() {
+            if !name.starts_with('.') && regular_file(&path.join(skills::SKILL_FILE)) {
                 found.push((name, path));
             } else if depth < walk.max_depth
                 && (walk.descend_hidden || !name.starts_with('.'))
@@ -215,6 +221,14 @@ fn all_archived(source: &Path, vault: &Path) -> bool {
             .all(|(name, _)| vault.join(name).join(skills::SKILL_FILE).is_file()),
         Err(_) => false,
     }
+}
+
+/// A skill marker must be a regular file. `is_file` follows a link and would
+/// treat an outside target as `SKILL.md`.
+fn regular_file(path: &Path) -> bool {
+    fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_file())
+        .unwrap_or(false)
 }
 
 /// Resolves without following the last component, so a dangling symlink still
