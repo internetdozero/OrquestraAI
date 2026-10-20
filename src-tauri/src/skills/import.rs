@@ -71,14 +71,32 @@ fn staging_dir() -> Result<PathBuf, String> {
 }
 
 fn import_dir(source: &Path) -> Result<SkillItem, String> {
-    if !source.is_dir() {
-        return Err(format!("not a folder: {}", source.display()));
-    }
-    if !source.join(SKILL_FILE).is_file() {
+    // Before any vault write. `is_dir` follows, and copying a link would
+    // read the target with `read_dir`.
+    let metadata = fs::symlink_metadata(source).map_err(|error| {
+        format!("not a folder: {} ({error})", source.display())
+    })?;
+    if !metadata.file_type().is_dir() {
         return Err(format!(
-            "no SKILL.md in {} — pick the skill folder itself",
+            "refusing to import {}: not a real directory",
             source.display()
         ));
+    }
+    let skill_file = source.join(SKILL_FILE);
+    match fs::symlink_metadata(&skill_file) {
+        Ok(metadata) if metadata.file_type().is_file() => {}
+        Ok(_) => {
+            return Err(format!(
+                "refusing to import {}: SKILL.md is not a regular file",
+                source.display()
+            ));
+        }
+        Err(_) => {
+            return Err(format!(
+                "no SKILL.md in {} — pick the skill folder itself",
+                source.display()
+            ));
+        }
     }
 
     let folder = source
@@ -121,6 +139,29 @@ fn finish(paths: &OrquestraPaths, id: &str, destination: &Path) -> Result<SkillI
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn import_refuses_a_symlinked_directory() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-import-link-{}-{unique}",
+            std::process::id()
+        ));
+        let outside = root.join("outside");
+        fs::create_dir_all(&outside).expect("outside");
+        fs::write(outside.join("SKILL.md"), "secret-outside\n").expect("skill");
+        let link = root.join("linked");
+        std::os::unix::fs::symlink(&outside, &link).expect("symlink");
+
+        let error = import_skill(link.to_string_lossy().into_owned()).expect_err("refuse");
+        assert!(error.contains("not a real directory"), "{error}");
+        assert!(outside.join("SKILL.md").is_file(), "the target stays put");
+        let _ = fs::remove_dir_all(&root);
+    }
 
     #[test]
     fn staging_stays_on_disk_backed_var_tmp() {

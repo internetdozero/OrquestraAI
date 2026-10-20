@@ -59,32 +59,45 @@ pub(crate) fn sanitize_subpath(raw: &str) -> Option<String> {
 /// Locate the skill folder in a cloned staging tree. An explicit subpath
 /// wins; otherwise root, one level down, monorepo folders, then a bounded
 /// breadth-first walk (sorted, so monorepos resolve deterministically).
+/// A skill folder we can copy without leaving the tree. `is_dir` / `is_file`
+/// follow symlinks, and `read_dir` on a link opens the target, so a repo that
+/// points `skills/foo` outside the clone would be imported wholesale.
+fn is_real_dir(dir: &Path) -> bool {
+    fs::symlink_metadata(dir)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
+}
+
+fn has_real_skill_file(dir: &Path) -> bool {
+    fs::symlink_metadata(dir.join(SKILL_FILE))
+        .map(|metadata| metadata.file_type().is_file())
+        .unwrap_or(false)
+}
+
 pub(crate) fn locate_skill_dir(staging: &Path, subpath: Option<&str>) -> Option<PathBuf> {
     if let Some(anchor) = subpath {
         let target = staging.join(anchor);
-        return target.is_dir().then_some(target).filter(|dir| {
-            dir.join(SKILL_FILE).is_file()
-        });
+        return (is_real_dir(&target) && has_real_skill_file(&target)).then_some(target);
     }
-    if staging.join(SKILL_FILE).is_file() {
+    if is_real_dir(staging) && has_real_skill_file(staging) {
         return Some(staging.to_path_buf());
     }
     // Depth 1: standalone repos nesting the skill one folder down.
     if let Some(found) = sorted_child_dirs(staging)
         .into_iter()
-        .find(|dir| dir.join(SKILL_FILE).is_file())
+        .find(|dir| has_real_skill_file(dir))
     {
         return Some(found);
     }
     // Standard monorepo containers, one skill per child folder.
     for container in MONOREPO_DIRS {
         let root = staging.join(container);
-        if !root.is_dir() {
+        if !is_real_dir(&root) {
             continue;
         }
         if let Some(found) = sorted_child_dirs(&root)
             .into_iter()
-            .find(|dir| dir.join(SKILL_FILE).is_file())
+            .find(|dir| has_real_skill_file(dir))
         {
             return Some(found);
         }
@@ -95,7 +108,7 @@ pub(crate) fn locate_skill_dir(staging: &Path, subpath: Option<&str>) -> Option<
         let mut next = Vec::new();
         for dir in frontier {
             for child in sorted_child_dirs(&dir) {
-                if child.join(SKILL_FILE).is_file() {
+                if has_real_skill_file(&child) {
                     return Some(child);
                 }
                 next.push(child);
@@ -271,6 +284,34 @@ mod tests {
         assert_eq!(found, root.join("skills/alpha"));
         assert!(locate_skill_dir(&root, Some("missing")).is_none());
         assert!(locate_skill_dir(&root, Some("../escape")).is_none());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_skill_directory_is_not_selected() {
+        let root = scratch("link");
+        skill_at(&root, "outside");
+        let outside = root.join("outside");
+        fs::write(outside.join(SKILL_FILE), "secret-outside\n").expect("marker");
+        let staging = root.join("repo");
+        fs::create_dir_all(&staging).expect("staging");
+        std::os::unix::fs::symlink(&outside, staging.join("linked")).expect("dir symlink");
+        std::os::unix::fs::symlink(&outside, staging.join("skills")).expect("container symlink");
+        assert!(locate_skill_dir(&staging, Some("linked")).is_none());
+        assert!(locate_skill_dir(&staging, None).is_none());
+
+        let hooked = staging.join("hooked");
+        fs::create_dir_all(&hooked).expect("hooked");
+        std::os::unix::fs::symlink(outside.join(SKILL_FILE), hooked.join(SKILL_FILE))
+            .expect("file symlink");
+        assert!(locate_skill_dir(&staging, Some("hooked")).is_none());
+
+        skill_at(&staging, "skills-real/kept");
+        // `skills` is the symlink container; a real folder with another name still resolves.
+        let found = locate_skill_dir(&staging, Some("skills-real/kept")).expect("real skill");
+        assert_eq!(found, staging.join("skills-real/kept"));
+        assert!(outside.join(SKILL_FILE).is_file(), "the target stays put");
         let _ = fs::remove_dir_all(&root);
     }
 
