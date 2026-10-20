@@ -64,6 +64,16 @@ impl Hermes {
 
     /// On-disk log copies kept beside the database.
     fn log_bytes(&self, id: &str) -> u64 {
+        // The id is joined under `sessions/`. `../outside` still names a real
+        // directory after the kernel resolves it, and `dir_size` would walk it.
+        if id.is_empty()
+            || id.contains('/')
+            || id.contains('\\')
+            || id == "."
+            || id == ".."
+        {
+            return 0;
+        }
         let sessions = self.store().join("sessions");
         let candidates = [
             sessions.join(format!("{id}.jsonl")),

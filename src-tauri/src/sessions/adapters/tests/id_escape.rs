@@ -42,3 +42,29 @@ fn claude_read_does_not_escape_a_project_with_parent_dirs() {
         "read_transcript climbed out of projects/: {turns:?}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn hermes_list_does_not_size_a_directory_outside_sessions() {
+    let home = TestHome::new();
+    fs::create_dir_all(home.0.join(".hermes/sessions")).unwrap();
+    let outside = home.0.join("outside-hermes");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("secret.bin"), vec![7u8; 4096]).unwrap();
+    home.database(
+        ".hermes/state.db",
+        "CREATE TABLE sessions (
+            id TEXT, source TEXT, display_name TEXT,
+            started_at TEXT, ended_at TEXT, message_count INTEGER
+         );
+         INSERT INTO sessions VALUES (
+            '../../outside-hermes', 'cli', 'x', NULL, NULL, 0
+         );",
+    );
+
+    let sessions = adapter(&home.0, "hermes").list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.size_bytes == 0),
+        "listing sized a directory outside sessions/: {sessions:?}"
+    );
+}
