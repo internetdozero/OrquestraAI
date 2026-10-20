@@ -38,8 +38,20 @@ pub fn write_master_agents_md(content: &str) -> Result<(), String> {
 pub(crate) fn read_agents(paths: &OrquestraPaths) -> Result<String, String> {
     let path = paths.agents_path();
 
-    if !path.is_file() {
-        write_agents(paths, DEFAULT_AGENTS)?;
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            write_agents(paths, DEFAULT_AGENTS)?;
+        }
+        Ok(metadata) if metadata.file_type().is_file() => {}
+        Ok(_) => {
+            return Err(format!(
+                "refusing to read {}: not a regular file",
+                path.display()
+            ));
+        }
+        Err(error) => {
+            return Err(format!("failed to read {}: {error}", path.display()));
+        }
     }
 
     fs::read_to_string(&path)

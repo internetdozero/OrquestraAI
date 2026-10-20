@@ -212,3 +212,40 @@ fn vault_security_scan_stays_live() {
     assert_eq!(alpha.script_files, vec!["scripts/hook.sh".to_string()]);
     fs::remove_dir_all(&paths.root).unwrap();
 }
+
+#[cfg(unix)]
+#[test]
+fn read_agents_does_not_follow_a_symlink() {
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-agents-link-{}-{unique}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let paths = crate::paths::OrquestraPaths {
+        vault: root.join("skills-library"),
+        active: root.join("active"),
+        root: root.clone(),
+    };
+    paths.ensure_layout().expect("layout");
+    let outside = root.join("secret.md");
+    fs::write(&outside, "ssh-private\n").expect("outside agents");
+    std::os::unix::fs::symlink(&outside, paths.agents_path()).expect("agents symlink");
+
+    let read = read_agents(&paths);
+    assert!(read.is_err(), "linked AGENTS.md must not be loaded: {read:?}");
+    assert!(
+        !read.unwrap_or_default().contains("ssh-private"),
+        "the target contents must not be returned"
+    );
+    assert_eq!(fs::read_to_string(&outside).unwrap(), "ssh-private\n");
+    assert!(fs::symlink_metadata(paths.agents_path())
+        .unwrap()
+        .file_type()
+        .is_symlink());
+
+    fs::remove_dir_all(&root).expect("cleanup");
+}
