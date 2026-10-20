@@ -202,3 +202,54 @@ fn opencode_does_not_delete_through_an_artifact_symlink() {
     );
     assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
 }
+
+#[cfg(unix)]
+#[test]
+fn freebuff_does_not_follow_a_desktop_projects_symlink() {
+    let home = TestHome::new();
+    let thread = "11111111-2222-3333-4444-555555555555";
+    home.database(
+        "outside/slug/desktop-v2.db",
+        &format!(
+            "CREATE TABLE threads (id TEXT PRIMARY KEY, title TEXT);
+             CREATE TABLE messages (
+                seq INTEGER PRIMARY KEY AUTOINCREMENT, thread_id TEXT,
+                role TEXT, parts_json TEXT
+             );
+             INSERT INTO threads VALUES ('{thread}', 'kept');
+             INSERT INTO messages (thread_id, role, parts_json)
+             VALUES ('{thread}', 'user', '[{{\"type\":\"text\",\"text\":\"ssh-private\"}}]');"
+        ),
+    );
+    fs::write(
+        home.0.join("outside/slug/project.json"),
+        "{\"projectPath\":\"/secret\"}",
+    )
+    .unwrap();
+    let desktop = home.0.join(".config/freebuff-desktop");
+    fs::create_dir_all(&desktop).unwrap();
+    std::os::unix::fs::symlink(home.0.join("outside"), desktop.join("projects")).unwrap();
+
+    let freebuff = adapter(&home.0, "freebuff");
+    let sessions = freebuff.list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| {
+            session.project_path.as_deref() != Some("/secret") && !session.id.contains("slug")
+        }),
+        "listing followed the desktop projects symlink: {sessions:?}"
+    );
+    let id = format!("desktop:slug:{thread}");
+    assert!(
+        freebuff
+            .read_transcript(&id)
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
+        "read_transcript followed the desktop projects symlink"
+    );
+    freebuff.delete_session(&id).unwrap();
+    let left: String = rusqlite::Connection::open(home.0.join("outside/slug/desktop-v2.db"))
+        .unwrap()
+        .query_row("SELECT title FROM threads", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(left, "kept");
+}

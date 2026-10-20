@@ -64,6 +64,11 @@ pub fn parse_id(session_id: &str) -> Option<(String, String)> {
 /// or corrupt is skipped: one broken store must not hide the healthy ones.
 pub fn list(home: &Path) -> Vec<UnifiedSession> {
     let projects = home.join(PROJECTS_REL);
+    // `read_dir` follows a directory symlink. Each project inside is then a
+    // real directory, so the child check does not keep the database inside.
+    if !real_dir(&projects) {
+        return Vec::new();
+    }
     let Ok(entries) = std::fs::read_dir(&projects) else {
         return Vec::new();
     };
@@ -102,16 +107,13 @@ pub fn list(home: &Path) -> Vec<UnifiedSession> {
             session.updated_at = row
                 .updated_ms
                 .map(|ms| utils::iso8601_from_secs(ms.div_euclid(1_000)))
-                .or_else(|| {
-                    utils::modified_secs(&database).map(utils::iso8601_from_secs)
-                })
+                .or_else(|| utils::modified_secs(&database).map(utils::iso8601_from_secs))
                 .unwrap_or_default();
             session.created_at = row
                 .created_ms
                 .map(|ms| utils::iso8601_from_secs(ms.div_euclid(1_000)));
             session.turns_count = row.turns;
-            session.size_bytes =
-                row.message_bytes + extra_size(home, &row.id);
+            session.size_bytes = row.message_bytes + extra_size(home, &row.id);
 
             sessions.push(session);
         }
@@ -125,11 +127,14 @@ pub fn list(home: &Path) -> Vec<UnifiedSession> {
 /// of folders removed; database pages are reclaimed by [`vacuum_all`].
 pub fn delete(home: &Path, slug: &str, thread: &str) -> Result<u64, String> {
     if slug.contains('/') || thread.contains('/') || thread.contains(':') {
-        return Err(format!("refusing to delete desktop thread {thread}: bad id"));
+        return Err(format!(
+            "refusing to delete desktop thread {thread}: bad id"
+        ));
     }
 
-    let database = home.join(PROJECTS_REL).join(slug).join(DB_NAME);
-    if database.is_file() {
+    let projects = home.join(PROJECTS_REL);
+    let database = projects.join(slug).join(DB_NAME);
+    if real_dir(&projects) && database.is_file() {
         delete_rows(&database, thread)?;
     }
 
@@ -149,6 +154,9 @@ pub fn delete(home: &Path, slug: &str, thread: &str) -> Result<u64, String> {
 /// Reclaim the pages deletes left in every desktop database.
 pub fn vacuum_all(home: &Path) -> Result<(), String> {
     let projects = home.join(PROJECTS_REL);
+    if !real_dir(&projects) {
+        return Ok(());
+    }
     let Ok(entries) = std::fs::read_dir(&projects) else {
         return Ok(());
     };
@@ -342,6 +350,12 @@ fn extra_size(home: &Path, thread: &str) -> u64 {
         bytes += utils::dir_size(&matched);
     }
     bytes
+}
+
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
 }
 
 fn fallback_title(id: &str, title: Option<String>) -> String {

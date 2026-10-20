@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::sessions::types::TranscriptTurn;
 
 use super::super::{time, transcript, utils};
-use super::{DB_NAME, PROJECTS_REL};
+use super::{real_dir, DB_NAME, PROJECTS_REL};
 
 /// Conversation turns of one desktop thread, oldest first.
 ///
@@ -22,7 +22,11 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
     if slug.contains('/') || thread.contains('/') || thread.contains(':') {
         return Vec::new();
     }
-    let database = home.join(PROJECTS_REL).join(slug).join(DB_NAME);
+    let projects = home.join(PROJECTS_REL);
+    if !real_dir(&projects) {
+        return Vec::new();
+    }
+    let database = projects.join(slug).join(DB_NAME);
     let Ok(connection) = utils::open_readonly(&database) else {
         return Vec::new();
     };
@@ -39,7 +43,8 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
         return Vec::new();
     };
     let ts_col = pick_column(&columns, &["created_at", "timestamp", "updated_at", "ts"]);
-    let order_col = pick_column(&columns, &["seq", "created_at", "rowid"]).unwrap_or_else(|| "rowid".to_string());
+    let order_col = pick_column(&columns, &["seq", "created_at", "rowid"])
+        .unwrap_or_else(|| "rowid".to_string());
 
     let sql = format!(
         "SELECT {}, {}, {} FROM messages WHERE thread_id = ?1 ORDER BY {} ASC LIMIT {LIMIT}",
