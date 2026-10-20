@@ -21,20 +21,36 @@ fn orquestra_root() -> Result<PathBuf, String> {
 /// Open an external HTTP(S) URL in the default system browser.
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
+    let (program, args) = browser_launch(std::env::consts::OS, &url)?;
+    std::process::Command::new(program)
+        .args(&args)
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("Failed to open browser: {error}"))
+}
+
+/// Launcher for one http(s) URL. The URL is a single argv entry.
+///
+/// Windows must not use `cmd /C start`: cmd re-parses the command line, so a
+/// query string (`?a=1&b=2`) is split on `&` and the tail runs as a command.
+fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), String> {
     let trimmed = url.trim();
     if !trimmed.starts_with("https://") && !trimmed.starts_with("http://") {
         return Err("Only http/https URLs are permitted".to_string());
     }
-    #[cfg(target_os = "linux")]
-    let opener: (&str, Vec<&str>) = ("xdg-open", vec![trimmed]);
-    #[cfg(target_os = "macos")]
-    let opener: (&str, Vec<&str>) = ("open", vec![trimmed]);
-    #[cfg(target_os = "windows")]
-    let opener: (&str, Vec<&str>) = ("cmd", vec!["/C", "start", "", trimmed]);
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-    return Err("Opening URLs is not supported on this platform".to_string());
-    std::process::Command::new(opener.0).args(&opener.1).spawn().map(|_| ())
-        .map_err(|error| format!("Failed to open browser: {error}"))
+    if trimmed.chars().any(|ch| ch.is_control()) {
+        return Err("URL contains control characters".to_string());
+    }
+    let owned = trimmed.to_string();
+    match os {
+        "linux" => Ok(("xdg-open", vec![owned])),
+        "macos" => Ok(("open", vec![owned])),
+        "windows" => Ok((
+            "rundll32",
+            vec!["url.dll,FileProtocolHandler".to_string(), owned],
+        )),
+        _ => Err("Opening URLs is not supported on this platform".to_string()),
+    }
 }
 
 /// Reveal a directory inside `~/.orquestra` in the native file manager.
@@ -214,3 +230,27 @@ pub fn ensure_desktop_integration() {
 
 #[cfg(not(target_os = "linux"))]
 pub fn ensure_desktop_integration() {}
+
+#[cfg(test)]
+mod tests {
+    use super::browser_launch;
+
+    #[test]
+    fn windows_launch_keeps_the_query_string_out_of_cmd() {
+        let (program, args) =
+            browser_launch("windows", "https://example.com/a?x=1&y=2").expect("https");
+        assert_eq!(program, "rundll32");
+        assert_eq!(args[0], "url.dll,FileProtocolHandler");
+        assert_eq!(args[1], "https://example.com/a?x=1&y=2");
+        assert!(args.iter().all(|arg| arg != "/C" && arg != "cmd" && arg != "start"));
+
+        let (program, args) =
+            browser_launch("linux", "  http://example.com/docs  ").expect("http");
+        assert_eq!(program, "xdg-open");
+        assert_eq!(args, vec!["http://example.com/docs".to_string()]);
+
+        assert!(browser_launch("linux", "file:///etc/passwd").is_err());
+        assert!(browser_launch("windows", "https://example.com/\ncalc").is_err());
+        assert!(browser_launch("haiku", "https://example.com").is_err());
+    }
+}
