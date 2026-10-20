@@ -188,6 +188,11 @@ impl SessionAdapter for Copilot {
     }
 
     fn is_session_active(&self, session_id: &str) -> bool {
+        // `../secret.lock` still exists after the kernel resolves it, so a
+        // file outside the lock directory would look like a live session.
+        if !single_segment(session_id) {
+            return false;
+        }
         let state_root = self.store().join("session-state");
         real_dir(&state_root)
             && state_root

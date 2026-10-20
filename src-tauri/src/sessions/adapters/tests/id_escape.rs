@@ -141,3 +141,16 @@ fn opencode_list_does_not_size_a_directory_outside_the_store() {
         "listing sized a directory outside the store: {sessions:?}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn copilot_does_not_treat_an_outside_file_as_an_active_lock() {
+    let home = TestHome::new();
+    fs::create_dir_all(home.0.join(".copilot/session-state/.session-operation-locks")).unwrap();
+    fs::write(home.0.join("secret.lock"), "ssh-private").unwrap();
+
+    assert!(
+        !adapter(&home.0, "copilot").is_session_active("../../../secret"),
+        "an outside file was treated as a live Copilot lock"
+    );
+}
