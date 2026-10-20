@@ -26,6 +26,11 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
     let mut seen = HashSet::new();
 
     for (id, directory) in skill_directories(&paths.vault)? {
+        let canonical = crate::official::canonical_skill_id(&id);
+        if canonical != id && paths.vault.join(canonical).is_dir() {
+            continue;
+        }
+
         // File bytes and YAML parse come from the vault cache (validated by
         // SKILL.md mtime+size); projection state and the security walk stay
         // live, because neither may ever serve a stale answer.

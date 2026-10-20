@@ -179,9 +179,8 @@ fn link_skill(vault_item: &Path, directory: &Path, id: &str) -> Result<(), Strin
     ensure_link(vault_item, &directory.join(id))
 }
 
-pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
-    real_projection_dir(directory)?;
-    let projection = directory.join(id);
+fn remove_projection_entry(directory: &Path, name: &str) -> Result<(), String> {
+    let projection = directory.join(name);
 
     match fs::symlink_metadata(&projection) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
@@ -211,25 +210,60 @@ pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
+    real_projection_dir(directory)?;
+    remove_projection_entry(directory, id)?;
+
+    for (legacy, canonical) in [
+        ("modular-start", "orquestra-modular-start"),
+        ("agent-orchestrator", "orquestra-agent-orchestrator"),
+        ("autonomous-audit", "orquestra-autonomous-audit"),
+        ("smart-build-router", "orquestra-smart-build-router"),
+    ] {
+        if canonical == id {
+            let _ = remove_projection_entry(directory, legacy);
+        }
+    }
+
+    Ok(())
+}
+
 /// A projection is only valid when it is a symlink that resolves to the vault
 /// folder for that skill. Dangling links count as disabled.
 pub(super) fn is_projected(projection_dir: &Path, vault: &Path, id: &str) -> bool {
-    let projection = projection_dir.join(id);
-    let metadata = match fs::symlink_metadata(&projection) {
-        Ok(metadata) => metadata,
-        Err(_) => return false,
+    let Ok(vault_item) = fs::canonicalize(vault.join(id)) else {
+        return false;
     };
 
-    if !metadata.file_type().is_symlink() {
-        return false;
+    let check_link = |name: &str| -> bool {
+        let projection = projection_dir.join(name);
+        let Ok(metadata) = fs::symlink_metadata(&projection) else {
+            return false;
+        };
+
+        if !metadata.file_type().is_symlink() {
+            return false;
+        }
+
+        fs::canonicalize(&projection)
+            .map(|target| target == vault_item)
+            .unwrap_or(false)
+    };
+
+    if check_link(id) {
+        return true;
     }
 
-    let (Ok(target), Ok(vault_item)) = (
-        fs::canonicalize(&projection),
-        fs::canonicalize(vault.join(id)),
-    ) else {
-        return false;
-    };
+    for (legacy, canonical) in [
+        ("modular-start", "orquestra-modular-start"),
+        ("agent-orchestrator", "orquestra-agent-orchestrator"),
+        ("autonomous-audit", "orquestra-autonomous-audit"),
+        ("smart-build-router", "orquestra-smart-build-router"),
+    ] {
+        if canonical == id && check_link(legacy) {
+            return true;
+        }
+    }
 
-    target == vault_item
+    false
 }

@@ -47,6 +47,7 @@ pub(crate) fn canonical_skill_id(id: &str) -> &str {
         "modular-start" => "orquestra-modular-start",
         "agent-orchestrator" => "orquestra-agent-orchestrator",
         "autonomous-audit" => "orquestra-autonomous-audit",
+        "smart-build-router" => "orquestra-smart-build-router",
         _ => id,
     }
 }

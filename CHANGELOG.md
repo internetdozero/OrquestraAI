@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Separated store catalog load errors from row action errors (install/enable), displaying action failures in an inline dismissible banner without unmounting the store cards.
   - Corrected error extraction in `OfficialStore.tsx` to preserve Tauri string error rejections instead of masking them as "Unexpected error".
   - Cleared stale or dangling symlinks at target destination in `import_dir`, preventing collisions when importing skills into the vault.
+- **Vault Deduplication & Legacy Alias Suppression:**
+  - Automatically suppressed legacy alias folders (e.g. `autonomous-audit`, `modular-start`, `smart-build-router`, `agent-orchestrator`) when their canonical unified `orquestra-*` folder is present in the vault, eliminating duplicate cards in the library UI.
+  - Extended projection resolution (`is_projected`) and unlinking (`unlink_skill`) to recognize legacy aliases seamlessly.
 
 ### Security & Hardening
 - **Comprehensive Path & Symlink Traversal Protection Across Fleet Adapters:**
