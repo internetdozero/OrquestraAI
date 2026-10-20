@@ -16,6 +16,7 @@ import {
   type UpdateIdeaInput,
 } from "../lib/ideas";
 import { devMockMode } from "../lib/fixtures";
+import { readIdeasCache, writeIdeasCache } from "../lib/ideasCache";
 import { useI18n } from "./useI18n";
 
 export type IdeasTab = "ideas" | "blackboard";
@@ -50,8 +51,11 @@ export function useIdeas(options: {
   // guard below treats mock mode like a live core.
   const [mockMode] = useState(devMockMode);
   const active = isTauri || mockMode;
-  const [ideas, setIdeas] = useState<IdeaItem[]>([]);
-  const [projects, setProjects] = useState<string[]>([]);
+  // SWR: paint instantly from the module cache when remounting, then
+  // revalidate silently in the background instead of flashing empty.
+  const initialCache = readIdeasCache();
+  const [ideas, setIdeas] = useState<IdeaItem[]>(() => initialCache?.ideas ?? []);
+  const [projects, setProjects] = useState<string[]>(() => initialCache?.projects ?? []);
   const [notes, setNotes] = useState<BlackboardNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +76,7 @@ export function useIdeas(options: {
       ]);
       setIdeas(rows);
       setProjects(names);
+      writeIdeasCache(rows, names);
     } catch (cause) {
       const message = t.ideas.loadFailed(toMessage(cause, t.common.unexpected));
       setError(message);

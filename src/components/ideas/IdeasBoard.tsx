@@ -25,6 +25,25 @@ const COLUMNS = [
 /** Completed columns page at this many cards before offering more. */
 const COMPLETED_PAGE = 5;
 
+/** localStorage key shielding user-opened columns across remounts/restarts. */
+const STORAGE_KEY_USER_OPENED = "orquestra:ideas:user_opened_columns";
+
+/** Best-effort read of the persisted set; denied storage falls back to empty. */
+function readUserOpened(): ReadonlySet<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY_USER_OPENED);
+    if (!raw) return new Set();
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(
+      parsed.filter((entry): entry is string => typeof entry === "string"),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 /**
  * Kanban board: collapsible columns, HTML5 drop targets with highlight, and
  * demand paging for the completed column so it never stretches forever.
@@ -44,10 +63,18 @@ export function IdeasBoard({
     () => new Set(["completed"]),
   );
   // Columns the user explicitly opened: shields them from the auto-collapse
-  // rule for empty columns below.
-  const [userOpened, setUserOpened] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  // rule for empty columns below. Persisted so remounts keep the choice.
+  const [userOpened, setUserOpened] =
+    useState<ReadonlySet<string>>(readUserOpened);
+  /** Update the set and persist it; storage failure keeps memory state. */
+  const persistOpened = (next: ReadonlySet<string>) => {
+    setUserOpened(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY_USER_OPENED, JSON.stringify([...next]));
+    } catch {
+      // Persisting the preference is a nicety, never a requirement.
+    }
+  };
   const [expandedCompleted, setExpandedCompleted] = useState(false);
   const [dropStatus, setDropStatus] = useState<string | null>(null);
 
@@ -68,14 +95,12 @@ export function IdeasBoard({
         next.delete(status);
         return next;
       });
-      setUserOpened((previous) => new Set(previous).add(status));
+      persistOpened(new Set(userOpened).add(status));
     } else {
       setCollapsed((previous) => new Set(previous).add(status));
-      setUserOpened((previous) => {
-        const next = new Set(previous);
-        next.delete(status);
-        return next;
-      });
+      const next = new Set(userOpened);
+      next.delete(status);
+      persistOpened(next);
     }
   };
 
