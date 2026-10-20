@@ -75,5 +75,14 @@ pub(crate) fn official_mcps() -> Vec<OfficialMcpEntry> {
             "cloudflare",
             "cloudflare-mcp",
         ),
+        official_mcp(
+            "orquestra-web-search",
+            "Web Search",
+            "Exa-backed web search returning cited highlights for AI agents (stdio).",
+            "mcps/orquestra-web-search",
+            "https://github.com/internetdozero/orquestra-extensions.git",
+            "web-search",
+            "web-search",
+        ),
     ]
 }

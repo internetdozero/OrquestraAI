@@ -32,6 +32,7 @@ const OFFICIAL_MCP_IDS: &[&str] = &[
     "orquestra-janitor",
     "orquestra-core",
     "orquestra-cloudflare",
+    "orquestra-web-search",
 ];
 
 /// True when a vault skill id belongs to the official tier. Legacy
@@ -66,6 +67,7 @@ pub(crate) fn canonical_mcp_id(id: &str) -> &str {
         "session-relay" => "orquestra-session-relay",
         "janitor" => "orquestra-janitor",
         "cloudflare" => "orquestra-cloudflare",
+        "web-search" => "orquestra-web-search",
         _ => id,
     }
 }
