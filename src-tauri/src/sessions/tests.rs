@@ -89,6 +89,11 @@ fn timestamps_normalize_every_harness_dialect() {
         utils::timestamp_secs("2026-08-18T12:11:33+02:00"),
         Some(1_787_047_893)
     );
+    // A negative offset is added. 12:11:33-03:00 is 15:11:33Z.
+    assert_eq!(
+        utils::timestamp_secs("2026-08-18T12:11:33-03:00"),
+        Some(1_787_055_093 + 3 * 3_600)
+    );
 
     // Unknown text is reported as-is rather than silently invented.
     assert_eq!(

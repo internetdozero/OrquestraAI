@@ -105,7 +105,12 @@ fn split_offset(rest: &str) -> (&str, i64) {
     for (index, ch) in rest.char_indices() {
         if (ch == '+' || ch == '-') && index > 0 {
             let (time, zone) = rest.split_at(index);
-            return (time, offset_secs(&zone[1..]));
+            let magnitude = offset_secs(&zone[1..]);
+            // West of UTC must be added back. Dropping the sign made
+            // `-03:00` look like `+03:00` and shifted the session by twice
+            // the offset.
+            let signed = if ch == '-' { -magnitude } else { magnitude };
+            return (time, signed);
         }
     }
 
