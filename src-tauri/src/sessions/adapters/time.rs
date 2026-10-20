@@ -93,7 +93,34 @@ fn parse_iso8601(raw: &str) -> Option<i64> {
         .and_then(|field| field.parse::<i64>().ok())
         .unwrap_or(0);
 
+    // Hinnant's conversion normalizes month 13 and 31 February into a later
+    // real day. An age purge would then treat that invented instant as known.
+    let max_day = days_in_month(year, month)?;
+    if !(1..=max_day).contains(&day)
+        || !(0..24).contains(&hour)
+        || !(0..60).contains(&minute)
+        || !(0..60).contains(&seconds)
+    {
+        return None;
+    }
+
     Some(days_from_civil(year, month, day) * 86_400 + hour * 3_600 + minute * 60 + seconds - offset)
+}
+
+fn days_in_month(year: i64, month: i64) -> Option<i64> {
+    let days = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap(year) => 29,
+        2 => 28,
+        _ => return None,
+    };
+    Some(days)
+}
+
+fn is_leap(year: i64) -> bool {
+    let year = year.rem_euclid(400);
+    year % 4 == 0 && (year % 100 != 0 || year == 0)
 }
 
 /// Split the timezone suffix off a time-of-day string.
@@ -158,4 +185,28 @@ fn civil_from_days(days: i64) -> (i64, i64, i64) {
     };
 
     (if month <= 2 { year + 1 } else { year }, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn impossible_calendar_fields_are_not_a_timestamp() {
+        for raw in [
+            "2026-13-01T00:00:00Z",
+            "2026-00-01T00:00:00Z",
+            "2026-02-31T00:00:00Z",
+            "2026-04-31T00:00:00Z",
+            "2025-02-29T00:00:00Z",
+            "2026-10-19T24:00:00Z",
+            "2026-10-19T23:60:00Z",
+            "2026-10-19T23:59:60Z",
+        ] {
+            assert_eq!(timestamp_secs(raw), None, "{raw}");
+            assert_eq!(normalized_timestamp(raw), raw);
+        }
+        assert!(timestamp_secs("2024-02-29T00:00:00Z").is_some());
+        assert!(timestamp_secs("2026-10-19T23:59:59Z").is_some());
+    }
 }
