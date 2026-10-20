@@ -305,5 +305,6 @@ enabled = true
     }
 
     mod deploy_cases;
+    mod deploy_links;
 
 }

@@ -97,11 +97,13 @@ pub(super) fn deploy_at(
         };
 
         let path = home.join(mcp.rel);
-        // `read_to_string` follows. A symlink would be copied into the new
-        // file and then replaced, taking the outside config with it.
-        if fs::symlink_metadata(&path)
-            .ok()
-            .is_some_and(|meta| meta.file_type().is_symlink())
+        // `read_to_string` follows, including a real file reached through a
+        // directory symlink. Either case would merge the outside config and
+        // write it back through the link.
+        if ancestor_is_symlink(home, &path)
+            || fs::symlink_metadata(&path)
+                .ok()
+                .is_some_and(|meta| meta.file_type().is_symlink())
         {
             continue;
         }
@@ -234,6 +236,28 @@ fn backup_run_dir(paths: &OrquestraPaths) -> Result<PathBuf, String> {
     }
 
     Err("could not allocate a backup folder".to_string())
+}
+
+/// True when a directory between `root` and `path` is a symlink. The last
+/// component is ignored so a symlinked file can be reported separately.
+fn ancestor_is_symlink(root: &Path, path: &Path) -> bool {
+    let Ok(relative) = path.strip_prefix(root) else {
+        return true;
+    };
+    let mut current = root.to_path_buf();
+    let mut components = relative.components().peekable();
+    while let Some(component) = components.next() {
+        if components.peek().is_none() {
+            break;
+        }
+        current.push(component);
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => return true,
+            Ok(_) => {}
+            Err(_) => return false,
+        }
+    }
+    false
 }
 
 fn backup_config(
