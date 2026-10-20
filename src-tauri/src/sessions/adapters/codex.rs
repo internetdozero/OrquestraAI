@@ -270,6 +270,14 @@ fn rollout_files(sessions_root: &Path) -> HashMap<String, (PathBuf, u64)> {
     let mut stack = vec![sessions_root.to_path_buf()];
 
     while let Some(current) = stack.pop() {
+        // `read_dir` follows a symlink. `sessions/` replaced by a link would
+        // list and then delete rollouts outside the store.
+        let real_dir = std::fs::symlink_metadata(&current)
+            .map(|metadata| metadata.file_type().is_dir())
+            .unwrap_or(false);
+        if !real_dir {
+            continue;
+        }
         let Ok(entries) = std::fs::read_dir(&current) else {
             continue;
         };
@@ -344,5 +352,49 @@ fn title(id: &str, name: Option<String>) -> String {
     match name.map(|name| utils::trim_title(&name)) {
         Some(name) if !name.is_empty() => name,
         _ => format!("Thread {}", id.chars().take(8).collect::<String>()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(unix)]
+    #[test]
+    fn sessions_symlink_is_not_listed_or_deleted() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or(0);
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-codex-link-{}-{unique}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let home = root.join("home");
+        let outside = root.join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::create_dir_all(home.join(".codex")).unwrap();
+        let id = "01a148f4-9277-7820-8e2c-30f21ca5100f";
+        let secret = outside.join(format!(
+            "rollout-2026-10-17T05-22-30-{id}.jsonl"
+        ));
+        let original = "{\"payload\":{\"cwd\":\"/secret\"}}\n";
+        fs::write(&secret, original).unwrap();
+        std::os::unix::fs::symlink(&outside, home.join(".codex/sessions")).unwrap();
+
+        let codex = Codex::new(&home);
+        let sessions = codex.list_sessions().unwrap();
+        assert!(
+            sessions.iter().all(|session| {
+                session.id != id && session.project_path.as_deref() != Some("/secret")
+            }),
+            "listing followed sessions symlink: {sessions:?}"
+        );
+        codex.delete_session(id).unwrap();
+        assert_eq!(fs::read_to_string(&secret).unwrap(), original);
+        let _ = fs::remove_dir_all(&root);
     }
 }
