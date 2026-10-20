@@ -1,12 +1,8 @@
 //! Freebuff / Manicode / Freebuff Desktop: worktrees, project chat logs and
 //! native desktop threads.
 //!
-//! Worktrees are the disk bomb of this harness — each one is a project clone
-//! with its own `node_modules` — so their size is measured with a full recursive
-//! walk that counts every regular file and never follows a symlink. The
-//! infrastructure symlinks under `~/.freebuff` stay untouched: listing only
-//! reads. Desktop threads live in `freebuff_desktop`; this adapter dispatches
-//! to it by session-id shape.
+//! Worktree size walks regular files and never follows a symlink. Desktop
+//! threads live in `freebuff_desktop`; this adapter dispatches by session id.
 
 use std::path::{Path, PathBuf};
 
@@ -80,8 +76,7 @@ impl SessionAdapter for Freebuff {
         if project.is_none() {
             let worktrees = self.root.join(WORKTREES_REL);
             let worktree = worktrees.join(session_id);
-            if std::fs::symlink_metadata(&worktree).is_ok() {
-                // This is the big one: a worktree carries its own node_modules.
+            if real_dir(&worktrees) && std::fs::symlink_metadata(&worktree).is_ok() {
                 bytes += fsops::remove_path(&worktrees, &worktree)?;
             }
         }
@@ -141,6 +136,11 @@ impl SessionAdapter for Freebuff {
 
 /// One session per worktree directory, titled from its `<project>.thread.json`.
 fn worktrees(root: &Path) -> Vec<UnifiedSession> {
+    // `read_dir` follows. A symlinked worktrees folder would list and size
+    // the outside tree, and delete would remove it.
+    if !real_dir(root) {
+        return Vec::new();
+    }
     let Ok(entries) = std::fs::read_dir(root) else {
         return Vec::new();
     };
