@@ -48,6 +48,39 @@ pub fn mask_secret(value: &str) -> String {
     format!("****{}", tail.chars().rev().collect::<String>())
 }
 
+/// Restore a masked arg wherever it sits. Index-only matching stores the
+/// `****` placeholder after a flag is inserted in front of the secret.
+pub(super) fn restore_masked_args(incoming: &mut [String], previous: &[String]) {
+    let mut probe = super::McpServer {
+        id: String::new(),
+        name: String::new(),
+        description: String::new(),
+        command: String::new(),
+        args: previous.to_vec(),
+        env: HashMap::new(),
+        url: None,
+        headers: HashMap::new(),
+        global_enabled: false,
+        enabled_harnesses: Vec::new(),
+        official: false,
+    };
+    mask_server(&mut probe);
+    let masked = probe.args;
+
+    for slot in incoming.iter_mut() {
+        let mut hits = masked.iter().enumerate().filter(|(_, value)| *value == slot);
+        let Some((index, _)) = hits.next() else {
+            continue;
+        };
+        if hits.next().is_some() {
+            continue;
+        }
+        if masked[index] != previous[index] {
+            *slot = previous[index].clone();
+        }
+    }
+}
+
 pub(super) fn mask_server(server: &mut super::McpServer) {
     server.env = server
         .env
@@ -277,6 +310,27 @@ mod tests {
         let url = server.url.expect("url");
         assert!(!url.contains("sk-live"), "uppercase query key must not leak");
         assert!(url.starts_with("****"));
+    }
+
+    #[test]
+    fn inserting_a_flag_does_not_store_the_mask_as_the_secret() {
+        let previous = vec!["--token=supersecretvalue".to_string()];
+        let mut shifted = vec![
+            "--verbose".to_string(),
+            "--token=****alue".to_string(),
+        ];
+        restore_masked_args(&mut shifted, &previous);
+        assert_eq!(
+            shifted,
+            vec![
+                "--verbose".to_string(),
+                "--token=supersecretvalue".to_string(),
+            ]
+        );
+
+        let mut replaced = vec!["--token=brand-new-secret".to_string()];
+        restore_masked_args(&mut replaced, &previous);
+        assert_eq!(replaced, vec!["--token=brand-new-secret".to_string()]);
     }
 
     #[test]

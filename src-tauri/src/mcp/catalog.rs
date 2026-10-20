@@ -11,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use super::deploy::{deploy_current, write_config};
-use super::secrets::{mask_server, mask_value};
+use super::secrets::{mask_server, mask_value, restore_masked_args};
 use super::McpServer;
 use crate::harness::{self, GLOBAL_SCOPE};
 use crate::official::is_official_mcp;
@@ -285,13 +285,7 @@ pub fn save_mcp(server: McpServer) -> Result<(), String> {
         mask_server(&mut masked_previous);
         restore_masked_values(&mut server.env, &previous.env);
         restore_masked_values(&mut server.headers, &previous.headers);
-        for (index, incoming) in server.args.iter_mut().enumerate() {
-            if masked_previous.args.get(index) == Some(incoming) {
-                if let Some(original) = previous.args.get(index) {
-                    *incoming = original.clone();
-                }
-            }
-        }
+        restore_masked_args(&mut server.args, &previous.args);
         if server.url == masked_previous.url {
             server.url = previous.url.clone();
         }
