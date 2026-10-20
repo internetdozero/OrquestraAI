@@ -283,3 +283,25 @@ fn grok_delete_does_not_follow_a_project_child_symlink() {
         "delete_session followed sessions/proj/escape into the outside tree"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn claude_delete_does_not_follow_a_project_child_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-claude-delete");
+    fs::create_dir_all(&outside).unwrap();
+    let secret = outside.join("secret.jsonl");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let project = home.0.join(".claude/projects/proj");
+    fs::create_dir_all(&project).unwrap();
+    std::os::unix::fs::symlink(&outside, project.join("escape")).unwrap();
+
+    adapter(&home.0, "claude")
+        .delete_session("escape/secret")
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(&secret).unwrap(),
+        "ssh-private\n",
+        "delete_session followed projects/proj/escape into the outside tree"
+    );
+}

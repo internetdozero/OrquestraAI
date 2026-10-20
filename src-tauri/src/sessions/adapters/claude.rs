@@ -128,6 +128,12 @@ impl SessionAdapter for Claude {
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
+        // `{id}.jsonl` is joined under each project and under legacy sessions/.
+        // A directory symlink named `escape` plus id `escape/secret` deletes
+        // the outside file. `read_transcript` already refuses that id.
+        if !single_segment(session_id) {
+            return Ok(0);
+        }
         let store = self.store();
         let mut bytes = 0;
         let mut projects = Vec::new();
@@ -311,6 +317,10 @@ fn insert(found: &mut HashMap<String, (PathBuf, u64)>, path: PathBuf) {
 }
 
 /// First user prompt and recorded `cwd`, read from the transcript header only.
+fn single_segment(id: &str) -> bool {
+    !id.is_empty() && !id.contains('/') && !id.contains('\\') && id != "." && id != ".."
+}
+
 fn real_dir(path: &Path) -> bool {
     std::fs::symlink_metadata(path)
         .map(|metadata| metadata.file_type().is_dir())
