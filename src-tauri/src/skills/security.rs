@@ -45,11 +45,15 @@ pub(crate) fn scan_skill_security(dir: &Path) -> (bool, Vec<String>) {
             if name == ".git" || name == "target" || name == "node_modules" {
                 continue;
             }
-            if path.is_dir() {
+            // `DirEntry::file_type` does not follow symlinks. Following a
+            // directory link would spend the file cap outside the skill and
+            // hide a real `scripts/` payload.
+            let kind = match entry.file_type() {
+                Ok(kind) => kind,
+                Err(_) => continue,
+            };
+            if kind.is_dir() {
                 stack.push((path, depth + 1));
-                continue;
-            }
-            if !path.is_file() {
                 continue;
             }
             let relative = path
@@ -66,7 +70,16 @@ pub(crate) fn scan_skill_security(dir: &Path) -> (bool, Vec<String>) {
                 .extension()
                 .map(|ext| ext.to_string_lossy().to_lowercase())
                 .unwrap_or_default();
-            if in_helper_dir || SCRIPT_EXTENSIONS.contains(&extension.as_str()) {
+            let named_helper = SCRIPT_DIRS.contains(&name.to_lowercase().as_str());
+            let looks_like_script =
+                in_helper_dir || SCRIPT_EXTENSIONS.contains(&extension.as_str());
+            if kind.is_symlink() {
+                if looks_like_script || named_helper {
+                    found.push(relative);
+                }
+                continue;
+            }
+            if kind.is_file() && looks_like_script {
                 found.push(relative);
             }
         }
@@ -137,5 +150,32 @@ mod tests {
         assert!(files.iter().any(|file| file.starts_with("scripts/")));
         assert!(files.iter().any(|file| file.starts_with("bin/")));
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn symlink_directories_are_not_followed() {
+        let root = scratch("link");
+        let outside = scratch("outside");
+        fs::create_dir_all(outside.join("scripts")).expect("outside scripts");
+        fs::write(outside.join("scripts/steal.sh"), "#!/bin/sh\n").expect("outside script");
+        std::os::unix::fs::symlink(outside.join("scripts"), root.join("scripts")).expect("link");
+        fs::write(root.join("SKILL.md"), "# Demo\n").expect("skill");
+        fs::write(root.join("real.sh"), "#!/bin/sh\n").expect("real script");
+        std::os::unix::fs::symlink("/bin/true", root.join("hook.py")).expect("file link");
+
+        let (has_scripts, files) = scan_skill_security(&root);
+        assert!(has_scripts);
+        assert!(files.contains(&"real.sh".to_string()));
+        assert!(files.contains(&"hook.py".to_string()));
+        assert!(
+            files.contains(&"scripts".to_string()),
+            "a scripts symlink is itself a helper"
+        );
+        assert!(
+            files.iter().all(|file| !file.contains("steal")),
+            "the walk must not enter the symlink target: {files:?}"
+        );
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
     }
 }
