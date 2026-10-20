@@ -3,7 +3,7 @@ import type { TranslationSchema } from "./locales/pt";
 /** Rust ships these sentences verbatim; the UI translates the known set. */
 export function bridgeRationale(t: TranslationSchema, raw: string): string {
   switch (raw) {
-    case "Shared user root that Codex and Grok inject into every session":
+    case "Shared root Codex and Grok also read; Freebuff links it to its projection":
       return t.bridge.rationales.sharedRoot;
     case "Vendor built-ins ship with the app; archived in the vault so ~/.gemini/config/skills stays the only user source":
       return t.bridge.rationales.vendorBuiltins;
@@ -31,7 +31,7 @@ export function bridgeNote(t: TranslationSchema, raw: string): string {
   switch (raw) {
     case "Internal .system folders are moved into the projection first":
       return t.bridge.notes.codexSystem;
-    case "Manicode shares the Freebuff projection":
+    case "Manicode and ~/.agents/skills share the Freebuff projection":
       return t.bridge.notes.freebuff;
     case "Curator state files are kept inside the projection":
       return t.bridge.notes.hermesCurator;

@@ -37,7 +37,7 @@ fn fusion_neutralises_secondary_discovery_paths() {
     );
     test.skill(".codex/.tmp/marketplaces/ponytail/skills", "ponytail-audit");
 
-    // The shared root Codex and Grok both inject into their sessions.
+    // The shared root Codex and Grok read, owned by Freebuff's projection.
     test.skill(".agents/skills", "orca-cli");
     test.write(".agents/.skill-lock.json", "{\n  \"version\": 3\n}\n");
 
@@ -124,13 +124,11 @@ fn fusion_neutralises_secondary_discovery_paths() {
         .join("codex/.codex__.tmp__marketplaces/ponytail/skills/ponytail-audit/SKILL.md")
         .is_file());
 
-    // Claude and Hermes stop discovering marketplace skills, and the shared
-    // root both Codex and Grok read is emptied too.
+    // Claude and Hermes stop discovering marketplace skills.
     for rel in [
         ".claude/plugins/marketplaces",
         ".hermes/hermes-agent/optional-skills",
         ".grok/installed-plugins",
-        ".agents/skills",
     ] {
         let path = test.home.join(rel);
         assert!(path.is_dir(), "{rel} should be left in place");
@@ -148,8 +146,18 @@ fn fusion_neutralises_secondary_discovery_paths() {
     assert!(backup
         .join("grok/.grok__installed-plugins/ponytail/skills/ponytail-debt/SKILL.md")
         .is_file());
+    // The shared root is Freebuff's canonical skills root: Codex and Grok defer
+    // to it instead of emptying it, and its skills move into that projection.
+    assert_linked(
+        &test.home.join(".agents/skills"),
+        &test.paths.projection_dir("freebuff"),
+    );
+    assert_linked(
+        &test.paths.projection_dir("freebuff").join("orca-cli"),
+        &test.paths.vault.join("orca-cli"),
+    );
     assert!(backup
-        .join("codex/.agents__skills/orca-cli/SKILL.md")
+        .join("freebuff/.agents__skills/orca-cli/SKILL.md")
         .is_file());
     // The shared root's own bookkeeping stays where the CLI expects it.
     assert!(test.home.join(".agents/.skill-lock.json").is_file());
@@ -179,7 +187,7 @@ fn fusion_neutralises_secondary_discovery_paths() {
     assert!(report
         .quarantined
         .contains(&".codex/vendor_imports/skills".to_string()));
-    assert!(report.quarantined.contains(&".agents/skills".to_string()));
+    assert!(!report.quarantined.contains(&".agents/skills".to_string()));
     assert!(report
         .quarantined
         .contains(&".grok/bundled/skills".to_string()));

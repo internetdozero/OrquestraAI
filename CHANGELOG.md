@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Official Autonomous Code Audit Skill (`orquestra-autonomous-audit` / `autonomous-audit`):** Time-boxed autonomous code audit and hardening shift protocol across the multi-harness fleet, supporting dynamic durations ($X$ minutes), 4 universal scopes (Security, Performance, Logic, DX), atomic reproduction tests, formal negative passes, and optional Idea Vault / Agent Board lifecycle.
 
 ### Fixed
+- **Freebuff Skill Discovery (`~/.agents/skills`):**
+  - Registered `~/.agents/skills` as Freebuff's primary skills link, matching the Codebuff SDK's canonical global skill root so enabling a skill for Freebuff makes it visible immediately instead of only through the Claude fallback.
+  - Added shared-path ownership to the harness registry: Codex and Grok now defer to Freebuff's projection of the shared agent root instead of quarantining the link, and still empty the folder when Freebuff is not installed.
+  - `deploy_harness_bridge` adopts, backs up, and replaces an existing physical `~/.agents/skills` directory with the Freebuff projection symlink.
 - **Official Store Resilience & Error Masking:**
   - Separated store catalog load errors from row action errors (install/enable), displaying action failures in an inline dismissible banner without unmounting the store cards.
   - Corrected error extraction in `OfficialStore.tsx` to preserve Tauri string error rejections instead of masking them as "Unexpected error".

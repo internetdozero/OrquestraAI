@@ -53,7 +53,7 @@ However, each tool maintains its own isolated skill definitions, separate MCP se
 | **Antigravity (AGY)** | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md` | Session logs (`.system_generated/logs/transcript.jsonl`) |
 | **OpenAI Codex** | `~/.codex/skills` | `~/.codex/AGENTS.md` | `thread_history_1.sqlite` + multi-file rollouts |
 | **Claude Code** | `~/.claude/skills` | `~/.claude/CLAUDE.md` | `projects/<slug>/*.jsonl` |
-| **Freebuff / Manicode** | `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + project chat logs + worktrees |
+| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + project chat logs + worktrees |
 | **OpenCode** | `skills.paths` config injection | Native instructions | `~/.config/opencode/opencode.jsonc` + `opencode.db` |
 | **Kilo Code** | `skills.paths` config injection | Native instructions | `~/.config/kilo/kilo.jsonc` + `kilo.db` |
 | **GitHub Copilot CLI** | `~/.copilot/skills` | Native instructions | `session-store.db` (turns schema) |

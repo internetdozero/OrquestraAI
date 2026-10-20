@@ -53,7 +53,7 @@ O **OrquestraAI** resolve essa fragmentação através de uma aplicação deskto
 | **Antigravity (AGY)** | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md` | Logs de sessão (`.system_generated/logs/transcript.jsonl`) |
 | **OpenAI Codex** | `~/.codex/skills` | `~/.codex/AGENTS.md` | `thread_history_1.sqlite` + rollouts multi-arquivos |
 | **Claude Code** | `~/.claude/skills` | `~/.claude/CLAUDE.md` | `projects/<slug>/*.jsonl` |
-| **Freebuff / Manicode** | `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + histórico Manicode + worktrees |
+| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + histórico Manicode + worktrees |
 | **OpenCode** | Injeção via `skills.paths` | Instruções nativas | `~/.config/opencode/opencode.jsonc` + `opencode.db` |
 | **Kilo Code** | Injeção via `skills.paths` | Instruções nativas | `~/.config/kilo/kilo.jsonc` + `kilo.db` |
 | **GitHub Copilot CLI** | `~/.copilot/skills` | Instruções nativas | `session-store.db` (tabela de turns) |

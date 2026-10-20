@@ -80,13 +80,7 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
                 .map(|entry| {
                     let path = home.join(entry.rel);
                     SecondaryStatus {
-                        cleared: secondary_cleared(
-                            home,
-                            &path,
-                            entry.action,
-                            &projection,
-                            &paths.vault,
-                        ),
+                        cleared: secondary_cleared(home, paths, &path, entry, &projection),
                         path: path.to_string_lossy().into_owned(),
                         action: entry.action,
                         rationale: entry.rationale.to_string(),
@@ -183,11 +177,19 @@ pub(super) fn skill_folders(root: &Path, walk: Walk) -> Result<Vec<(String, Path
 /// skills. A missing path counts as cleared: there is no backdoor to close.
 fn secondary_cleared(
     home: &Path,
+    paths: &OrquestraPaths,
     source: &Path,
-    action: SecondaryAction,
+    entry: &harness::SecondarySpec,
     projection: &Path,
-    vault: &Path,
 ) -> bool {
+    // A shared path is cleared when the harness that owns it as a primary root
+    // projects it: fusion leaves that link alone, so there is nothing to empty.
+    if let Some(owner) = harness::primary_owner(entry.rel) {
+        if harness::is_installed(owner, home) {
+            return is_linked_to(source, &paths.projection_dir(owner.id));
+        }
+    }
+
     if !path_present(source) {
         return true;
     }
@@ -197,7 +199,7 @@ fn secondary_cleared(
         return false;
     }
 
-    match action {
+    match entry.action {
         SecondaryAction::Project => is_linked_to(source, projection),
         SecondaryAction::Quarantine => {
             if is_link(source) || !source.is_dir() {
@@ -212,7 +214,7 @@ fn secondary_cleared(
                 }
             }
         }
-        SecondaryAction::AdoptOnly => all_archived(source, vault),
+        SecondaryAction::AdoptOnly => all_archived(source, &paths.vault),
     }
 }
 

@@ -11,7 +11,8 @@ use serde::Serialize;
 
 mod lookup;
 pub use lookup::{
-    find, harness_ids, is_installed, is_mcp_target, mcp_targets, resolve_install_dir,
+    find, harness_ids, is_installed, is_mcp_target, mcp_targets, primary_owner, provisions_parent,
+    resolve_install_dir,
 };
 
 /// Reserved scope id for the universal baseline projection.
@@ -91,11 +92,13 @@ pub struct HarnessSpec {
 }
 
 /// The `skills` CLI installs into a shared user root that Codex and Grok both
-/// inject into their session context, so both harnesses have to claim it.
+/// inject into their session context. Freebuff owns that root as its canonical
+/// projection, so the secondary entries below only apply while Freebuff is
+/// absent; fusion defers to the owner instead of emptying the link.
 const SHARED_AGENT_SKILLS: SecondarySpec = SecondarySpec {
     rel: ".agents/skills",
     action: SecondaryAction::Quarantine,
-    rationale: "Shared user root that Codex and Grok inject into every session",
+    rationale: "Shared root Codex and Grok also read; Freebuff links it to its projection",
 };
 
 pub const HARNESSES: &[HarnessSpec] = &[
@@ -178,12 +181,18 @@ pub const HARNESSES: &[HarnessSpec] = &[
         label: "Freebuff",
         env_override: None,
         install_rel: ".freebuff",
-        skills_links: &[".freebuff/skills", ".config/manicode/skills"],
+        // `~/.agents/skills` is the Codebuff SDK's canonical global root, so
+        // Freebuff reads operator-enabled skills there before its own folders.
+        skills_links: &[
+            ".agents/skills",
+            ".freebuff/skills",
+            ".config/manicode/skills",
+        ],
         instructions_rel: Some(".config/manicode/AGENTS.md"),
         config_rel: None,
         mcp: None,
         secondary: &[],
-        note: Some("Manicode shares the Freebuff projection"),
+        note: Some("Manicode and ~/.agents/skills share the Freebuff projection"),
     },
     HarnessSpec {
         id: "opencode",

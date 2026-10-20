@@ -32,7 +32,8 @@ export const bridge: TranslationSchema["bridge"] = {
   backupConnect: "Back up & Connect",
   linkingHarnesses: "Linking harnesses…",
   rationales: {
-    sharedRoot: "Shared user root that Codex and Grok inject into every session",
+    sharedRoot:
+      "Shared root Codex and Grok also read; Freebuff links it to its projection",
     vendorBuiltins:
       "Vendor built-ins ship with the app; archived in the vault so ~/.gemini/config/skills stays the only user source",
     codexVendor: "Curated vendor checkout Codex indexes beside ~/.codex/skills",
@@ -46,7 +47,7 @@ export const bridge: TranslationSchema["bridge"] = {
   },
   notes: {
     codexSystem: "Internal .system folders are moved into the projection first",
-    freebuff: "Manicode shares the Freebuff projection",
+    freebuff: "Manicode and ~/.agents/skills share the Freebuff projection",
     hermesCurator: "Curator state files are kept inside the projection",
   },
   readFailed: (detail: string) => `Could not read the harness bridge: ${detail}`,

@@ -363,5 +363,6 @@ mod tests {
     }
 
     mod secondary;
+    mod shared_root;
 
 }
