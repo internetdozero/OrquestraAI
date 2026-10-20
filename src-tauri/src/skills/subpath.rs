@@ -152,7 +152,12 @@ pub(crate) fn refresh_skill_dir(
     primary_url: &str,
     fallback_url: Option<&str>,
 ) -> Result<(), String> {
-    if vault_dir.join(".git").is_dir() {
+    // `is_dir` follows symlinks. A `.git` link would make `git pull` fast-forward
+    // that other repository instead of this vault folder.
+    let real_checkout = fs::symlink_metadata(vault_dir.join(".git"))
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false);
+    if real_checkout {
         let output = std::process::Command::new("git")
             .arg("-C")
             .arg(vault_dir)
@@ -340,6 +345,53 @@ mod tests {
         skill_at(&root, "skills/later");
         let found = locate_skill_dir(&root, None).expect("root skill");
         assert_eq!(found, root);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refresh_does_not_pull_through_a_symlinked_git_dir() {
+        let root = scratch("gitlink");
+        let remote = root.join("remote.git");
+        let seed = root.join("seed");
+        let other = root.join("other");
+        let skill = root.join("skill");
+        let run = |dir: &Path, args: &[&str]| {
+            let output = std::process::Command::new("git")
+                .arg("-C")
+                .arg(dir)
+                .args(args)
+                .output()
+                .expect("git");
+            assert!(output.status.success(), "{args:?} {}", String::from_utf8_lossy(&output.stderr));
+        };
+        run(&root, &["init", "--bare", remote.to_str().unwrap()]);
+        run(&root, &["clone", remote.to_str().unwrap(), seed.to_str().unwrap()]);
+        run(&seed, &["config", "user.email", "t@example.com"]);
+        run(&seed, &["config", "user.name", "t"]);
+        fs::write(seed.join("seed.txt"), "seed\n").unwrap();
+        run(&seed, &["add", "seed.txt"]);
+        run(&seed, &["commit", "-qm", "seed"]);
+        run(&seed, &["push", "origin", "HEAD"]);
+        run(&root, &["clone", remote.to_str().unwrap(), other.to_str().unwrap()]);
+        fs::write(seed.join("seed.txt"), "more\n").unwrap();
+        run(&seed, &["commit", "-qam", "more"]);
+        run(&seed, &["push", "origin", "HEAD"]);
+        fs::create_dir_all(&skill).unwrap();
+        std::os::unix::fs::symlink(other.join(".git"), skill.join(".git")).unwrap();
+        let head = |dir: &Path| {
+            let output = std::process::Command::new("git")
+                .arg("-C")
+                .arg(dir)
+                .args(["rev-parse", "HEAD"])
+                .output()
+                .unwrap();
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        };
+        let before = head(&other);
+        let result = refresh_skill_dir(&skill, &root.join("missing-remote").to_string_lossy(), None);
+        assert!(result.is_err(), "a linked .git must not count as a checkout: {result:?}");
+        assert_eq!(head(&other), before, "pull must not fast-forward the linked repository");
         let _ = fs::remove_dir_all(&root);
     }
 }
