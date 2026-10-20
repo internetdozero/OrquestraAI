@@ -305,3 +305,25 @@ fn claude_delete_does_not_follow_a_project_child_symlink() {
         "delete_session followed projects/proj/escape into the outside tree"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn freebuff_delete_does_not_follow_a_chat_child_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-freebuff-delete");
+    fs::create_dir_all(outside.join("secret")).unwrap();
+    let secret = outside.join("secret/keep.txt");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let chats = home.0.join(".config/manicode/projects/proj/chats");
+    fs::create_dir_all(&chats).unwrap();
+    std::os::unix::fs::symlink(&outside, chats.join("escape")).unwrap();
+
+    adapter(&home.0, "freebuff")
+        .delete_session("proj/escape/secret")
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(&secret).unwrap(),
+        "ssh-private\n",
+        "delete_session followed chats/escape into the outside tree"
+    );
+}
