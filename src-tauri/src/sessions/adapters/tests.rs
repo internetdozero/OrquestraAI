@@ -16,6 +16,7 @@ use rusqlite::Connection;
 use super::{registry, SessionAdapter};
 
 mod stores;
+mod symlink_cases;
 
 struct TestHome(PathBuf);
 

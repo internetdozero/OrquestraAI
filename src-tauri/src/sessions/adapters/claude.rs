@@ -147,8 +147,13 @@ impl SessionAdapter for Claude {
             }
         }
 
-        let legacy = store.join("sessions").join(format!("{session_id}.jsonl"));
-        bytes += fsops::remove_path(&store, &legacy)?;
+        // `sessions` itself may be a directory symlink. The joined jsonl is
+        // then a regular file, so `remove_path` would delete the outside target.
+        let sessions_dir = store.join("sessions");
+        if real_dir(&sessions_dir) {
+            let legacy = sessions_dir.join(format!("{session_id}.jsonl"));
+            bytes += fsops::remove_path(&store, &legacy)?;
+        }
 
         // Leaving rows in history.jsonl is what makes the CLI re-offer a
         // conversation whose transcript is gone.
@@ -187,9 +192,12 @@ impl SessionAdapter for Claude {
             }
         }
 
-        let legacy = store.join("sessions").join(format!("{session_id}.jsonl"));
-        if legacy.is_file() {
-            return transcript::read_transcript(&legacy);
+        let sessions_dir = store.join("sessions");
+        if real_dir(&sessions_dir) {
+            let legacy = sessions_dir.join(format!("{session_id}.jsonl"));
+            if legacy.is_file() {
+                return transcript::read_transcript(&legacy);
+            }
         }
 
         Vec::new()
@@ -224,14 +232,19 @@ fn transcripts(store: &Path) -> HashMap<String, (PathBuf, u64)> {
         }
     }
 
-    if let Ok(entries) = std::fs::read_dir(store.join("sessions")) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path
-                .extension()
-                .is_some_and(|extension| extension == "jsonl")
-            {
-                insert(&mut found, path);
+    // Same hole as a project symlink: `read_dir` follows `sessions/` and the
+    // last component is still a regular file, so the scan would open it.
+    let sessions = store.join("sessions");
+    if real_dir(&sessions) {
+        if let Ok(entries) = std::fs::read_dir(&sessions) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path
+                    .extension()
+                    .is_some_and(|extension| extension == "jsonl")
+                {
+                    insert(&mut found, path);
+                }
             }
         }
     }
