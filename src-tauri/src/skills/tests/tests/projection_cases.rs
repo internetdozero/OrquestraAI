@@ -4,7 +4,7 @@ use std::fs;
 
 use super::super::super::agents::{read_agents, write_agents};
 use super::super::super::projection::{set_global, unlink_skill};
-use super::super::super::vault::list_from;
+use super::super::super::vault::{list_from, read_skill_content, SKILL_FILE};
 use super::super::super::*;
 use super::{setup_two_skills, skill_in, temp_paths};
 
@@ -151,6 +151,50 @@ fn vault_cache_reflects_skill_edits() {
         "Alpha Renamed Longer"
     );
     fs::remove_dir_all(&paths.root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn a_symlinked_skill_file_is_not_listed_or_read() {
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-skill-link-{}-{unique}",
+        std::process::id()
+    ));
+    let paths = crate::paths::OrquestraPaths {
+        vault: root.join("skills-library"),
+        active: root.join("active"),
+        root: root.clone(),
+    };
+    paths.ensure_layout().expect("layout");
+    let outside = root.join("outside.md");
+    fs::write(
+        &outside,
+        "---\nname: Leaked\ndescription: ssh-private-key-material\n---\n\nsecret body\n",
+    )
+    .expect("outside skill");
+    let linked = paths.vault.join("linked");
+    fs::create_dir_all(&linked).expect("linked dir");
+    std::os::unix::fs::symlink(&outside, linked.join(SKILL_FILE)).expect("skill symlink");
+    let real = paths.vault.join("real");
+    fs::create_dir_all(&real).expect("real dir");
+    fs::write(
+        real.join(SKILL_FILE),
+        "---\nname: Real\ndescription: stays\n---\n\nbody\n",
+    )
+    .expect("real skill");
+
+    let listed = list_from(&paths, "global").expect("list");
+    assert!(listed.iter().all(|skill| skill.id != "linked"));
+    assert!(listed.iter().all(|skill| !skill.description.contains("ssh-private")));
+    assert!(listed.iter().any(|skill| skill.id == "real"));
+    assert!(read_skill_content(&paths, "linked").is_err());
+    assert!(outside.is_file(), "the target stays put");
+
+    fs::remove_dir_all(&root).expect("cleanup");
 }
 
 #[test]

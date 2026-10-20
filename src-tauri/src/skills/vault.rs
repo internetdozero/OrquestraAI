@@ -69,6 +69,14 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
 pub(super) fn read_skill_content(paths: &OrquestraPaths, id: &str) -> Result<String, String> {
     let directory = skill_directory(paths, id)?;
     let file = directory.join(SKILL_FILE);
+    let metadata = fs::symlink_metadata(&file)
+        .map_err(|error| format!("failed to read {}: {error}", file.display()))?;
+    if !metadata.file_type().is_file() {
+        return Err(format!(
+            "refusing to read {}: not a regular file",
+            file.display()
+        ));
+    }
     fs::read_to_string(&file)
         .map_err(|error| format!("failed to read {}: {error}", file.display()))
 }
@@ -146,7 +154,13 @@ pub(super) fn skill_directories(vault: &Path) -> Result<Vec<(String, PathBuf)>, 
         if !kind.is_dir() {
             continue;
         }
-        if !path.join(SKILL_FILE).is_file() {
+        // `is_file` follows symlinks. A SKILL.md that points outside the vault
+        // would be listed and then read into the editor.
+        let skill_file = path.join(SKILL_FILE);
+        let Ok(file_meta) = fs::symlink_metadata(&skill_file) else {
+            continue;
+        };
+        if !file_meta.file_type().is_file() {
             continue;
         }
 

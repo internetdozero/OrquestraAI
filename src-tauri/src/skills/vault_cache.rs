@@ -48,7 +48,10 @@ fn locked_cache() -> std::sync::MutexGuard<'static, HashMap<PathBuf, CachedConte
 /// (mtime nanos, size) of `SKILL.md`. `None` when the file cannot be stated,
 /// which reads as absent — the caller skips the skill, like before.
 fn fingerprint(skill_file: &Path) -> Option<(u128, u64)> {
-    let metadata = std::fs::metadata(skill_file).ok()?;
+    let metadata = std::fs::symlink_metadata(skill_file).ok()?;
+    if !metadata.file_type().is_file() {
+        return None;
+    }
     let mtime = metadata
         .modified()
         .ok()?
