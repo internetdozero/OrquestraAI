@@ -249,3 +249,52 @@ fn read_agents_does_not_follow_a_symlink() {
 
     fs::remove_dir_all(&root).expect("cleanup");
 }
+
+#[test]
+fn projection_symlink_is_not_a_directory_to_delete() {
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-projection-link-{}-{unique}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let paths = crate::paths::OrquestraPaths {
+        vault: root.join("skills-library"),
+        active: root.join("active"),
+        root: root.clone(),
+    };
+    let skill = paths.vault.join("beta");
+    fs::create_dir_all(&skill).unwrap();
+    fs::write(skill.join(SKILL_FILE), "---\nname: Beta\n---\n\nbody\n").unwrap();
+
+    let outside = root.join("outside");
+    fs::create_dir_all(outside.join("beta")).unwrap();
+    fs::write(outside.join("beta/secret.txt"), "ssh-private\n").unwrap();
+    fs::create_dir_all(&paths.active).unwrap();
+    std::os::unix::fs::symlink(&outside, paths.global_dir()).unwrap();
+
+    let disabled = set_global(&paths, "beta", false);
+    assert!(
+        disabled.is_err(),
+        "disable followed the projection symlink: {disabled:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(outside.join("beta/secret.txt")).unwrap(),
+        "ssh-private\n"
+    );
+
+    let enabled = set_global(&paths, "beta", true);
+    assert!(
+        enabled.is_err(),
+        "enable followed the projection symlink: {enabled:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(outside.join("beta/secret.txt")).unwrap(),
+        "ssh-private\n"
+    );
+
+    fs::remove_dir_all(&root).expect("cleanup");
+}

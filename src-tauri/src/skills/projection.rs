@@ -106,6 +106,23 @@ pub(super) fn batch_from(paths: &OrquestraPaths, scope: &str, enabled: bool) -> 
     }
 }
 
+/// Missing scope folders are fine. A symlink is not: `lstat` follows every
+/// ancestor, so the joined skill id would be a real directory outside.
+fn real_projection_dir(directory: &Path) -> Result<(), String> {
+    match fs::symlink_metadata(directory) {
+        Ok(metadata) if metadata.file_type().is_dir() => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Ok(_) => Err(format!(
+            "refusing to update {}: not a real directory",
+            directory.display()
+        )),
+        Err(error) => Err(format!(
+            "failed to inspect {}: {error}",
+            directory.display()
+        )),
+    }
+}
+
 fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
     let target = vault_item
         .canonicalize()
@@ -156,10 +173,14 @@ fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
 }
 
 fn link_skill(vault_item: &Path, directory: &Path, id: &str) -> Result<(), String> {
+    // `active/<scope>` as a directory symlink makes `<id>` a real folder on
+    // the far side, and `remove_dir_all` would delete that outside tree.
+    real_projection_dir(directory)?;
     ensure_link(vault_item, &directory.join(id))
 }
 
 pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
+    real_projection_dir(directory)?;
     let projection = directory.join(id);
 
     match fs::symlink_metadata(&projection) {
