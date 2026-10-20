@@ -182,3 +182,23 @@ fn hermes_does_not_delete_through_a_sessions_symlink() {
     );
     assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private\n");
 }
+
+#[cfg(unix)]
+#[test]
+fn opencode_does_not_delete_through_an_artifact_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside");
+    fs::create_dir_all(outside.join("abc")).unwrap();
+    let secret = outside.join("abc/note.txt");
+    fs::write(&secret, "ssh-private").unwrap();
+    let store = home.0.join(".local/share/opencode");
+    fs::create_dir_all(&store).unwrap();
+    std::os::unix::fs::symlink(&outside, store.join("session_diff")).unwrap();
+
+    adapter(&home.0, "opencode").delete_session("abc").unwrap();
+    assert!(
+        secret.is_file(),
+        "delete must not remove the artifact folder outside the store"
+    );
+    assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
+}

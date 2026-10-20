@@ -134,8 +134,36 @@ fn artifact_dirs(root: &Path, storage_rel: &str, id: &str) -> Vec<PathBuf> {
         .iter()
         .flat_map(|folder| [storage.join(folder), storage.join("storage").join(folder)])
         .map(|folder| folder.join(id))
-        .filter(|path| path.is_dir())
+        .filter(|path| artifact_dir_is_inside(&storage, path))
         .collect()
+}
+
+/// `path.is_dir()` follows a symlink ancestor, so `session_diff/<id>` can be a
+/// real directory that lives outside the store. Every directory between the
+/// store and the session folder has to be real. A symlink session folder is
+/// still removed: `remove_path` unlinks it and does not follow.
+fn artifact_dir_is_inside(store: &Path, path: &Path) -> bool {
+    let Ok(relative) = path.strip_prefix(store) else {
+        return false;
+    };
+    let mut current = store.to_path_buf();
+    let mut components = relative.components().peekable();
+    while let Some(component) = components.next() {
+        if components.peek().is_none() {
+            break;
+        }
+        current.push(component);
+        if !real_dir(&current) {
+            return false;
+        }
+    }
+    path.is_dir()
+}
+
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
 }
 
 /// Bytes of the per-session artifact folders, when this release keeps any.
