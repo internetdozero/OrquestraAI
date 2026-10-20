@@ -162,6 +162,12 @@ impl SessionAdapter for Grok {
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
+        // `<project>/<id>` is a path join. A directory symlink named `escape`
+        // plus id `escape/secret` deletes the outside child. `read_transcript`
+        // already refuses that id.
+        if !single_segment(session_id) {
+            return Ok(0);
+        }
         let store = self.store();
         let mut bytes = 0;
 
@@ -283,6 +289,10 @@ impl SessionAdapter for Grok {
 
         Ok(sessions)
     }
+}
+
+fn single_segment(id: &str) -> bool {
+    !id.is_empty() && !id.contains('/') && !id.contains('\\') && id != "." && id != ".."
 }
 
 fn real_dir(path: &Path) -> bool {

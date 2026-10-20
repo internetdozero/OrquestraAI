@@ -261,3 +261,25 @@ fn copilot_delete_does_not_follow_a_state_child_symlink() {
         "delete_session followed session-state/escape into the outside tree"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn grok_delete_does_not_follow_a_project_child_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-grok-delete");
+    fs::create_dir_all(outside.join("secret")).unwrap();
+    let secret = outside.join("secret/keep.txt");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let project = home.0.join(".grok/sessions/proj");
+    fs::create_dir_all(&project).unwrap();
+    std::os::unix::fs::symlink(&outside, project.join("escape")).unwrap();
+
+    adapter(&home.0, "grok")
+        .delete_session("escape/secret")
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(&secret).unwrap(),
+        "ssh-private\n",
+        "delete_session followed sessions/proj/escape into the outside tree"
+    );
+}
