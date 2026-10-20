@@ -119,7 +119,9 @@ pub fn rewrite_jsonl(
     keep: &dyn Fn(&Value) -> bool,
 ) -> Result<bool, String> {
     ensure_within(root, path)?;
-    if !path.is_file() {
+    // `is_file` follows symlinks. history.jsonl replaced by a link would be
+    // read from outside the store and then rewritten in place.
+    if utils::regular_file_len(path).is_none() {
         return Ok(false);
     }
 
@@ -292,4 +294,70 @@ pub fn remove_sqlite(root: &Path, path: &Path) -> Result<u64, String> {
     }
 
     Ok(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn scratch(label: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or(0);
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-fsops-{label}-{}-{unique}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("store")).unwrap();
+        root
+    }
+
+    #[test]
+    fn rewrite_jsonl_drops_a_matching_record_in_a_regular_file() {
+        let root = scratch("rewrite");
+        let store = root.join("store");
+        let index = store.join("history.jsonl");
+        fs::write(&index, "{\"sessionId\":\"drop-me\"}\n{\"sessionId\":\"keep\"}\n").unwrap();
+
+        let changed = rewrite_jsonl(&store, &index, &|record| {
+            record.get("sessionId").and_then(|id| id.as_str()) != Some("drop-me")
+        })
+        .unwrap();
+
+        assert!(changed);
+        let body = fs::read_to_string(&index).unwrap();
+        assert!(!body.contains("drop-me"));
+        assert!(body.contains("keep"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rewrite_jsonl_does_not_read_through_a_symlink() {
+        let root = scratch("link");
+        let store = root.join("store");
+        let outside = root.join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        let secret = outside.join("history.jsonl");
+        let original = "{\"sessionId\":\"drop-me\"}\nssh-private\n";
+        fs::write(&secret, original).unwrap();
+        let link = store.join("history.jsonl");
+        std::os::unix::fs::symlink(&secret, &link).unwrap();
+
+        let changed = rewrite_jsonl(&store, &link, &|record| {
+            record.get("sessionId").and_then(|id| id.as_str()) != Some("drop-me")
+        })
+        .unwrap();
+
+        assert!(!changed);
+        assert!(
+            fs::symlink_metadata(&link).unwrap().file_type().is_symlink(),
+            "the store entry must stay a symlink"
+        );
+        assert_eq!(fs::read_to_string(&secret).unwrap(), original);
+        let _ = fs::remove_dir_all(&root);
+    }
 }
