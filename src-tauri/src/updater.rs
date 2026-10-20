@@ -55,14 +55,15 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
     let assets = asset_candidates(std::env::consts::OS, std::env::consts::ARCH)?;
     let staging = Staging::fresh("orquestra-update")?;
 
-    let base = format!("https://github.com/{REPO}/releases/latest/download");
-    // First candidate wins; Linux falls back to the legacy `orquestra-ai`.
+    // Pin the tag the operator confirmed. `releases/latest` can move between
+    // the UI check and this call, and the success string would still name
+    // the older version.
     let mut asset = String::new();
     let mut binary_path = PathBuf::new();
     let mut last_error = String::new();
     for candidate in &assets {
         let path = staging.0.join(candidate);
-        match download(&format!("{base}/{candidate}"), &path) {
+        match download(&release_asset_url(&version, candidate), &path) {
             Ok(()) => {
                 asset = candidate.to_string();
                 binary_path = path;
@@ -75,7 +76,7 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
         return Err(last_error);
     }
     let sums_path = staging.0.join("SHA256SUMS.txt");
-    download(&format!("{base}/SHA256SUMS.txt"), &sums_path)?;
+    download(&release_asset_url(&version, "SHA256SUMS.txt"), &sums_path)?;
 
     let expected = expected_hash(&sums_path, &asset)?;
     let actual = sha256_of(&binary_path)?;
@@ -181,6 +182,11 @@ fn active_binary() -> Result<PathBuf, String> {
         return Ok(fallback);
     }
     Err("cannot locate the running binary (current_exe and ~/.local/bin/orquestra both missing)".to_string())
+}
+
+/// Asset URL for one validated version tag (`v` is added back; validation strips it).
+fn release_asset_url(version: &str, asset: &str) -> String {
+    format!("https://github.com/{REPO}/releases/download/v{version}/{asset}")
 }
 
 /// Release asset candidates per platform; Linux keeps the legacy alias.
@@ -293,6 +299,19 @@ mod tests {
         );
         assert!(asset_candidates("windows", "x86_64").is_err());
         assert!(asset_candidates("linux", "aarch64").is_err());
+    }
+
+    #[test]
+    fn asset_url_pins_the_validated_release_tag() {
+        let version = validate_version("v0.1.0-alpha.3").expect("tag");
+        let binary = release_asset_url(&version, "orquestra-linux-x86_64");
+        assert_eq!(
+            binary,
+            "https://github.com/internetdozero/OrquestraAI/releases/download/v0.1.0-alpha.3/orquestra-linux-x86_64"
+        );
+        assert!(!binary.contains("/releases/latest/"));
+        let sums = release_asset_url(&version, "SHA256SUMS.txt");
+        assert!(sums.ends_with("/releases/download/v0.1.0-alpha.3/SHA256SUMS.txt"));
     }
 
     #[test]
