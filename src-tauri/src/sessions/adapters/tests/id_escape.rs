@@ -239,3 +239,25 @@ fn hermes_delete_does_not_follow_a_sessions_child_symlink() {
         "delete_session followed sessions/escape into the outside tree"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn copilot_delete_does_not_follow_a_state_child_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-copilot-delete");
+    fs::create_dir_all(outside.join("secret")).unwrap();
+    let secret = outside.join("secret/keep.txt");
+    fs::write(&secret, "ssh-private\n").unwrap();
+    let state = home.0.join(".copilot/session-state");
+    fs::create_dir_all(&state).unwrap();
+    std::os::unix::fs::symlink(&outside, state.join("escape")).unwrap();
+
+    adapter(&home.0, "copilot")
+        .delete_session("escape/secret")
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(&secret).unwrap(),
+        "ssh-private\n",
+        "delete_session followed session-state/escape into the outside tree"
+    );
+}

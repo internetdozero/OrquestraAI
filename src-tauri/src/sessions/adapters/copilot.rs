@@ -205,6 +205,12 @@ impl SessionAdapter for Copilot {
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
+        // `session-state/<id>` is a path join. A directory symlink named
+        // `escape` plus id `escape/secret` deletes the outside child.
+        // `is_session_active` already refuses that id.
+        if !single_segment(session_id) {
+            return Ok(0);
+        }
         let store = self.store();
         let mut bytes = 0;
 
