@@ -237,7 +237,13 @@ impl SessionAdapter for Grok {
             {
                 continue;
             }
-            let log = project.path().join(session_id).join("chat_history.jsonl");
+            // `sess/` as a directory symlink makes `chat_history.jsonl` a
+            // regular file, and `read_transcript` would load it from outside.
+            let session = project.path().join(session_id);
+            if !real_dir(&session) {
+                continue;
+            }
+            let log = session.join("chat_history.jsonl");
             if log.is_file() {
                 return transcript::read_transcript(&log);
             }

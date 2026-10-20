@@ -17,6 +17,7 @@ use super::{registry, SessionAdapter};
 
 mod stores;
 mod symlink_cases;
+mod grok_links;
 
 struct TestHome(PathBuf);
 
