@@ -13,6 +13,7 @@ use std::path::PathBuf;
 
 #[cfg(test)]
 mod tests {
+    use super::naming::slugify;
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
 

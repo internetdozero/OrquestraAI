@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use super::{builtins, validate_id, Preset};
 
-pub(super) use super::naming::{slugify, unique_id};
+pub(super) use super::naming::unique_id;
 use crate::paths::OrquestraPaths;
 
 /// Custom preset file inside `~/.orquestra`.

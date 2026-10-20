@@ -20,19 +20,14 @@ const VAULT_FILE: &str = "vault.json";
 const COOLDOWN_SECS: u64 = 300;
 
 /// Per-key circuit-breaker state.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum KeyHealth {
+    #[default]
     Healthy,
     RateLimited,
     QuotaExceeded,
     InvalidKey,
-}
-
-impl Default for KeyHealth {
-    fn default() -> Self {
-        Self::Healthy
-    }
 }
 
 /// One stored key (secret never leaves the backend unmasked).
@@ -275,6 +270,7 @@ fn normalized_tag(tag: Option<String>) -> Option<String> {
 }
 
 /// Next healthy key index after `failed`, skipping cooldown + invalid keys.
+#[allow(dead_code)]
 pub fn next_key_index(keys: &[VaultKey], failed: usize, now: u64) -> Option<usize> {
     next_key_index_in(keys, failed, now, None)
 }
@@ -282,7 +278,7 @@ pub fn next_key_index(keys: &[VaultKey], failed: usize, now: u64) -> Option<usiz
 /// Tag-scoped failover: only keys whose normalized tag matches `tag`.
 /// `None` keeps the legacy behavior (whole pool).
 pub fn next_key_index_in(keys: &[VaultKey], failed: usize, now: u64, tag: Option<&str>) -> Option<usize> {
-    let wanted = tag.and_then(|raw| normalize_tag(raw));
+    let wanted = tag.and_then(normalize_tag);
     if keys.len() <= 1 {
         if keys.len() == 1 && matches_tag(&keys[0], wanted.as_deref()) {
             return None;
@@ -325,7 +321,7 @@ fn matches_tag(key: &VaultKey, wanted: Option<&str>) -> bool {
 
 /// First healthy key index inside an optional tag scope.
 pub fn first_key_index_in(keys: &[VaultKey], start: usize, now: u64, tag: Option<&str>) -> Option<usize> {
-    let wanted = tag.and_then(|raw| normalize_tag(raw));
+    let wanted = tag.and_then(normalize_tag);
     if keys.is_empty() {
         return None;
     }

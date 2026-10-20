@@ -179,7 +179,7 @@ pub async fn vault_http_request(
     }
     let verb = method.unwrap_or_else(|| "GET".to_string());
     let extra = headers.unwrap_or_default();
-    let tag = key_tag.as_deref().and_then(|raw| normalize_tag(raw));
+    let tag = key_tag.as_deref().and_then(normalize_tag);
     let paths = crate::paths::OrquestraPaths::resolve()?;
     let mut vault = store::load_vault(&paths)?;
     let snapshot = vault.services.get(&service).cloned().ok_or_else(|| format!("unknown vault service: {service}"))?;
@@ -341,7 +341,7 @@ pub async fn vault_test_connection(
             let hint: String = scrubbed.chars().take(160).collect();
             Ok(VaultTestResult {
                 success: ok,
-                latency_ms: latency_ms,
+                latency_ms,
                 message: if ok {
                     format!("HTTP {status} in {latency_ms}ms")
                 } else {
@@ -352,7 +352,7 @@ pub async fn vault_test_connection(
         }
         Err(error) => Ok(VaultTestResult {
             success: false,
-            latency_ms: latency_ms,
+            latency_ms,
             message: error,
             health: service_health(&live),
         }),
