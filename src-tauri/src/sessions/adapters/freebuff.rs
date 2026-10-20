@@ -249,7 +249,13 @@ fn manicode_chats(root: &Path) -> Vec<UnifiedSession> {
 
             let chat_name = chat.file_name().to_string_lossy().into_owned();
             let id = format!("{project_name}/{chat_name}");
-            let messages = utils::read_json(&log);
+            // The transcript reader already refuses logs past this ceiling.
+            // Listing still parsed the whole array, including a 33 MiB body.
+            let messages = if utils::file_size(&log) > utils::MAX_JSONL_BYTES {
+                None
+            } else {
+                utils::read_json(&log)
+            };
             let (title, user_turns) = match messages.as_ref() {
                 Some(messages) => summarize(messages),
                 None => (None, 0),

@@ -1,5 +1,6 @@
 use super::*;
 use std::fs;
+use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn scratch() -> PathBuf {
@@ -72,5 +73,34 @@ fn worktree_metadata_does_not_follow_a_directory_symlink() {
         fs::read_to_string(outside.join("proj.thread.json")).unwrap(),
         "{\"title\":\"ssh-private\",\"cwd\":\"/secret\"}"
     );
+    let _ = fs::remove_dir_all(&root);
+}
+
+#[test]
+fn manicode_list_does_not_parse_an_oversized_chat_log() {
+    let root = scratch();
+    let home = root.join("home");
+    let log = home.join(".config/manicode/projects/proj/chats/demo/chat-messages.json");
+    fs::create_dir_all(log.parent().unwrap()).unwrap();
+    let mut file = fs::File::create(&log).unwrap();
+    file.write_all(br#"[{"role":"user","content":""#).unwrap();
+    let chunk = vec![b'a'; 1024 * 1024];
+    for _ in 0..33 {
+        file.write_all(&chunk).unwrap();
+    }
+    file.write_all(br#""}]"#).unwrap();
+    drop(file);
+
+    let sessions = Freebuff::new(&home).list_sessions().unwrap();
+    let session = sessions
+        .iter()
+        .find(|session| session.id == "proj/demo")
+        .unwrap();
+    assert_eq!(
+        session.turns_count, 0,
+        "listing parsed a chat log past the 32 MiB ceiling"
+    );
+    assert_eq!(session.title, "Chat demo");
+    assert!(log.is_file());
     let _ = fs::remove_dir_all(&root);
 }
