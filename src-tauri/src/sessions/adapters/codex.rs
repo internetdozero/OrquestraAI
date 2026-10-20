@@ -174,7 +174,7 @@ impl SessionAdapter for Codex {
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
         let store = self.store();
-        if store.join(MAINTENANCE_LOCK).exists() {
+        if maintenance_lock_held(&store) {
             return Err(format!(
                 "Codex is running a database maintenance pass ({MAINTENANCE_LOCK})"
             ));
@@ -205,10 +205,7 @@ impl SessionAdapter for Codex {
     /// turns: `developer` instructions, environment setup blocks and bare
     /// tool items are harness scaffolding, not conversation.
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
-        if session_id.is_empty()
-            || session_id.contains('/')
-            || session_id.contains('\\')
-        {
+        if session_id.is_empty() || session_id.contains('/') || session_id.contains('\\') {
             return Vec::new();
         }
 
@@ -248,7 +245,7 @@ impl SessionAdapter for Codex {
 
     fn optimize_storage(&self) -> Result<(), String> {
         let store = self.store();
-        if store.join(MAINTENANCE_LOCK).exists() {
+        if maintenance_lock_held(&store) {
             return Err(format!(
                 "Codex is running a database maintenance pass ({MAINTENANCE_LOCK})"
             ));
@@ -348,6 +345,14 @@ fn project_path(rollout: &Path) -> Option<String> {
     utils::json_string(payload, &["cwd", "working_directory", "workdir"])
 }
 
+/// A real lock file means Codex is inside a maintenance pass. A symlink is
+/// not that file: `exists` would follow it and refuse every delete.
+fn maintenance_lock_held(store: &Path) -> bool {
+    std::fs::symlink_metadata(store.join(MAINTENANCE_LOCK))
+        .map(|metadata| metadata.file_type().is_file())
+        .unwrap_or(false)
+}
+
 fn title(id: &str, name: Option<String>) -> String {
     match name.map(|name| utils::trim_title(&name)) {
         Some(name) if !name.is_empty() => name,
@@ -356,45 +361,6 @@ fn title(id: &str, name: Option<String>) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    #[cfg(unix)]
-    #[test]
-    fn sessions_symlink_is_not_listed_or_deleted() {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|elapsed| elapsed.as_nanos())
-            .unwrap_or(0);
-        let root = PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-codex-link-{}-{unique}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&root);
-        let home = root.join("home");
-        let outside = root.join("outside");
-        fs::create_dir_all(&outside).unwrap();
-        fs::create_dir_all(home.join(".codex")).unwrap();
-        let id = "01a148f4-9277-7820-8e2c-30f21ca5100f";
-        let secret = outside.join(format!(
-            "rollout-2026-10-17T05-22-30-{id}.jsonl"
-        ));
-        let original = "{\"payload\":{\"cwd\":\"/secret\"}}\n";
-        fs::write(&secret, original).unwrap();
-        std::os::unix::fs::symlink(&outside, home.join(".codex/sessions")).unwrap();
-
-        let codex = Codex::new(&home);
-        let sessions = codex.list_sessions().unwrap();
-        assert!(
-            sessions.iter().all(|session| {
-                session.id != id && session.project_path.as_deref() != Some("/secret")
-            }),
-            "listing followed sessions symlink: {sessions:?}"
-        );
-        codex.delete_session(id).unwrap();
-        assert_eq!(fs::read_to_string(&secret).unwrap(), original);
-        let _ = fs::remove_dir_all(&root);
-    }
-}
+#[allow(clippy::unwrap_used)]
+#[path = "codex_tests.rs"]
+mod tests;
