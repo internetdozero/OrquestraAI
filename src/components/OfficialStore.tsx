@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, X } from "lucide-react";
 import {
   listOfficialStore,
   type OfficialMcpEntry,
@@ -28,6 +28,13 @@ interface OfficialStoreProps {
   projectScope?: string;
 }
 
+function toMessage(cause: unknown, fallback: string): string {
+  if (typeof cause === "string" && cause.trim()) return cause;
+  if (cause instanceof Error && cause.message.trim()) return cause.message;
+  if (cause) return String(cause);
+  return fallback;
+}
+
 /**
  * Community & Official Hub: curated entries with tier/category filters,
  * security badges (via StoreCard) and one-click install-and-project.
@@ -43,7 +50,8 @@ export function OfficialStore({
   const { t } = useI18n();
   const s = t.store;
   const [entries, setEntries] = useState<StoreEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tier, setTier] = useState<StoreTierFilter>("all");
   const [category, setCategory] = useState<string>("All");
@@ -56,10 +64,8 @@ export function OfficialStore({
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setError(
-            s.loadFailed(
-              cause instanceof Error ? cause.message : t.common.unexpected,
-            ),
+          setLoadError(
+            s.loadFailed(toMessage(cause, t.common.unexpected)),
           );
         }
       });
@@ -88,10 +94,10 @@ export function OfficialStore({
     });
   }, [entries, kind, tier, category]);
 
-  if (error) {
+  if (loadError) {
     return (
       <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/[0.07] px-4 py-3 text-[12px] text-red-200">
-        {error}
+        {loadError}
       </div>
     );
   }
@@ -136,6 +142,23 @@ export function OfficialStore({
         </div>
       )}
 
+      {actionError && (
+        <div
+          role="alert"
+          className="mx-4 my-3 flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-200"
+        >
+          <span className="min-w-0 flex-1 break-words">{actionError}</span>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="shrink-0 rounded p-1 text-red-300 hover:bg-red-500/20 hover:text-white"
+            aria-label="Dismiss"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
+
       <ol className="divide-y divide-white/[0.04]">
         {visible.map((entry) => {
           const status = statusOf(entry);
@@ -159,14 +182,12 @@ export function OfficialStore({
               onRun={async () => {
                 if (!action) return;
                 setBusyId(entry.id);
-                setError(null);
+                setActionError(null);
                 try {
                   await action.run();
                 } catch (cause: unknown) {
-                  setError(
-                    s.actionFailed(
-                      cause instanceof Error ? cause.message : t.common.unexpected,
-                    ),
+                  setActionError(
+                    s.actionFailed(toMessage(cause, t.common.unexpected)),
                   );
                 } finally {
                   setBusyId(null);

@@ -107,8 +107,16 @@ fn import_dir(source: &Path) -> Result<SkillItem, String> {
 
     let paths = open_paths()?;
     let destination = paths.vault.join(&folder);
-    if destination.exists() {
-        return Err(format!("a skill named {folder:?} is already in the vault"));
+    if let Ok(metadata) = fs::symlink_metadata(&destination) {
+        if metadata.file_type().is_symlink() {
+            // A symlink in the vault is refused by vault listing and lookup.
+            // Replace the link with the imported real directory.
+            fs::remove_file(&destination).map_err(|error| {
+                format!("failed to clear symlink {}: {error}", destination.display())
+            })?;
+        } else if destination.exists() {
+            return Err(format!("a skill named {folder:?} is already in the vault"));
+        }
     }
 
     copy_dir_all(source, &destination)?;
