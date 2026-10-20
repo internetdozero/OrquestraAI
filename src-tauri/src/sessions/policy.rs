@@ -70,6 +70,15 @@ pub(crate) fn policy_path(root: &Path) -> PathBuf {
 /// the caller can surface it instead of silently dropping the operator's pins.
 pub(crate) fn load_from(root: &Path) -> Result<PolicyFile, String> {
     let path = policy_path(root);
+    if fs::symlink_metadata(&path)
+        .ok()
+        .is_some_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to read {}: not a regular file",
+            path.display()
+        ));
+    }
     let raw = match fs::read_to_string(&path) {
         Ok(raw) => raw,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -87,6 +96,15 @@ pub(crate) fn load_from(root: &Path) -> Result<PolicyFile, String> {
 pub(crate) fn save_to(root: &Path, file: &PolicyFile) -> Result<(), String> {
     create_dir(root)?;
     let path = policy_path(root);
+    if fs::symlink_metadata(&path)
+        .ok()
+        .is_some_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to replace {}: not a regular file",
+            path.display()
+        ));
+    }
     let temporary = root.join(format!(".{POLICY_FILE}.tmp-{}", std::process::id()));
 
     let mut content = serde_json::to_string_pretty(file)
@@ -181,4 +199,50 @@ fn root() -> Result<PathBuf, String> {
 
 pub(crate) fn now_iso8601() -> String {
     super::adapters::utils::iso8601_from_secs(super::adapters::utils::now_secs())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(unix)]
+    #[test]
+    fn toggle_pin_does_not_follow_a_policy_symlink() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-policy-link-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let outside = root.join("outside.json");
+        let original = "{\n  \"pinnedSessions\": [{\n    \"harness\": \"codex\",\n    \"sessionId\": \"ssh-private\",\n    \"pinnedAt\": \"2026-10-18T06:00:00Z\"\n  }]\n}\n";
+        fs::write(&outside, original).unwrap();
+        let link = root.join(POLICY_FILE);
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+        let result = toggle_pin_at(
+            &root,
+            "claude",
+            "s1",
+            None,
+            "2026-10-18T06:00:00Z".to_string(),
+        );
+        assert!(
+            result.is_err(),
+            "pin must not read through the policy symlink: {result:?}"
+        );
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the policy symlink must stay"
+        );
+        assert_eq!(fs::read_to_string(&outside).unwrap(), original);
+        let _ = fs::remove_dir_all(&root);
+    }
 }
