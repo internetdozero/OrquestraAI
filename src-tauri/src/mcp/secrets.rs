@@ -79,12 +79,13 @@ pub(super) fn mask_server(server: &mut super::McpServer) {
     }
 
     if let Some(url) = &mut server.url {
+        // Query keys arrive in any case (`API_KEY=`). Match the folded URL
+        // so a capitalised secret does not cross IPC in plaintext.
+        let folded = url.to_ascii_lowercase();
         if !contains_template(url)
-            && (url.contains("token=")
-            || url.contains("key=")
-            || url.contains("secret=")
-            || url.contains("password=")
-            || url.contains("authorization="))
+            && ["token=", "key=", "secret=", "password=", "authorization="]
+                .iter()
+                .any(|marker| folded.contains(marker))
         {
             *url = mask_secret(url);
         }
@@ -255,6 +256,27 @@ mod tests {
         assert_eq!(mask_secret("sk-123456789"), "****6789");
         assert_eq!(mask_value("API_TOKEN", "raw"), "********");
         assert_eq!(mask_value("API_TOKEN", "${TOKEN}"), "${TOKEN}");
+    }
+
+    #[test]
+    fn url_secrets_are_masked_when_the_query_key_is_uppercase() {
+        let mut server = super::super::McpServer {
+            id: "remote".to_string(),
+            name: "remote".to_string(),
+            description: String::new(),
+            command: String::new(),
+            args: Vec::new(),
+            env: HashMap::new(),
+            url: Some("https://mcp.example/sse?API_KEY=sk-live-abcdefghij".to_string()),
+            headers: HashMap::new(),
+            global_enabled: false,
+            enabled_harnesses: Vec::new(),
+            official: false,
+        };
+        mask_server(&mut server);
+        let url = server.url.expect("url");
+        assert!(!url.contains("sk-live"), "uppercase query key must not leak");
+        assert!(url.starts_with("****"));
     }
 
     #[test]
