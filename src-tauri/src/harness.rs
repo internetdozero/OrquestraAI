@@ -8,7 +8,6 @@
 //! harness is described in exactly one place.
 
 use serde::Serialize;
-use std::path::{Path, PathBuf};
 
 mod lookup;
 pub use lookup::{
@@ -284,6 +283,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
 mod tests {
     use super::*;
     use std::env;
+    use std::path::{Path, PathBuf};
 
     /// `CODEX_HOME` wins over `~/.codex` while set; removing it restores
     /// the home-relative default, and `is_installed` follows the resolved

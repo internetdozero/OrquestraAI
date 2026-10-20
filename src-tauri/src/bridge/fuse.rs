@@ -22,6 +22,7 @@ use fuse_io::{
     backup_move, backup_slot, create_dir_all, ensure_config, ensure_symlink, link_instructions,
     move_entry, quarantine_dir,
 };
+#[cfg_attr(not(test), allow(unused_imports))]
 pub(super) use fuse_io::{format_timestamp, merge_skills_path};
 pub(crate) use fuse_io::timestamp_label;
 

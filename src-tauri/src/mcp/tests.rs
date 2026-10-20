@@ -5,7 +5,6 @@
 //! non-destructive guarantees.
 
 use super::catalog::*;
-use super::deploy::*;
 use super::serializers::*;
 use super::*;
 use std::collections::BTreeSet;

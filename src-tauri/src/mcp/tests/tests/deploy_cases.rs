@@ -2,16 +2,13 @@
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
 
 use serde_json::Value as JsonValue;
 
 use super::super::super::catalog::*;
 use super::super::super::deploy::*;
-use super::super::super::serializers::*;
-use super::super::super::*;
 use super::super::is_target;
-use super::{mode_of, server, with_env, TestHome};
+use super::{mode_of, server, TestHome};
 
 #[test]
 fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {

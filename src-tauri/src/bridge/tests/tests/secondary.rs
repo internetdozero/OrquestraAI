@@ -1,7 +1,6 @@
 //! Secondary-discovery fusion tests, split out to stay under the file cap.
 
 use std::fs;
-use std::path::Path;
 
 use super::super::super::*;
 use super::{assert_linked, TestHome};

@@ -11,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use super::deploy::{deploy_current, write_config};
-use super::secrets::{mask_server, mask_value, restore_masked_args};
+use super::secrets::mask_server;
 use super::McpServer;
 use crate::harness::{self, GLOBAL_SCOPE};
 use crate::official::is_official_mcp;

@@ -3,8 +3,7 @@
 
 //! Unit tests for the vault, the projections and the instruction file.
 
-use super::agents::{read_agents, write_agents};
-use super::projection::{batch_from, clear_global_baseline, set_global, set_scope, unlink_skill};
+use super::projection::{batch_from, clear_global_baseline, set_global, set_scope};
 use super::vault::{delete_skill, read_skill_content, save_skill_content};
 use super::vault::{
     categorize, estimate_tokens, list_from, normalize_description, split_frontmatter,

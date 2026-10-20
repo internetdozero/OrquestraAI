@@ -3,13 +3,8 @@
 use std::fs;
 
 use super::super::super::agents::{read_agents, write_agents};
-use super::super::super::projection::{
-    batch_from, clear_global_baseline, set_global, set_scope, unlink_skill,
-};
-use super::super::super::vault::{
-    categorize, delete_skill, estimate_tokens, list_from, normalize_description, read_skill_content,
-    save_skill_content, split_frontmatter, validate_id, Frontmatter,
-};
+use super::super::super::projection::{set_global, unlink_skill};
+use super::super::super::vault::list_from;
 use super::super::super::*;
 use super::{setup_two_skills, skill_in, temp_paths};
 
