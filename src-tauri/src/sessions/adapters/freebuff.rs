@@ -88,8 +88,15 @@ impl SessionAdapter for Freebuff {
 
         if let (Some(project), Some(chat)) = (project, chat) {
             let projects = self.root.join(MANICODE_REL);
-            let chat_dir = projects.join(project).join("chats").join(chat);
-            bytes += fsops::remove_path(&projects, &chat_dir)?;
+            let project_dir = projects.join(project);
+            let chats_dir = project_dir.join("chats");
+            // `remove_path` checks the lexical prefix. A symlink in the middle
+            // still points at a directory outside the store, and `remove_dir_all`
+            // would delete that directory.
+            if real_dir(&project_dir) && real_dir(&chats_dir) {
+                let chat_dir = chats_dir.join(chat);
+                bytes += fsops::remove_path(&projects, &chat_dir)?;
+            }
         }
 
         Ok(bytes)
@@ -117,13 +124,14 @@ impl SessionAdapter for Freebuff {
         if !valid_segment(project) || !valid_segment(chat) {
             return Vec::new();
         }
-        let log = self
-            .root
-            .join(MANICODE_REL)
-            .join(project)
-            .join("chats")
-            .join(chat)
-            .join("chat-messages.json");
+        let project_dir = self.root.join(MANICODE_REL).join(project);
+        let chats_dir = project_dir.join("chats");
+        // A project or chats entry that is a symlink would make this path
+        // resolve outside the store. `read_transcript` follows that path.
+        if !real_dir(&project_dir) || !real_dir(&chats_dir) || !real_dir(&chats_dir.join(chat)) {
+            return Vec::new();
+        }
+        let log = chats_dir.join(chat).join("chat-messages.json");
         if !log.is_file() {
             return Vec::new();
         }
@@ -204,12 +212,26 @@ fn manicode_chats(root: &Path) -> Vec<UnifiedSession> {
 
     let mut sessions = Vec::new();
     for project in projects.flatten() {
+        if !project
+            .file_type()
+            .map(|kind| kind.is_dir())
+            .unwrap_or(false)
+        {
+            continue;
+        }
         let project_name = project.file_name().to_string_lossy().into_owned();
-        let Ok(chats) = std::fs::read_dir(project.path().join("chats")) else {
+        let chats_dir = project.path().join("chats");
+        if !real_dir(&chats_dir) {
+            continue;
+        }
+        let Ok(chats) = std::fs::read_dir(&chats_dir) else {
             continue;
         };
 
         for chat in chats.flatten() {
+            if !chat.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
+                continue;
+            }
             let log = chat.path().join("chat-messages.json");
             if !log.is_file() {
                 continue;
@@ -265,6 +287,12 @@ fn summarize(messages: &Value) -> (Option<String>, usize) {
     (title, turns)
 }
 
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
+}
+
 /// A session-id path segment: single, non-empty, and never a traversal.
 fn valid_segment(segment: &str) -> bool {
     !(segment.is_empty()
@@ -283,5 +311,54 @@ fn title(id: &str, meta: Option<&Value>) -> String {
         format!("Worktree {}", id.chars().take(8).collect::<String>())
     } else {
         utils::trim_title(&text)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn scratch() -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or(0);
+        let root = PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-freebuff-link-{}-{unique}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn manicode_project_symlink_is_not_listed_or_deleted() {
+        let root = scratch();
+        let home = root.join("home");
+        let outside = root.join("outside");
+        fs::create_dir_all(outside.join("chats/demo")).unwrap();
+        let secret = outside.join("chats/demo/chat-messages.json");
+        let original = "[{\"role\":\"user\",\"content\":\"ssh-private\"}]";
+        fs::write(&secret, original).unwrap();
+        let projects = home.join(".config/manicode/projects");
+        fs::create_dir_all(&projects).unwrap();
+        std::os::unix::fs::symlink(&outside, projects.join("linked")).unwrap();
+
+        let adapter = Freebuff::new(&home);
+        let sessions = adapter.list_sessions().unwrap();
+        assert!(
+            sessions.iter().all(|session| {
+                session.id != "linked/demo" && !session.title.contains("ssh-private")
+            }),
+            "listing followed the project symlink: {sessions:?}"
+        );
+        assert!(adapter.read_transcript("linked/demo").is_empty());
+        adapter.delete_session("linked/demo").unwrap();
+        assert_eq!(fs::read_to_string(&secret).unwrap(), original);
+        let _ = fs::remove_dir_all(&root);
     }
 }
