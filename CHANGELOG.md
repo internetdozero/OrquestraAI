@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security & Hardening
+- **Comprehensive Path & Symlink Traversal Protection Across Fleet Adapters:**
+  - Hardened `delete_session`, `read_transcript`, and artifact sizing across all 9 session adapters (Antigravity, Claude Code, Codex, Copilot CLI, Freebuff/Manicode, Grok, Hermes Agent, OpenCode, Kilo).
+  - Enforced strict single-segment validation on session IDs before path joining (`single_segment` rejecting `/`, `\`, `.`, `..` and empty strings), eliminating arbitrary file deletion through directory symlinks.
+  - Replaced naive `is_dir()` and `exists()` checks with `symlink_metadata()` and `real_dir()` guards to prevent following symlinks outside harness stores.
+  - Hardened Bridge, Skills, MCP, and Presets engines against symlinked projections, vault entries, `.git` roots, and configuration stores.
+- **Timestamp & Dialect Sanitization:**
+  - Added strict validation in `sessions/adapters/time.rs` rejecting impossible calendar dates (e.g. Feb 31, leap-year anomalies), invalid UTC offsets (`>14:00`, `< -12:00`, non-digit offset characters), and trailing garbage strings.
+- **Desktop & Updater Hardening:**
+  - Guarded launcher creation and `.desktop` writes against directory symlinks.
+  - Replaced `cmd.exe` URL execution on Windows with direct platform opening for HTTP/HTTPS links.
+  - Enforced confirmed release tag verification in in-app updater download routines.
+
+### Performance
+- **Bounded Session Log Parsing:**
+  - Enforced a 32 MiB size ceiling (`MAX_JSONL_BYTES`) on Freebuff/Manicode `list_sessions`, preventing memory bloat and UI freezes on oversized `chat-messages.json` files.
+  - Prevented cyclical and out-of-tree walks in directory size calculations (`dir_size`).
+
+### Reliability & Logic
+- **Maintenance Lock Validation:**
+  - Hardened lock detection in Codex (`.sqlite-maintenance.lock`) and Copilot (`.session-operation-locks`) to require real regular files, eliminating denial-of-service locks caused by dangling or external symlinks.
+  - Corrected ISO timezone offset sign handling during timestamp normalization.
+- **Updater Version Ordering:**
+  - Improved semver comparison to rank pre-releases strictly behind corresponding stable releases.
+
+### Refactored (Anti-Monolith File Cap)
+- Decomposed modules approaching the 400-line project limit into focused submodules:
+  - Extracted `freebuff_tests.rs` from `freebuff.rs` and `subpath_tests.rs` from `subpath.rs`.
+  - Split MCP catalog mutations into `mcp/catalog/mutate.rs` and secrets into `mcp/secrets_tests.rs`.
+  - Extracted fusion IO into `bridge/fuse/fuse_io.rs` and secondary bridge tests into `bridge/tests/tests/secondary.rs`.
+  - Modularized session adapter ID escape tests into `sessions/adapters/tests/id_escape.rs`.
+
 ## [0.1.0-alpha.3] - 2026-10-19
 
 ### Added
