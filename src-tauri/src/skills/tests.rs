@@ -291,6 +291,13 @@ mod tests {
         {
             assert!(delete_skill(&paths, "linked").is_err());
             assert!(outside.join(SKILL_FILE).is_file());
+            assert!(list_from(&paths, GLOBAL_SCOPE)
+                .unwrap()
+                .iter()
+                .all(|skill| skill.id != "linked"));
+            assert!(set_global(&paths, "linked", true).is_err());
+            assert!(fs::symlink_metadata(paths.global_dir().join("linked")).is_err());
+            assert!(outside.join(SKILL_FILE).is_file());
         }
 
         fs::remove_dir_all(&paths.root).unwrap();

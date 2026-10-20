@@ -122,8 +122,12 @@ pub(super) fn delete_skill(paths: &OrquestraPaths, id: &str) -> Result<(), Strin
 pub(super) fn skill_directory(paths: &OrquestraPaths, id: &str) -> Result<PathBuf, String> {
     validate_id(id)?;
     let directory = paths.vault.join(id);
-    if !directory.is_dir() {
-        return Err(format!("unknown skill: {id}"));
+    let metadata = fs::symlink_metadata(&directory)
+        .map_err(|_| format!("unknown skill: {id}"))?;
+    if !metadata.file_type().is_dir() {
+        return Err(format!(
+            "refusing to use {id}: vault entry is not a real directory"
+        ));
     }
     Ok(directory)
 }
@@ -135,7 +139,12 @@ pub(super) fn skill_directories(vault: &Path) -> Result<Vec<(String, PathBuf)>, 
     let mut directories = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
-        if !path.is_dir() {
+        // `is_dir` follows symlinks. A vault entry that points outside would
+        // be listed and then projected into every harness.
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        if !kind.is_dir() {
             continue;
         }
         if !path.join(SKILL_FILE).is_file() {
