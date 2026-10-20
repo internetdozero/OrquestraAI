@@ -194,11 +194,14 @@ impl SessionAdapter for Copilot {
             return false;
         }
         let state_root = self.store().join("session-state");
+        let locks = state_root.join(".session-operation-locks");
+        // `exists` follows. A lock symlink, or a symlinked lock directory,
+        // would borrow an outside file and keep the session out of purge.
         real_dir(&state_root)
-            && state_root
-                .join(".session-operation-locks")
-                .join(format!("{session_id}.lock"))
-                .exists()
+            && real_dir(&locks)
+            && std::fs::symlink_metadata(locks.join(format!("{session_id}.lock")))
+                .map(|metadata| metadata.file_type().is_file())
+                .unwrap_or(false)
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {

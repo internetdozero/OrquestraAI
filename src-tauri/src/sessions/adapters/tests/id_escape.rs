@@ -20,7 +20,9 @@ fn antigravity_read_does_not_escape_brain_with_parent_dirs() {
 
     let turns = adapter(&home.0, "antigravity").read_transcript("../../../outside-escape");
     assert!(
-        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
         "read_transcript climbed out of brain/: {turns:?}"
     );
 }
@@ -38,7 +40,9 @@ fn claude_read_does_not_escape_a_project_with_parent_dirs() {
 
     let turns = adapter(&home.0, "claude").read_transcript("../../../secret");
     assert!(
-        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
         "read_transcript climbed out of projects/: {turns:?}"
     );
 }
@@ -146,11 +150,48 @@ fn opencode_list_does_not_size_a_directory_outside_the_store() {
 #[test]
 fn copilot_does_not_treat_an_outside_file_as_an_active_lock() {
     let home = TestHome::new();
-    fs::create_dir_all(home.0.join(".copilot/session-state/.session-operation-locks")).unwrap();
+    fs::create_dir_all(
+        home.0
+            .join(".copilot/session-state/.session-operation-locks"),
+    )
+    .unwrap();
     fs::write(home.0.join("secret.lock"), "ssh-private").unwrap();
 
     assert!(
         !adapter(&home.0, "copilot").is_session_active("../../../secret"),
         "an outside file was treated as a live Copilot lock"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn copilot_symlink_lock_is_not_an_active_session() {
+    let home = TestHome::new();
+    let locks = home
+        .0
+        .join(".copilot/session-state/.session-operation-locks");
+    fs::create_dir_all(&locks).unwrap();
+    let outside = home.0.join("outside-lock");
+    fs::write(&outside, "keep\n").unwrap();
+    std::os::unix::fs::symlink(&outside, locks.join("live.lock")).unwrap();
+    assert!(
+        !adapter(&home.0, "copilot").is_session_active("live"),
+        "a symlink lock followed to an outside file"
+    );
+
+    let home = TestHome::new();
+    let outside_dir = home.0.join("outside-locks");
+    fs::create_dir_all(&outside_dir).unwrap();
+    fs::write(outside_dir.join("live.lock"), "keep\n").unwrap();
+    fs::create_dir_all(home.0.join(".copilot/session-state")).unwrap();
+    std::os::unix::fs::symlink(
+        &outside_dir,
+        home.0
+            .join(".copilot/session-state/.session-operation-locks"),
+    )
+    .unwrap();
+    assert!(
+        !adapter(&home.0, "copilot").is_session_active("live"),
+        "a symlinked lock directory was followed"
     );
 }
