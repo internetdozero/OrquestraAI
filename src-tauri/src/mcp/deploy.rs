@@ -62,9 +62,22 @@ pub(super) fn deploy_current(paths: &OrquestraPaths) -> Result<(), String> {
 // Catalog storage
 // ---------------------------------------------------------------------------
 
-pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Result<Vec<String>, String> {
+pub(super) fn deploy_at(
+    home: &Path,
+    paths: &OrquestraPaths,
+    seed: &Path,
+) -> Result<Vec<String>, String> {
     let mut catalog = load_catalog(paths, seed)?;
     let dotenv_path = paths.root.join(".env");
+    if fs::symlink_metadata(&dotenv_path)
+        .ok()
+        .is_some_and(|meta| meta.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to read {}: not a regular file",
+            dotenv_path.display()
+        ));
+    }
     let dotenv = match fs::read_to_string(&dotenv_path) {
         Ok(content) => parse_dotenv(&content),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Default::default(),
@@ -84,6 +97,14 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Res
         };
 
         let path = home.join(mcp.rel);
+        // `read_to_string` follows. A symlink would be copied into the new
+        // file and then replaced, taking the outside config with it.
+        if fs::symlink_metadata(&path)
+            .ok()
+            .is_some_and(|meta| meta.file_type().is_symlink())
+        {
+            continue;
+        }
         let existing = match fs::read_to_string(&path) {
             Ok(content) => content,
             Err(error) if error.kind() == io::ErrorKind::NotFound => String::new(),
@@ -132,11 +153,9 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths, seed: &Path) -> Res
             continue;
         }
 
-        let secret = active
-            .iter()
-            .any(|server| {
-                !server.env.is_empty() || !server.headers.is_empty() || server.url.is_some()
-            });
+        let secret = active.iter().any(|server| {
+            !server.env.is_empty() || !server.headers.is_empty() || server.url.is_some()
+        });
 
         let result = if existing.trim().is_empty() {
             Ok(())
@@ -210,9 +229,7 @@ fn backup_run_dir(paths: &OrquestraPaths) -> Result<PathBuf, String> {
         match fs::create_dir(&candidate) {
             Ok(()) => return Ok(candidate),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
-            Err(error) => {
-                return Err(format!("failed to create {}: {error}", candidate.display()))
-            }
+            Err(error) => return Err(format!("failed to create {}: {error}", candidate.display())),
         }
     }
 
@@ -296,8 +313,12 @@ pub(super) fn write_config(path: &Path, content: &str, secret: bool) -> Result<b
         return Err(format!("failed to write {}: {error}", temporary.display()));
     }
 
-    fs::set_permissions(&temporary, fs::Permissions::from_mode(mode))
-        .map_err(|error| format!("failed to set permissions on {}: {error}", temporary.display()))?;
+    fs::set_permissions(&temporary, fs::Permissions::from_mode(mode)).map_err(|error| {
+        format!(
+            "failed to set permissions on {}: {error}",
+            temporary.display()
+        )
+    })?;
 
     fs::rename(&temporary, path).map_err(|error| {
         let _ = fs::remove_file(&temporary);

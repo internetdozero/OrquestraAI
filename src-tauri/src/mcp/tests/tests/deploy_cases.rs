@@ -2,6 +2,8 @@
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value as JsonValue;
 
@@ -66,9 +68,15 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     .unwrap();
 
     let changed = deploy_at(&test.home, &test.paths, &seed).unwrap();
-    assert_eq!(changed.len(), 7, "every installed target is written: {changed:?}");
+    assert_eq!(
+        changed.len(),
+        7,
+        "every installed target is written: {changed:?}"
+    );
     assert!(
-        changed.iter().any(|path| path.contains("kilo.jsonc") && path.contains("0600")),
+        changed
+            .iter()
+            .any(|path| path.contains("kilo.jsonc") && path.contains("0600")),
         "a config that gains a token is tightened: {changed:?}"
     );
 
@@ -81,16 +89,16 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     let antigravity: JsonValue =
         serde_json::from_str(&test.read(".gemini/config/mcp_config.json")).unwrap();
     assert_eq!(antigravity["theme"], "dark");
-    assert_eq!(
-        antigravity["mcpServers"]["hand-added"]["command"],
-        "custom"
-    );
+    assert_eq!(antigravity["mcpServers"]["hand-added"]["command"], "custom");
 
     let kilo: JsonValue = serde_json::from_str(&test.read(".config/kilo/kilo.jsonc")).unwrap();
     assert_eq!(kilo["permission"]["bash"], "allow");
     assert_eq!(kilo["skills"]["paths"][0], "/projection");
     assert_eq!(kilo["mcp"]["github"]["type"], "local");
-    assert_eq!(kilo["mcp"]["github"]["environment"]["GITHUB_PERSONAL_ACCESS_TOKEN"], "ghp_test");
+    assert_eq!(
+        kilo["mcp"]["github"]["environment"]["GITHUB_PERSONAL_ACCESS_TOKEN"],
+        "ghp_test"
+    );
     assert_eq!(mode_of(&test.home.join(".config/kilo/kilo.jsonc")), 0o600);
 
     let opencode: JsonValue =
@@ -112,7 +120,9 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     let _: toml_edit::DocumentMut = grok.parse().expect("grok config must stay valid TOML");
 
     // Second run changes nothing.
-    assert!(deploy_at(&test.home, &test.paths, &seed).unwrap().is_empty());
+    assert!(deploy_at(&test.home, &test.paths, &seed)
+        .unwrap()
+        .is_empty());
     assert_eq!(test.read(".codex/config.toml").trim(), codex.trim());
 
     // Disable one server globally: it disappears from every adapter while
@@ -177,12 +187,18 @@ fn write_never_loosens_a_mode_and_tightens_files_holding_secrets() {
 
     let shared = test.write("shared.json", "old");
     fs::set_permissions(&shared, fs::Permissions::from_mode(0o644)).unwrap();
-    assert!(!write_config(&shared, "new", false).unwrap(), "no secret, no tightening");
+    assert!(
+        !write_config(&shared, "new", false).unwrap(),
+        "no secret, no tightening"
+    );
     assert_eq!(mode_of(&shared), 0o644);
 
     let leaked = test.write("leaked.json", "old");
     fs::set_permissions(&leaked, fs::Permissions::from_mode(0o644)).unwrap();
-    assert!(write_config(&leaked, "new", true).unwrap(), "secret, tighten");
+    assert!(
+        write_config(&leaked, "new", true).unwrap(),
+        "secret, tighten"
+    );
     assert_eq!(mode_of(&leaked), 0o600);
 
     // A brand new file with secrets is private from the start.
@@ -200,8 +216,7 @@ fn global_selection_sets_the_baseline_but_keeps_harness_opt_ins() {
     let seed = test.seed_file();
 
     let mut catalog = load_catalog(&test.paths, &seed).unwrap();
-    catalog.mcps.get_mut("github").unwrap().enabled_harnesses =
-        vec!["codex".to_string()];
+    catalog.mcps.get_mut("github").unwrap().enabled_harnesses = vec!["codex".to_string()];
     save_catalog(&test.paths, &catalog).unwrap();
 
     // A preset that drops everything disables the Global baseline but
@@ -210,7 +225,11 @@ fn global_selection_sets_the_baseline_but_keeps_harness_opt_ins() {
 
     let reloaded = load_catalog(&test.paths, &seed).unwrap();
     for server in reloaded.mcps.values() {
-        assert!(!server.global_enabled, "{} should be off globally", server.id);
+        assert!(
+            !server.global_enabled,
+            "{} should be off globally",
+            server.id
+        );
     }
     assert_eq!(
         reloaded.mcps["github"].enabled_harnesses,
@@ -246,4 +265,60 @@ fn harnesses_without_an_adapter_are_rejected() {
     assert!(validate_server(&server("bad id", "npx", &[])).is_err());
     assert!(validate_server(&server("../escape", "npx", &[])).is_err());
     assert!(validate_server(&server("ok", "  ", &[])).is_err());
+}
+
+#[cfg(unix)]
+#[test]
+fn deploy_does_not_read_a_symlinked_harness_config() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let base = PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-mcp-config-link-{}-{unique}",
+        std::process::id()
+    ));
+    let home = base.join("home");
+    let root = base.join("orquestra");
+    fs::create_dir_all(home.join(".config/opencode")).unwrap();
+    let outside = base.join("outside.jsonc");
+    fs::write(&outside, "{\n  \"secret\": \"ssh-private\"\n}\n").unwrap();
+    let config = home.join(".config/opencode/opencode.jsonc");
+    std::os::unix::fs::symlink(&outside, &config).unwrap();
+    let seed = base.join("seed.json");
+    fs::write(
+        &seed,
+        r#"{
+  "headroom": {
+    "id": "headroom",
+    "name": "Headroom",
+    "description": "local",
+    "command": "headroom",
+    "args": ["mcp"],
+    "env": {},
+    "enabled": true
+  }
+}
+"#,
+    )
+    .unwrap();
+    let paths = crate::paths::OrquestraPaths {
+        vault: root.join("skills-library"),
+        active: root.join("active"),
+        root,
+    };
+
+    let _ = deploy_at(&home, &paths, &seed);
+    assert!(
+        fs::symlink_metadata(&config)
+            .unwrap()
+            .file_type()
+            .is_symlink(),
+        "deploy must not replace the config symlink"
+    );
+    assert_eq!(
+        fs::read_to_string(&outside).unwrap(),
+        "{\n  \"secret\": \"ssh-private\"\n}\n"
+    );
+    let _ = fs::remove_dir_all(&base);
 }
