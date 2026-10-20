@@ -14,8 +14,6 @@ use super::{fsops, transcript, utils, SessionAdapter};
 const HARNESS: &str = "copilot";
 const STORE_REL: &str = ".copilot";
 const DATABASE: &str = "session-store.db";
-/// Per-session locks the CLI takes while it is working on a conversation.
-const LOCKS_REL: &str = "session-state/.session-operation-locks";
 /// Registry of conversations the CLI currently considers open.
 const OPEN_STATE: &str = "open-sessions-state.json";
 
@@ -123,7 +121,8 @@ impl Copilot {
                 }
 
                 let (turns, content_bytes) = turn_summary.get(&id).copied().unwrap_or((0, 0));
-                let state = self.store().join("session-state").join(&id);
+                let state_root = self.store().join("session-state");
+                let state = state_root.join(&id);
 
                 let mut session = UnifiedSession::new(HARNESS, id.clone(), title(&id, summary));
                 session.project_path = cwd
@@ -136,7 +135,10 @@ impl Copilot {
                     .map(utils::normalized_timestamp)
                     .unwrap_or_default();
                 session.turns_count = turns;
-                session.size_bytes = utils::dir_size(&state) + content_bytes;
+                session.size_bytes = content_bytes
+                    + real_dir(&state_root)
+                        .then(|| utils::dir_size(&state))
+                        .unwrap_or(0);
 
                 Some(session)
             })
@@ -145,7 +147,13 @@ impl Copilot {
 
     /// Sessions whose state folder survived a database wipe.
     fn orphan_state(&self) -> Vec<UnifiedSession> {
-        let Ok(entries) = std::fs::read_dir(self.store().join("session-state")) else {
+        let state_root = self.store().join("session-state");
+        // `read_dir` follows a directory symlink and would list folders that
+        // live outside the store. The child then looks like a real directory.
+        if !real_dir(&state_root) {
+            return Vec::new();
+        }
+        let Ok(entries) = std::fs::read_dir(&state_root) else {
             return Vec::new();
         };
 
@@ -177,10 +185,12 @@ impl SessionAdapter for Copilot {
     }
 
     fn is_session_active(&self, session_id: &str) -> bool {
-        self.store()
-            .join(LOCKS_REL)
-            .join(format!("{session_id}.lock"))
-            .exists()
+        let state_root = self.store().join("session-state");
+        real_dir(&state_root)
+            && state_root
+                .join(".session-operation-locks")
+                .join(format!("{session_id}.lock"))
+                .exists()
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
@@ -195,7 +205,10 @@ impl SessionAdapter for Copilot {
             fsops::delete_rows(&connection, "sessions", "id", session_id)?;
         }
 
-        bytes += fsops::remove_path(&store, &store.join("session-state").join(session_id))?;
+        let state_root = store.join("session-state");
+        if real_dir(&state_root) {
+            bytes += fsops::remove_path(&store, &state_root.join(session_id))?;
+        }
         fsops::remove_json_key(&store, &store.join(OPEN_STATE), session_id)?;
 
         Ok(bytes)
@@ -268,9 +281,7 @@ impl SessionAdapter for Copilot {
                 if content.trim().is_empty() {
                     continue;
                 }
-                if let Some(turn) =
-                    transcript::build_turn(role, content, stamped.clone())
-                {
+                if let Some(turn) = transcript::build_turn(role, content, stamped.clone()) {
                     turns.push(turn);
                     if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
                         return turns;
@@ -293,6 +304,12 @@ impl SessionAdapter for Copilot {
 
         Ok(sessions)
     }
+}
+
+fn real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_dir())
+        .unwrap_or(false)
 }
 
 fn title(id: &str, summary: Option<String>) -> String {

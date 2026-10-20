@@ -84,3 +84,29 @@ fn claude_does_not_follow_a_projects_directory_symlink() {
     );
     assert!(fs::read_to_string(&secret).unwrap().contains("ssh-private"));
 }
+
+#[cfg(unix)]
+#[test]
+fn copilot_does_not_follow_a_session_state_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside");
+    fs::create_dir_all(outside.join("orphan")).unwrap();
+    let secret = outside.join("orphan/state.json");
+    fs::write(&secret, "ssh-private").unwrap();
+    let copilot_dir = home.0.join(".copilot");
+    fs::create_dir_all(&copilot_dir).unwrap();
+    std::os::unix::fs::symlink(&outside, copilot_dir.join("session-state")).unwrap();
+
+    let copilot = adapter(&home.0, "copilot");
+    let sessions = copilot.list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| session.id != "orphan"),
+        "listing followed the session-state symlink: {sessions:?}"
+    );
+    copilot.delete_session("orphan").unwrap();
+    assert!(
+        secret.is_file(),
+        "delete must not remove the state folder outside the store"
+    );
+    assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
+}
