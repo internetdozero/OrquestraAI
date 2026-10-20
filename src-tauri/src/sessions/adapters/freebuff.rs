@@ -1,8 +1,4 @@
-//! Freebuff / Manicode / Freebuff Desktop: worktrees, project chat logs and
-//! native desktop threads.
-//!
-//! Worktree size walks regular files and never follows a symlink. Desktop
-//! threads live in `freebuff_desktop`; this adapter dispatches by session id.
+//! Freebuff, Manicode and Freebuff Desktop session stores.
 
 use std::path::{Path, PathBuf};
 
@@ -88,7 +84,7 @@ impl SessionAdapter for Freebuff {
             // `remove_path` checks the lexical prefix. A symlink in the middle
             // still points at a directory outside the store, and `remove_dir_all`
             // would delete that directory.
-            if real_dir(&project_dir) && real_dir(&chats_dir) {
+            if real_dir(&projects) && real_dir(&project_dir) && real_dir(&chats_dir) {
                 let chat_dir = chats_dir.join(chat);
                 bytes += fsops::remove_path(&projects, &chat_dir)?;
             }
@@ -119,11 +115,14 @@ impl SessionAdapter for Freebuff {
         if !valid_segment(project) || !valid_segment(chat) {
             return Vec::new();
         }
-        let project_dir = self.root.join(MANICODE_REL).join(project);
+        let projects = self.root.join(MANICODE_REL);
+        let project_dir = projects.join(project);
         let chats_dir = project_dir.join("chats");
-        // A project or chats entry that is a symlink would make this path
-        // resolve outside the store. `read_transcript` follows that path.
-        if !real_dir(&project_dir) || !real_dir(&chats_dir) || !real_dir(&chats_dir.join(chat)) {
+        if !real_dir(&projects)
+            || !real_dir(&project_dir)
+            || !real_dir(&chats_dir)
+            || !real_dir(&chats_dir.join(chat))
+        {
             return Vec::new();
         }
         let log = chats_dir.join(chat).join("chat-messages.json");
@@ -136,8 +135,6 @@ impl SessionAdapter for Freebuff {
 
 /// One session per worktree directory, titled from its `<project>.thread.json`.
 fn worktrees(root: &Path) -> Vec<UnifiedSession> {
-    // `read_dir` follows. A symlinked worktrees folder would list and size
-    // the outside tree, and delete would remove it.
     if !real_dir(root) {
         return Vec::new();
     }
@@ -211,6 +208,9 @@ fn thread_metadata(worktree: &Path) -> Option<Value> {
 
 /// `projects/<project>/chats/<chat>/chat-messages.json`, one session per chat.
 fn manicode_chats(root: &Path) -> Vec<UnifiedSession> {
+    if !real_dir(root) {
+        return Vec::new();
+    }
     let Ok(projects) = std::fs::read_dir(root) else {
         return Vec::new();
     };

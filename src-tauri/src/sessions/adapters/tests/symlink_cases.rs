@@ -306,3 +306,28 @@ fn freebuff_does_not_follow_a_worktrees_directory_symlink() {
     assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
     assert!(outside.join("wt").is_dir(), "the outside worktree must stay");
 }
+
+#[cfg(unix)]
+#[test]
+fn freebuff_does_not_follow_a_manicode_projects_symlink() {
+    let home = TestHome::new();
+    let outside = home.0.join("outside-manicode");
+    fs::create_dir_all(outside.join("proj/chats/demo")).unwrap();
+    let secret = outside.join("proj/chats/demo/chat-messages.json");
+    let original = "[{\"role\":\"user\",\"content\":\"ssh-private\"}]";
+    fs::write(&secret, original).unwrap();
+    fs::create_dir_all(home.0.join(".config/manicode")).unwrap();
+    std::os::unix::fs::symlink(&outside, home.0.join(".config/manicode/projects")).unwrap();
+
+    let freebuff = adapter(&home.0, "freebuff");
+    let sessions = freebuff.list_sessions().unwrap();
+    assert!(
+        sessions.iter().all(|session| {
+            session.id != "proj/demo" && !session.title.contains("ssh-private")
+        }),
+        "listing followed the projects symlink: {sessions:?}"
+    );
+    assert!(freebuff.read_transcript("proj/demo").is_empty());
+    freebuff.delete_session("proj/demo").unwrap();
+    assert_eq!(fs::read_to_string(&secret).unwrap(), original);
+}
