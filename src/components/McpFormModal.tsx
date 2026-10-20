@@ -9,7 +9,7 @@ import {
 } from "../lib/mcps";
 import { type McpPreset } from "../lib/mcpPresets";
 import { parseSmartMcpCommand } from "../lib/smartCommandParser";
-import { cn } from "../lib/utils";
+import { cn, confirmOnEnter } from "../lib/utils";
 import { McpConnectionFields } from "./McpConnectionFields";
 import { McpPresetSelector } from "./McpPresetSelector";
 
@@ -112,7 +112,10 @@ export function McpFormModal({
         if (event.target === event.currentTarget && !saving) onClose();
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d10] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]">
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d10] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]"
+        onKeyDown={(event) => confirmOnEnter(event, submit)}
+      >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
           <div>
             <h2

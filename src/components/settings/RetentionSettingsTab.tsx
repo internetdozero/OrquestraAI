@@ -6,7 +6,7 @@ import {
   saveRetentionPolicy,
   type RetentionPolicy,
 } from "../../lib/sessions";
-import { cn } from "../../lib/utils";
+import { cn, confirmOnEnter } from "../../lib/utils";
 
 function toMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
@@ -67,7 +67,10 @@ export function RetentionSettingsTab({
   useEffect(() => undefined, []);
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      onKeyDown={(event) => confirmOnEnter(event, () => void save())}
+    >
       <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
         <div>
           <p className="flex items-center gap-1.5 text-[12.5px] text-zinc-100">

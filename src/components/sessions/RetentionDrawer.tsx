@@ -4,6 +4,7 @@ import { ShieldCheck, X } from "lucide-react";
 import { HARNESSES } from "../../lib/harnesses";
 import { useI18n } from "../../hooks/useI18n";
 import type { RetentionPolicy } from "../../lib/sessions";
+import { confirmOnEnter } from "../../lib/utils";
 
 interface RetentionDrawerProps {
   policy: RetentionPolicy | null;
@@ -22,6 +23,16 @@ export function RetentionDrawer({ policy, onClose, onSave }: RetentionDrawerProp
     policy?.harnessOverrides ?? {},
   );
 
+  const save = () => {
+    onSave({
+      defaultTtlDays: ttl,
+      harnessOverrides: overrides,
+      autoPurgeEnabled: enabled,
+      autoPurgeIntervalHours: interval,
+      lastRun: policy?.lastRun ?? null,
+    });
+  };
+
   if (typeof document === "undefined") return null;
 
   // Portaled to the body above every shell layer: inside <main> the fixed
@@ -38,6 +49,7 @@ export function RetentionDrawer({ policy, onClose, onSave }: RetentionDrawerProp
       <div
         className="flex h-full w-full max-w-sm flex-col border-l border-white/10 bg-[#101014] p-5"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(event) => confirmOnEnter(event, save)}
       >
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
@@ -142,15 +154,7 @@ export function RetentionDrawer({ policy, onClose, onSave }: RetentionDrawerProp
 
         <button
           type="button"
-          onClick={() =>
-            onSave({
-              defaultTtlDays: ttl,
-              harnessOverrides: overrides,
-              autoPurgeEnabled: enabled,
-              autoPurgeIntervalHours: interval,
-              lastRun: policy?.lastRun ?? null,
-            })
-          }
+          onClick={save}
           className="mt-4 rounded-lg bg-emerald-600 py-2 text-[12.5px] font-semibold text-white transition hover:bg-emerald-500"
         >
           {s.save}

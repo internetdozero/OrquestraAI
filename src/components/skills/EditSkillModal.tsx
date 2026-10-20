@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Loader2, X } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { readSkillContent, saveSkillContent } from "../../lib/tauri";
+import { confirmOnEnter } from "../../lib/utils";
 
 interface EditSkillModalProps {
   skillId: string;
@@ -144,7 +145,10 @@ export function EditSkillModal({ skillId, skillName, onClose, onSaved, onError }
         if (event.target === event.currentTarget && !saving) onClose();
       }}
     >
-      <div className="flex max-h-[86vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0e0e12] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]">
+      <div
+        className="flex max-h-[86vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0e0e12] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
+        onKeyDown={(event) => confirmOnEnter(event, () => void save())}
+      >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold text-zinc-100">

@@ -3,7 +3,7 @@ import { CheckCircle2, FolderDown, FolderGit2, Loader2, X } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { importSkill, importSkillFromGit, pickFolder } from "../../lib/tauri";
 import type { SkillItem } from "../../lib/skills";
-import { cn } from "../../lib/utils";
+import { cn, confirmOnEnter } from "../../lib/utils";
 
 interface ImportSkillModalProps {
   isTauri: boolean;
@@ -160,6 +160,7 @@ export function ImportSkillModal({ isTauri, onClose, onImported, onError }: Impo
             <input
               value={folderPath}
               onChange={(event) => setFolderPath(event.target.value)}
+              onKeyDown={(event) => confirmOnEnter(event, () => void runFolder())}
               placeholder={s.pathPlaceholder}
               spellCheck={false}
               disabled={!isTauri || busy !== null}
@@ -184,6 +185,7 @@ export function ImportSkillModal({ isTauri, onClose, onImported, onError }: Impo
             <input
               value={gitUrl}
               onChange={(event) => setGitUrl(event.target.value)}
+              onKeyDown={(event) => confirmOnEnter(event, () => void runGit())}
               placeholder={s.gitPlaceholder}
               spellCheck={false}
               inputMode="url"

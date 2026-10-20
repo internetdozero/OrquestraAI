@@ -4,7 +4,7 @@ import { Loader2, Save, X } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import type { CreateIdeaInput, IdeaItem, UpdateIdeaInput } from "../../lib/ideas";
 import { CustomDropdown } from "../CustomDropdown";
-import { cn } from "../../lib/utils";
+import { cn, confirmOnEnter } from "../../lib/utils";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-white/10 bg-zinc-900/60 px-2.5 text-[12px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-amber-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-amber-500/10";
@@ -73,7 +73,10 @@ export function IdeaFormModal({ idea, projects, saving, onClose, onSave }: IdeaF
         if (event.target === event.currentTarget && !saving) onClose();
       }}
     >
-      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d10] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]">
+      <div
+        className="w-full max-w-xl overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d10] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]"
+        onKeyDown={(event) => confirmOnEnter(event, submit)}
+      >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold tracking-tight text-zinc-100">
