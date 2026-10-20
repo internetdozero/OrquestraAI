@@ -46,6 +46,13 @@ pub fn dir_size(path: &Path) -> u64 {
     let mut stack = vec![path.to_path_buf()];
 
     while let Some(current) = stack.pop() {
+        // `read_dir` follows a symlink. A session folder that *is* a link
+        // would otherwise be walked, counting (and stalling on) the target.
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_dir() => {}
+            _ => continue,
+        }
+
         let entries = match fs::read_dir(&current) {
             Ok(entries) => entries,
             Err(_) => continue,
@@ -327,5 +334,46 @@ pub fn i64_cell(row: &Row, index: usize) -> Option<i64> {
         ValueRef::Real(number) => Some(number as i64),
         ValueRef::Text(bytes) => std::str::from_utf8(bytes).ok()?.trim().parse().ok(),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{dir_size, file_size};
+    use std::fs;
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_session_tree_is_not_measured() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let scratch = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-dir-size-{}-{unique}",
+            std::process::id()
+        ));
+        let outside = scratch.join("outside");
+        let session = scratch.join("vault").join("session");
+        fs::create_dir_all(&outside).expect("outside tree");
+        fs::create_dir_all(session.parent().expect("vault")).expect("vault");
+        fs::write(outside.join("secret.bin"), vec![7u8; 4096]).expect("payload");
+        fs::write(outside.join("note.txt"), b"note").expect("note");
+        std::os::unix::fs::symlink(outside.join("note.txt"), outside.join("alias.txt"))
+            .expect("file symlink");
+        std::os::unix::fs::symlink(&outside, &session).expect("dir symlink");
+
+        assert_eq!(dir_size(&outside), 4100, "real files still count");
+        assert_eq!(dir_size(&session), 0, "the link itself is not walked");
+        assert_eq!(
+            crate::sessions::adapters::fsops::size_of(&session),
+            0,
+            "reclaim estimates use the same rule"
+        );
+        assert_eq!(file_size(&outside.join("secret.bin")), 4096);
+        assert!(outside.join("secret.bin").is_file(), "the target stays put");
+
+        fs::remove_file(&session).expect("unlink session");
+        fs::remove_dir_all(&scratch).expect("cleanup");
     }
 }
