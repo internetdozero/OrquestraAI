@@ -77,11 +77,18 @@ pub fn dir_size(path: &Path) -> u64 {
     total
 }
 
-/// Size of one file, or `0` when it is missing.
+/// Bytes of a regular file. `None` when the path is missing, a directory, or a
+/// symlink: `metadata` and `read_to_string` follow links, so a session file
+/// that is a link would be measured and loaded from outside the store. A link
+/// also reports length 0, which would skip the size ceiling and read it whole.
+pub(super) fn regular_file_len(path: &Path) -> Option<u64> {
+    let metadata = fs::symlink_metadata(path).ok()?;
+    metadata.file_type().is_file().then_some(metadata.len())
+}
+
+/// Size of one regular file, or `0` when it is missing or a symlink.
 pub fn file_size(path: &Path) -> u64 {
-    fs::metadata(path)
-        .map(|metadata| metadata.len())
-        .unwrap_or(0)
+    regular_file_len(path).unwrap_or(0)
 }
 
 /// Modification time in epoch seconds, used only when a store records no
@@ -157,6 +164,7 @@ pub fn decode_path_hint(raw: &str) -> Option<String> {
 
 /// Read a JSON document, treating a missing or corrupt file as "nothing there".
 pub fn read_json(path: &Path) -> Option<Value> {
+    regular_file_len(path)?;
     let raw = fs::read_to_string(path).ok()?;
     serde_json::from_str(&raw).ok()
 }
@@ -166,6 +174,7 @@ pub fn read_json(path: &Path) -> Option<Value> {
 pub fn first_json_line(path: &Path) -> Option<Value> {
     use std::io::BufRead;
 
+    regular_file_len(path)?;
     let file = fs::File::open(path).ok()?;
     let mut line = String::new();
     std::io::BufReader::new(file).read_line(&mut line).ok()?;
@@ -174,7 +183,10 @@ pub fn first_json_line(path: &Path) -> Option<Value> {
 
 /// Every parsable line of a JSONL index. Oversized files are skipped whole.
 pub fn read_jsonl(path: &Path) -> Vec<Value> {
-    if file_size(path) > MAX_JSONL_BYTES {
+    let Some(bytes) = regular_file_len(path) else {
+        return Vec::new();
+    };
+    if bytes > MAX_JSONL_BYTES {
         return Vec::new();
     }
 

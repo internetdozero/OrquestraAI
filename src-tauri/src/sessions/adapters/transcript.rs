@@ -15,7 +15,7 @@ use crate::sessions::types::TranscriptTurn;
 
 pub use super::transcript_clean::clean_turn_content;
 use super::utils::{
-    file_size, iso8601_from_secs, json_string, json_timestamp, normalized_timestamp,
+    iso8601_from_secs, json_string, json_timestamp, normalized_timestamp, regular_file_len,
 };
 
 /// Most turns a transcript read returns; a full replay is the drawer's job
@@ -190,7 +190,10 @@ pub(crate) fn parse_value(entry: &Value) -> Option<TranscriptTurn> {
 /// parses as a single JSON array instead (Manicode chat logs) is read
 /// element-wise, so both layouts work without the caller caring.
 pub fn read_transcript(path: &Path) -> Vec<TranscriptTurn> {
-    if file_size(path) > MAX_TRANSCRIPT_BYTES {
+    let Some(bytes) = regular_file_len(path) else {
+        return Vec::new();
+    };
+    if bytes > MAX_TRANSCRIPT_BYTES {
         return Vec::new();
     }
 
