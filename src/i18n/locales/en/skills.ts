@@ -77,6 +77,8 @@ export const skills: TranslationSchema["skills"] = {
     `Are you sure you want to delete “${name}” from the vault?`,
   deleteDeleted: (name: string) => `Skill “${name}” deleted from the vault`,
   deleteFailed: (detail: string) => `Could not delete: ${detail}`,
+  deleteTitle: "Delete skill",
+  deleteCancel: "Cancel",
   importAction: "Import skill",
   import: {
     title: "Import skill",

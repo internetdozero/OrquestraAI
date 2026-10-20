@@ -95,6 +95,8 @@ export function SkillCard({
         // Rasterize each card once and keep its repaints contained so a hover
         // or a flash cannot cascade into its grid siblings.
         "transform-gpu [backface-visibility:hidden] [contain:content]",
+        // Stretch to fill the row's tallest item like every other card in the grid.
+        "h-full",
         active
           ? "accent-border bg-gradient-to-b from-[var(--accent-bg)] to-zinc-900/40 hover:border-[var(--accent-ring)]"
           : "border-white/[0.07] bg-zinc-900/30 hover:border-white/15 hover:bg-zinc-900/50",

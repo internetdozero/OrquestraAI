@@ -11,6 +11,7 @@ interface SidebarProps {
   skillStats: { active: number; total: number };
   mcpCount: number;
   onOpenSettings: () => void;
+  hasAppUpdate?: boolean;
 }
 
 function CountBadge({ value, active }: { value: number; active: boolean }) {
@@ -85,7 +86,7 @@ function ViewButton({
  * Platform navigation. Harness scopes live *inside* the skills and MCP views as
  * inner scope tabs, so this list stays at the three things the app manages.
  */
-export function Sidebar({ view, onSelect, skillStats, mcpCount, onOpenSettings }: SidebarProps) {
+export function Sidebar({ view, onSelect, skillStats, mcpCount, onOpenSettings, hasAppUpdate = false }: SidebarProps) {
   const { t } = useI18n();
   const counts: Record<ActiveView, number | null> = {
     skills: skillStats.active,
@@ -140,9 +141,14 @@ export function Sidebar({ view, onSelect, skillStats, mcpCount, onOpenSettings }
           onClick={onOpenSettings}
           title={t.settings.sidebarHint}
           aria-label={t.settings.sidebarAction}
-          className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
+          className="relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
         >
-          <Settings className="size-4" />
+          <span className="relative">
+            <Settings className="size-4" />
+            {hasAppUpdate && (
+              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-400 ring-2 ring-zinc-900 animate-pulse" />
+            )}
+          </span>
           {t.settings.sidebarAction}
         </button>
         <span className="font-mono text-[10px] text-zinc-600">v0.1.0</span>

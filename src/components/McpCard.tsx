@@ -125,6 +125,8 @@ export function McpCard({
         // repaint local to this card while the grid scrolls.
         "hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.9)]",
         "transform-gpu [backface-visibility:hidden] [contain:content]",
+        // Stretch to fill the row's tallest item like every other card in the grid.
+        "h-full",
         active
           ? "accent-border bg-gradient-to-b from-[var(--accent-bg)] to-zinc-900/40 hover:border-[var(--accent-ring)]"
           : "border-white/[0.07] bg-zinc-900/30 hover:border-white/15 hover:bg-zinc-900/50",

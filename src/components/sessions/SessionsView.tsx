@@ -4,6 +4,7 @@ import { useSessions } from "../../hooks/useSessions";
 import { useI18n } from "../../hooks/useI18n";
 import type { UnifiedSession } from "../../lib/sessions";
 import { ErrorBanner } from "../ui";
+import { ConfirmModal } from "../ConfirmModal";
 import { SessionDetailDrawer } from "./SessionDetailDrawer";
 import { SessionsHeader } from "./SessionsHeader";
 import { SessionsToolbar } from "./SessionsToolbar";
@@ -25,6 +26,9 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
   const state = useSessions({ isTauri, notifyOnPurge, onToast, onError });
   const s = t.sessions;
   const [inspecting, setInspecting] = useState<UnifiedSession | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<
+    { harness: string; id: string; title: string } | null
+  >(null);
   // Re-resolve against the live list so pin toggles repaint the drawer.
   const liveInspecting =
     inspecting == null
@@ -99,9 +103,30 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
         enabled={state.enabled}
         pendingIds={state.pendingIds}
         onTogglePin={(h, id) => void state.togglePin(h, id)}
-        onDelete={(h, id) => void state.deleteSingleSession(h, id)}
+        onDelete={(h, id) => {
+          const target = state.sessions.find(
+            (session) => session.harness === h && session.id === id,
+          );
+          setPendingDelete({ harness: h, id, title: target?.title ?? id });
+        }}
         onInspect={setInspecting}
       />
+
+      {pendingDelete && (
+        <ConfirmModal
+          title={s.deleteTitle}
+          message={s.deleteConfirm(pendingDelete.title || pendingDelete.id)}
+          confirmLabel={t.common.delete}
+          cancelLabel={s.cancel}
+          tone="danger"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            void state.deleteSingleSession(pendingDelete.harness, pendingDelete.id);
+            setPendingDelete(null);
+            setInspecting(null);
+          }}
+        />
+      )}
 
       {state.purgeFilter && (
         <PurgeConfirmModal
@@ -121,13 +146,13 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
           onTogglePin={() =>
             void state.togglePin(liveInspecting.harness, liveInspecting.id)
           }
-          onDelete={() => {
-            void state.deleteSingleSession(
-              liveInspecting.harness,
-              liveInspecting.id,
-            );
-            setInspecting(null);
-          }}
+          onDelete={() =>
+            setPendingDelete({
+              harness: liveInspecting.harness,
+              id: liveInspecting.id,
+              title: liveInspecting.title || liveInspecting.id,
+            })
+          }
           onToast={onToast}
         />
       )}

@@ -9,6 +9,7 @@ import {
   writeSkillsCache,
 } from "../lib/skillsCache";
 import { loadSkillsScope } from "../lib/skillsLoader";
+import { devMockMode } from "../lib/fixtures";
 
 function toMessage(cause: unknown, fallback: string): string {
   if (typeof cause === "string") return cause;
@@ -55,7 +56,7 @@ export function useSkillsCache(scope: string, isTauri: boolean) {
       requestRef.current += 1;
       const request = requestRef.current;
 
-      if (!isTauri) {
+      if (!isTauri && !devMockMode()) {
         setLoading(false);
         return;
       }

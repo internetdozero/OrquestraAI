@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import { devMockMode, fixtureOfficialStore } from "./fixtures.ts";
+import { devMockMode, fixtureOfficialStore, fixtureSkills } from "./fixtures.ts";
 import type { HarnessSummary } from "./harnesses";
 import type { SkillItem } from "./skills";
 
@@ -46,6 +46,9 @@ export function useCoreStatus() {
 
 /** List skills evaluated for `harnessId`; `global` evaluates the baseline. */
 export function listSkills(harnessId: string): Promise<SkillItem[]> {
+  if (devMockMode()) {
+    return Promise.resolve(fixtureSkills());
+  }
   return invoke<SkillItem[]>("list_skills", {
     harnessId: harnessId === "global" ? null : harnessId,
   });

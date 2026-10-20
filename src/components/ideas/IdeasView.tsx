@@ -5,6 +5,7 @@ import { useI18n } from "../../hooks/useI18n";
 import { devMockMode } from "../../lib/fixtures";
 import type { IdeaItem } from "../../lib/ideas";
 import { ErrorBanner, StatePanel } from "../ui";
+import { ConfirmModal } from "../ConfirmModal";
 import { ArchivedIdeasModal } from "./ArchivedIdeasModal";
 import { BlackboardFeed } from "./BlackboardFeed";
 import { IdeaDetailModal } from "./IdeaDetailModal";
@@ -57,9 +58,8 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
             : null;
     if (next) void state.changeStatus(idea.id, next);
   };
-  const confirmDelete = (idea: IdeaItem) => {
-    if (window.confirm(s.deleteConfirm(idea.title))) void state.remove(idea.id);
-  };
+  const [deleteTarget, setDeleteTarget] = useState<IdeaItem | null>(null);
+  const confirmDelete = (idea: IdeaItem) => setDeleteTarget(idea);
   const archivedIdeas = state.ideas.filter((idea) => idea.status === "archived");
 
   if (!isTauri && !mockMode) {
@@ -169,6 +169,21 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
             if (editing) await state.update({ ...input, id: editing.id });
             else await state.create(input);
             setFormOpen(false);
+          }}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title={s.delete}
+          message={s.deleteConfirm(deleteTarget.title)}
+          confirmLabel={s.delete}
+          cancelLabel={s.cancel}
+          tone="danger"
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            void state.remove(deleteTarget.id);
+            setDeleteTarget(null);
           }}
         />
       )}

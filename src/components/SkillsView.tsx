@@ -11,9 +11,11 @@ import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { entryTokens } from "../lib/tokens";
 import { markSkillsCacheStale, projectSkillState } from "../lib/skillsCache";
 import { batchSetAll, deleteSkill as deleteVaultSkill, setSkillState } from "../lib/tauri";
+import { devMockMode } from "../lib/fixtures";
 import { useI18n } from "../hooks/useI18n";
 import { useSkillsCache } from "../hooks/useSkillsCache";
 import { useSkillStoreActions } from "../hooks/useSkillStoreActions";
+import { ConfirmModal } from "./ConfirmModal";
 import { SkillCard } from "./SkillCard";
 import { EditSkillModal } from "./skills/EditSkillModal";
 import { ImportSkillModal } from "./skills/ImportSkillModal";
@@ -288,29 +290,37 @@ export function SkillsView({
     [t, isTauri, scope, skills.length, updateSkills, reload, setError, onSummaryStale],
   );
 
-  const handleDeleteSkill = useCallback(
-    async (id: string) => {
+  const [pendingDeleteSkill, setPendingDeleteSkill] = useState<SkillItem | null>(null);
+
+  const requestDeleteSkill = useCallback(
+    (id: string) => {
       const current = skills.find((skill) => skill.id === id);
       if (!current || !isTauri) return;
-      if (!window.confirm(t.skills.deleteConfirm(current.name))) return;
-      setDeletingIds((ids) => new Set(ids).add(id));
-      try {
-        await deleteVaultSkill(id);
-        onSummaryStale();
-        await invalidate();
-        onToast?.(t.skills.deleteDeleted(current.name));
-      } catch (cause) {
-        setError(t.skills.deleteFailed(toMessage(cause, t.common.unexpected)));
-      } finally {
-        setDeletingIds((ids) => {
-          const remaining = new Set(ids);
-          remaining.delete(id);
-          return remaining;
-        });
-      }
+      setPendingDeleteSkill(current);
     },
-    [t, skills, isTauri, invalidate, onSummaryStale, onToast, setError],
+    [skills, isTauri],
   );
+
+  const confirmDeleteSkill = useCallback(async () => {
+    const current = pendingDeleteSkill;
+    if (!current) return;
+    setPendingDeleteSkill(null);
+    setDeletingIds((ids) => new Set(ids).add(current.id));
+    try {
+      await deleteVaultSkill(current.id);
+      onSummaryStale();
+      await invalidate();
+      onToast?.(t.skills.deleteDeleted(current.name));
+    } catch (cause) {
+      setError(t.skills.deleteFailed(toMessage(cause, t.common.unexpected)));
+    } finally {
+      setDeletingIds((ids) => {
+        const remaining = new Set(ids);
+        remaining.delete(current.id);
+        return remaining;
+      });
+    }
+  }, [pendingDeleteSkill, t, invalidate, onSummaryStale, onToast, setError]);
 
   const { statusOf: storeStatusOf, actionFor: storeActionFor } =
     useSkillStoreActions(skills, {
@@ -331,7 +341,7 @@ export function SkillsView({
       skill={skill}
       onToggle={(id) => void toggleSkill(id)}
       onEdit={(id) => setEditingId(id)}
-      onDelete={(id) => void handleDeleteSkill(id)}
+      onDelete={(id) => requestDeleteSkill(id)}
       busy={batchPending || pendingIds.has(skill.id)}
       deleteBusy={deletingIds.has(skill.id)}
       flash={flash?.id === skill.id}
@@ -339,10 +349,10 @@ export function SkillsView({
   );
 
   const hasSkills = skills.length > 0;
-  const canBatch = isTauri && hasSkills && !loading && !batchPending;
+  const canBatch = (isTauri || devMockMode()) && hasSkills && !loading && !batchPending;
   const banner = error ?? externalError;
 
-  const stateKind: SkillsStateKind | null = !isTauri
+  const stateKind: SkillsStateKind | null = (!isTauri && !devMockMode())
     ? "unavailable"
     : error && !hasSkills
       ? "read-error"
@@ -456,6 +466,18 @@ export function SkillsView({
             setError(null);
             onToast?.(t.skills.import.success(skill.name));
           }}
+        />
+      )}
+
+      {pendingDeleteSkill && (
+        <ConfirmModal
+          title={t.skills.deleteTitle}
+          message={t.skills.deleteConfirm(pendingDeleteSkill.name)}
+          confirmLabel={t.common.delete}
+          cancelLabel={t.skills.deleteCancel}
+          tone="danger"
+          onCancel={() => setPendingDeleteSkill(null)}
+          onConfirm={() => void confirmDeleteSkill()}
         />
       )}
 

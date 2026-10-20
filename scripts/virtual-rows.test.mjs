@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_ROW_HEIGHT,
   GRID_GAP,
+  mergeRowHeight,
   rowHeightAt,
   rowOffset,
   rowsFor,
@@ -71,8 +72,8 @@ test("a window at the top renders the first rows and only a bottom spacer", () =
 
   assert.equal(window.start, 0);
   assert.equal(window.topSpace, 0);
-  // 600px of viewport at a 188px row pitch is 4 rows, plus one overscan row.
-  assert.equal(window.end, 5);
+  // 600px of viewport at a 216px row pitch is 3 rows, plus one overscan row.
+  assert.equal(window.end, 4);
   assert.ok(window.bottomSpace > 0);
 });
 
@@ -119,6 +120,70 @@ test("spacers reproduce the full grid height for every viewport", () => {
       assert.ok(window.start >= 0 && window.start <= window.end);
       assert.ok(window.end <= 30);
       assert.ok(window.topSpace >= 0 && window.bottomSpace >= 0);
+    }
+  }
+});
+
+test("mergeRowHeight keeps the tallest card of the row", () => {
+  // Tall card measured first must survive shorter siblings measured later.
+  assert.equal(mergeRowHeight(mergeRowHeight(undefined, 300), 140), 300);
+  // Tall card measured last must still win over earlier short cards.
+  assert.equal(mergeRowHeight(mergeRowHeight(mergeRowHeight(undefined, 140), 150), 300), 300);
+  // Equal heights are stable.
+  assert.equal(mergeRowHeight(176, 176), 176);
+  // Hidden or unlaid-out cards (zero/negative reads) never clobber a max.
+  assert.equal(mergeRowHeight(240, 0), 240);
+  assert.equal(mergeRowHeight(240, -10), 240);
+  assert.equal(mergeRowHeight(undefined, 0), 0);
+});
+
+test("folding per-card heights yields the row maximum", () => {
+  // Mirrors the hook's measurement loop: three cards in one CSS grid row
+  // with uneven heights; the stored row height must equal the tallest.
+  const columns = 3;
+  const startRow = 4;
+  const cardHeights = [140, 300, 152, 176, 176, 210];
+  const rowMaxHeights = new Map();
+  cardHeights.forEach((height, cardIndex) => {
+    const rowIndex = startRow + Math.floor(cardIndex / columns);
+    rowMaxHeights.set(rowIndex, mergeRowHeight(rowMaxHeights.get(rowIndex), height));
+  });
+  assert.equal(rowMaxHeights.get(4), 300);
+  assert.equal(rowMaxHeights.get(5), 210);
+  // A re-measure where the tallest card now reads short keeps working
+  // through max-folding: the stored value only ever reflects measured maxes.
+  const remeasured = new Map();
+  [120, 130, 125].forEach((height, cardIndex) => {
+    const rowIndex = startRow + Math.floor(cardIndex / columns);
+    remeasured.set(rowIndex, mergeRowHeight(remeasured.get(rowIndex), height));
+  });
+  assert.equal(remeasured.get(4), 130);
+});
+
+test("spacers account for irregular tallest-item row heights", () => {
+  // Rows whose heights came from tallest-item folding, not uniform cards.
+  const heights = new Map([
+    [0, 300],
+    [1, 140],
+    [2, 252],
+    [3, 176],
+    [4, 320],
+    [5, 141],
+  ]);
+  for (const viewHeight of [400, 600]) {
+    for (const scrollTop of [0, 300, 1200]) {
+      const window = windowFor({
+        rowTotal: 6,
+        heights,
+        scrollTop,
+        viewHeight,
+        overscanRows: 1,
+      });
+      assert.equal(
+        renderedHeight(window, heights),
+        totalHeight(6, heights),
+        `viewport ${viewHeight} at ${scrollTop}: spacers must reproduce the jagged grid`,
+      );
     }
   }
 });

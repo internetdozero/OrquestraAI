@@ -75,6 +75,8 @@ export const skills = {
     `Tem certeza que deseja excluir “${name}” do cofre?`,
   deleteDeleted: (name: string) => `Skill “${name}” excluída do cofre`,
   deleteFailed: (detail: string) => `Não foi possível excluir: ${detail}`,
+  deleteTitle: "Excluir skill",
+  deleteCancel: "Cancelar",
   importAction: "Importar skill",
   import: {
     title: "Importar skill",

@@ -102,9 +102,7 @@ export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: 
         <button
           type="button"
           disabled={busy}
-          onClick={() => {
-            if (window.confirm(s.deleteConfirm(session.title || session.id))) onDelete();
-          }}
+          onClick={() => onDelete()}
           title={s.deleteTitle}
           aria-label={s.deleteTitle}
           className="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.02] text-zinc-500 transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-50"

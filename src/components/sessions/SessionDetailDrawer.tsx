@@ -209,9 +209,7 @@ export function SessionDetailDrawer({
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm(s.deleteConfirm(session.title || session.id))) onDelete();
-            }}
+            onClick={() => onDelete()}
             className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-zinc-400 transition hover:border-rose-500/40 hover:text-rose-300"
           >
             <Trash2 className="size-3" />

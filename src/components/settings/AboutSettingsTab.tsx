@@ -47,7 +47,7 @@ export function AboutSettingsTab({
   const [result, setResult] = useState<ReleaseCheckResult | null>(null);
   const { copied: copiedDiag, copy: copyDiagText } = useClipboard(1500);
   const version = status?.version ?? "0.1.0";
-  const { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart } =
+  const { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart, step } =
     useAppUpdater({ onToast, onError });
 
   const checkNow = async () => {
@@ -195,6 +195,21 @@ export function AboutSettingsTab({
             )}
             {checking ? a.checking : a.checkNow}
           </button>
+          {updatingApp && (step === "downloading" || step === "verifying") && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mt-2 w-full rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2.5"
+            >
+              <p className="flex items-center gap-2 text-[11.5px] font-medium text-sky-200">
+                <Loader2 className="size-3.5 animate-spin" />
+                {a.downloadingUpdate}
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sky-500/15">
+                <div className="h-full w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] rounded-full bg-sky-400" />
+              </div>
+            </div>
+          )}
           {result && !checking && result.isLatest && (
             <span
               role="status"

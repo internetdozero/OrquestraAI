@@ -77,6 +77,8 @@ export const settings: TranslationSchema["settings"] = {
     viewRelease: "View release",
     updateNow: "Update now",
     updatingApp: "Downloading and installing update…",
+    downloadingUpdate:
+      "Downloading release and verifying SHA-256 checksum...",
     updateAppSuccess: "Update installed! Restart OrquestraAI to apply.",
     updateAppFailed: (detail: string) => `Update failed: ${detail}`,
     restart: "Restart",

@@ -13,6 +13,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SessionsView } from "./components/sessions/SessionsView";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
+import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
 import { useJanitor } from "./hooks/useJanitor";
@@ -53,6 +54,18 @@ export default function App() {
 
   const { toast, showToast } = useToast();
   const prefs = useAppSettings();
+  const handleUpdateFound = useCallback(
+    (release: { latestVersion: string }) => {
+      showToast(t.settings.about.newVersionAvailable(release.latestVersion));
+    },
+    [showToast, t],
+  );
+  const { hasUpdate: hasAppUpdate } = useAutoUpdateCheck({
+    enabled: prefs.settings.autoCheckAppUpdates,
+    currentVersion: status?.version ?? "0.1.0",
+    isTauri,
+    onUpdateFound: handleUpdateFound,
+  });
   const clearError = useCallback(() => setError(null), []);
   const janitor = useJanitor({
     isTauri,
@@ -249,6 +262,7 @@ export default function App() {
           skillStats={{ active: skillStats.active, total: totalSkills }}
           mcpCount={mcpCount}
           onOpenSettings={() => setSettingsOpen(true)}
+          hasAppUpdate={hasAppUpdate}
         />
 
         <main

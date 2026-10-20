@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Cpu, Globe, Loader2, RotateCcw, Save, Search, ShieldAlert, Sparkles, X, Zap } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
+import { ConfirmModal } from "./ConfirmModal";
 import { presentPreset } from "../i18n/presetCopy";
 import { ensureMcpCatalog } from "../lib/mcpCache";
 import type { Preset } from "../lib/presets";
@@ -47,6 +48,7 @@ export function PresetEditModal({
   const [search, setSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -106,7 +108,6 @@ export function PresetEditModal({
 
   const handleReset = async () => {
     if (isResetting || !preset.builtin) return;
-    if (!window.confirm(t.presets.resetConfirm(copy.name))) return;
     setIsResetting(true);
     try {
       if (await onReset(preset.id)) onClose();
@@ -136,6 +137,7 @@ export function PresetEditModal({
   if (typeof document === "undefined") return null;
 
   return createPortal(
+    <>
     <div
       role="dialog"
       aria-modal="true"
@@ -308,7 +310,7 @@ export function PresetEditModal({
             {preset.builtin ? (
               <button
                 type="button"
-                onClick={() => void handleReset()}
+                onClick={() => setConfirmResetOpen(true)}
                 disabled={busy}
                 className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-[11.5px] font-medium text-zinc-400 hover:border-white/20 hover:text-zinc-200 disabled:opacity-50"
               >
@@ -338,7 +340,23 @@ export function PresetEditModal({
           </div>
         </form>
       </div>
-    </div>,
+    </div>
+    {confirmResetOpen && (
+      <ConfirmModal
+        title={t.presets.resetToDefault}
+        message={t.presets.resetConfirm(copy.name)}
+        confirmLabel={t.presets.resetToDefault}
+        cancelLabel={t.presets.cancel}
+        tone="warning"
+        busy={isResetting}
+        onCancel={() => setConfirmResetOpen(false)}
+        onConfirm={() => {
+          setConfirmResetOpen(false);
+          void handleReset();
+        }}
+      />
+    )}
+    </>,
     document.body,
   );
 }

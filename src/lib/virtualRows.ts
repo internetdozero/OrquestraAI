@@ -10,8 +10,12 @@
 /** Vertical gap between card rows; matches `gap-3` in the grid classes. */
 export const GRID_GAP = 12;
 
-/** Height assumed for a row until it has been measured on screen. */
-export const DEFAULT_ROW_HEIGHT = 176;
+/**
+ * Height assumed for a row until it has been measured on screen. Cards
+ * measure 196–215px, so 204px keeps the cumulative spacer delta near zero
+ * as unvisited rows enter the viewport.
+ */
+export const DEFAULT_ROW_HEIGHT = 204;
 
 export interface GridWindow {
   /** First rendered row (inclusive). */
@@ -28,6 +32,21 @@ export interface GridWindow {
 export function rowsFor(itemCount: number, columns: number): number {
   if (itemCount <= 0 || columns <= 0) return 0;
   return Math.ceil(itemCount / columns);
+}
+
+/**
+ * Fold one measured card height into its row's remembered maximum.
+ *
+ * CSS grid stretches every track to its tallest item, so a row's height is
+ * the max of its cards — never the last card measured. Non-positive reads
+ * (hidden or unlaid-out cards) leave the remembered value untouched.
+ */
+export function mergeRowHeight(
+  current: number | undefined,
+  height: number,
+): number {
+  if (!(height > 0)) return current ?? 0;
+  return Math.max(current ?? 0, height);
 }
 
 /** Measured height of a row, falling back to the estimate when unknown. */

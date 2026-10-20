@@ -74,7 +74,10 @@ export function VirtualCardGrid<T>({
   const visible = items.slice(rows.start * columns, rows.end * columns);
 
   return (
-    <div ref={gridRef} className={className}>
+    // `overflowAnchor: "none"` opts out of native scroll anchoring: when the
+    // top/bottom spacers resize, Blink/WebKit must not shift the scroll
+    // position to compensate — the spacer math already accounts for it.
+    <div ref={gridRef} className={`${className} [overflow-anchor:none]`} style={{ overflowAnchor: "none" }}>
       {rows.topSpace > 0 && <Spacer slot="top" height={rows.topSpace} />}
 
       {visible.map((item) => (

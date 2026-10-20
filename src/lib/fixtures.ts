@@ -23,6 +23,7 @@ import type {
   UnifiedSession,
 } from "./sessions";
 import type { OfficialMcpEntry, OfficialStore } from "./tauri";
+import type { SkillItem } from "./skills";
 
 /**
  * Developer fixture mode: makes the Sessions view and the transcript drawer
@@ -417,3 +418,29 @@ export function fixturePurge(filter: PurgeFilter): PurgeReport {
 
   return { deletedCount, reclaimedBytes, failedCount: 0, errors: [] };
 }
+
+export function fixtureSkills(count = 420): SkillItem[] {
+  const categories = ["Security", "Database", "Cloud", "Infra", "Frontend", "AI & Agents"];
+  return Array.from({ length: count }, (_, i) => {
+    const isGlobal = i < 2;
+    const cat = categories[i % categories.length];
+    return {
+      id: `skill-${i}`,
+      name: `skill-${String(i).padStart(3, "0")}-${cat.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      description:
+        i % 3 === 0
+          ? "Deep structural analysis and refactoring workflows across multiple repositories with strict type boundaries and runtime verifications."
+          : i % 3 === 1
+            ? "Short single-line description."
+            : "Medium description spanning roughly two lines of text in the three-column card grid layout for realistic vertical variance across cards.",
+      category: cat,
+      official: i % 7 === 0,
+      tokens: 800 + (i % 20) * 150,
+      globalEnabled: isGlobal,
+      enabledHarnesses: isGlobal ? ["antigravity", "claude_code"] : [],
+      harnessEnabled: isGlobal,
+      inheritedFromGlobal: false,
+    };
+  });
+}
+

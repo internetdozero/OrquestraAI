@@ -75,6 +75,8 @@ export const settings = {
     viewRelease: "Ver release",
     updateNow: "Atualizar agora",
     updatingApp: "Baixando e instalando atualização…",
+    downloadingUpdate:
+      "Baixando versão e validando integridade SHA-256...",
     updateAppSuccess: "Atualização instalada! Reinicie o OrquestraAI para aplicar.",
     updateAppFailed: (detail: string) => `Falha ao atualizar: ${detail}`,
     restart: "Reiniciar",

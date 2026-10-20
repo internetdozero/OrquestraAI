@@ -11,6 +11,8 @@ interface AppUpdaterDeps {
   onError: (message: string) => void;
 }
 
+export type AppUpdateStep = "idle" | "downloading" | "verifying" | "done" | "error";
+
 /** 1-click update state machine behind the About tab: app binary + extensions. */
 export function useAppUpdater({ onToast, onError }: AppUpdaterDeps) {
   const { t } = useI18n();
@@ -18,17 +20,22 @@ export function useAppUpdater({ onToast, onError }: AppUpdaterDeps) {
   const [updatingApp, setUpdatingApp] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [updatedTo, setUpdatedTo] = useState<string | null>(null);
+  const [step, setStep] = useState<AppUpdateStep>("idle");
 
   const updateApp = useCallback(
     async (version: string) => {
       if (updatingApp) return;
       setUpdatingApp(true);
+      setStep("downloading");
       try {
         await applyAppUpdate(version);
+        setStep("verifying");
         setUpdatedTo(version);
+        setStep("done");
         onToast(a.updateAppSuccess);
       } catch (cause) {
         const detail = cause instanceof Error ? cause.message : String(cause);
+        setStep("error");
         onError(a.updateAppFailed(detail));
       } finally {
         setUpdatingApp(false);
@@ -61,5 +68,5 @@ export function useAppUpdater({ onToast, onError }: AppUpdaterDeps) {
     });
   }, []);
 
-  return { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart };
+  return { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart, step };
 }
