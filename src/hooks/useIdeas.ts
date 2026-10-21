@@ -141,8 +141,8 @@ export function useIdeas(options: {
       if (selectedCategory !== "all" && idea.category !== selectedCategory) return false;
       if (selectedPriority !== "all" && idea.priority !== selectedPriority) return false;
       if (!needle) return true;
-      return [idea.title, idea.description ?? "", idea.tags ?? ""].some((field) =>
-        field.toLowerCase().includes(needle),
+      return [idea.title, idea.description ?? "", idea.tags ?? "", idea.prompt ?? ""].some(
+        (field) => field.toLowerCase().includes(needle),
       );
     });
   }, [ideas, selectedProject, selectedCategory, selectedPriority, search]);

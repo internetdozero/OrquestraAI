@@ -29,6 +29,7 @@ fn create(
             category: None,
             priority: priority.map(str::to_string),
             tags: Some("[\"rust\"]".to_string()),
+            prompt: None,
         },
     )
     .expect("idea should be created")
@@ -53,6 +54,7 @@ fn ideas_default_enums_and_reject_bad_values() {
             category: Some("nope".to_string()),
             priority: None,
             tags: None,
+            prompt: None,
         },
     );
     assert!(bad.is_err(), "an unknown category must be rejected");
@@ -66,6 +68,7 @@ fn ideas_default_enums_and_reject_bad_values() {
             category: None,
             priority: None,
             tags: None,
+            prompt: None,
         },
     );
     assert!(blank.is_err(), "a blank title must be rejected");
@@ -117,6 +120,56 @@ fn ideas_update_partially_and_delete_missing_fails() {
         ideas_repo::delete_idea(&connection, idea.id).is_err(),
         "deleting twice must fail loudly"
     );
+}
+
+#[test]
+fn prompt_roundtrips_through_create_update_and_list() {
+    let connection = memory();
+    let created = ideas_repo::create_idea(
+        &connection,
+        CreateIdeaInput {
+            project: "vault".to_string(),
+            title: "Prompted task".to_string(),
+            description: Some("short summary".to_string()),
+            category: None,
+            priority: None,
+            tags: None,
+            prompt: Some("### Mission: Prompted task\n\nDo the thing.".to_string()),
+        },
+    )
+    .expect("create with prompt");
+    assert_eq!(
+        created.prompt.as_deref(),
+        Some("### Mission: Prompted task\n\nDo the thing.")
+    );
+
+    let listed = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"))
+        .expect("list");
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].prompt, created.prompt);
+
+    let updated = ideas_repo::update_idea(
+        &connection,
+        UpdateIdeaInput {
+            id: created.id,
+            prompt: Some("Revised builder dispatch".to_string()),
+            ..UpdateIdeaInput::default()
+        },
+    )
+    .expect("update prompt");
+    assert_eq!(updated.prompt.as_deref(), Some("Revised builder dispatch"));
+
+    // A blank prompt clears back to None so the UI can show "no prompt".
+    let cleared = ideas_repo::update_idea(
+        &connection,
+        UpdateIdeaInput {
+            id: created.id,
+            prompt: Some("   ".to_string()),
+            ..UpdateIdeaInput::default()
+        },
+    )
+    .expect("clear prompt");
+    assert_eq!(cleared.prompt, None);
 }
 
 #[test]

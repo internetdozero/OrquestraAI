@@ -150,6 +150,14 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
             {s.priorities[idea.priority as keyof typeof s.priorities] ?? idea.priority}
           </span>
         )}
+        {idea.prompt && idea.prompt.trim() && (
+          <span
+            title={s.fieldPrompt}
+            className="rounded border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-violet-300"
+          >
+            ▶ prompt
+          </span>
+        )}
         {!Number.isNaN(updated.getTime()) && (
           <span className="ml-auto text-[10px] text-zinc-600">
             {updated.toLocaleDateString()}

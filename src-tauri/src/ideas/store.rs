@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS ideas (
     status      TEXT NOT NULL DEFAULT 'open',
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP
+    completed_at TIMESTAMP,
+    prompt      TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS blackboard_notes (
@@ -84,6 +85,7 @@ pub fn connect_at(path: &Path) -> Result<Connection, String> {
         .execute_batch(SCHEMA)
         .map_err(|error| format!("cannot initialize the schema: {error}"))?;
     migrate_completed_at(&connection)?;
+    migrate_prompt(&connection)?;
 
     Ok(connection)
 }
@@ -108,6 +110,22 @@ fn migrate_completed_at(connection: &Connection) -> Result<(), String> {
              WHERE status IN ('completed', 'archived') AND completed_at IS NULL;",
         )
         .map_err(|error| format!("cannot backfill completed_at: {error}"))?;
+    Ok(())
+}
+
+/// Idempotent migration for vaults created before `prompt` existed:
+/// old tables gain the Orchestrator Builder-prompt column with an empty
+/// default so legacy rows stay readable.
+fn migrate_prompt(connection: &Connection) -> Result<(), String> {
+    let has_column: bool = connection
+        .prepare("SELECT 1 FROM pragma_table_info('ideas') WHERE name = 'prompt'")
+        .and_then(|mut statement| statement.exists([]))
+        .map_err(|error| format!("cannot inspect the ideas schema: {error}"))?;
+    if !has_column {
+        connection
+            .execute_batch("ALTER TABLE ideas ADD COLUMN prompt TEXT NOT NULL DEFAULT '';")
+            .map_err(|error| format!("cannot migrate the ideas schema: {error}"))?;
+    }
     Ok(())
 }
 
@@ -175,6 +193,9 @@ pub(super) fn idea_from_row(row: &Row) -> Result<IdeaItem, rusqlite::Error> {
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
         completed_at: row.get("completed_at")?,
+        prompt: row
+            .get::<_, Option<String>>("prompt")?
+            .filter(|text| !text.trim().is_empty()),
     })
 }
 

@@ -176,6 +176,7 @@ export function fixtureCreateIdea(input: CreateIdeaInput): IdeaItem {
     createdAt: nowStamp(),
     updatedAt: nowStamp(),
     completedAt: null,
+    prompt: input.prompt ?? null,
   };
   ideas.push(next);
   return { ...next };
@@ -190,6 +191,7 @@ export function fixtureUpdateIdea(input: UpdateIdeaInput): IdeaItem {
   if (input.category != null) idea.category = input.category;
   if (input.priority != null) idea.priority = input.priority;
   if (input.tags !== undefined) idea.tags = input.tags;
+  if (input.prompt !== undefined) idea.prompt = input.prompt;
   if (input.status != null) {
     idea.status = input.status;
     // Mirror the core: completing stamps, reopening clears, archiving keeps.

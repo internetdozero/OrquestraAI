@@ -108,6 +108,7 @@ fn payload_shapes_match_the_frozen_contract() {
             created_at: "2026-10-18 12:00:00".to_string(),
             updated_at: "2026-10-18 12:00:00".to_string(),
             completed_at: None,
+            prompt: None,
         }),
         frozen("IdeaItem"),
     );
