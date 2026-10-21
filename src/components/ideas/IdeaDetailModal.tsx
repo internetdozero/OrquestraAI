@@ -90,6 +90,17 @@ export function IdeaDetailModal({ idea, onAdvance, onEdit, onDelete, onClose }: 
             <p className="font-mono text-[11px] text-zinc-500">{idea.tags}</p>
           )}
 
+          {idea.prompt && idea.prompt.trim() && (
+            <div className="overflow-hidden rounded-lg border border-violet-500/20 bg-violet-500/[0.05]">
+              <p className="border-b border-violet-500/15 px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-violet-300 uppercase">
+                {s.fieldPrompt}
+              </p>
+              <pre className="max-h-64 overflow-y-auto px-3 py-2.5 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-violet-100/90">
+                {idea.prompt}
+              </pre>
+            </div>
+          )}
+
           <dl className="grid grid-cols-1 gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-[11.5px] sm:grid-cols-2">
             <div>
               <dt className="text-zinc-500">{s.detailCreated}</dt>

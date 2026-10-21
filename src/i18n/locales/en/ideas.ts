@@ -72,6 +72,9 @@ export const ideas: TranslationSchema["ideas"] = {
   fieldPriority: "Priority",
   fieldTags: "Tags",
   tagsHint: "comma-separated",
+  fieldPrompt: "Builder Prompt",
+  promptHint: "technical, in English",
+  promptPlaceholder: "### Mission: …\n\nExact steps for the Builder AI…",
   fieldStatus: "Status",
   titleRequired: "A title is required.",
   save: "Save",
@@ -112,6 +115,7 @@ export const ideas: TranslationSchema["ideas"] = {
   detailClose: "Close details",
   hTitle: "Title",
   hUpdated: "Updated",
+  newBadge: "NEW",
   copyForAi: "Copy for AI agent",
   copied: "Copied!",
   productivity: {

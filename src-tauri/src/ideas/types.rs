@@ -30,6 +30,10 @@ pub struct IdeaItem {
     /// When the idea last entered `completed`; NULL unless it is (or was)
     /// completed. Drives the productivity heatmap.
     pub completed_at: Option<String>,
+    /// Exact technical English Builder prompt persisted by the Orchestrator
+    /// (mirrors the Python `idea-vault` MCP `prompt` column). Empty when
+    /// the idea has no executable task attached.
+    pub prompt: Option<String>,
 }
 
 /// One inter-agent blackboard note: the `blackboard_notes` row.
@@ -56,6 +60,7 @@ pub struct CreateIdeaInput {
     pub category: Option<String>,
     pub priority: Option<String>,
     pub tags: Option<String>,
+    pub prompt: Option<String>,
 }
 
 /// Partial update: only `Some` fields are written, `updated_at` always moves.
@@ -70,6 +75,7 @@ pub struct UpdateIdeaInput {
     pub priority: Option<String>,
     pub tags: Option<String>,
     pub status: Option<String>,
+    pub prompt: Option<String>,
 }
 
 /// Arguments for posting a blackboard note; `target` defaults to `all`.

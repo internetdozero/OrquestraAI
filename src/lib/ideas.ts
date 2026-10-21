@@ -33,6 +33,8 @@ export interface IdeaItem {
   updatedAt: string;
   /** When the idea last entered `completed`; null unless it is (or was) done. */
   completedAt: string | null;
+  /** Exact technical English Builder prompt; null when no task attached. */
+  prompt: string | null;
 }
 
 /** Mirrors the Rust `BlackboardNote` struct. */
@@ -55,6 +57,7 @@ export interface CreateIdeaInput {
   category?: string | null;
   priority?: string | null;
   tags?: string | null;
+  prompt?: string | null;
 }
 
 /** Mirrors the Rust `UpdateIdeaInput`; only set fields are written. */
@@ -67,6 +70,7 @@ export interface UpdateIdeaInput {
   priority?: string | null;
   tags?: string | null;
   status?: string | null;
+  prompt?: string | null;
 }
 
 /** Mirrors the Rust `PostNoteInput`; `target` defaults to `"all"`. */
@@ -200,6 +204,10 @@ export function formatIdeaForAi(idea: IdeaItem): string {
   }
   lines.push("\nDescription:");
   lines.push(idea.description || "(No description provided)");
+  if (idea.prompt && idea.prompt.trim()) {
+    lines.push("\nBuilder Prompt:");
+    lines.push(idea.prompt);
+  }
   return lines.join("\n");
 }
 

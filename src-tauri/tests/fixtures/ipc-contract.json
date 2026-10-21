@@ -276,6 +276,7 @@
       "id",
       "priority",
       "project",
+      "prompt",
       "status",
       "tags",
       "title",

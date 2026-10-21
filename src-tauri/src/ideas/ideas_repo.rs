@@ -29,12 +29,18 @@ pub fn create_idea(connection: &Connection, input: CreateIdeaInput) -> Result<Id
     };
     let description = input.description.map(|text| text.trim().to_string());
     let tags = input.tags.map(|text| text.trim().to_string());
+    // Never store NULL: the column is NOT NULL DEFAULT '' (MCP parity),
+    // so an absent prompt becomes "" and reads back as None.
+    let prompt = input
+        .prompt
+        .map(|text| text.trim().to_string())
+        .unwrap_or_default();
 
     connection
         .execute(
-            "INSERT INTO ideas (project, title, description, category, priority, tags) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            rusqlite::params![project, title, description, category, priority, tags],
+            "INSERT INTO ideas (project, title, description, category, priority, tags, prompt) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![project, title, description, category, priority, tags, prompt],
         )
         .map_err(db_error)?;
 
@@ -118,6 +124,9 @@ pub fn update_idea(connection: &Connection, input: UpdateIdeaInput) -> Result<Id
     }
     if let Some(raw) = input.tags {
         sets.push(("tags", raw.trim().to_string()));
+    }
+    if let Some(raw) = input.prompt {
+        sets.push(("prompt", raw.trim().to_string()));
     }
     // `completed_at` follows the status: stamping a completion starts the
     // delivery clock for the heatmap, reopening clears it, and archiving

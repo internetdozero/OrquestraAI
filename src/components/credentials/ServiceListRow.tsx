@@ -4,8 +4,8 @@ import type { VaultPreset, VaultService, VaultTestResult } from "../../lib/vault
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { BrandIcon } from "../vault/BrandIcons.tsx";
-import { healthBadgeClass } from "./ServiceKeyRow.tsx";
 import { ServiceDetailModal } from "./ServiceDetailModal.tsx";
+import { StatusDot } from "./StatusDot.tsx";
 import type { ServiceEditInput } from "./ServiceEditForm.tsx";
 
 interface ServiceListRowProps {
@@ -98,14 +98,7 @@ export function ServiceListRow({
             {primaryTag.trim()}
           </span>
         )}
-        <span
-          className={cn(
-            "shrink-0 rounded border px-1.5 py-0.5 text-[11px]",
-            healthBadgeClass(service.health),
-          )}
-        >
-          {s.healthName(service.health)}
-        </span>
+        <StatusDot health={service.health} label={s.healthName(service.health)} />
         <span className="flex-1 sm:hidden" />
         <div className="flex shrink-0 items-center gap-1">
           <button

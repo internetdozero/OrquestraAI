@@ -70,6 +70,9 @@ export const ideas = {
   fieldPriority: "Prioridade",
   fieldTags: "Tags",
   tagsHint: "separadas por vírgula",
+  fieldPrompt: "Prompt do Builder",
+  promptHint: "técnico, em inglês",
+  promptPlaceholder: "### Mission: …\n\nPassos exatos para a IA Builder…",
   fieldStatus: "Status",
   titleRequired: "O título é obrigatório.",
   save: "Salvar",
@@ -110,6 +113,7 @@ export const ideas = {
   detailClose: "Fechar detalhes",
   hTitle: "Título",
   hUpdated: "Atualizada",
+  newBadge: "NEW",
   copyForAi: "Copiar para IA",
   copied: "Copiado!",
   productivity: {

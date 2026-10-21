@@ -37,6 +37,7 @@ export function IdeaFormModal({ idea, projects, saving, onClose, onSave }: IdeaF
   const [priority, setPriority] = useState(idea?.priority ?? "medium");
   const [status, setStatus] = useState(idea?.status ?? "open");
   const [tags, setTags] = useState(idea?.tags ?? "");
+  const [prompt, setPrompt] = useState(idea?.prompt ?? "");
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export function IdeaFormModal({ idea, projects, saving, onClose, onSave }: IdeaF
       priority,
       status,
       tags: tags.trim() || null,
+      prompt: prompt.trim() || null,
     }).catch(() => undefined);
   };
 
@@ -179,6 +181,21 @@ export function IdeaFormModal({ idea, projects, saving, onClose, onSave }: IdeaF
                 className="w-full [&>button]:w-full [&>button]:justify-between"
               />
             </div>
+          </div>
+
+          <div>
+            <label className={labelClass} htmlFor="idea-prompt">
+              {s.fieldPrompt} <span className="text-zinc-600">· {s.promptHint}</span>
+            </label>
+            <textarea
+              id="idea-prompt"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              rows={5}
+              spellCheck={false}
+              placeholder={s.promptPlaceholder}
+              className={cn(inputClass, "h-auto resize-y py-2 font-mono leading-relaxed")}
+            />
           </div>
 
           <div>

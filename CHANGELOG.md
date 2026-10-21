@@ -10,9 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Vault Health Status Dots:**
+  - Replaced the textual `healthy`/`saudável` badges with a shared circular `StatusDot` in service cards, list rows, detail-modal headers and per-key rows; the translated health name moved into `title` and `aria-label` for tooltips and screen readers.
+  - Healthy reads from the accent-independent `green-*` ramp, because `index.css` remaps `emerald-*` onto the operator's accent and would otherwise paint a healthy dot in the brand colour.
+- **Task IDs and `NEW` Chip in the Idea Vault:**
+  - Board cards and list rows now lead with `#<id>` in mono, truncated tabular type, keeping the full title in the row tooltip.
+  - Tasks created in the last 10 minutes that were never opened carry a dismissible `NEW` chip; opening an idea records it in `localStorage` (`orquestra:seen-ideas`, capped at 500 ids), so the chip clears on click and survives reloads.
+- **Card-Motion Guardrail Before the Build:**
+  - Extended `scripts/check-card-motion.mjs` beyond TSX class strings to stylesheets (`transition: all`, transforms inside `:hover` blocks), inline style objects and shared `.ts` class constants, with brace tracking so `@keyframes` and `transform: none` stay exempt.
+  - Added a versioned pre-commit hook (`.githooks/pre-commit`, installed through the `prepare` npm script) that runs the same guard whenever TS, TSX or CSS is staged, plus `scripts/git-hooks.test.mjs` to keep the hook wiring intact.
 - **Official Autonomous Code Audit Skill (`orquestra-autonomous-audit` / `autonomous-audit`):** Time-boxed autonomous code audit and hardening shift protocol across the multi-harness fleet, supporting dynamic durations ($X$ minutes), 4 universal scopes (Security, Performance, Logic, DX), atomic reproduction tests, formal negative passes, and optional Idea Vault / Agent Board lifecycle.
 
 ### Fixed
+- **PresetCard Hover Jank:** `PresetCard` no longer transitions every property; it lists the three it actually animates (`border-color`, `background-color`, `box-shadow`), clearing the `no-transition-all` guardrail violation that blocked `npm run build`, `build:fast` and `build:release`.
 - **Freebuff Skill Discovery (`~/.agents/skills`):**
   - Registered `~/.agents/skills` as Freebuff's primary skills link, matching the Codebuff SDK's canonical global skill root so enabling a skill for Freebuff makes it visible immediately instead of only through the Claude fallback.
   - Added shared-path ownership to the harness registry: Codex and Grok now defer to Freebuff's projection of the shared agent root instead of quarantining the link, and still empty the folder when Freebuff is not installed.

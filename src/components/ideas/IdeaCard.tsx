@@ -25,6 +25,8 @@ interface IdeaCardProps {
   idea: IdeaItem;
   /** Compact density for finished work: one-line title, no description. */
   compact?: boolean;
+  /** Freshly created and not opened yet: renders the [NEW] chip. */
+  isNew?: boolean;
   onAdvance: (idea: IdeaItem) => void;
   onEdit: (idea: IdeaItem) => void;
   onDelete: (idea: IdeaItem) => void;
@@ -35,7 +37,7 @@ interface IdeaCardProps {
  * Draggable vault card. Clicking anywhere outside the action buttons opens
  * the detail viewer; completed columns render the compact variant.
  */
-export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, onOpen }: IdeaCardProps) {
+export function IdeaCard({ idea, compact = false, isNew = false, onAdvance, onEdit, onDelete, onOpen }: IdeaCardProps) {
   const { t } = useI18n();
   const s = t.ideas;
   const next = nextStatusOf(idea.status);
@@ -67,11 +69,19 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
       <div className="flex items-start justify-between gap-2">
         <h4
           className={cn(
-            "min-w-0 flex-1 leading-snug font-medium text-zinc-100",
-            compact ? "truncate text-[12px]" : "text-[12.5px]",
+            "flex min-w-0 flex-1 items-baseline gap-1.5 leading-snug font-medium text-zinc-100",
+            compact ? "text-[12px]" : "text-[12.5px]",
           )}
         >
-          {idea.title}
+          {isNew && (
+            <span className="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1 py-px font-mono text-[9.5px] font-semibold text-emerald-300">
+              {s.newBadge}
+            </span>
+          )}
+          <span className="shrink-0 font-mono text-[10.5px] font-normal text-zinc-500 tabular-nums">
+            #{idea.id}
+          </span>
+          <span className={cn("min-w-0", compact && "truncate")}>{idea.title}</span>
         </h4>
         <div className="flex shrink-0 items-center gap-1 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
           <GripVertical className="size-3 text-zinc-600" aria-hidden="true" />
@@ -148,6 +158,14 @@ export function IdeaCard({ idea, compact = false, onAdvance, onEdit, onDelete, o
             )}
           >
             {s.priorities[idea.priority as keyof typeof s.priorities] ?? idea.priority}
+          </span>
+        )}
+        {idea.prompt && idea.prompt.trim() && (
+          <span
+            title={s.fieldPrompt}
+            className="rounded border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-violet-300"
+          >
+            ▶ prompt
           </span>
         )}
         {!Number.isNaN(updated.getTime()) && (

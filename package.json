@@ -12,6 +12,8 @@
     "dev:tauri": "tauri dev",
     "tauri:dev": "tauri dev",
     "check:ui": "node scripts/check-card-motion.mjs",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "prepare": "git config core.hooksPath .githooks || true",
     "test": "node --test 'scripts/**/*.test.mjs'",
     "test:visual": "node scripts/visual-snapshots.mjs",
     "test:all": "node --test 'scripts/**/*.test.mjs' && cargo test",

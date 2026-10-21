@@ -9,6 +9,8 @@ import { IdeaCard } from "./IdeaCard";
 interface IdeasBoardProps {
   ideas: IdeaItem[];
   loading: boolean;
+  /** Freshly created, unopened ideas that keep their [NEW] chip. */
+  newIds: ReadonlySet<number>;
   onAdvance: (idea: IdeaItem) => void;
   onEdit: (idea: IdeaItem) => void;
   onDelete: (idea: IdeaItem) => void;
@@ -51,6 +53,7 @@ function readUserOpened(): ReadonlySet<string> {
 export function IdeasBoard({
   ideas,
   loading,
+  newIds,
   onAdvance,
   onEdit,
   onDelete,
@@ -235,6 +238,7 @@ export function IdeasBoard({
                 key={idea.id}
                 idea={idea}
                 compact={isCompleted}
+                isNew={newIds.has(idea.id)}
                 onAdvance={onAdvance}
                 onEdit={onEdit}
                 onDelete={onDelete}

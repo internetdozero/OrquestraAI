@@ -39,6 +39,11 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
 
+  /** Opening a task is what clears its [NEW] chip, in either view. */
+  const openDetail = (idea: IdeaItem) => {
+    state.markSeenIdea(idea.id);
+    setDetail(idea);
+  };
   const openCreate = () => {
     setEditing(null);
     setFormOpen(true);
@@ -115,17 +120,19 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
             <IdeasBoard
               ideas={state.ideas}
               loading={state.loading}
+              newIds={state.newIds}
               onAdvance={advance}
               onEdit={openEdit}
               onDelete={confirmDelete}
-              onOpen={setDetail}
+              onOpen={openDetail}
               onDropIdea={(id, status) => void state.changeStatus(id, status)}
             />
           ) : (
             <IdeasListView
               ideas={state.ideas}
               loading={state.loading}
-              onOpen={setDetail}
+              newIds={state.newIds}
+              onOpen={openDetail}
               onStatusChange={(id, status) => void state.changeStatus(id, status)}
               onEdit={openEdit}
               onDelete={confirmDelete}
@@ -142,7 +149,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
           onClose={() => setArchivedOpen(false)}
           onOpen={(idea) => {
             setArchivedOpen(false);
-            setDetail(idea);
+            openDetail(idea);
           }}
           onRestore={(id) => void state.changeStatus(id, "open")}
           onDelete={confirmDelete}

@@ -17,6 +17,11 @@ import {
 } from "../lib/ideas";
 import { devMockMode } from "../lib/fixtures";
 import { readIdeasCache, writeIdeasCache } from "../lib/ideasCache";
+import {
+  collectNewIdeaIds,
+  readSeenIdeaIds,
+  writeSeenIdeaIds,
+} from "../lib/seenIdeas";
 import { useI18n } from "./useI18n";
 
 export type IdeasTab = "ideas" | "blackboard";
@@ -65,6 +70,10 @@ export function useIdeas(options: {
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  // Ids the operator already opened; the [NEW] chip keys off this set.
+  const [seenIds, setSeenIds] = useState<ReadonlySet<number>>(
+    () => new Set(readSeenIdeaIds()),
+  );
 
   const refreshIdeas = useCallback(async () => {
     if (!active) return;
@@ -141,11 +150,28 @@ export function useIdeas(options: {
       if (selectedCategory !== "all" && idea.category !== selectedCategory) return false;
       if (selectedPriority !== "all" && idea.priority !== selectedPriority) return false;
       if (!needle) return true;
-      return [idea.title, idea.description ?? "", idea.tags ?? ""].some((field) =>
-        field.toLowerCase().includes(needle),
+      return [idea.title, idea.description ?? "", idea.tags ?? "", idea.prompt ?? ""].some(
+        (field) => field.toLowerCase().includes(needle),
       );
     });
   }, [ideas, selectedProject, selectedCategory, selectedPriority, search]);
+
+  /** Record one opened idea and persist it so [NEW] never comes back. */
+  const markSeenIdea = useCallback(
+    (id: number) => {
+      setSeenIds((current) => {
+        if (current.has(id)) return current;
+        const next = new Set(current).add(id);
+        writeSeenIdeaIds(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  // Recomputed on every poll, so a chip expires within one refresh cycle of
+  // the freshness window closing.
+  const newIds = useMemo(() => collectNewIdeaIds(ideas, seenIds), [ideas, seenIds]);
 
   const metrics = useMemo(() => {
     let open = 0;
@@ -249,6 +275,8 @@ export function useIdeas(options: {
     search,
     setSearch,
     refreshAll,
+    newIds,
+    markSeenIdea,
     create,
     update,
     changeStatus,

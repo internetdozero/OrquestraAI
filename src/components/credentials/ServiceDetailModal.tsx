@@ -5,7 +5,8 @@ import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { BrandIcon } from "../vault/BrandIcons.tsx";
 import { ServiceEditForm, type ServiceEditInput } from "./ServiceEditForm.tsx";
-import { ServiceKeyRow, healthBadgeClass } from "./ServiceKeyRow.tsx";
+import { ServiceKeyRow } from "./ServiceKeyRow.tsx";
+import { StatusDot } from "./StatusDot.tsx";
 
 interface ServiceDetailModalProps {
   open: boolean;
@@ -149,14 +150,11 @@ export function ServiceDetailModal({
               </span>
             </div>
           </div>
-          <span
-            className={cn(
-              "shrink-0 rounded border px-1.5 py-0.5 text-[11px]",
-              healthBadgeClass(service.health),
-            )}
-          >
-            {s.healthName(service.health)}
-          </span>
+          <StatusDot
+            health={service.health}
+            label={s.healthName(service.health)}
+            className="mt-1"
+          />
           <button
             type="button"
             onClick={onClose}

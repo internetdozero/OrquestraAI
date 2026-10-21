@@ -3,27 +3,7 @@ import { Check, Crown, Loader2, Pencil, PlugZap, RefreshCw, Trash2, X } from "lu
 import type { VaultKeyHealth, VaultTestResult } from "../../lib/vault.ts";
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
-
-/** Badge tint shared by the card and the header filters. */
-export function healthBadgeClass(health: string): string {
-  switch (health) {
-    case "Healthy":
-    case "healthy":
-      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
-    case "Degraded":
-      return "bg-amber-500/15 text-amber-300 border-amber-500/30";
-    case "RateLimited":
-    case "rateLimited":
-      return "bg-orange-500/15 text-orange-300 border-orange-500/30";
-    case "QuotaExceeded":
-    case "quotaExceeded":
-    case "InvalidKey":
-    case "invalidKey":
-      return "bg-red-500/15 text-red-300 border-red-500/30";
-    default:
-      return "bg-zinc-500/15 text-zinc-300 border-zinc-500/30";
-  }
-}
+import { StatusDot } from "./StatusDot.tsx";
 
 /** Human cooldown remainder from an epoch-ms expiry (0 = none).
  * Callers pass translated formatters so PT shows "espera ~…" and EN shows
@@ -220,14 +200,7 @@ export function ServiceKeyRow({
             </button>
           </span>
         )}
-        <span
-          className={cn(
-            "shrink-0 rounded border px-1 py-px text-[10px]",
-            healthBadgeClass(keyHealth),
-          )}
-        >
-          {s.healthName(keyHealth)}
-        </span>
+        <StatusDot health={keyHealth} label={s.healthName(keyHealth)} size="sm" />
         <button
           type="button"
           onClick={() => {
