@@ -5,8 +5,8 @@ import type { ServiceEditInput } from "./ServiceEditForm.tsx";
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { BrandIcon } from "../vault/BrandIcons.tsx";
-import { healthBadgeClass } from "./ServiceKeyRow.tsx";
 import { ServiceDetailModal } from "./ServiceDetailModal.tsx";
+import { StatusDot } from "./StatusDot.tsx";
 
 interface ServiceCardProps {
   service: VaultService;
@@ -91,15 +91,12 @@ export function ServiceCard({
               {service.id}
             </p>
           </div>
-        <span
-          className={cn(
-            "shrink-0 rounded border px-1.5 py-0.5 text-[11px]",
-            healthBadgeClass(service.health),
-          )}
-        >
-          {s.healthName(service.health)}
-        </span>
-      </div>
+          <StatusDot
+            health={service.health}
+            label={s.healthName(service.health)}
+            className="mt-1"
+          />
+        </div>
 
       <div className="mt-2 flex items-center gap-1.5">
         <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10.5px] font-medium text-zinc-300">
