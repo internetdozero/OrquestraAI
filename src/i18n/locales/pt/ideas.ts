@@ -113,6 +113,7 @@ export const ideas = {
   detailClose: "Fechar detalhes",
   hTitle: "Título",
   hUpdated: "Atualizada",
+  newBadge: "NEW",
   copyForAi: "Copiar para IA",
   copied: "Copiado!",
   productivity: {

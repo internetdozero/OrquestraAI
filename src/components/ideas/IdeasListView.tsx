@@ -10,6 +10,8 @@ import { StatePanel } from "../ui";
 interface IdeasListViewProps {
   ideas: IdeaItem[];
   loading: boolean;
+  /** Freshly created, unopened ideas that keep their [NEW] chip. */
+  newIds: ReadonlySet<number>;
   onOpen: (idea: IdeaItem) => void;
   onStatusChange: (id: number, status: string) => void;
   onEdit: (idea: IdeaItem) => void;
@@ -69,6 +71,7 @@ function SortHeader({
 export function IdeasListView({
   ideas,
   loading,
+  newIds,
   onOpen,
   onStatusChange,
   onEdit,
@@ -168,9 +171,18 @@ export function IdeasListView({
                         <button
                           type="button"
                           onClick={() => onOpen(idea)}
-                          className="block w-full truncate text-left text-[12px] font-medium text-zinc-100 hover:text-amber-200"
+                          title={idea.title}
+                          className="flex w-full min-w-0 items-baseline gap-1.5 text-left text-[12px] font-medium text-zinc-100 hover:text-amber-200"
                         >
-                          {idea.title}
+                          {newIds.has(idea.id) && (
+                            <span className="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1 py-px font-mono text-[9.5px] font-semibold text-emerald-300">
+                              {s.newBadge}
+                            </span>
+                          )}
+                          <span className="shrink-0 font-mono text-[10.5px] font-normal text-zinc-500 tabular-nums">
+                            #{idea.id}
+                          </span>
+                          <span className="min-w-0 truncate">{idea.title}</span>
                         </button>
                         {/* Inline status on small screens, where the table columns collapse. */}
                         <div className="mt-1 max-w-44 lg:hidden" onClick={(event) => event.stopPropagation()}>
