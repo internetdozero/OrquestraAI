@@ -3,6 +3,9 @@
 //! Three concerns live here so the adapters stay thin:
 //! * **Sizing** — recursive byte counts that never follow a symlink, because
 //!   harness trees contain links to projects outside the home directory.
+//!   Dependency, VCS and build-cache directories are pruned and descent is
+//!   depth-capped, because worktrees contain trees no size column should pay
+//!   to walk.
 //! * **Time** — see [`super::time`], re-exported below so adapters import one
 //!   path for every helper.
 //! * **SQLite** — every open is read-only with `query_only` set, so listing
@@ -38,14 +41,48 @@ pub fn home() -> Result<PathBuf, String> {
 // Sizing
 // ---------------------------------------------------------------------------
 
+/// Directory names never descended into when sizing. Dependency checkouts,
+/// VCS metadata and build caches hold hundreds of thousands of files that
+/// the size column should never report; walking them on every listing
+/// refresh is what saturates I/O on worktree-backed sessions.
+const SKIP_DIRS: [&str; 8] = [
+    "node_modules",
+    ".git",
+    ".hg",
+    ".svn",
+    "target",
+    "__pycache__",
+    ".venv",
+    "venv",
+];
+
+/// Backstop descent budget for [`dir_size`]. Session payloads live within a
+/// few levels of the session root, so anything deeper is either a runaway
+/// artifact or already covered by [`SKIP_DIRS`].
+const DEFAULT_MAX_DEPTH: usize = 8;
+
+fn is_skipped_dir(name: &std::ffi::OsStr) -> bool {
+    name.to_str().is_some_and(|name| SKIP_DIRS.contains(&name))
+}
+
 /// Total bytes of every regular file under `path`, without following symlinks.
+/// Dependency, VCS and build-cache directories ([`SKIP_DIRS`]) are never
+/// descended into, and directories deeper than [`DEFAULT_MAX_DEPTH`] levels
+/// below `path` are skipped, so sizing a worktree cannot saturate I/O.
 /// Unreadable entries are skipped: a lock file that vanishes mid-walk is not a
 /// reason to report the whole harness as broken.
 pub fn dir_size(path: &Path) -> u64 {
-    let mut total = 0;
-    let mut stack = vec![path.to_path_buf()];
+    dir_size_limited(path, DEFAULT_MAX_DEPTH)
+}
 
-    while let Some(current) = stack.pop() {
+/// [`dir_size`] with an explicit descent budget: directories more than
+/// `max_depth` levels below `path` are skipped. `0` counts only the files
+/// directly inside `path`; the root itself is always walked.
+pub fn dir_size_limited(path: &Path, max_depth: usize) -> u64 {
+    let mut total = 0;
+    let mut stack = vec![(path.to_path_buf(), 0usize)];
+
+    while let Some((current, depth)) = stack.pop() {
         // `read_dir` follows a symlink. A session folder that *is* a link
         // would otherwise be walked, counting (and stalling on) the target.
         match fs::symlink_metadata(&current) {
@@ -64,7 +101,9 @@ pub fn dir_size(path: &Path) -> u64 {
             };
 
             if kind.is_dir() {
-                stack.push(entry.path());
+                if depth < max_depth && !is_skipped_dir(&entry.file_name()) {
+                    stack.push((entry.path(), depth + 1));
+                }
             } else if kind.is_file() {
                 if let Ok(metadata) = entry.metadata() {
                     total += metadata.len();
@@ -353,7 +392,7 @@ pub fn i64_cell(row: &Row, index: usize) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{dir_size, file_size};
+    use super::{dir_size, dir_size_limited, file_size};
     use std::fs;
 
     #[cfg(unix)]
@@ -388,6 +427,66 @@ mod tests {
         assert!(outside.join("secret.bin").is_file(), "the target stays put");
 
         fs::remove_file(&session).expect("unlink session");
+        fs::remove_dir_all(&scratch).expect("cleanup");
+    }
+
+    fn unique_scratch(tag: &str) -> std::path::PathBuf {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "orquestra-dir-unit-{tag}-{}-{unique}",
+            std::process::id()
+        ))
+    }
+
+    fn write_sized(path: &std::path::Path, bytes: usize) {
+        fs::write(path, vec![7u8; bytes]).expect("fixture file");
+    }
+
+    #[test]
+    fn heavy_dependency_and_build_dirs_are_pruned() {
+        let scratch = unique_scratch("prune");
+        let session = scratch.join("session");
+        fs::create_dir_all(&session).expect("session dir");
+        write_sized(&session.join("thread.json"), 100);
+
+        // Ballast at the top level and nested one level down: none of it
+        // may contribute, wherever it sits.
+        for heavy in ["node_modules", ".git", "target", "__pycache__", ".venv"] {
+            for base in [&session, &session.join("sub")] {
+                let dir = base.join(heavy);
+                fs::create_dir_all(&dir).expect("ballast dir");
+                write_sized(&dir.join("blob.bin"), 4096);
+            }
+        }
+
+        assert_eq!(dir_size(&session), 100, "only real payload files count");
+
+        fs::remove_dir_all(&scratch).expect("cleanup");
+    }
+
+    #[test]
+    fn descent_stops_at_the_depth_budget() {
+        let scratch = unique_scratch("depth");
+        let mut level = scratch.join("root");
+        fs::create_dir_all(&level).expect("root");
+        // Twelve nested levels, one 10-byte file each.
+        for depth in 0..12 {
+            write_sized(&level.join(format!("file-{depth}.bin")), 10);
+            level = level.join(format!("d{depth}"));
+            fs::create_dir_all(&level).expect("nested level");
+        }
+        let root = scratch.join("root");
+
+        // Budget 2 visits root, d0 and d1: three files.
+        assert_eq!(dir_size_limited(&root, 2), 30);
+        // Budget 0 counts only the files directly inside the root.
+        assert_eq!(dir_size_limited(&root, 0), 10);
+        // The default budget of 8 visits root plus eight levels: nine files.
+        assert_eq!(dir_size(&root), 90);
+
         fs::remove_dir_all(&scratch).expect("cleanup");
     }
 }

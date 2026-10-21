@@ -15,8 +15,9 @@ fn freebuff_measures_worktree_bytes_and_chat_turns() {
         ".freebuff/worktrees/cb07e0aa/turma/turma.thread.json",
         "{\"title\":\"Turma migration\",\"cwd\":\"/work/turma\"}",
     );
-    // The reason worktrees matter: a whole node_modules per thread.
-    let modules = home.write(
+    // A whole node_modules per thread rides along in worktrees, but sizing
+    // prunes dependency directories: it must not inflate the total.
+    home.write(
         ".freebuff/worktrees/cb07e0aa/turma/node_modules/pkg/index.js",
         "module.exports = 1;",
     );
@@ -35,7 +36,7 @@ fn freebuff_measures_worktree_bytes_and_chat_turns() {
         .expect("worktree");
     assert_eq!(worktree.title, "Turma migration");
     assert_eq!(worktree.project_path.as_deref(), Some("/work/turma"));
-    assert_eq!(worktree.size_bytes, meta + modules);
+    assert_eq!(worktree.size_bytes, meta, "node_modules is pruned");
 
     let chat = sessions
         .iter()
@@ -82,7 +83,9 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
         &format!(".config/freebuff-desktop/local-projects/abc123/threads/{thread}/state.json"),
         "12345",
     );
-    let tree = home.write(
+    // Dependency ballast rides along in the worktree but stays out of every
+    // byte count below: listing and reclaim report the same pruned total.
+    home.write(
         &format!(".freebuff/worktrees/{thread}/node_modules/pkg/index.js"),
         "module.exports = 1;",
     );
@@ -99,9 +102,10 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
     // Epoch millis normalized to ISO 8601 UTC.
     assert_eq!(desktop.updated_at, "2026-10-18T12:02:22Z");
     assert_eq!(desktop.created_at.as_deref(), Some("2026-10-18T11:55:43Z"));
-    // Message payload bytes plus the thread folder plus the worktree.
+    // Message payload bytes plus the thread folder plus the worktree's real
+    // files; node_modules inside the worktree is pruned.
     let payloads = "[{\"kind\":\"text\"}]".len() as u64 * 2 + "[]".len() as u64 * 2;
-    assert_eq!(desktop.size_bytes, payloads + folder + tree);
+    assert_eq!(desktop.size_bytes, payloads + folder);
 
     let fallback = sessions
         .iter()
@@ -114,7 +118,7 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
     let freed = adapter(&home.0, "freebuff")
         .delete_session(&desktop.id)
         .expect("delete");
-    assert_eq!(freed, folder + tree);
+    assert_eq!(freed, folder, "reclaim reports the same pruned total");
     assert!(
         !home.0.join(format!(".freebuff/worktrees/{thread}")).exists(),
         "the same-id worktree is reclaimed"
