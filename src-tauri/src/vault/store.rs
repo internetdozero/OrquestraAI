@@ -10,8 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::paths::OrquestraPaths;
@@ -116,7 +115,7 @@ pub(super) fn vault_path(paths: &OrquestraPaths) -> PathBuf {
     paths.root.join(VAULT_FILE)
 }
 
-fn now_ms() -> u64 {
+pub(super) fn now_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_millis() as u64)
@@ -197,32 +196,7 @@ pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<()
     let mut content = serde_json::to_string_pretty(vault)
         .map_err(|error| format!("failed to serialize the credential vault: {error}"))?;
     content.push('\n');
-    write_private(&path, &content)
-}
-
-fn write_private(path: &Path, content: &str) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent)
-                .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-        }
-    }
-    let tmp = path.with_extension("json.tmp");
-    {
-        use std::io::Write;
-        let mut options = fs::OpenOptions::new();
-        options.write(true).create(true).truncate(true).mode(0o600);
-        let mut file = options
-            .open(&tmp)
-            .map_err(|error| format!("failed to write {}: {error}", tmp.display()))?;
-        file.write_all(content.as_bytes())
-            .map_err(|error| format!("failed to write {}: {error}", tmp.display()))?;
-        file.sync_all().map_err(|error| format!("failed to sync {}: {error}", tmp.display()))?;
-    }
-    let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600));
-    fs::rename(&tmp, path).map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
-    let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
-    Ok(())
+    super::atomic::write_private(&path, &content)
 }
 
 pub(super) fn validate_id(id: &str) -> Result<(), String> {
@@ -355,6 +329,10 @@ pub fn health_for_status(status: u16) -> Option<KeyHealth> {
 }
 
 /// Record one request outcome: cooldown the failing key, fail over.
+/// Untagged shorthand over [`record_result_in`]; only unit tests call this
+/// directly now (production paths are tag-scoped). Kept — not deleted — so
+/// the rotation semantics stay covered without duplicating the test.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn record_result(service: &mut VaultService, used: usize, status: u16) {
     record_result_in(service, used, status, None)
 }

@@ -354,3 +354,46 @@ fn service_meta_round_trips_into_child_env() {
     assert_eq!(env["AWS_SECRET_ACCESS_KEY"], "aws-secret");
     assert_eq!(env["AWS_DEFAULT_REGION"], "us-east-1");
 }
+
+#[test]
+fn concurrent_vault_updates_lose_nothing() {
+    // TOCTOU regression: stale-snapshot saves and the static tmp name used
+    // to drop concurrent writes. 8 threads × 25 bumps must sum exactly.
+    use super::atomic::update_vault;
+    use super::store::load_vault;
+    use crate::paths::OrquestraPaths;
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let root = std::env::temp_dir().join(format!("orquestra-vault-race-{}-{nanos}", std::process::id()));
+    std::fs::create_dir_all(&root).expect("scratch dir");
+    let paths = OrquestraPaths { root: root.clone(), vault: root.clone(), active: root.clone() };
+    let mut handles = Vec::new();
+    for _ in 0..8 {
+        let paths = paths.clone();
+        handles.push(std::thread::spawn(move || {
+            for _ in 0..25 {
+                update_vault(&paths, |vault| {
+                    let service = vault.services.entry("ticker".to_string()).or_insert_with(|| test_service("custom", &["k"]));
+                    if service.id != "ticker" {
+                        service.id = "ticker".to_string();
+                    }
+                    let count: u64 = service.meta.get("count").and_then(|v| v.parse().ok()).unwrap_or(0);
+                    service.meta.insert("count".to_string(), (count + 1).to_string());
+                    Ok(())
+                }).expect("bump");
+            }
+        }));
+    }
+    for handle in handles {
+        handle.join().expect("worker");
+    }
+    let vault = load_vault(&paths).expect("reload");
+    let count: u64 = vault.services["ticker"].meta["count"].parse().expect("count");
+    assert_eq!(count, 200, "every concurrent bump must survive");
+    let leftovers: Vec<_> = std::fs::read_dir(&root)
+        .expect("scan")
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with("vault.json.tmp"))
+        .collect();
+    assert!(leftovers.is_empty(), "unique tmp names must leave nothing behind: {leftovers:?}");
+    std::fs::remove_dir_all(&root).expect("cleanup");
+}
