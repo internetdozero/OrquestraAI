@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { cn } from "../../lib/utils";
@@ -307,7 +307,7 @@ function ListBlock({ ordered, items }: { ordered: boolean; items: string[] }) {
  * Safe, dependency-free Markdown for one chat bubble. Everything is rendered
  * as React nodes (never HTML), so harness text cannot inject markup.
  */
-export function MarkdownTurn({ content, role }: { content: string; role: string }) {
+function MarkdownTurnView({ content, role }: { content: string; role: string }) {
   const blocks = useMemo(() => parseBlocks(content), [content]);
   const isUser = role === "user";
 
@@ -352,3 +352,14 @@ export function MarkdownTurn({ content, role }: { content: string; role: string 
     </div>
   );
 }
+
+/**
+ * Memoized on turn identity: the regex block split + inline formatting is
+ * the expensive part of a 1000-turn feed, and string equality on the
+ * content is the content-hash comparison — equal text parses to equal
+ * trees, so re-renders with unchanged text reuse the memoized output.
+ */
+export const MarkdownTurn = memo(
+  MarkdownTurnView,
+  (previous, next) => previous.content === next.content && previous.role === next.role,
+);

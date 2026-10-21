@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Download, Loader2, MessagesSquare, Search, X } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { useClipboard } from "../../hooks/useClipboard";
+import { useWindowedList } from "../../hooks/useWindowedList";
 import { getSessionTranscript, type TranscriptTurn } from "../../lib/sessions";
 import { cn } from "../../lib/utils";
 import { MarkdownTurn } from "./MarkdownTurn";
@@ -108,6 +109,7 @@ export function TranscriptFeed({
   const s = t.sessions;
   const [turns, setTurns] = useState<TranscriptTurn[] | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const { copied: copiedAll, copy: copyAllText } = useClipboard(1500);
 
   useEffect(() => {
@@ -130,11 +132,29 @@ export function TranscriptFeed({
     };
   }, [harness, sessionId]);
 
+  // Debounced filter text: the input stays responsive per keystroke while
+  // the expensive filter + re-parse only runs 300ms after typing pauses.
+  // An emptied box applies instantly instead of waiting out the timer.
+  useEffect(() => {
+    if (query === "") {
+      setDebouncedQuery("");
+      return;
+    }
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 300);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+  const activeQuery = query === "" ? "" : debouncedQuery;
+
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = activeQuery.trim().toLowerCase();
     if (!turns || !needle) return turns;
     return turns.filter((turn) => turn.content.toLowerCase().includes(needle));
-  }, [turns, query]);
+  }, [turns, activeQuery]);
+
+  const { start, end, topSpacer, bottomSpacer, rootRef } = useWindowedList(
+    visible?.length ?? 0,
+    `${harness}:${sessionId}:${activeQuery}`,
+  );
 
   if (turns === null || visible === null) {
     return (
@@ -156,7 +176,7 @@ export function TranscriptFeed({
     );
   }
 
-  const filtering = query.trim().length > 0;
+  const filtering = activeQuery.trim().length > 0;
 
   const exportMarkdown = () => {
     const markdown = formatTranscriptMarkdown(turns, { harness, id: sessionId, title });
@@ -234,9 +254,22 @@ export function TranscriptFeed({
         )}
       </div>
 
-      {visible.map((turn, index) => (
-        <Turn key={`${index}-${turn.role}-${turn.content.length}`} turn={turn} onToast={onToast} />
-      ))}
+      <div ref={rootRef}>
+        {topSpacer > 0 && <div style={{ height: topSpacer }} aria-hidden="true" />}
+        {visible.slice(start, end).map((turn, offset) => {
+          const index = start + offset;
+          return (
+            <div
+              key={`${index}-${turn.role}-${turn.content.length}`}
+              data-index={index}
+              className="pb-2"
+            >
+              <Turn turn={turn} onToast={onToast} />
+            </div>
+          );
+        })}
+        {bottomSpacer > 0 && <div style={{ height: bottomSpacer }} aria-hidden="true" />}
+      </div>
     </div>
   );
 }
