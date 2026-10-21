@@ -76,6 +76,17 @@ fn core_status(app: tauri::AppHandle) -> CoreStatus {
     }
 }
 
+/// Crash reports from the React error boundaries land on stderr next to the
+/// backend logs, so a white-screen report carries its area and message.
+#[tauri::command]
+fn log_ui_error(area: String, message: String, stack: Option<String>) -> Result<(), String> {
+    crate::log_error!("ui error in {area}: {message}");
+    if let Some(stack) = stack.filter(|stack| !stack.is_empty()) {
+        crate::log_error!("ui stack: {stack}");
+    }
+    Ok(())
+}
+
 /// Scan the master vault and evaluate each skill for the selected harness.
 /// `None` evaluates the universal Global baseline.
 #[tauri::command]
@@ -305,6 +316,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             core_status,
+            log_ui_error,
             get_system_health,
             sweep_system_caches,
             list_skills,

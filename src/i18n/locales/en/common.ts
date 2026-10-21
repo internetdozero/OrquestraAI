@@ -17,6 +17,9 @@ export const common: TranslationSchema["common"] = {
   close: "Close",
   dismiss: "Dismiss",
   unexpected: "Unexpected error",
+  viewCrashedHint:
+    "This view hit an unexpected error. Your data is safe — retry the view or reload the app.",
+  reloadApp: "Reload app",
   delete: "Delete",
   edit: "Edit",
   notInstalled: "not installed",

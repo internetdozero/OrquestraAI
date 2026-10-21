@@ -161,6 +161,15 @@ export function restartApp(): Promise<void> {
   return invoke<void>("restart_app");
 }
 
+/**
+ * Report a React error-boundary crash to the Rust core (stderr, next to the
+ * backend logs). No-op in browser previews, where there is no backend.
+ */
+export function logUiError(area: string, message: string, stack?: string): Promise<void> {
+  if (!isTauri()) return Promise.resolve();
+  return invoke<void>("log_ui_error", { area, message, stack: stack ?? null });
+}
+
 /** Native OS folder picker; `null` means the user cancelled. */
 export function pickFolder(): Promise<string | null> {
   return invoke<string | null>("pick_folder");

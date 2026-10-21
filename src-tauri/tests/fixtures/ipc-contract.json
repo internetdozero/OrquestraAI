@@ -32,6 +32,7 @@
     "list_presets",
     "list_skills",
     "list_vault_presets",
+    "log_ui_error",
     "mark_note_read",
     "mcp_targets",
     "open_in_file_manager",

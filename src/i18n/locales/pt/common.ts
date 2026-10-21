@@ -20,6 +20,9 @@ export const common = {
   close: "Fechar",
   dismiss: "Dispensar",
   unexpected: "Erro inesperado",
+  viewCrashedHint:
+    "Esta visão encontrou um erro inesperado. Seus dados estão a salvo — tente de novo ou recarregue o app.",
+  reloadApp: "Recarregar app",
   delete: "Excluir",
   edit: "Editar",
   notInstalled: "não instalado",

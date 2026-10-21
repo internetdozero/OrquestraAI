@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { AgentsView } from "./components/AgentsView";
 import { BootScreen } from "./components/BootScreen";
 import { BridgeModal } from "./components/BridgeModal";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { IdeasView } from "./components/ideas/IdeasView";
 import { JanitorModal } from "./components/JanitorModal";
@@ -272,51 +273,62 @@ export default function App() {
             // sessions shares the scroll-pane layout with skills
           )}
         >
-          {view === "ideas" ? (
-            <IdeasView isTauri={isTauri} onToast={showToast} onError={setError} />
-          ) : view === "agents" ? (
-            <AgentsView
-              isTauri={isTauri}
-              error={error}
-              onToast={showToast}
-              onError={setError}
-              onClear={clearError}
-            />
-          ) : view === "sessions" ? (
-            <SessionsView
-              isTauri={isTauri}
-              notifyOnPurge={prefs.settings.notifyOnPurge}
-              onToast={showToast}
-              onError={setError}
-            />
-          ) : view === "credentials" ? (
-            <CredentialsView isTauri={isTauri} onToast={showToast} onError={setError} />
-          ) : view === "mcps" ? (
-            <McpView
-              isTauri={isTauri}
-              onToast={showToast}
-              onActiveCountChange={setMcpCount}
-              reloadToken={reloadToken}
-              query={query}
-              onQueryChange={setQuery}
-            />
-          ) : (
-            <SkillsView
-              isTauri={isTauri}
-              harnessCounts={summaries.counts}
-              harnessTotal={summaries.total}
-              installedHarnessIds={installedHarnessIds}
-              query={query}
-              onQueryChange={setQuery}
-              reloadToken={reloadToken}
-              onStatsChange={setSkillStats}
-              onSummaryStale={() => void summaries.refresh()}
-              onBusyChange={setSkillsBusy}
-              externalError={error}
-              onDismissExternalError={clearError}
-              onToast={showToast}
-            />
-          )}
+          <ErrorBoundary
+            key={view}
+            area={view}
+            copy={{
+              title: t.common.unexpected,
+              message: t.common.viewCrashedHint,
+              retry: t.skills.tryAgain,
+              reload: t.common.reloadApp,
+            }}
+          >
+            {view === "ideas" ? (
+              <IdeasView isTauri={isTauri} onToast={showToast} onError={setError} />
+            ) : view === "agents" ? (
+              <AgentsView
+                isTauri={isTauri}
+                error={error}
+                onToast={showToast}
+                onError={setError}
+                onClear={clearError}
+              />
+            ) : view === "sessions" ? (
+              <SessionsView
+                isTauri={isTauri}
+                notifyOnPurge={prefs.settings.notifyOnPurge}
+                onToast={showToast}
+                onError={setError}
+              />
+            ) : view === "credentials" ? (
+              <CredentialsView isTauri={isTauri} onToast={showToast} onError={setError} />
+            ) : view === "mcps" ? (
+              <McpView
+                isTauri={isTauri}
+                onToast={showToast}
+                onActiveCountChange={setMcpCount}
+                reloadToken={reloadToken}
+                query={query}
+                onQueryChange={setQuery}
+              />
+            ) : (
+              <SkillsView
+                isTauri={isTauri}
+                harnessCounts={summaries.counts}
+                harnessTotal={summaries.total}
+                installedHarnessIds={installedHarnessIds}
+                query={query}
+                onQueryChange={setQuery}
+                reloadToken={reloadToken}
+                onStatsChange={setSkillStats}
+                onSummaryStale={() => void summaries.refresh()}
+                onBusyChange={setSkillsBusy}
+                externalError={error}
+                onDismissExternalError={clearError}
+                onToast={showToast}
+              />
+            )}
+          </ErrorBoundary>
         </main>
       </div>
 
