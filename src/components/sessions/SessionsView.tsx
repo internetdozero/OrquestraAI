@@ -26,16 +26,17 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
   const state = useSessions({ isTauri, notifyOnPurge, onToast, onError });
   const s = t.sessions;
   const [inspecting, setInspecting] = useState<UnifiedSession | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<
-    { harness: string; id: string; title: string } | null
-  >(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    harness: string;
+    id: string;
+    title: string;
+  } | null>(null);
   // Re-resolve against the live list so pin toggles repaint the drawer.
   const liveInspecting =
     inspecting == null
       ? null
       : (state.sessions.find(
-          (session) =>
-            session.harness === inspecting.harness && session.id === inspecting.id,
+          (session) => session.harness === inspecting.harness && session.id === inspecting.id,
         ) ?? inspecting);
 
   return (
@@ -143,9 +144,7 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
         <SessionDetailDrawer
           session={liveInspecting}
           onClose={() => setInspecting(null)}
-          onTogglePin={() =>
-            void state.togglePin(liveInspecting.harness, liveInspecting.id)
-          }
+          onTogglePin={() => void state.togglePin(liveInspecting.harness, liveInspecting.id)}
           onDelete={() =>
             setPendingDelete({
               harness: liveInspecting.harness,

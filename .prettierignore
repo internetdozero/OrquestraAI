@@ -1,0 +1,12 @@
+# Build output and agent scratch state — never source.
+dist/
+dist-ssr/
+target/
+node_modules/
+.freebuff/logs/
+.freebuff/tmp/
+.freebuff/evidence/
+.orquestra/audits/
+*.sqlite
+*.sqlite3
+*.db

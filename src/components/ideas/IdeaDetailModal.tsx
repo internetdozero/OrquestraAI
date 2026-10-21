@@ -21,7 +21,13 @@ function formatStamp(raw: string): string {
 }
 
 /** Full idea viewer: untruncated body, metadata and quick actions. */
-export function IdeaDetailModal({ idea, onAdvance, onEdit, onDelete, onClose }: IdeaDetailModalProps) {
+export function IdeaDetailModal({
+  idea,
+  onAdvance,
+  onEdit,
+  onDelete,
+  onClose,
+}: IdeaDetailModalProps) {
   const { t } = useI18n();
   const s = t.ideas;
   const next = nextStatusOf(idea.status);
@@ -86,9 +92,7 @@ export function IdeaDetailModal({ idea, onAdvance, onEdit, onDelete, onClose }: 
               {idea.description}
             </p>
           ) : null}
-          {idea.tags && (
-            <p className="font-mono text-[11px] text-zinc-500">{idea.tags}</p>
-          )}
+          {idea.tags && <p className="font-mono text-[11px] text-zinc-500">{idea.tags}</p>}
 
           {idea.prompt && idea.prompt.trim() && (
             <div className="overflow-hidden rounded-lg border border-violet-500/20 bg-violet-500/[0.05]">

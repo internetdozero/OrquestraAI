@@ -40,9 +40,7 @@ export function summarizePreset(
   const skills = preset.allSkills
     ? t.presets.everySkill
     : t.presets.skillCount(preset.skills.length);
-  const mcps = preset.allMcps
-    ? t.presets.everyMcp
-    : t.presets.mcpCount(preset.mcps.length);
+  const mcps = preset.allMcps ? t.presets.everyMcp : t.presets.mcpCount(preset.mcps.length);
   return `${skills} · ${mcps}`;
 }
 

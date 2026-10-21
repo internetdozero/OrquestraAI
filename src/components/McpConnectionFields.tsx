@@ -21,7 +21,10 @@ export function McpConnectionFields({
   return (
     <>
       <div>
-        <label className="mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase" htmlFor="mcp-url">
+        <label
+          className="mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase"
+          htmlFor="mcp-url"
+        >
           URL
         </label>
         <input
@@ -34,9 +37,11 @@ export function McpConnectionFields({
         />
       </div>
       <div>
-        <label className="mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase" htmlFor="mcp-headers">
-          {t.mcps.headers}{" "}
-          <span className="text-zinc-600">· KEY=VALUE per line</span>
+        <label
+          className="mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase"
+          htmlFor="mcp-headers"
+        >
+          {t.mcps.headers} <span className="text-zinc-600">· KEY=VALUE per line</span>
         </label>
         <textarea
           id="mcp-headers"

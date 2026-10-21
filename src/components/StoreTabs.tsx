@@ -16,7 +16,12 @@ export function StoreTabs({
   const base = "rounded-md px-2.5 py-1 transition";
 
   return (
-    <div className={cn("mb-3 flex w-fit items-center gap-1 rounded-lg border border-white/[0.07] bg-black/30 p-1 text-[11.5px] font-medium", className)}>
+    <div
+      className={cn(
+        "mb-3 flex w-fit items-center gap-1 rounded-lg border border-white/[0.07] bg-black/30 p-1 text-[11.5px] font-medium",
+        className,
+      )}
+    >
       <button
         type="button"
         onClick={() => onChange(false)}

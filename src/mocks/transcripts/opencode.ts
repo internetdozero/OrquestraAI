@@ -10,7 +10,7 @@ export const OPENCODE_TURNS: TranscriptTurn[] = [
   {
     role: "assistant",
     content:
-      "Only text parts:\n\n```ts\nconst parts = rows.filter((part) => part.type === \"text\");\n```\n\nThe join keeps message roles authoritative, so a tool part never becomes an assistant bubble.",
+      'Only text parts:\n\n```ts\nconst parts = rows.filter((part) => part.type === "text");\n```\n\nThe join keeps message roles authoritative, so a tool part never becomes an assistant bubble.',
     timestamp: "2026-10-18T04:14:00Z",
   },
   {

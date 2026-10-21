@@ -1,19 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Loader2,
-  Plug,
-  Plus,
-  RefreshCw,
-  Unplug,
-  Waypoints,
-} from "lucide-react";
-import {
-  coversHarness,
-  sortMcps,
-  type McpServer,
-  type McpSortMode,
-} from "../lib/mcps";
+import { AlertTriangle, Loader2, Plug, Plus, RefreshCw, Unplug, Waypoints } from "lucide-react";
+import { coversHarness, sortMcps, type McpServer, type McpSortMode } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
 import { devMockMode } from "../lib/fixtures";
 import { useMcpCatalog } from "../hooks/useMcpCatalog";
@@ -55,8 +42,10 @@ export function McpView({
 }: McpViewProps) {
   const { t } = useI18n();
   const [mockMode] = useState(devMockMode);
-  const { servers, targets, loading, error, setError, load, replaceServers } =
-    useMcpCatalog(isTauri, reloadToken);
+  const { servers, targets, loading, error, setError, load, replaceServers } = useMcpCatalog(
+    isTauri,
+    reloadToken,
+  );
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<McpServer | null>(null);
@@ -66,11 +55,7 @@ export function McpView({
   const [showStore, setShowStore] = useState(false);
 
   const activeServers = useMemo(
-    () =>
-      servers.filter(
-        (server) =>
-          server.globalEnabled || server.enabledHarnesses.length > 0,
-      ),
+    () => servers.filter((server) => server.globalEnabled || server.enabledHarnesses.length > 0),
     [servers],
   );
 
@@ -92,8 +77,8 @@ export function McpView({
     const needle = query.trim().toLowerCase();
     if (!needle) return servers;
     return servers.filter((server) =>
-      [server.name, server.id, server.description, server.command].some(
-        (field) => field?.toLowerCase().includes(needle),
+      [server.name, server.id, server.description, server.command].some((field) =>
+        field?.toLowerCase().includes(needle),
       ),
     );
   }, [query, servers]);
@@ -128,20 +113,25 @@ export function McpView({
     },
   });
 
-  const { statusOf: storeStatusOf, actionFor: storeActionFor } =
-    useMcpStoreActions(servers, {
-      scope,
-      toggle,
-      save,
-      reload: load,
-      onToast,
-    });
+  const { statusOf: storeStatusOf, actionFor: storeActionFor } = useMcpStoreActions(servers, {
+    scope,
+    toggle,
+    save,
+    reload: load,
+    onToast,
+  });
 
   if (!isTauri && !mockMode) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <StatePanel icon={Unplug} title={t.skills.stateUnavailableTitle} description={t.mcps.unavailableBody}>
-          <code className="rounded border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10.5px] text-zinc-400">npm run tauri dev</code>
+        <StatePanel
+          icon={Unplug}
+          title={t.skills.stateUnavailableTitle}
+          description={t.mcps.unavailableBody}
+        >
+          <code className="rounded border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10.5px] text-zinc-400">
+            npm run tauri dev
+          </code>
         </StatePanel>
       </div>
     );
@@ -170,16 +160,15 @@ export function McpView({
               {t.mcps.subtitle}
             </p>
             <p className="mt-1 font-mono text-[10.5px] text-zinc-600" title={t.tokens.scopeHint}>
-              {t.tokens.entry} ≈ {formatTokens(scopeTokens.entry)} · {t.tokens.full} ≈ {formatTokens(scopeTokens.full)} {t.tokens.unit}
+              {t.tokens.entry} ≈ {formatTokens(scopeTokens.entry)} · {t.tokens.full} ≈{" "}
+              {formatTokens(scopeTokens.full)} {t.tokens.unit}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="accent-border accent-bg-soft flex items-center gap-2 rounded-lg border px-3 py-2">
               <Plug className="accent-text size-3.5" />
-              <span className="accent-text text-[11.5px] font-medium">
-                {t.mcps.active}
-              </span>
+              <span className="accent-text text-[11.5px] font-medium">{t.mcps.active}</span>
               <span className="accent-text font-mono text-[11.5px] opacity-70">
                 {activeServers.length}/{servers.length}
               </span>
@@ -227,9 +216,7 @@ export function McpView({
             totalCount={servers.length}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
-            canBatch={
-              (isTauri || mockMode) && servers.length > 0 && !batchPending && !loading
-            }
+            canBatch={(isTauri || mockMode) && servers.length > 0 && !batchPending && !loading}
             batchPending={batchPending}
             onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
           />
@@ -252,50 +239,47 @@ export function McpView({
           </div>
         )}
 
-        {!showStore && (loading ? (
-          <div className="flex items-center justify-center gap-2 py-16 text-[12px] text-zinc-500">
-            <Loader2 className="size-4 animate-spin" />
-            {t.mcps.reading}
-          </div>
-        ) : visibleServers.length === 0 ? (
-          <McpEmptyState
-            onExploreStore={() => setShowStore(true)}
-            onAddManual={() => {
-              setEditing(null);
-              setFormError(null);
-              setFormOpen(true);
-            }}
-          />
-        ) : (
-          <VirtualCardGrid
-            items={visibleServers}
-            keyOf={(server) => server.id}
-            className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-            renderItem={(server) => (
-              <McpCard
-                server={server}
-                scope={scope}
-                scopeLabel={scopeLabel}
-                busy={busyIds.has(server.id)}
-                onToggle={(item) => void toggle(item)}
-                onInspect={(item) => setInspecting(item)}
-                onEdit={(item) => {
-                  setEditing(item);
-                  setFormError(null);
-                  setFormOpen(true);
-                }}
-                onDelete={(item) => void remove(item)}
-              />
-            )}
-          />
-        ))}
+        {!showStore &&
+          (loading ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-[12px] text-zinc-500">
+              <Loader2 className="size-4 animate-spin" />
+              {t.mcps.reading}
+            </div>
+          ) : visibleServers.length === 0 ? (
+            <McpEmptyState
+              onExploreStore={() => setShowStore(true)}
+              onAddManual={() => {
+                setEditing(null);
+                setFormError(null);
+                setFormOpen(true);
+              }}
+            />
+          ) : (
+            <VirtualCardGrid
+              items={visibleServers}
+              keyOf={(server) => server.id}
+              className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+              renderItem={(server) => (
+                <McpCard
+                  server={server}
+                  scope={scope}
+                  scopeLabel={scopeLabel}
+                  busy={busyIds.has(server.id)}
+                  onToggle={(item) => void toggle(item)}
+                  onInspect={(item) => setInspecting(item)}
+                  onEdit={(item) => {
+                    setEditing(item);
+                    setFormError(null);
+                    setFormOpen(true);
+                  }}
+                  onDelete={(item) => void remove(item)}
+                />
+              )}
+            />
+          ))}
 
         {showStore && (
-          <OfficialStore
-            kind="mcp"
-            statusOf={storeStatusOf}
-            actionFor={storeActionFor}
-          />
+          <OfficialStore kind="mcp" statusOf={storeStatusOf} actionFor={storeActionFor} />
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[10.5px] text-zinc-600">
@@ -316,9 +300,7 @@ export function McpView({
 
       {inspecting && (
         <McpDetailDrawer
-          server={
-            servers.find((server) => server.id === inspecting.id) ?? inspecting
-          }
+          server={servers.find((server) => server.id === inspecting.id) ?? inspecting}
           scopeLabel={scopeLabel}
           onClose={() => setInspecting(null)}
           onEdit={(item) => {

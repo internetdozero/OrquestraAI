@@ -118,11 +118,7 @@ test("a Global toggle projects into the global and harness flags", () => {
   const released = projectSkillState(inherited, GLOBAL, false, GLOBAL);
   assert.equal(released.globalEnabled, false);
   assert.equal(released.harnessEnabled, false);
-  assert.equal(
-    released.inheritedFromGlobal,
-    false,
-    "a Global change re-locks nothing",
-  );
+  assert.equal(released.inheritedFromGlobal, false, "a Global change re-locks nothing");
 });
 
 test("a harness toggle only moves that harness's flag", () => {
@@ -136,9 +132,5 @@ test("a harness toggle only moves that harness's flag", () => {
 
   assert.equal(updated.harnessEnabled, false);
   assert.equal(updated.globalEnabled, true, "Global is untouched");
-  assert.equal(
-    updated.inheritedFromGlobal,
-    true,
-    "inheritance bookkeeping is preserved",
-  );
+  assert.equal(updated.inheritedFromGlobal, true, "inheritance bookkeeping is preserved");
 });

@@ -144,13 +144,9 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
       presetLabel: presetLabels.get(service.preset) ?? service.preset,
       presets,
       onPromote: (index: number) =>
-        mutate(
-          () => vaultSetPrimary(service.id, index),                  s.toastPrimary(service.label),
-        ),
+        mutate(() => vaultSetPrimary(service.id, index), s.toastPrimary(service.label)),
       onRemoveKey: (index: number) =>
-        mutate(
-          () => vaultRemoveKey(service.id, index),                  s.toastRemoved(service.label),
-        ),
+        mutate(() => vaultRemoveKey(service.id, index), s.toastRemoved(service.label)),
       onAddKeys: (keys: string[], keyTags: (string | null)[]) =>
         mutate(
           () =>
@@ -161,12 +157,10 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
               description: service.description,
               keys: [...service.maskedKeys, ...keys],
               keyTags: [...(service.keyTags ?? service.maskedKeys.map(() => null)), ...keyTags],
-            }),                  s.toastExtended(service.label),
+            }),
+          s.toastExtended(service.label),
         ),
-      onDelete: () =>
-        mutate(
-          () => vaultDeleteService(service.id),                  s.toastDeleted(service.label),
-        ),
+      onDelete: () => mutate(() => vaultDeleteService(service.id), s.toastDeleted(service.label)),
       onSaveTag: (index: number, tag: string | null) =>
         mutate(
           () =>
@@ -179,7 +173,8 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
               keyTags: service.maskedKeys.map((_, position) =>
                 position === index ? tag : (service.keyTags?.[position] ?? null),
               ),
-            }),                  s.toastTag(index, service.label),
+            }),
+          s.toastTag(index, service.label),
         ),
       onReplaceKey: (index: number, secret: string) =>
         mutate(
@@ -193,7 +188,8 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
                 position === index ? secret : masked,
               ),
               keyTags: [...(service.keyTags ?? service.maskedKeys.map(() => null))],
-            }),                  s.toastRotated(index, service.label),
+            }),
+          s.toastRotated(index, service.label),
         ),
       onSaveService: (input: {
         label: string;
@@ -217,7 +213,8 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
               customPrefix: input.customPrefix,
               customEnv: input.customEnv,
               meta: input.meta,
-            }),                  s.toastUpdated(service.label),
+            }),
+          s.toastUpdated(service.label),
         ),
       onTest: async (index: number): Promise<VaultTestResult> => {
         const result = await vaultTestConnection(service.id, index);
@@ -229,22 +226,12 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
 
   if (!isTauri && !mockMode) {
     return (
-      <StatePanel
-        icon={KeyRound}
-        title={s.needDesktopTitle}
-        description={s.needDesktopBody}
-      />
+      <StatePanel icon={KeyRound} title={s.needDesktopTitle} description={s.needDesktopBody} />
     );
   }
 
   if (loading) {
-    return (
-      <StatePanel
-        icon={KeyRound}
-        title={s.loadingTitle}
-        description={s.loadingBody}
-      />
-    );
+    return <StatePanel icon={KeyRound} title={s.loadingTitle} description={s.loadingBody} />;
   }
 
   return (
@@ -273,12 +260,8 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
               <div className="grid size-12 place-items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_32px_-6px_rgba(16,185,129,0.7)]">
                 <KeyRound className="size-5 text-emerald-300" />
               </div>
-              <p className="text-sm font-semibold text-zinc-200">
-                {s.emptyTitle}
-              </p>
-              <p className="max-w-sm text-[12px] leading-relaxed text-zinc-500">
-                {s.emptyBody}
-              </p>
+              <p className="text-sm font-semibold text-zinc-200">{s.emptyTitle}</p>
+              <p className="max-w-sm text-[12px] leading-relaxed text-zinc-500">{s.emptyBody}</p>
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
@@ -288,11 +271,7 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
               </button>
             </div>
           ) : (
-            <StatePanel
-              icon={KeyRound}
-              title={s.noMatchesTitle}
-              description={s.noMatchesBody}
-            />
+            <StatePanel icon={KeyRound} title={s.noMatchesTitle} description={s.noMatchesBody} />
           )}
         </div>
       ) : view === "grid" ? (

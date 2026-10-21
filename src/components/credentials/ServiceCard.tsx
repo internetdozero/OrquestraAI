@@ -84,12 +84,8 @@ export function ServiceCard({
             <BrandIcon presetId={presetId} size={36} />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold text-zinc-100">
-              {service.label}
-            </h3>
-            <p className="mt-0.5 truncate font-mono text-[10.5px] text-zinc-500">
-              {service.id}
-            </p>
+            <h3 className="truncate text-sm font-semibold text-zinc-100">{service.label}</h3>
+            <p className="mt-0.5 truncate font-mono text-[10.5px] text-zinc-500">{service.id}</p>
           </div>
           <StatusDot
             health={service.health}
@@ -98,20 +94,18 @@ export function ServiceCard({
           />
         </div>
 
-      <div className="mt-2 flex items-center gap-1.5">
-        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10.5px] font-medium text-zinc-300">
-          {presetLabel}
-        </span>
-        <span className="text-[10.5px] text-zinc-500">
-          {s.keysCount(service.totalKeys)} · {s.primaryShort(service.activeKeyIndex)}
-        </span>
-      </div>
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10.5px] font-medium text-zinc-300">
+            {presetLabel}
+          </span>
+          <span className="text-[10.5px] text-zinc-500">
+            {s.keysCount(service.totalKeys)} · {s.primaryShort(service.activeKeyIndex)}
+          </span>
+        </div>
 
         <div className="mt-2.5 flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/[0.06] px-2 py-1.5 text-xs">
           <Crown className="size-3.5 shrink-0 text-emerald-300" />
-          <code className="min-w-0 flex-1 truncate font-mono text-zinc-200">
-            {primaryMasked}
-          </code>
+          <code className="min-w-0 flex-1 truncate font-mono text-zinc-200">{primaryMasked}</code>
           {primaryTag !== null && primaryTag.trim() !== "" && (
             <span className="shrink-0 rounded-full border border-violet-500/40 bg-violet-500/15 px-1.5 py-px font-mono text-[10px] font-medium text-violet-200">
               {primaryTag.trim()}

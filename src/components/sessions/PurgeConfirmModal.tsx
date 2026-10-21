@@ -26,12 +26,8 @@ export function PurgeConfirmModal({
 }: PurgeConfirmModalProps) {
   const { t } = useI18n();
   const s = t.sessions;
-  const scope =
-    filter.harness != null
-      ? scopeLabel(filter.harness)
-      : s.harnessAll;
-  const age =
-    filter.olderThanDays != null ? ` · > ${filter.olderThanDays}d` : "";
+  const scope = filter.harness != null ? scopeLabel(filter.harness) : s.harnessAll;
+  const age = filter.olderThanDays != null ? ` · > ${filter.olderThanDays}d` : "";
 
   if (typeof document === "undefined") return null;
 
@@ -56,7 +52,8 @@ export function PurgeConfirmModal({
           <div>
             <h2 className="text-sm font-semibold text-zinc-100">{s.purgeModalTitle}</h2>
             <p className="font-mono text-[10.5px] text-zinc-500">
-              {scope}{age}
+              {scope}
+              {age}
             </p>
           </div>
         </div>

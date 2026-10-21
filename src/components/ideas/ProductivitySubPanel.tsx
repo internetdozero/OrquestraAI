@@ -58,10 +58,13 @@ export function ProductivitySubPanel({ projects }: ProductivitySubPanelProps) {
     ? s.pillSummary(metrics.currentStreak, velocity?.thisWeek ?? 0)
     : s.pillIdle;
 
-  const projectOptions = useMemo<DropdownOption<string>[]>(() => [
-    { id: "all", label: s.allProjects },
-    ...projects.map((name) => ({ id: name, label: name })),
-  ], [projects, s.allProjects]);
+  const projectOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { id: "all", label: s.allProjects },
+      ...projects.map((name) => ({ id: name, label: name })),
+    ],
+    [projects, s.allProjects],
+  );
 
   return (
     <section
@@ -79,7 +82,10 @@ export function ProductivitySubPanel({ projects }: ProductivitySubPanelProps) {
           {open ? s.title : collapsedSummary}
         </span>
         <ChevronDown
-          className={cn("size-3.5 shrink-0 text-zinc-500 transition-transform", open && "rotate-180")}
+          className={cn(
+            "size-3.5 shrink-0 text-zinc-500 transition-transform",
+            open && "rotate-180",
+          )}
           aria-hidden="true"
         />
       </button>

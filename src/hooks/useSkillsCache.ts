@@ -31,9 +31,7 @@ function toMessage(cause: unknown, fallback: string): string {
  */
 export function useSkillsCache(scope: string, isTauri: boolean) {
   const { t } = useI18n();
-  const [skills, setSkills] = useState<SkillItem[]>(
-    () => readSkillsCache(scope) ?? [],
-  );
+  const [skills, setSkills] = useState<SkillItem[]>(() => readSkillsCache(scope) ?? []);
   const [loading, setLoading] = useState(() => !hasSkillsCache(scope));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -118,7 +118,11 @@ export function AboutSettingsTab({
         onClick={() => void copyDiagnostics()}
         className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-medium text-zinc-200 transition hover:border-white/20"
       >
-        {copiedDiag ? <Check className="size-3.5 text-emerald-400" /> : <ClipboardCopy className="size-3.5 text-emerald-400" />}
+        {copiedDiag ? (
+          <Check className="size-3.5 text-emerald-400" />
+        ) : (
+          <ClipboardCopy className="size-3.5 text-emerald-400" />
+        )}
         {a.copyDiag}
       </button>
 

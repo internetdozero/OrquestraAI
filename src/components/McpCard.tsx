@@ -1,18 +1,7 @@
 import { useState } from "react";
-import {
-  CircleSlash,
-  Info,
-  Plug,
-  Power,
-  Trash2,
-} from "lucide-react";
+import { CircleSlash, Info, Plug, Power, Trash2 } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
-import {
-  coversHarness,
-  executionKind,
-  isLockedByGlobal,
-  type McpServer,
-} from "../lib/mcps";
+import { coversHarness, executionKind, isLockedByGlobal, type McpServer } from "../lib/mcps";
 import { listingTokens, mcpCatalogTokens } from "../lib/tokens";
 import { cn } from "../lib/utils";
 import { OfficialBadge } from "./OfficialBadge";
@@ -175,9 +164,7 @@ export function McpCard({
               </span>
             )}
             {anyActive && !active && (
-              <span className="font-mono text-[9.5px] text-zinc-600">
-                {t.mcps.onElsewhere}
-              </span>
+              <span className="font-mono text-[9.5px] text-zinc-600">{t.mcps.onElsewhere}</span>
             )}
           </div>
         </div>
@@ -192,9 +179,7 @@ export function McpCard({
       </div>
 
       <p className="line-clamp-2 min-h-[2.1rem] text-[12.5px] leading-relaxed text-zinc-400">
-        {server.description || (
-          <span className="text-zinc-600 italic">{t.mcps.noDescription}</span>
-        )}
+        {server.description || <span className="text-zinc-600 italic">{t.mcps.noDescription}</span>}
       </p>
 
       <TokenPair

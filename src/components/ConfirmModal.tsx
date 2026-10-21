@@ -76,7 +76,9 @@ export function ConfirmModal({
       aria-modal="true"
       aria-label={title}
       className="fixed inset-0 z-[120] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
-      onClick={() => { if (!busy) onCancel(); }}
+      onClick={() => {
+        if (!busy) onCancel();
+      }}
     >
       <div
         className="w-full max-w-md rounded-2xl border border-white/10 bg-[#101014] p-5 shadow-2xl"
@@ -89,9 +91,7 @@ export function ConfirmModal({
           <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
         </div>
 
-        <div className="mt-4 text-[12.5px] leading-relaxed text-zinc-300">
-          {message}
-        </div>
+        <div className="mt-4 text-[12.5px] leading-relaxed text-zinc-300">{message}</div>
 
         <div className="mt-5 flex justify-end gap-2">
           <button

@@ -34,12 +34,7 @@ interface UsePresetsOptions {
  * command fails, so the bar feels instant while the Rust side rewrites
  * projections and harness configs.
  */
-export function usePresets({
-  isTauri,
-  onToast,
-  onError,
-  onApplied,
-}: UsePresetsOptions) {
+export function usePresets({ isTauri, onToast, onError, onApplied }: UsePresetsOptions) {
   const { t } = useI18n();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +65,7 @@ export function usePresets({
       if (busyId) return;
 
       setBusyId(preset.id);
-      setPresets((current) =>
-        current.map((item) => ({ ...item, active: item.id === preset.id })),
-      );
+      setPresets((current) => current.map((item) => ({ ...item, active: item.id === preset.id })));
 
       try {
         const report = await applyPreset(preset.id);
@@ -81,9 +74,7 @@ export function usePresets({
         dropSkillsCache();
         await refreshMcpCatalog().catch(() => undefined);
         const shown = presentPreset(t, preset);
-        onToast(
-          t.presets.applied(shown.name, report.skillsEnabled, report.mcpsEnabled),
-        );
+        onToast(t.presets.applied(shown.name, report.skillsEnabled, report.mcpsEnabled));
         if (report.warnings.length > 0) {
           onError(report.warnings.map((warning) => localizePresetWarning(t, warning)).join("; "));
         }
@@ -151,9 +142,7 @@ export function usePresets({
     async (presetToUpdate: Preset): Promise<boolean> => {
       try {
         const updated = await updatePreset(presetToUpdate);
-        setPresets((current) =>
-          current.map((item) => (item.id === updated.id ? updated : item)),
-        );
+        setPresets((current) => current.map((item) => (item.id === updated.id ? updated : item)));
         onToast(t.presets.updateSuccess(presentPreset(t, updated).name));
         return true;
       } catch (cause) {
@@ -173,9 +162,7 @@ export function usePresets({
     async (id: string): Promise<boolean> => {
       try {
         const restored = await resetPreset(id);
-        setPresets((current) =>
-          current.map((item) => (item.id === restored.id ? restored : item)),
-        );
+        setPresets((current) => current.map((item) => (item.id === restored.id ? restored : item)));
         onToast(t.presets.resetSuccess(presentPreset(t, restored).name));
         return true;
       } catch (cause) {

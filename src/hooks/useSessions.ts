@@ -70,14 +70,14 @@ export function useSessions(options: {
   // IPC entry point has a matching in-memory implementation in `lib/fixtures`.
   const [fixtureMode] = useState(fixturesEnabled);
   const enabled = isTauri || fixtureMode;
-  const [sessions, setSessions] = useState<UnifiedSession[]>(() => cachedSessions ?? peekWarmedSessions() ?? []);
+  const [sessions, setSessions] = useState<UnifiedSession[]>(
+    () => cachedSessions ?? peekWarmedSessions() ?? [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<SessionFilterState>(INITIAL_FILTER);
   const [policy, setPolicy] = useState<RetentionPolicy | null>(null);
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [purgeFilter, setPurgeFilter] = useState<PurgeFilter | null>(null);
   const [estimate, setEstimate] = useState<PurgeEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
@@ -92,17 +92,12 @@ export function useSessions(options: {
     if (cold) setLoading(true);
     setError(null);
     try {
-      const [list, retention] = await Promise.all([
-        getUnifiedSessions(),
-        getRetentionPolicy(),
-      ]);
+      const [list, retention] = await Promise.all([getUnifiedSessions(), getRetentionPolicy()]);
       cachedSessions = list;
       setSessions(list);
       setPolicy(retention);
     } catch (cause) {
-      const message = t.sessions.loadFailed(
-        toMessage(cause, t.common.unexpected),
-      );
+      const message = t.sessions.loadFailed(toMessage(cause, t.common.unexpected));
       setError(message);
       onError(message);
     } finally {
@@ -225,9 +220,7 @@ export function useSessions(options: {
   const deleteSingleSession = useCallback(
     async (harness: string, sessionId: string) => {
       if (!enabled) return;
-      const before = sessions.find(
-        (s) => s.harness === harness && s.id === sessionId,
-      );
+      const before = sessions.find((s) => s.harness === harness && s.id === sessionId);
       try {
         const report = await purgeSessions({
           harness,

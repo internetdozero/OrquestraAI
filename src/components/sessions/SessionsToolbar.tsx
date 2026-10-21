@@ -17,18 +17,28 @@ export function SessionsToolbar({ filter, onChange, visibleCount }: SessionsTool
   const { t } = useI18n();
   const s = t.sessions;
   const sortLabel =
-    filter.sort === "newest" ? s.sortNewest : filter.sort === "oldest" ? s.sortOldest : s.sortLargest;
+    filter.sort === "newest"
+      ? s.sortNewest
+      : filter.sort === "oldest"
+        ? s.sortOldest
+        : s.sortLargest;
 
-  const harnessOptions = useMemo<DropdownOption<string>[]>(() => [
-    { id: "all", label: s.harnessAll },
-    ...HARNESSES.map((h) => ({ id: h.id, label: h.label })),
-  ], [s.harnessAll]);
+  const harnessOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { id: "all", label: s.harnessAll },
+      ...HARNESSES.map((h) => ({ id: h.id, label: h.label })),
+    ],
+    [s.harnessAll],
+  );
 
-  const sortOptions = useMemo<DropdownOption<SessionSort>[]>(() => [
-    { id: "newest", label: s.sortNewest },
-    { id: "oldest", label: s.sortOldest },
-    { id: "largest", label: s.sortLargest },
-  ], [s.sortNewest, s.sortOldest, s.sortLargest]);
+  const sortOptions = useMemo<DropdownOption<SessionSort>[]>(
+    () => [
+      { id: "newest", label: s.sortNewest },
+      { id: "oldest", label: s.sortOldest },
+      { id: "largest", label: s.sortLargest },
+    ],
+    [s.sortNewest, s.sortOldest, s.sortLargest],
+  );
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 p-3">
@@ -62,7 +72,9 @@ export function SessionsToolbar({ filter, onChange, visibleCount }: SessionsTool
             title={s.sortLabel}
             icon={ArrowDownWideNarrow}
           />
-          <span className="font-mono text-[10.5px] text-zinc-500">{visibleCount} · {sortLabel}</span>
+          <span className="font-mono text-[10.5px] text-zinc-500">
+            {visibleCount} · {sortLabel}
+          </span>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">

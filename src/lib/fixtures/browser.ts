@@ -33,11 +33,7 @@ export function fixtureListMcpTargets(): McpTarget[] {
 }
 
 /** `harnessId` null edits the universal baseline, mirroring the core. */
-export function fixtureSetMcpState(
-  id: string,
-  harnessId: string | null,
-  enabled: boolean,
-): void {
+export function fixtureSetMcpState(id: string, harnessId: string | null, enabled: boolean): void {
   const server = mcpServers.find((entry) => entry.id === id);
   if (!server) return;
   if (harnessId === null || harnessId === "global") {
@@ -49,10 +45,7 @@ export function fixtureSetMcpState(
     : server.enabledHarnesses.filter((entry) => entry !== harnessId);
 }
 
-export function fixtureBatchSetMcpAll(
-  harnessId: string | null,
-  enabled: boolean,
-): void {
+export function fixtureBatchSetMcpAll(harnessId: string | null, enabled: boolean): void {
   for (const server of mcpServers) {
     if (harnessId === null || harnessId === "global") {
       server.globalEnabled = enabled;
@@ -120,7 +113,15 @@ export function fixtureProductivity(
     return {
       date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
       ideasCompleted,
-      intensity: (ideasCompleted === 0 ? 0 : ideasCompleted === 1 ? 1 : ideasCompleted === 2 ? 2 : ideasCompleted === 3 ? 3 : 4) as 0 | 1 | 2 | 3 | 4,
+      intensity: (ideasCompleted === 0
+        ? 0
+        : ideasCompleted === 1
+          ? 1
+          : ideasCompleted === 2
+            ? 2
+            : ideasCompleted === 3
+              ? 3
+              : 4) as 0 | 1 | 2 | 3 | 4,
     };
   });
   let cursor = dailyActivity.length;
@@ -134,9 +135,7 @@ export function fixtureProductivity(
     cursor -= 1;
   }
   const week = dailyActivity.slice(-7).reduce((sum, day) => sum + day.ideasCompleted, 0);
-  const previous = dailyActivity
-    .slice(-14, -7)
-    .reduce((sum, day) => sum + day.ideasCompleted, 0);
+  const previous = dailyActivity.slice(-14, -7).reduce((sum, day) => sum + day.ideasCompleted, 0);
   const deliveries = dailyActivity.reduce((sum, day) => sum + day.ideasCompleted, 0);
   return {
     dailyActivity,
@@ -181,4 +180,3 @@ export function fixtureSkills(count = 420): SkillItem[] {
     };
   });
 }
-

@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   DEFAULT_ROW_HEIGHT,
   mergeRowHeight,
@@ -20,7 +14,6 @@ export const VIRTUALIZE_AFTER = 60;
 /** Marks the spacer children so they are never measured as cards. */
 const SPACER_ATTR = "data-virtual-slot";
 
-
 const EMPTY_WINDOW: GridWindow = {
   start: 0,
   end: 0,
@@ -32,10 +25,7 @@ const EMPTY_WINDOW: GridWindow = {
 function readColumns(grid: HTMLElement): number {
   const tracks = getComputedStyle(grid).gridTemplateColumns;
   if (!tracks || tracks === "none") return 1;
-  return Math.max(
-    1,
-    tracks.split(" ").filter((track) => track.trim() !== "").length,
-  );
+  return Math.max(1, tracks.split(" ").filter((track) => track.trim() !== "").length);
 }
 
 /** Nearest ancestor that actually scrolls vertically. */
@@ -140,9 +130,7 @@ export function useVirtualRows({
     const gridRect = grid.getBoundingClientRect();
     const viewTop = Math.max(
       0,
-      parent
-        ? parent.getBoundingClientRect().top - gridRect.top
-        : -gridRect.top,
+      parent ? parent.getBoundingClientRect().top - gridRect.top : -gridRect.top,
     );
     const viewHeight = parent ? parent.clientHeight : window.innerHeight;
 
@@ -184,16 +172,18 @@ export function useVirtualRows({
         continue;
       }
       const rowIndex = startRow + Math.floor(cardIndex / measuredColumns);
-      rowMaxHeights.set(
-        rowIndex,
-        mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight),
-      );
+      rowMaxHeights.set(rowIndex, mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight));
       cardIndex += 1;
     }
     for (const [rowIndex, maxHeight] of rowMaxHeights) {
       if (maxHeight > 0) heightsRef.current.set(rowIndex, maxHeight);
     }
-  });
+    // Runs on every input that can move or resize rows: the scrolled window,
+    // the measured column count, the virtualization switch, and the update
+    // callback itself (whose identity tracks the remaining inputs). Scroll
+    // and resize frames re-invoke update() through updateRef, which
+    // re-measures, so no commit passes unmeasured.
+  }, [update, win, columns, virtual]);
 
   // Initial calculation on mount and whenever column count stabilizes.
   useEffect(() => {
@@ -254,9 +244,7 @@ export function useVirtualRows({
       }
 
       const gridTopInContent =
-        grid.getBoundingClientRect().top -
-        parent.getBoundingClientRect().top +
-        parent.scrollTop;
+        grid.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.scrollTop;
       parent.scrollTo({
         top: Math.max(0, gridTopInContent + offset - 16),
         behavior: "smooth",

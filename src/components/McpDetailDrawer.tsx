@@ -88,12 +88,7 @@ function EnvRow({
  * Sliding inspector for one catalog entry: the exact command, arguments,
  * environment and the scopes it is projected into.
  */
-export function McpDetailDrawer({
-  server,
-  scopeLabel,
-  onClose,
-  onEdit,
-}: McpDetailDrawerProps) {
+export function McpDetailDrawer({ server, scopeLabel, onClose, onEdit }: McpDetailDrawerProps) {
   const { t } = useI18n();
   const envKeys = Object.keys(server.env).sort();
   const args = server.args;
@@ -166,14 +161,11 @@ export function McpDetailDrawer({
 
           <section>
             <p className="text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase">
-              {t.mcps.environment}{" "}
-              <span className="text-zinc-700">· {envKeys.length}</span>
+              {t.mcps.environment} <span className="text-zinc-700">· {envKeys.length}</span>
             </p>
             <div className="mt-1 rounded border border-white/[0.06] bg-black/30 px-2.5 py-1">
               {envKeys.length === 0 ? (
-                <p className="py-1 text-[10.5px] text-zinc-600">
-                  {t.mcps.noneDeclared}
-                </p>
+                <p className="py-1 text-[10.5px] text-zinc-600">{t.mcps.noneDeclared}</p>
               ) : (
                 envKeys.map((key) => (
                   <EnvRow id={server.id} key={key} name={key} value={server.env[key]} />
@@ -199,9 +191,11 @@ export function McpDetailDrawer({
                 {t.mcps.headers}
               </p>
               <div className="mt-1 rounded border border-white/[0.06] bg-black/30 px-2.5 py-1">
-                {Object.entries(server.headers ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => (
-                  <EnvRow id={server.id} key={key} name={key} value={value} />
-                ))}
+                {Object.entries(server.headers ?? {})
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([key, value]) => (
+                    <EnvRow id={server.id} key={key} name={key} value={value} />
+                  ))}
               </div>
             </section>
           )}
@@ -214,10 +208,7 @@ export function McpDetailDrawer({
               className="flex items-center gap-1.5 rounded text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase transition hover:text-zinc-400 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
             >
               <ChevronDown
-                className={cn(
-                  "size-3 transition-transform duration-200",
-                  expanded && "rotate-180",
-                )}
+                className={cn("size-3 transition-transform duration-200", expanded && "rotate-180")}
               />
               {t.mcps.arguments} <span className="text-zinc-700">· {args.length}</span>
             </button>
@@ -227,9 +218,7 @@ export function McpDetailDrawer({
                   <p className="text-[10.5px] text-zinc-600">{t.mcps.noneDeclared}</p>
                 ) : (
                   args.map((arg, index) => (
-                    <div
-                      key={`${index}-${arg}`}
-                    >
+                    <div key={`${index}-${arg}`}>
                       <EnvRow
                         id={server.id}
                         name={`arg ${String(index).padStart(2, "0")}`}
@@ -262,24 +251,18 @@ export function McpDetailDrawer({
                 </span>
               ))}
               {!anyActive && (
-                <span className="font-mono text-[9.5px] text-zinc-600">
-                  {t.mcps.nowhereYet}
-                </span>
+                <span className="font-mono text-[9.5px] text-zinc-600">{t.mcps.nowhereYet}</span>
               )}
             </div>
           </section>
 
           {server.description && (
-            <p className="text-[12px] leading-relaxed text-zinc-400">
-              {server.description}
-            </p>
+            <p className="text-[12px] leading-relaxed text-zinc-400">{server.description}</p>
           )}
         </div>
 
         <footer className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3">
-          <span className="font-mono text-[10px] text-zinc-600">
-            {server.id}
-          </span>
+          <span className="font-mono text-[10px] text-zinc-600">{server.id}</span>
           <button
             type="button"
             onClick={() => onEdit(server)}

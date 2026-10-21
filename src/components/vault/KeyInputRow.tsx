@@ -52,9 +52,7 @@ export function KeyInputRow({
           <Crown className="size-3" /> {s.primaryAction}
         </span>
       ) : (
-        <span className="shrink-0 font-mono text-[10px] text-zinc-500">
-          {s.backupIndex(index)}
-        </span>
+        <span className="shrink-0 font-mono text-[10px] text-zinc-500">{s.backupIndex(index)}</span>
       )}
       <input
         type={revealed ? "text" : "password"}

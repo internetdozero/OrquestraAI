@@ -59,12 +59,7 @@ export function ScopeTabs({
             )}
           >
             {Icon && (
-              <Icon
-                className={cn(
-                  "size-3 shrink-0",
-                  active ? "accent-text" : "text-zinc-600",
-                )}
-              />
+              <Icon className={cn("size-3 shrink-0", active ? "accent-text" : "text-zinc-600")} />
             )}
             <span className="whitespace-nowrap">{tab.label}</span>
             {tab.badge}

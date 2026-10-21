@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       create_release:
-        description: 'Publish as a GitHub Release?'
+        description: "Publish as a GitHub Release?"
         required: false
         type: boolean
         default: false
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -67,7 +67,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install Node dependencies
         run: npm ci

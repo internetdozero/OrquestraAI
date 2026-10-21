@@ -1,13 +1,5 @@
 import { useEffect } from "react";
-import {
-  Activity,
-  AlertTriangle,
-  Cpu,
-  Loader2,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Activity, AlertTriangle, Cpu, Loader2, RefreshCw, Trash2, X } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import type { SystemHealth } from "../lib/janitor";
 import { cn } from "../lib/utils";
@@ -56,7 +48,10 @@ function Gauge({
         className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.07]"
       >
         <div
-          className={cn("h-full rounded-full transition-[width]", elevated ? "bg-amber-400" : "bg-gradient-to-r from-emerald-500 to-cyan-400")}
+          className={cn(
+            "h-full rounded-full transition-[width]",
+            elevated ? "bg-amber-400" : "bg-gradient-to-r from-emerald-500 to-cyan-400",
+          )}
           style={{ width: `${value}%` }}
         />
       </div>
@@ -137,16 +132,37 @@ export function JanitorModal({
           {health ? (
             <>
               {health.alert && (
-                <div role="status" className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2 text-[11px] font-medium text-amber-200">
+                <div
+                  role="status"
+                  className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2 text-[11px] font-medium text-amber-200"
+                >
                   <AlertTriangle className="size-3.5 shrink-0 text-amber-400" />
                   {t.janitor.alert}
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                <Gauge label={t.janitor.ram} used={health.ram.usedMb} total={health.ram.totalMb} percent={health.ram.usedPercent} warning={ramWarning} />
-                <Gauge label={t.janitor.tmp} used={health.tmp.usedMb} total={health.tmp.totalMb} percent={health.tmp.usedPercent} warning={80} />
-                <Gauge label={t.janitor.swap} used={health.swap.usedMb} total={health.swap.totalMb} percent={health.swap.usedPercent} warning={Number.POSITIVE_INFINITY} />
+                <Gauge
+                  label={t.janitor.ram}
+                  used={health.ram.usedMb}
+                  total={health.ram.totalMb}
+                  percent={health.ram.usedPercent}
+                  warning={ramWarning}
+                />
+                <Gauge
+                  label={t.janitor.tmp}
+                  used={health.tmp.usedMb}
+                  total={health.tmp.totalMb}
+                  percent={health.tmp.usedPercent}
+                  warning={80}
+                />
+                <Gauge
+                  label={t.janitor.swap}
+                  used={health.swap.usedMb}
+                  total={health.swap.totalMb}
+                  percent={health.swap.usedPercent}
+                  warning={Number.POSITIVE_INFINITY}
+                />
                 <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5">
                   <Cpu className="size-4 text-cyan-300" />
                   <div>
@@ -160,27 +176,41 @@ export function JanitorModal({
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">{t.janitor.topProcesses}</h3>
-                  <span className="text-[10px] text-zinc-600">{t.janitor.tmpPath(health.tmp.path, health.tmp.isTmpfs)}</span>
+                  <h3 className="text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
+                    {t.janitor.topProcesses}
+                  </h3>
+                  <span className="text-[10px] text-zinc-600">
+                    {t.janitor.tmpPath(health.tmp.path, health.tmp.isTmpfs)}
+                  </span>
                 </div>
                 {health.topProcesses.length > 0 ? (
                   <ul className="divide-y divide-white/[0.05] rounded-lg border border-white/[0.06] bg-white/[0.015] px-3">
                     {health.topProcesses.map((process) => (
                       <li key={process.pid} className="flex items-center gap-3 py-2 text-[11px]">
                         <span className="w-12 shrink-0 font-mono text-zinc-600">{process.pid}</span>
-                        <span className="min-w-0 flex-1 truncate text-zinc-300">{process.name}</span>
-                        <span className="font-mono text-zinc-500">{process.rssMb} {t.janitor.mb}</span>
+                        <span className="min-w-0 flex-1 truncate text-zinc-300">
+                          {process.name}
+                        </span>
+                        <span className="font-mono text-zinc-500">
+                          {process.rssMb} {t.janitor.mb}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="rounded-lg border border-white/[0.06] px-3 py-4 text-center text-[11px] text-zinc-500">{t.janitor.noProcesses}</p>
+                  <p className="rounded-lg border border-white/[0.06] px-3 py-4 text-center text-[11px] text-zinc-500">
+                    {t.janitor.noProcesses}
+                  </p>
                 )}
               </div>
             </>
           ) : (
             <div className="flex min-h-44 items-center justify-center gap-2 text-[11px] text-zinc-500">
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <AlertTriangle className="size-4" />}
+              {loading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <AlertTriangle className="size-4" />
+              )}
               {loading ? t.janitor.loading : t.janitor.unavailable}
             </div>
           )}
@@ -194,7 +224,11 @@ export function JanitorModal({
             disabled={sweeping || !health}
             className="flex shrink-0 items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-[11px] font-semibold text-emerald-200 transition hover:border-emerald-400/50 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {sweeping ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+            {sweeping ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
             {sweeping ? t.janitor.sweeping : t.janitor.sweep}
           </button>
         </footer>

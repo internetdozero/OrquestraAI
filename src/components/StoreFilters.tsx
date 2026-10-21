@@ -46,9 +46,7 @@ export function StoreFilters({
       {tierChip("all", labels.all)}
       {tierChip("official", labels.official)}
       {tierChip("community", labels.community)}
-      {categories.length > 0 && (
-        <span className="mx-1 h-4 w-px bg-white/10" aria-hidden="true" />
-      )}
+      {categories.length > 0 && <span className="mx-1 h-4 w-px bg-white/10" aria-hidden="true" />}
       {categories.map((entry) => (
         <button
           key={entry}

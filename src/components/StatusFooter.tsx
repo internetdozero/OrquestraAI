@@ -27,15 +27,12 @@ export function StatusFooter({
   ramAlertThreshold,
   onOpenJanitor,
 }: StatusFooterProps) {
-  const ramElevated =
-    janitorHealth != null && janitorHealth.ram.usedPercent > ramAlertThreshold;
+  const ramElevated = janitorHealth != null && janitorHealth.ram.usedPercent > ramAlertThreshold;
   const janitorAlert = janitorHealth?.alert === true || ramElevated;
   const { t } = useI18n();
   const online = isTauri && status !== null;
 
-  const managed = bridgeStatuses.filter(
-    (harness) => harness.installed && harness.supported,
-  );
+  const managed = bridgeStatuses.filter((harness) => harness.installed && harness.supported);
   const bridged = managed.filter((harness) => harness.bridged).length;
   const pending = managed.length - bridged;
   const connected = isTauri && managed.length > 0 && pending === 0;
@@ -50,11 +47,7 @@ export function StatusFooter({
           ? t.footer.notConnected
           : t.footer.linkedOf(bridged, managed.length);
 
-  const tone = !isTauri || bridgeStatuses.length === 0
-    ? "zinc"
-    : connected
-      ? "emerald"
-      : "amber";
+  const tone = !isTauri || bridgeStatuses.length === 0 ? "zinc" : connected ? "emerald" : "amber";
 
   return (
     <footer className="relative z-20 shrink-0 border-t border-white/5 bg-[#0b0b0e]/85 px-4 py-2.5 backdrop-blur-xl sm:px-6">
@@ -138,11 +131,7 @@ export function StatusFooter({
                 "border-white/[0.07] bg-white/[0.03] text-zinc-400 disabled:cursor-default",
             )}
           >
-            {tone === "amber" ? (
-              <AlertTriangle className="size-3" />
-            ) : (
-              <Link2 className="size-3" />
-            )}
+            {tone === "amber" ? <AlertTriangle className="size-3" /> : <Link2 className="size-3" />}
             {t.footer.harnessBridge}
             <span className="text-zinc-700">·</span>
             <span className="font-mono text-[10.5px]">{bridgeLabel}</span>

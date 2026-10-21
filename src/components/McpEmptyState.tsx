@@ -21,9 +21,7 @@ export function McpEmptyState({
         <Wrench className="size-4 text-zinc-500" />
       </div>
       <p className="text-sm font-semibold text-zinc-200">{t.mcps.emptyTitle}</p>
-      <p className="max-w-sm text-[12px] leading-relaxed text-zinc-500">
-        {t.mcps.emptyBody}
-      </p>
+      <p className="max-w-sm text-[12px] leading-relaxed text-zinc-500">{t.mcps.emptyBody}</p>
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"

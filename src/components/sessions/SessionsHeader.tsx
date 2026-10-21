@@ -51,12 +51,7 @@ export function SessionsHeader({
           icon={Database}
           accent
         />
-        <StatTile
-          label={s.pinned}
-          value={`${pinned}`}
-          hint={s.pinnedHint}
-          icon={Pin}
-        />
+        <StatTile label={s.pinned} value={`${pinned}`} hint={s.pinnedHint} icon={Pin} />
         <StatTile
           label={s.autoPurgeHint}
           value={autoEnabled ? s.autoPurgeActive(intervalHours) : s.autoPurgeDisabled}

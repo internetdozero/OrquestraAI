@@ -81,10 +81,7 @@ export function useAppSettings() {
     [],
   );
 
-  const setLanguage = useCallback(
-    (next: Locale) => setLocale(next),
-    [setLocale],
-  );
+  const setLanguage = useCallback((next: Locale) => setLocale(next), [setLocale]);
 
   const setAutoCheckAppUpdates = useCallback((enabled: boolean) => {
     setSettings((prev) => ({ ...prev, autoCheckAppUpdates: enabled }));

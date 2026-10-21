@@ -211,7 +211,11 @@ export function TranscriptFeed({
             }}
             className="grid size-7.5 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
           >
-            {copiedAll ? <Check className="size-3.5 text-emerald-300" /> : <Copy className="size-3.5" />}
+            {copiedAll ? (
+              <Check className="size-3.5 text-emerald-300" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
           </button>
           <button
             type="button"

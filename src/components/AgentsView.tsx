@@ -16,13 +16,7 @@ interface AgentsViewProps {
 }
 
 /** Route for the master `~/.orquestra/AGENTS.md`, loaded and saved over IPC. */
-export function AgentsView({
-  isTauri,
-  error,
-  onToast,
-  onError,
-  onClear,
-}: AgentsViewProps) {
+export function AgentsView({ isTauri, error, onToast, onError, onClear }: AgentsViewProps) {
   const { t } = useI18n();
   const agents = useAgentsFile({ isTauri, onToast, onError, onClear });
   const { load } = agents;

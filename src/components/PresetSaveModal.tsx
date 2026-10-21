@@ -54,12 +54,8 @@ export function PresetSaveModal({ saving, onClose, onSave }: PresetSaveModalProp
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-100">
-              {t.presets.saveHeading}
-            </h2>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
-              {t.presets.saveBody}
-            </p>
+            <h2 className="text-sm font-semibold text-zinc-100">{t.presets.saveHeading}</h2>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">{t.presets.saveBody}</p>
           </div>
           <button
             type="button"
@@ -87,8 +83,7 @@ export function PresetSaveModal({ saving, onClose, onSave }: PresetSaveModalProp
 
         <label className="mt-3 block">
           <span className="text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase">
-            {t.presets.descriptionLabel}{" "}
-            <span className="text-zinc-700">{t.presets.optional}</span>
+            {t.presets.descriptionLabel} <span className="text-zinc-700">{t.presets.optional}</span>
           </span>
           <input
             value={description}
@@ -112,11 +107,7 @@ export function PresetSaveModal({ saving, onClose, onSave }: PresetSaveModalProp
             disabled={saving || name.trim().length === 0}
             className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-[11.5px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Save className="size-3.5" />
-            )}
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
             {t.presets.saveAction}
           </button>
         </div>

@@ -41,10 +41,7 @@ export function rowsFor(itemCount: number, columns: number): number {
  * the max of its cards — never the last card measured. Non-positive reads
  * (hidden or unlaid-out cards) leave the remembered value untouched.
  */
-export function mergeRowHeight(
-  current: number | undefined,
-  height: number,
-): number {
+export function mergeRowHeight(current: number | undefined, height: number): number {
   if (!(height > 0)) return current ?? 0;
   return Math.max(current ?? 0, height);
 }

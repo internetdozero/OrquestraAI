@@ -35,12 +35,7 @@ export function StatTile({
         <span className="truncate text-[10.5px] font-medium tracking-wider text-zinc-500 uppercase">
           {label}
         </span>
-        <Icon
-          className={cn(
-            "size-3.5 shrink-0",
-            accent ? "accent-text" : "text-zinc-600",
-          )}
-        />
+        <Icon className={cn("size-3.5 shrink-0", accent ? "accent-text" : "text-zinc-600")} />
       </div>
       <div className="mt-1.5 font-mono text-xl font-semibold tracking-tight text-zinc-100">
         {value}
@@ -69,9 +64,7 @@ export function StatePanel({
       </div>
       <div className="max-w-md">
         <p className="text-sm font-medium text-zinc-300">{title}</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-          {description}
-        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">{description}</p>
       </div>
       {children}
     </div>
@@ -79,13 +72,7 @@ export function StatePanel({
 }
 
 /** Dismissible inline error banner. */
-export function ErrorBanner({
-  message,
-  onDismiss,
-}: {
-  message: string;
-  onDismiss: () => void;
-}) {
+export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   const { t } = useI18n();
 
   return (

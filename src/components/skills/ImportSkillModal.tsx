@@ -203,9 +203,7 @@ export function ImportSkillModal({ isTauri, onClose, onImported, onError }: Impo
             </button>
           </section>
 
-          {!isTauri && (
-            <p className="text-[11px] leading-relaxed text-zinc-500">{s.unavailable}</p>
-          )}
+          {!isTauri && <p className="text-[11px] leading-relaxed text-zinc-500">{s.unavailable}</p>}
         </div>
       </div>
     </div>

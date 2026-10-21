@@ -42,10 +42,7 @@ test("priority follows low < medium < high < critical", () => {
     assert.equal(sign(compareIdeas("priority", lower, higher)), -1);
     assert.equal(sign(compareIdeas("priority", higher, lower)), 1);
   }
-  assert.equal(
-    compareIdeas("priority", idea({ priority: "high" }), idea({ priority: "high" })),
-    0,
-  );
+  assert.equal(compareIdeas("priority", idea({ priority: "high" }), idea({ priority: "high" })), 0);
 });
 
 test("unknown priorities sink below low", () => {
@@ -71,6 +68,12 @@ test("sort with a negated comparator yields the exact reverse rank", () => {
   ];
   const asc = [...rows].sort((a, b) => compareIdeas("title", a, b));
   const desc = [...rows].sort((a, b) => -compareIdeas("title", a, b));
-  assert.deepEqual(asc.map((row) => row.id), [2, 3, 1]);
-  assert.deepEqual(desc.map((row) => row.id), [1, 3, 2]);
+  assert.deepEqual(
+    asc.map((row) => row.id),
+    [2, 3, 1],
+  );
+  assert.deepEqual(
+    desc.map((row) => row.id),
+    [1, 3, 2],
+  );
 });

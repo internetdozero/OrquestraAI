@@ -32,19 +32,10 @@ export function McpScopeSelector({
         : `${target.configPath} — ${t.common.notInstalled}`,
       dimmed: !target.installed,
       badge: !target.installed ? (
-        <span className="font-mono text-[9px] text-zinc-700">
-          {t.common.notInstalled}
-        </span>
+        <span className="font-mono text-[9px] text-zinc-700">{t.common.notInstalled}</span>
       ) : undefined,
     })),
   ];
 
-  return (
-    <ScopeTabs
-      label={t.skills.scopeLabel}
-      scope={scope}
-      tabs={tabs}
-      onSelect={onSelect}
-    />
-  );
+  return <ScopeTabs label={t.skills.scopeLabel} scope={scope} tabs={tabs} onSelect={onSelect} />;
 }

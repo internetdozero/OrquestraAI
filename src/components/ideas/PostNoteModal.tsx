@@ -7,8 +7,7 @@ import { confirmOnEnter } from "../../lib/utils";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-white/10 bg-zinc-900/60 px-2.5 text-[12px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-amber-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-amber-500/10";
-const labelClass =
-  "mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase";
+const labelClass = "mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase";
 
 interface PostNoteModalProps {
   projects: string[];

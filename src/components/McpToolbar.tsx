@@ -91,11 +91,7 @@ export function McpToolbar({
         onClick={() => onApplyAll(false)}
         disabled={!canBatch}
         className={actionButtonClass}
-        title={
-          isGlobal
-            ? t.mcps.disableAllGlobal
-            : t.mcps.disableAllHarness(scopeLabel)
-        }
+        title={isGlobal ? t.mcps.disableAllGlobal : t.mcps.disableAllHarness(scopeLabel)}
       >
         {batchPending ? (
           <Loader2 className="mr-1 inline size-3 animate-spin" />

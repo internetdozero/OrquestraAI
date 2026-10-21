@@ -24,8 +24,7 @@ export const common = {
   edit: "Editar",
   notInstalled: "não instalado",
   loadingResources: "Carregando recursos...",
-  loadingResourcesHint:
-    "O essencial entra agora. O restante carrega em segundo plano.",
+  loadingResourcesHint: "O essencial entra agora. O restante carrega em segundo plano.",
 };
 
 export const scopes = {
@@ -34,8 +33,7 @@ export const scopes = {
 
 export const sidebar = {
   workspace: "Espaço de trabalho",
-  counts: (skills: number, harnesses: number) =>
-    `${skills} skills · ${harnesses} harnesses`,
+  counts: (skills: number, harnesses: number) => `${skills} skills · ${harnesses} harnesses`,
   views: {
     skills: {
       label: "Skills",
@@ -78,11 +76,9 @@ export const footer = {
   core: "Núcleo",
   browserPreview: "Prévia no navegador",
   checking: "Verificando…",
-  connectedAll: (count: number) =>
-    `Conectado (todos os ${count} harnesses vinculados)`,
+  connectedAll: (count: number) => `Conectado (todos os ${count} harnesses vinculados)`,
   notConnected: "Não conectado",
-  linkedOf: (bridged: number, total: number) =>
-    `${bridged} de ${total} vinculados`,
+  linkedOf: (bridged: number, total: number) => `${bridged} de ${total} vinculados`,
   connectBridge: "Conectar ponte de harnesses",
   linking: "Vinculando…",
   harnessBridge: "Ponte de harnesses",
@@ -101,17 +97,14 @@ export const agents = {
   charCount: (count: number) => `${count} caracteres`,
   editorAria: "Editor do AGENTS.md",
   loadingPlaceholder: "Carregando instruções mestras…",
-  emptyPlaceholder:
-    "Escreva as instruções que cada harness vinculado deve seguir…",
+  emptyPlaceholder: "Escreva as instruções que cada harness vinculado deve seguir…",
   reading: "Lendo instruções mestras…",
   linkedHarnesses: "Harnesses vinculados",
   masterFile: "arquivo mestre",
   unavailableBody:
     "O AGENTS.md mestre é servido pelo núcleo em Rust. Execute o app com npm run tauri dev para editar e salvar.",
-  loadFailed: (detail: string) =>
-    `Não foi possível carregar o AGENTS.md: ${detail}`,
-  saveFailed: (detail: string) =>
-    `Não foi possível salvar o AGENTS.md: ${detail}`,
+  loadFailed: (detail: string) => `Não foi possível carregar o AGENTS.md: ${detail}`,
+  saveFailed: (detail: string) => `Não foi possível salvar o AGENTS.md: ${detail}`,
   savedToast: "AGENTS.md salvo em ~/.orquestra/AGENTS.md",
 };
 
@@ -120,16 +113,14 @@ export const store = {
   libraryTab: "Biblioteca",
   storeTab: "Loja oficial",
   title: "Loja oficial",
-  subtitle:
-    "Skills e servidores MCP mantidos pelo OrquestraAI, com instalação em um clique.",
+  subtitle: "Skills e servidores MCP mantidos pelo OrquestraAI, com instalação em um clique.",
   install: "Instalar",
   enable: "Ativar",
   add: "Adicionar",
   installed: "Instalado",
   unpublished: "Sem repositório publicado ainda",
   loading: "Carregando loja oficial…",
-  loadFailed: (detail: string) =>
-    `Não foi possível carregar a loja oficial: ${detail}`,
+  loadFailed: (detail: string) => `Não foi possível carregar a loja oficial: ${detail}`,
   viewRepo: "Ver repositório",
   actionFailed: (detail: string) => `A ação da loja falhou: ${detail}`,
   filterAll: "Todas",
@@ -143,8 +134,7 @@ export const store = {
   projectHint: (scope: string) => `Projeta em ${scope} logo após instalar`,
   scriptsWarning: (count: number) =>
     `${count} script${count === 1 ? "" : "s"} executável${count === 1 ? "" : "es"} — revise antes de instalar`,
-  communitySubtitle:
-    "Curadoria da comunidade com auditoria de scripts e projeção em um clique.",
+  communitySubtitle: "Curadoria da comunidade com auditoria de scripts e projeção em um clique.",
 };
 
 export const tokens = {
@@ -152,8 +142,7 @@ export const tokens = {
   full: "inteiro",
   unit: "tok",
   entryHint: "Nome e descrição que entram em todo turno enquanto o item está ativo.",
-  fullSkillHint:
-    "SKILL.md inteiro, estimado. Só entra no contexto quando a skill é aberta.",
+  fullSkillHint: "SKILL.md inteiro, estimado. Só entra no contexto quando a skill é aberta.",
   fullMcpHint:
     "Definição inteira do catálogo: nome, descrição, comando e argumentos. Não inclui segredos de ambiente nem o schema ao vivo do servidor.",
   agentsHint: "Estimativa do arquivo inteiro. O AGENTS.md entra em todo turno.",

@@ -175,8 +175,7 @@ function checkStylesheet(absolutePath) {
 
 // Paths are resolved against the repo root, never the caller's cwd: Tauri runs
 // `beforeBuildCommand` from its own working directory.
-const collect = (pattern) =>
-  globSync(pattern, { cwd: ROOT }).map((entry) => resolve(ROOT, entry));
+const collect = (pattern) => globSync(pattern, { cwd: ROOT }).map((entry) => resolve(ROOT, entry));
 
 const tsxFiles = collect("src/**/*.tsx");
 const tsFiles = collect("src/**/*.ts");

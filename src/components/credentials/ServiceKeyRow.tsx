@@ -16,9 +16,7 @@ export function formatCooldownWith(
   const remaining = cooldownUntilMs - Date.now();
   if (remaining <= 0) return null;
   const minutes = Math.ceil(remaining / 60000);
-  return minutes >= 60
-    ? hoursLabel(Math.floor(minutes / 60), minutes % 60)
-    : minutesLabel(minutes);
+  return minutes >= 60 ? hoursLabel(Math.floor(minutes / 60), minutes % 60) : minutesLabel(minutes);
 }
 
 interface ServiceKeyRowProps {
@@ -128,13 +126,9 @@ export function ServiceKeyRow({
         {isPrimary ? (
           <Crown className="size-3.5 shrink-0 text-emerald-300" />
         ) : (
-          <span className="shrink-0 font-mono text-[10px] text-zinc-500">
-            #{index}
-          </span>
+          <span className="shrink-0 font-mono text-[10px] text-zinc-500">#{index}</span>
         )}
-        <code className="min-w-0 flex-1 truncate font-mono text-zinc-200">
-          {masked}
-        </code>
+        <code className="min-w-0 flex-1 truncate font-mono text-zinc-200">{masked}</code>
         {editingTag ? (
           <span className="flex shrink-0 items-center gap-1">
             <input
@@ -284,9 +278,7 @@ export function ServiceKeyRow({
           </button>
         </div>
       )}
-      {cooldown !== null && (
-        <p className="mt-1 text-[10.5px] text-orange-300/90">{cooldown}</p>
-      )}
+      {cooldown !== null && <p className="mt-1 text-[10.5px] text-orange-300/90">{cooldown}</p>}
       {result !== null && (
         <p
           className={cn(

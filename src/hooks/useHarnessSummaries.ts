@@ -33,15 +33,11 @@ export function useHarnessSummaries(
 
   const counts = useMemo(
     () =>
-      Object.fromEntries(summaries.map((row) => [row.id, row.active])) as Record<
-        string,
-        number
-      >,
+      Object.fromEntries(summaries.map((row) => [row.id, row.active])) as Record<string, number>,
     [summaries],
   );
 
-  const total =
-    summaries.find((row) => row.id === GLOBAL_SCOPE.id)?.total ?? 0;
+  const total = summaries.find((row) => row.id === GLOBAL_SCOPE.id)?.total ?? 0;
 
   return { summaries, counts, total, refresh };
 }

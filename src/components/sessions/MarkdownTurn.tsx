@@ -321,10 +321,7 @@ export function MarkdownTurn({ content, role }: { content: string; role: string 
             return (
               <p
                 key={index}
-                className={cn(
-                  HEADING_SIZE[block.level],
-                  isUser && "text-emerald-100",
-                )}
+                className={cn(HEADING_SIZE[block.level], isUser && "text-emerald-100")}
               >
                 {renderInline(block.text)}
               </p>
@@ -341,9 +338,7 @@ export function MarkdownTurn({ content, role }: { content: string; role: string 
               </blockquote>
             );
           case "list":
-            return (
-              <ListBlock key={index} ordered={block.ordered} items={block.items} />
-            );
+            return <ListBlock key={index} ordered={block.ordered} items={block.items} />;
           case "divider":
             return <hr key={index} className="my-2 border-0 border-t border-white/10" />;
           default:

@@ -20,7 +20,8 @@ import { connectPage, launchChrome } from "./visual/cdp.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 1422;
 const APP_URL = `http://127.0.0.1:${PORT}/?fixtures=1`;
-const GOLDEN = process.env.SNAPSHOT_FILE || join(ROOT, "scripts/__snapshots__/transcript-drawers.json");
+const GOLDEN =
+  process.env.SNAPSHOT_FILE || join(ROOT, "scripts/__snapshots__/transcript-drawers.json");
 const TMP = process.env.ORQUESTRA_VISUAL_TMP || "/var/tmp/testing";
 const HARNESSES = [
   "antigravity",
@@ -124,7 +125,8 @@ const READ_DRAWER = `(() => {
 function assertDrawer(harness, drawer) {
   if (!drawer) throw new Error(`${harness}: drawer did not open`);
   if (drawer.turns.length < 2) throw new Error(`${harness}: no conversation rendered`);
-  if (drawer.overflow !== 0) throw new Error(`${harness}: horizontal overflow ${drawer.overflow}px`);
+  if (drawer.overflow !== 0)
+    throw new Error(`${harness}: horizontal overflow ${drawer.overflow}px`);
 
   for (const turn of drawer.turns) {
     if (turn.role !== "user" && turn.role !== "assistant") {
@@ -150,7 +152,12 @@ function firstDifference(actual, expected, path = "") {
   const a = JSON.stringify(actual);
   const b = JSON.stringify(expected);
   if (a === b) return null;
-  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") {
+  if (
+    actual === null ||
+    expected === null ||
+    typeof actual !== "object" ||
+    typeof expected !== "object"
+  ) {
     return `${path || "<root>"}: expected ${b}, got ${a}`;
   }
   for (const key of new Set([...Object.keys(actual), ...Object.keys(expected)])) {

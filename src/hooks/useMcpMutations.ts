@@ -80,11 +80,7 @@ export function useMcpMutations({
     try {
       await setMcpState(server.id, harnessId, enabled);
       onToast(
-        t.mcps.toggled(
-          server.name,
-          enabled ? t.mcps.enabledVerb : t.mcps.disabledVerb,
-          scopeLabel,
-        ),
+        t.mcps.toggled(server.name, enabled ? t.mcps.enabledVerb : t.mcps.disabledVerb, scopeLabel),
       );
     } catch (cause) {
       setError(toMessage(cause, t.common.unexpected));
@@ -161,11 +157,7 @@ export function useMcpMutations({
 
     try {
       const changed = await deployMcps();
-      onToast(
-        changed.length === 0
-          ? t.mcps.alreadyMatches
-          : t.mcps.recompiled(changed.length),
-      );
+      onToast(changed.length === 0 ? t.mcps.alreadyMatches : t.mcps.recompiled(changed.length));
       await load();
     } catch (cause) {
       setError(t.mcps.recompileFailed(toMessage(cause, t.common.unexpected)));

@@ -94,9 +94,7 @@ export function sortSkills(items: SkillItem[], mode: SortMode): SkillItem[] {
     case "active":
     default:
       return sorted.sort(
-        (a, b) =>
-          Number(b.harnessEnabled) - Number(a.harnessEnabled) ||
-          compareNames(a, b),
+        (a, b) => Number(b.harnessEnabled) - Number(a.harnessEnabled) || compareNames(a, b),
       );
   }
 }

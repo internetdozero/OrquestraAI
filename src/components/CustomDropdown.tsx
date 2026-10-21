@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -46,19 +39,13 @@ interface MenuBox {
  * Right-aligned by default, mirrored to left-aligned when the right edge would
  * leave the screen, and flipped above the trigger when there is no room below.
  */
-function measureMenu(
-  trigger: DOMRect,
-  menu: HTMLElement | null,
-): MenuBox {
+function measureMenu(trigger: DOMRect, menu: HTMLElement | null): MenuBox {
   const viewportW = window.innerWidth;
   const viewportH = window.innerHeight;
   const width = Math.max(MENU_MIN_WIDTH, menu?.offsetWidth ?? MENU_MIN_WIDTH);
   const height = menu?.offsetHeight ?? 0;
 
-  const maxLeft = Math.max(
-    VIEWPORT_MARGIN,
-    viewportW - width - VIEWPORT_MARGIN,
-  );
+  const maxLeft = Math.max(VIEWPORT_MARGIN, viewportW - width - VIEWPORT_MARGIN);
   // Prefer the trigger's right edge; fall back to its left edge on compact
   // layouts where a wrapped toolbar pushes the control toward the viewport.
   let left = trigger.right - width;
@@ -68,19 +55,11 @@ function measureMenu(
   const below = trigger.bottom + TRIGGER_GAP;
   const above = trigger.top - TRIGGER_GAP - height;
   const flipAbove =
-    height > 0 &&
-    below + height > viewportH - VIEWPORT_MARGIN &&
-    above >= VIEWPORT_MARGIN;
+    height > 0 && below + height > viewportH - VIEWPORT_MARGIN && above >= VIEWPORT_MARGIN;
   // A safety clamp: if the trigger itself is partly off-screen (short window,
   // wrapped toolbar), keep the menu fully inside the viewport anyway.
-  const maxTop = Math.max(
-    VIEWPORT_MARGIN,
-    viewportH - height - VIEWPORT_MARGIN,
-  );
-  const top = Math.min(
-    Math.max(flipAbove ? above : below, VIEWPORT_MARGIN),
-    maxTop,
-  );
+  const maxTop = Math.max(VIEWPORT_MARGIN, viewportH - height - VIEWPORT_MARGIN);
+  const top = Math.min(Math.max(flipAbove ? above : below, VIEWPORT_MARGIN), maxTop);
 
   return {
     top: Math.round(top),
@@ -163,8 +142,7 @@ export function CustomDropdown<T extends string>({
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
-      if (rootRef.current?.contains(target) || menuRef.current?.contains(target))
-        return;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
 
       setOpen(false);
     };
@@ -232,8 +210,7 @@ export function CustomDropdown<T extends string>({
               minWidth: box?.minWidth ?? MENU_MIN_WIDTH,
               maxHeight: box?.maxHeight,
               visibility: box ? "visible" : "hidden",
-              transformOrigin:
-                box?.placement === "top" ? "bottom center" : "top center",
+              transformOrigin: box?.placement === "top" ? "bottom center" : "top center",
             }}
             className="dropdown-pop fixed z-40 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.08] bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md"
           >
@@ -254,9 +231,7 @@ export function CustomDropdown<T extends string>({
                     )}
                   >
                     <span>{option.label}</span>
-                    {active && (
-                      <Check className="size-3 shrink-0" aria-hidden="true" />
-                    )}
+                    {active && <Check className="size-3 shrink-0" aria-hidden="true" />}
                   </button>
                 </li>
               );

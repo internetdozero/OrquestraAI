@@ -41,9 +41,7 @@ export function SessionsTable({
   }, [sessions]);
 
   if (!enabled) {
-    return (
-      <StatePanel icon={History} title={s.empty} description={s.unavailable} />
-    );
+    return <StatePanel icon={History} title={s.empty} description={s.unavailable} />;
   }
 
   if (loading && sessions.length === 0) {
@@ -66,9 +64,7 @@ export function SessionsTable({
   }
 
   if (sessions.length === 0) {
-    return (
-      <StatePanel icon={SearchX} title={s.empty} description={s.noMatch} />
-    );
+    return <StatePanel icon={SearchX} title={s.empty} description={s.noMatch} />;
   }
 
   const shown = sessions.slice(0, pageSize);

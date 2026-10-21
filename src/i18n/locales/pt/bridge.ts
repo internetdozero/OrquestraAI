@@ -37,30 +37,22 @@ export const bridge = {
       "Raiz compartilhada que Codex e Grok também leem; o Freebuff a vincula à sua projeção",
     vendorBuiltins:
       "Built-ins do fornecedor vêm com o app; arquivados no cofre para ~/.gemini/config/skills continuar sendo a única fonte do usuário",
-    codexVendor:
-      "Checkout de fornecedor que o Codex indexa ao lado de ~/.codex/skills",
+    codexVendor: "Checkout de fornecedor que o Codex indexa ao lado de ~/.codex/skills",
     bundledMarket: "Cache de marketplace empacotado de skills de plugin",
     staleMarket: "Cache antigo de marketplace de skills de plugin",
-    claudePlugins:
-      "Skills de marketplace de plugins carregam ao lado de ~/.claude/skills",
+    claudePlugins: "Skills de marketplace de plugins carregam ao lado de ~/.claude/skills",
     hermesOptional:
       "Repositório opcional de skills que o Hermes carrega sozinho ao lado de ~/.hermes/skills",
-    grokBundled:
-      "O Grok resolve os built-ins aqui e ignora ~/.grok/skills",
-    grokPlugins:
-      "Pacotes de plugins de terceiros que o Grok carrega na inicialização",
+    grokBundled: "O Grok resolve os built-ins aqui e ignora ~/.grok/skills",
+    grokPlugins: "Pacotes de plugins de terceiros que o Grok carrega na inicialização",
   },
   notes: {
-    codexSystem:
-      "Pastas internas .system são movidas para a projeção primeiro",
-    freebuff:
-      "O Manicode e ~/.agents/skills compartilham a projeção do Freebuff",
+    codexSystem: "Pastas internas .system são movidas para a projeção primeiro",
+    freebuff: "O Manicode e ~/.agents/skills compartilham a projeção do Freebuff",
     hermesCurator: "Arquivos de estado do curator ficam dentro da projeção",
   },
-  readFailed: (detail: string) =>
-    `Não foi possível ler a ponte de harnesses: ${detail}`,
-  partial: (errors: string) =>
-    `Ponte de harnesses implantada em parte: ${errors}`,
+  readFailed: (detail: string) => `Não foi possível ler a ponte de harnesses: ${detail}`,
+  partial: (errors: string) => `Ponte de harnesses implantada em parte: ${errors}`,
   backupDetail: (name: string) => `backup ${name}`,
   adopted: (count: number) =>
     count === 1
@@ -69,6 +61,5 @@ export const bridge = {
   imported: (sources: string) => `AGENTS.md importado de ${sources}`,
   connected: (bridged: number, total: number, extra: string) =>
     `Ponte de harnesses conectada — ${bridged}/${total} harnesses vinculados${extra}`,
-  deployFailed: (detail: string) =>
-    `Não foi possível implantar a ponte de harnesses: ${detail}`,
+  deployFailed: (detail: string) => `Não foi possível implantar a ponte de harnesses: ${detail}`,
 };

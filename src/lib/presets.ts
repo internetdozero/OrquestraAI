@@ -63,10 +63,7 @@ export function applyPreset(id: string): Promise<PresetReport> {
 }
 
 /** Snapshot the current live combination as a named custom preset. */
-export function savePreset(
-  name: string,
-  description?: string | null,
-): Promise<Preset> {
+export function savePreset(name: string, description?: string | null): Promise<Preset> {
   return invoke<Preset>("save_preset", { name, description: description ?? null });
 }
 

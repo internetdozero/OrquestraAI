@@ -63,29 +63,23 @@ export const settings: TranslationSchema["settings"] = {
     copyFailed: (detail: string) => `Could not copy: ${detail}`,
     updatesTitle: "Updates",
     autoCheckAppTitle: "Check for app updates on launch",
-    autoCheckAppDesc:
-      "Automatically check GitHub for new OrquestraAI desktop releases.",
+    autoCheckAppDesc: "Automatically check GitHub for new OrquestraAI desktop releases.",
     autoCheckExtTitle: "Check for official extension updates",
-    autoCheckExtDesc:
-      "Check for upstream improvements to installed official skills and MCPs.",
+    autoCheckExtDesc: "Check for upstream improvements to installed official skills and MCPs.",
     checkNow: "Check for updates now",
     checking: "Checking…",
-    upToDate: (version: string) =>
-      `You are on the latest version — v${version}`,
-    newVersionAvailable: (version: string) =>
-      `New version v${version} available!`,
+    upToDate: (version: string) => `You are on the latest version — v${version}`,
+    newVersionAvailable: (version: string) => `New version v${version} available!`,
     viewRelease: "View release",
     updateNow: "Update now",
     updatingApp: "Downloading and installing update…",
-    downloadingUpdate:
-      "Downloading release and verifying SHA-256 checksum...",
+    downloadingUpdate: "Downloading release and verifying SHA-256 checksum...",
     updateAppSuccess: "Update installed! Restart OrquestraAI to apply.",
     updateAppFailed: (detail: string) => `Update failed: ${detail}`,
     restart: "Restart",
     syncExtensions: "Sync official extensions",
     syncingExtensions: "Syncing official skills & MCPs…",
-    syncExtensionsSuccess: (count: number) =>
-      `${count} extensions updated successfully.`,
+    syncExtensionsSuccess: (count: number) => `${count} extensions updated successfully.`,
   },
   sidebarAction: "Settings",
   sidebarHint: "Preferences, language, retention and about",

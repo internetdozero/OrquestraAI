@@ -73,8 +73,7 @@ export const skills: TranslationSchema["skills"] = {
   editLoading: "Reading SKILL.md…",
   editSaved: (name: string) => `Skill “${name}” saved`,
   editFailed: (detail: string) => `Could not save: ${detail}`,
-  deleteConfirm: (name: string) =>
-    `Are you sure you want to delete “${name}” from the vault?`,
+  deleteConfirm: (name: string) => `Are you sure you want to delete “${name}” from the vault?`,
   deleteDeleted: (name: string) => `Skill “${name}” deleted from the vault`,
   deleteFailed: (detail: string) => `Could not delete: ${detail}`,
   deleteTitle: "Delete skill",

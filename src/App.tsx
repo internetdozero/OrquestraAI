@@ -76,7 +76,7 @@ export default function App() {
     onError: setError,
   });
   const summaries = useHarnessSummaries(isTauri, setError, reloadToken);
-  const bridge =  useHarnessBridge({
+  const bridge = useHarnessBridge({
     isTauri,
     onToast: showToast,
     onError: setError,
@@ -133,9 +133,7 @@ export default function App() {
       const target = event.target as HTMLElement | null;
       const editable =
         target !== null &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
       if (!editable) event.preventDefault();
     };
 
@@ -179,8 +177,7 @@ export default function App() {
 
         setMcpCount(
           catalog.servers.filter(
-            (server) =>
-              server.globalEnabled || server.enabledHarnesses.length > 0,
+            (server) => server.globalEnabled || server.enabledHarnesses.length > 0,
           ).length,
         );
       })
@@ -201,9 +198,7 @@ export default function App() {
       bridge.statuses.length === 0
         ? null
         : new Set(
-            bridge.statuses
-              .filter((harness) => harness.installed)
-              .map((harness) => harness.id),
+            bridge.statuses.filter((harness) => harness.installed).map((harness) => harness.id),
           ),
     [bridge.statuses],
   );
@@ -275,7 +270,6 @@ export default function App() {
                 ? "overflow-hidden"
                 : "scroll-pane overflow-y-auto px-4 py-5 sm:px-6",
             // sessions shares the scroll-pane layout with skills
-
           )}
         >
           {view === "ideas" ? (
@@ -296,11 +290,7 @@ export default function App() {
               onError={setError}
             />
           ) : view === "credentials" ? (
-            <CredentialsView
-              isTauri={isTauri}
-              onToast={showToast}
-              onError={setError}
-            />
+            <CredentialsView isTauri={isTauri} onToast={showToast} onError={setError} />
           ) : view === "mcps" ? (
             <McpView
               isTauri={isTauri}

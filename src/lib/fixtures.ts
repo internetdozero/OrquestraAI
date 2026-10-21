@@ -100,9 +100,7 @@ export function fixtureSaveRetention(policy: RetentionPolicy): void {
 
 /** Flip one fixture's pin and report the state after the toggle. */
 export function fixtureTogglePin(harness: string, sessionId: string): boolean {
-  const session = sessions.find(
-    (entry) => entry.harness === harness && entry.id === sessionId,
-  );
+  const session = sessions.find((entry) => entry.harness === harness && entry.id === sessionId);
   if (!session) return false;
   session.isPinned = !session.isPinned;
   if (!session.isPinned) session.pinLabel = null;
@@ -142,10 +140,7 @@ export function fixtureEstimate(filter: PurgeFilter): PurgeEstimate {
 /* Ideas mock resolvers (mirror lib/ideas filter semantics)              */
 /* ------------------------------------------------------------------ */
 
-export function fixtureListIdeas(
-  project?: string | null,
-  status?: string | null,
-): IdeaItem[] {
+export function fixtureListIdeas(project?: string | null, status?: string | null): IdeaItem[] {
   return ideas
     .filter((idea) => {
       if (project && idea.project !== project) return false;
@@ -158,9 +153,7 @@ export function fixtureListIdeas(
 }
 
 export function fixtureListIdeaProjects(): string[] {
-  return [...new Set(ideas.map((idea) => idea.project))].sort((a, b) =>
-    a.localeCompare(b),
-  );
+  return [...new Set(ideas.map((idea) => idea.project))].sort((a, b) => a.localeCompare(b));
 }
 
 export function fixtureCreateIdea(input: CreateIdeaInput): IdeaItem {
@@ -213,10 +206,7 @@ export function fixtureDeleteIdea(id: number): void {
   if (index >= 0) ideas.splice(index, 1);
 }
 
-export function fixtureListNotes(
-  project?: string | null,
-  unreadOnly?: boolean,
-): BlackboardNote[] {
+export function fixtureListNotes(project?: string | null, unreadOnly?: boolean): BlackboardNote[] {
   return notes
     .filter((note) => {
       if (project && note.project !== project) return false;

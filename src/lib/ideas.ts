@@ -86,10 +86,7 @@ export interface PostNoteInput {
  * Ideas, highest priority first. A missing status defaults to `"open"`;
  * pass `"all"` to disable the status filter.
  */
-export function listIdeas(
-  project?: string | null,
-  status?: string | null,
-): Promise<IdeaItem[]> {
+export function listIdeas(project?: string | null, status?: string | null): Promise<IdeaItem[]> {
   if (devMockMode()) return Promise.resolve(fixtureListIdeas(project, status));
   return invoke<IdeaItem[]>("list_ideas", {
     project: project ?? null,
@@ -132,8 +129,7 @@ export function listBlackboardNotes(
   project?: string | null,
   unreadOnly?: boolean,
 ): Promise<BlackboardNote[]> {
-  if (devMockMode())
-    return Promise.resolve(fixtureListNotes(project, unreadOnly));
+  if (devMockMode()) return Promise.resolve(fixtureListNotes(project, unreadOnly));
   return invoke<BlackboardNote[]>("list_blackboard_notes", {
     project: project ?? null,
     unreadOnly: unreadOnly ?? true,
@@ -182,8 +178,7 @@ export function getProductivityMetrics(
   project?: string | null,
   weeks?: number | null,
 ): Promise<ProductivityMetrics> {
-  if (devMockMode())
-    return Promise.resolve(fixtureProductivity(project, weeks));
+  if (devMockMode()) return Promise.resolve(fixtureProductivity(project, weeks));
   return invoke<ProductivityMetrics>("get_productivity_metrics", {
     project: project ?? null,
     weeks: weeks ?? null,

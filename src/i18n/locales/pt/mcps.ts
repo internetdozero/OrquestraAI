@@ -20,7 +20,9 @@ export const mcps = {
   disableAllGlobal: "Desativar todos os servidores no Global",
   disableAllHarness: (label: string) => `Remover ${label} de todos os servidores`,
   batchApplied: (enabled: boolean, scope: string) =>
-    enabled ? `Todos os servidores ativados em ${scope}` : `Todos os servidores desativados em ${scope}`,
+    enabled
+      ? `Todos os servidores ativados em ${scope}`
+      : `Todos os servidores desativados em ${scope}`,
   batchFailed: (detail: string) => `Falha na atualização em lote: ${detail}`,
   addServer: "Adicionar servidor MCP",
   recompile: "Recompilar os arquivos de configuração de todos os harnesses",
@@ -35,16 +37,12 @@ export const mcps = {
     "O registro MCP é compilado pelo núcleo em Rust na configuração de cada harness. Abra o aplicativo desktop para ler ou alterar.",
   mockBanner:
     "Modo demonstração no navegador: catálogo fictício em memória, nada é compilado de verdade.",
-  readFailed: (detail: string) =>
-    `Não foi possível ler o catálogo MCP: ${detail}`,
-  toggled: (name: string, verb: string, scope: string) =>
-    `${name} ${verb} · ${scope}`,
+  readFailed: (detail: string) => `Não foi possível ler o catálogo MCP: ${detail}`,
+  toggled: (name: string, verb: string, scope: string) => `${name} ${verb} · ${scope}`,
   enabledVerb: "ativado",
   disabledVerb: "desativado",
-  deletedFromConfigs: (name: string) =>
-    `${name} excluído de todos os arquivos de configuração`,
-  deleteFailed: (name: string, detail: string) =>
-    `Não foi possível excluir ${name}: ${detail}`,
+  deletedFromConfigs: (name: string) => `${name} excluído de todos os arquivos de configuração`,
+  deleteFailed: (name: string, detail: string) => `Não foi possível excluir ${name}: ${detail}`,
   savedDeployed: (name: string) => `${name} salvo e implantado`,
   alreadyMatches: "Todos os arquivos de configuração já batem com o catálogo",
   recompiled: (count: number) =>
@@ -58,8 +56,7 @@ export const mcps = {
   onElsewhere: "ativo em outro lugar",
   noDescription: "Sem descrição",
   inspect: "Comando, argumentos e ambiente",
-  deleteConfirm: (name: string) =>
-    `Excluir “${name}” de todos os arquivos de configuração?`,
+  deleteConfirm: (name: string) => `Excluir “${name}” de todos os arquivos de configuração?`,
   deleteAria: (name: string) => `Excluir ${name}`,
   inheritedShort: "herdada",
   inScope: (label: string) => `em ${label}`,
@@ -81,8 +78,7 @@ export const mcps = {
   nowhereYet: "em lugar nenhum ainda",
   editServer: "Editar servidor",
   editTitle: (name: string) => `Editar ${name}`,
-  formBlurb:
-    "Uma definição, compilada em cada formato de harness em que estiver ativa.",
+  formBlurb: "Uma definição, compilada em cada formato de harness em que estiver ativa.",
   fieldName: "Nome",
   fieldId: "Id",
   fieldDescription: "Descrição",
@@ -94,8 +90,7 @@ export const mcps = {
   enableGloballyHint: "todo harness com adaptador herda",
   nameRequired: "Um nome de exibição é obrigatório.",
   idRequired: "Um id é obrigatório.",
-  idCharset:
-    "O id deve ter letras minúsculas, dígitos, pontos, traços ou sublinhados.",
+  idCharset: "O id deve ter letras minúsculas, dígitos, pontos, traços ou sublinhados.",
   idTaken: (id: string) => `“${id}” já existe no catálogo.`,
   commandRequired: "Um comando de inicialização é obrigatório.",
   addServerAction: "Adicionar servidor",
@@ -104,10 +99,8 @@ export const mcps = {
   smartPasteTitle: "Auto-preenchimento inteligente",
   smartPasteHint:
     "Cole o comando do terminal (ex: npx -y …) ou um bloco JSON do Claude, ou toque num preset.",
-  smartPastePlaceholder:
-    "npx -y @modelcontextprotocol/server-github  ou  { \"command\": … }",
+  smartPastePlaceholder: 'npx -y @modelcontextprotocol/server-github  ou  { "command": … }',
   smartPasteAction: "Preencher campos",
   smartPasteApplied: "Campos preenchidos — revise e salve.",
-  smartPasteFailed:
-    "Não reconheci esse texto. Cole um comando CLI ou um JSON com \"command\".",
+  smartPasteFailed: 'Não reconheci esse texto. Cole um comando CLI ou um JSON com "command".',
 };

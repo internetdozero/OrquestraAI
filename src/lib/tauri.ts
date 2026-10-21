@@ -54,18 +54,11 @@ export function listSkills(harnessId: string): Promise<SkillItem[]> {
   });
 }
 
-export function setSkillState(
-  id: string,
-  harnessId: string,
-  enabled: boolean,
-): Promise<void> {
+export function setSkillState(id: string, harnessId: string, enabled: boolean): Promise<void> {
   return invoke<void>("set_skill_state", { id, harnessId, enabled });
 }
 
-export function batchSetAll(
-  harnessId: string,
-  enabled: boolean,
-): Promise<void> {
+export function batchSetAll(harnessId: string, enabled: boolean): Promise<void> {
   return invoke<void>("batch_set_all", { harnessId, enabled });
 }
 

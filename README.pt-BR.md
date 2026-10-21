@@ -5,7 +5,7 @@
 **Painel e Plano de Controle Universal para IA e Harnesses de Código**
 
 [![License: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-blue.svg)](LICENSE)
-[![Status: Alpha](https://img.shields.io/badge/Status-Alpha%20(Desenvolvimento%20Ativo)-orange.svg)](https://github.com/internetdozero/OrquestraAI)
+[![Status: Alpha](<https://img.shields.io/badge/Status-Alpha%20(Desenvolvimento%20Ativo)-orange.svg>)](https://github.com/internetdozero/OrquestraAI)
 [![Platform](https://img.shields.io/badge/Plataforma-Linux%20%7C%20Tauri%20v2-emerald.svg)](https://github.com/internetdozero/OrquestraAI)
 
 [**Read in English / Ler em Inglês (README.md)**](README.md)
@@ -35,6 +35,7 @@ A rotina de engenharia com agentes de IA modernos costuma envolver múltiplos as
 No entanto, cada ferramenta isola suas próprias pastas de skills, configurações de servidores MCP, instruções de sistema (`AGENTS.md` vs `CLAUDE.md`) e históricos de conversa.
 
 O **OrquestraAI** resolve essa fragmentação através de uma aplicação desktop em **Tauri v2 + Rust + React** e CLI headless de alto desempenho:
+
 1. **Cofre Universal de Skills e Projeções:** Mantenha um repositório central (`~/.orquestra/skills-library`) e projete skills dinamicamente (via symlinks atômicos ou injeção em configurações JSONC) em qualquer harness sem duplicar arquivos no disco.
 2. **Hub Oficial de Extensões e Comunidade:** Descoberta e instalação em 1 clique de skills e servidores MCP oficiais servidos a partir do monorepo [`internetdozero/orquestra-extensions`](https://github.com/internetdozero/orquestra-extensions), com auditoria estática automatizada de scripts executáveis.
 3. **Catálogo de Servidores MCP Global e por Harness:** Ative, desative e configure servidores do Model Context Protocol (MCP) globalmente ou por agente individual.
@@ -48,17 +49,17 @@ O **OrquestraAI** resolve essa fragmentação através de uma aplicação deskto
 
 ## 🛠️ Harnesses Suportados (Os 9 Agentes Principais)
 
-| Harness | Caminho de Projeção de Skills | Arquivo de Instruções | Integração de Configuração / Banco de Dados |
-| :--- | :--- | :--- | :--- |
-| **Antigravity (AGY)** | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md` | Logs de sessão (`.system_generated/logs/transcript.jsonl`) |
-| **OpenAI Codex** | `~/.codex/skills` | `~/.codex/AGENTS.md` | `thread_history_1.sqlite` + rollouts multi-arquivos |
-| **Claude Code** | `~/.claude/skills` | `~/.claude/CLAUDE.md` | `projects/<slug>/*.jsonl` |
-| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + histórico Manicode + worktrees |
-| **OpenCode** | Injeção via `skills.paths` | Instruções nativas | `~/.config/opencode/opencode.jsonc` + `opencode.db` |
-| **Kilo Code** | Injeção via `skills.paths` | Instruções nativas | `~/.config/kilo/kilo.jsonc` + `kilo.db` |
-| **GitHub Copilot CLI** | `~/.copilot/skills` | Instruções nativas | `session-store.db` (tabela de turns) |
-| **Hermes Agent** | `~/.hermes/skills` | Instruções nativas | `state.db` (tabela de messages) |
-| **xAI Grok** | `~/.grok/skills` | Instruções nativas | `chat_history.jsonl` + índice SQLite |
+| Harness                 | Caminho de Projeção de Skills                                         | Arquivo de Instruções          | Integração de Configuração / Banco de Dados                |
+| :---------------------- | :-------------------------------------------------------------------- | :----------------------------- | :--------------------------------------------------------- |
+| **Antigravity (AGY)**   | `~/.gemini/config/skills`                                             | `~/.gemini/config/AGENTS.md`   | Logs de sessão (`.system_generated/logs/transcript.jsonl`) |
+| **OpenAI Codex**        | `~/.codex/skills`                                                     | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite` + rollouts multi-arquivos        |
+| **Claude Code**         | `~/.claude/skills`                                                    | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`                                  |
+| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + histórico Manicode + worktrees           |
+| **OpenCode**            | Injeção via `skills.paths`                                            | Instruções nativas             | `~/.config/opencode/opencode.jsonc` + `opencode.db`        |
+| **Kilo Code**           | Injeção via `skills.paths`                                            | Instruções nativas             | `~/.config/kilo/kilo.jsonc` + `kilo.db`                    |
+| **GitHub Copilot CLI**  | `~/.copilot/skills`                                                   | Instruções nativas             | `session-store.db` (tabela de turns)                       |
+| **Hermes Agent**        | `~/.hermes/skills`                                                    | Instruções nativas             | `state.db` (tabela de messages)                            |
+| **xAI Grok**            | `~/.grok/skills`                                                      | Instruções nativas             | `chat_history.jsonl` + índice SQLite                       |
 
 ---
 

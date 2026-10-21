@@ -67,7 +67,13 @@ function setFmValue(fm: string[], key: string, value: string): string[] {
 }
 
 /** Editor for one vault skill: name, description and the SKILL.md body. */
-export function EditSkillModal({ skillId, skillName, onClose, onSaved, onError }: EditSkillModalProps) {
+export function EditSkillModal({
+  skillId,
+  skillName,
+  onClose,
+  onSaved,
+  onError,
+}: EditSkillModalProps) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

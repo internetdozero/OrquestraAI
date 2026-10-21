@@ -19,8 +19,7 @@ export const bridge: TranslationSchema["bridge"] = {
     const waiting = pending > 0 ? ` · ${pending} waiting` : "";
     return `${found} · ${done}${waiting}`;
   },
-  warnLead:
-    "Every skill folder, instruction file, and config file listed below is moved into",
+  warnLead: "Every skill folder, instruction file, and config file listed below is moved into",
   warnTail: "before a symlink is created. Nothing is deleted.",
   warnSees:
     "After linking, a harness only sees the skills you enabled for it in this app. Skills that exist only inside a harness are adopted into the vault first.",
@@ -32,16 +31,14 @@ export const bridge: TranslationSchema["bridge"] = {
   backupConnect: "Back up & Connect",
   linkingHarnesses: "Linking harnesses…",
   rationales: {
-    sharedRoot:
-      "Shared root Codex and Grok also read; Freebuff links it to its projection",
+    sharedRoot: "Shared root Codex and Grok also read; Freebuff links it to its projection",
     vendorBuiltins:
       "Vendor built-ins ship with the app; archived in the vault so ~/.gemini/config/skills stays the only user source",
     codexVendor: "Curated vendor checkout Codex indexes beside ~/.codex/skills",
     bundledMarket: "Bundled marketplace cache of plugin skills",
     staleMarket: "Stale marketplace cache of plugin skills",
     claudePlugins: "Plugin marketplace skills load beside ~/.claude/skills",
-    hermesOptional:
-      "Optional skill repository Hermes auto-loads beside ~/.hermes/skills",
+    hermesOptional: "Optional skill repository Hermes auto-loads beside ~/.hermes/skills",
     grokBundled: "Grok resolves its built-ins here and ignores ~/.grok/skills",
     grokPlugins: "Third-party plugin bundles Grok loads on startup",
   },
@@ -53,11 +50,9 @@ export const bridge: TranslationSchema["bridge"] = {
   readFailed: (detail: string) => `Could not read the harness bridge: ${detail}`,
   partial: (errors: string) => `Harness bridge partially deployed: ${errors}`,
   backupDetail: (name: string) => `backup ${name}`,
-  adopted: (count: number) =>
-    `${count} harness-only skill${count === 1 ? "" : "s"} adopted`,
+  adopted: (count: number) => `${count} harness-only skill${count === 1 ? "" : "s"} adopted`,
   imported: (sources: string) => `AGENTS.md imported from ${sources}`,
   connected: (bridged: number, total: number, extra: string) =>
     `Harness bridge connected — ${bridged}/${total} harnesses bridged${extra}`,
-  deployFailed: (detail: string) =>
-    `Could not deploy the harness bridge: ${detail}`,
+  deployFailed: (detail: string) => `Could not deploy the harness bridge: ${detail}`,
 };

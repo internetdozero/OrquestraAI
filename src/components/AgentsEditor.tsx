@@ -26,9 +26,7 @@ export function AgentsEditor({
   const { t } = useI18n();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  const lineCount = useMemo(() => Math.max(1, content.split("\n").length), [
-    content,
-  ]);
+  const lineCount = useMemo(() => Math.max(1, content.split("\n").length), [content]);
   const dirty = content !== savedContent;
 
   const handleScroll = () => {
@@ -70,9 +68,7 @@ export function AgentsEditor({
             <p className="text-[10px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
               {t.agents.configuring}
             </p>
-            <h2 className="text-base font-semibold tracking-tight text-zinc-100">
-              AGENTS.md
-            </h2>
+            <h2 className="text-base font-semibold tracking-tight text-zinc-100">AGENTS.md</h2>
             <p className="mt-0.5 text-[11px] text-zinc-500">
               {t.agents.masterHint(HARNESSES.length)}
             </p>
@@ -87,10 +83,7 @@ export function AgentsEditor({
             )}
           >
             <span
-              className={cn(
-                "size-1.5 rounded-full",
-                dirty ? "bg-amber-400" : "bg-emerald-400",
-              )}
+              className={cn("size-1.5 rounded-full", dirty ? "bg-amber-400" : "bg-emerald-400")}
             />
             {dirty ? t.agents.unsaved : t.agents.saved}
           </span>
@@ -100,11 +93,7 @@ export function AgentsEditor({
             disabled={!dirty || loading || saving}
             className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[11.5px] font-medium text-emerald-200 transition hover:border-emerald-400/50 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-zinc-500 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
           >
-            {saving ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Save className="size-3.5" />
-            )}
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
             {t.agents.saveDeploy}
           </button>
         </div>
@@ -146,9 +135,7 @@ export function AgentsEditor({
             spellCheck={false}
             disabled={loading}
             aria-label={t.agents.editorAria}
-            placeholder={
-              loading ? t.agents.loadingPlaceholder : t.agents.emptyPlaceholder
-            }
+            placeholder={loading ? t.agents.loadingPlaceholder : t.agents.emptyPlaceholder}
             className="selectable-text min-h-0 flex-1 resize-none bg-transparent py-3 pr-4 pl-3 font-mono text-[12.5px] leading-5 text-zinc-200 caret-emerald-400 outline-none placeholder:text-zinc-600 disabled:cursor-wait"
           />
 

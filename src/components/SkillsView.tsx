@@ -75,25 +75,13 @@ export function SkillsView({
   const { t } = useI18n();
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE.id);
 
-  const {
-    skills,
-    loading,
-    refreshing,
-    error,
-    setError,
-    updateSkills,
-    reload,
-    invalidate,
-  } = useSkillsCache(scope, isTauri);
+  const { skills, loading, refreshing, error, setError, updateSkills, reload, invalidate } =
+    useSkillsCache(scope, isTauri);
 
   const [importOpen, setImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [batchPending, setBatchPending] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("active");
   const [showStore, setShowStore] = useState(false);
@@ -137,14 +125,10 @@ export function SkillsView({
 
   const activeCount = skills.filter((skill) => skill.harnessEnabled).length;
   const disabledCount = skills.length - activeCount;
-  const inheritedCount = skills.filter(
-    (skill) => skill.inheritedFromGlobal,
-  ).length;
+  const inheritedCount = skills.filter((skill) => skill.inheritedFromGlobal).length;
   const savedTokens = skills.reduce(
     (sum, skill) =>
-      skill.harnessEnabled
-        ? sum
-        : sum + entryTokens(skill.name, skill.description, skill.tokens),
+      skill.harnessEnabled ? sum : sum + entryTokens(skill.name, skill.description, skill.tokens),
     0,
   );
 
@@ -188,18 +172,15 @@ export function SkillsView({
     onToast,
   });
 
-  const { statusOf: storeStatusOf, actionFor: storeActionFor } =
-    useSkillStoreActions(skills, {
-      scope,
-      toggleSkill,
-      invalidate,
-      onSummaryStale,
-      onToast,
-    });
+  const { statusOf: storeStatusOf, actionFor: storeActionFor } = useSkillStoreActions(skills, {
+    scope,
+    toggleSkill,
+    invalidate,
+    onSummaryStale,
+    onToast,
+  });
 
-  const editingSkill = editingId
-    ? (skills.find((skill) => skill.id === editingId) ?? null)
-    : null;
+  const editingSkill = editingId ? (skills.find((skill) => skill.id === editingId) ?? null) : null;
 
   const renderSkillCard = (skill: SkillItem) => (
     <SkillCard
@@ -218,20 +199,19 @@ export function SkillsView({
   const canBatch = (isTauri || devMockMode()) && hasSkills && !loading && !batchPending;
   const banner = error ?? externalError;
 
-  const stateKind: SkillsStateKind | null = (!isTauri && !devMockMode())
-    ? "unavailable"
-    : error && !hasSkills
-      ? "read-error"
-      : !hasSkills
-        ? "empty-vault"
-        : filteredSkills.length === 0
-          ? "no-match"
-          : null;
+  const stateKind: SkillsStateKind | null =
+    !isTauri && !devMockMode()
+      ? "unavailable"
+      : error && !hasSkills
+        ? "read-error"
+        : !hasSkills
+          ? "empty-vault"
+          : filteredSkills.length === 0
+            ? "no-match"
+            : null;
 
   const projectionLabel =
-    scope === GLOBAL_SCOPE.id
-      ? `${projectionPath}/global`
-      : `${projectionPath}/${scope}`;
+    scope === GLOBAL_SCOPE.id ? `${projectionPath}/global` : `${projectionPath}/${scope}`;
 
   return (
     <div className="mx-auto w-full max-w-[1400px]">
@@ -272,30 +252,31 @@ export function SkillsView({
       )}
 
       {/* Only a scope that has never been evaluated shows the skeleton. */}
-      {!showStore && (loading && !hasSkills ? (
-        <SkeletonGrid />
-      ) : stateKind ? (
-        <SkillsState
-          kind={stateKind}
-          error={error}
-          query={query}
-          onRescan={() => void reload()}
-          onClearQuery={() => onQueryChange("")}
-        />
-      ) : isGrouped ? (
-        <GroupedSkillGrid
-          activeSkills={activeSkills}
-          idleSkills={idleSkills}
-          renderCard={renderSkillCard}
-          focusKey={flash?.follow ? flash.id : null}
-        />
-      ) : (
-        <FlatSkillGrid
-          skills={visibleSkills}
-          renderCard={renderSkillCard}
-          focusKey={flash?.follow ? flash.id : null}
-        />
-      ))}
+      {!showStore &&
+        (loading && !hasSkills ? (
+          <SkeletonGrid />
+        ) : stateKind ? (
+          <SkillsState
+            kind={stateKind}
+            error={error}
+            query={query}
+            onRescan={() => void reload()}
+            onClearQuery={() => onQueryChange("")}
+          />
+        ) : isGrouped ? (
+          <GroupedSkillGrid
+            activeSkills={activeSkills}
+            idleSkills={idleSkills}
+            renderCard={renderSkillCard}
+            focusKey={flash?.follow ? flash.id : null}
+          />
+        ) : (
+          <FlatSkillGrid
+            skills={visibleSkills}
+            renderCard={renderSkillCard}
+            focusKey={flash?.follow ? flash.id : null}
+          />
+        ))}
 
       {showStore && (
         <OfficialStore
@@ -350,10 +331,8 @@ export function SkillsView({
       <div className="mt-4 flex flex-wrap items-center gap-2 text-[10.5px] text-zinc-600">
         <Waypoints className="size-3 shrink-0" />
         <span>
-          {t.skills.symlinkedFrom}{" "}
-          <code className="font-mono text-zinc-500">{vaultPath}</code>{" "}
-          {t.skills.into}{" "}
-          <code className="font-mono text-zinc-500">{projectionLabel}</code>.
+          {t.skills.symlinkedFrom} <code className="font-mono text-zinc-500">{vaultPath}</code>{" "}
+          {t.skills.into} <code className="font-mono text-zinc-500">{projectionLabel}</code>.
         </span>
         <span className="flex items-center gap-1 text-zinc-700">
           <Sparkles className="size-3" />

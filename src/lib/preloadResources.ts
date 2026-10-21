@@ -14,9 +14,7 @@ export function preloadEssentials(): Promise<void> {
  * MCP and the master instructions go first because those views are one click
  * away; harness scopes follow so a tab switch paints from memory.
  */
-export async function preloadBackground(
-  isCancelled: () => boolean,
-): Promise<void> {
+export async function preloadBackground(isCancelled: () => boolean): Promise<void> {
   if (isCancelled()) return;
 
   await ensureMcpCatalog().catch(() => undefined);

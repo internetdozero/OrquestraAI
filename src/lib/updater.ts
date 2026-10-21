@@ -8,8 +8,7 @@ export interface ReleaseCheckResult {
   publishedAt?: string;
 }
 
-const LATEST_URL =
-  "https://api.github.com/repos/internetdozero/OrquestraAI/releases/latest";
+const LATEST_URL = "https://api.github.com/repos/internetdozero/OrquestraAI/releases/latest";
 
 /** `v0.1.0` → `0.1.0` so tags compare against the bare app version. */
 function cleanTag(tag: string): string {
@@ -34,8 +33,7 @@ function parseVersion(value: string): ParsedVersion {
   const numbers = (core.length === 0 ? [] : core.split(".")).map((part) =>
     /^\d+$/.test(part) ? Number(part) : 0,
   );
-  const prerelease =
-    pre.length === 0 ? [] : pre.split(".").filter((part) => part.length > 0);
+  const prerelease = pre.length === 0 ? [] : pre.split(".").filter((part) => part.length > 0);
   return { numbers, prerelease };
 }
 
@@ -82,9 +80,7 @@ function compareVersions(left: string, right: string): number {
  * release yet) or any network failure resolves as up-to-date with the
  * current version — the check must never crash the settings UI.
  */
-export async function checkLatestRelease(
-  currentVersion: string,
-): Promise<ReleaseCheckResult> {
+export async function checkLatestRelease(currentVersion: string): Promise<ReleaseCheckResult> {
   try {
     const response = await fetch(LATEST_URL, {
       headers: {

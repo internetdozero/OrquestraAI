@@ -1,15 +1,8 @@
 import { useCallback } from "react";
 import { useI18n } from "./useI18n";
 import { coversHarness, type McpServer } from "../lib/mcps";
-import type {
-  OfficialMcpEntry,
-  OfficialSkillEntry,
-} from "../lib/tauri";
-import type {
-  StoreEntry,
-  StoreRowAction,
-  StoreStatus,
-} from "../components/OfficialStore";
+import type { OfficialMcpEntry, OfficialSkillEntry } from "../lib/tauri";
+import type { StoreEntry, StoreRowAction, StoreStatus } from "../components/OfficialStore";
 
 interface McpStoreDeps {
   scope: string;
@@ -20,10 +13,7 @@ interface McpStoreDeps {
 }
 
 /** Live status + one-click actions backing the MCP store tab. */
-export function useMcpStoreActions(
-  servers: McpServer[],
-  deps: McpStoreDeps,
-) {
+export function useMcpStoreActions(servers: McpServer[], deps: McpStoreDeps) {
   const { t } = useI18n();
   const { scope, toggle, save, reload, onToast } = deps;
 
@@ -42,10 +32,7 @@ export function useMcpStoreActions(
   );
 
   const actionFor = useCallback(
-    (
-      entry: OfficialSkillEntry | OfficialMcpEntry,
-      status: StoreStatus,
-    ): StoreRowAction | null => {
+    (entry: OfficialSkillEntry | OfficialMcpEntry, status: StoreStatus): StoreRowAction | null => {
       if (status === "idle") {
         const legacy = "legacyId" in entry ? entry.legacyId : undefined;
         const found = servers.find(

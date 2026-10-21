@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronRight, Copy, Inbox, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Inbox,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import type { IdeaItem, IdeaSortField } from "../../lib/ideas";
 import { compareIdeas, copyIdeaForAi } from "../../lib/ideas";
@@ -46,7 +57,9 @@ function SortHeader({
       type="button"
       onClick={() => onSort(field)}
       title={label}
-      aria-label={active ? `${label} (${sortAsc ? "ascending" : "descending"})` : `Sort by ${label}`}
+      aria-label={
+        active ? `${label} (${sortAsc ? "ascending" : "descending"})` : `Sort by ${label}`
+      }
       className="group/sort flex min-w-0 cursor-pointer items-center gap-1 truncate transition-colors hover:text-zinc-200"
     >
       <span className="truncate">{label}</span>
@@ -57,7 +70,10 @@ function SortHeader({
           <ArrowDown className="size-3 shrink-0 text-amber-300" aria-hidden="true" />
         )
       ) : (
-        <ArrowUpDown className="size-3 shrink-0 opacity-0 transition-opacity group-hover/sort:opacity-60" aria-hidden="true" />
+        <ArrowUpDown
+          className="size-3 shrink-0 opacity-0 transition-opacity group-hover/sort:opacity-60"
+          aria-hidden="true"
+        />
       )}
     </button>
   );
@@ -81,9 +97,7 @@ export function IdeasListView({
   const s = t.ideas;
   // Completed starts collapsed, mirroring the board: finished work stays one
   // click away instead of stretching the list on load.
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-    () => new Set(["completed"]),
-  );
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set(["completed"]));
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<IdeaSortField | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
@@ -115,14 +129,42 @@ export function IdeasListView({
     // construction instead of by coincidence.
     <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/20">
       {/* Interactive column labels for wide screens; rows carry the same fields inline. */}
-      <div
-        className="hidden grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_96px] items-center gap-3 border-b border-white/[0.08] px-3.5 py-2 text-[10.5px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid"
-      >
-        <SortHeader label={s.hTitle} field="title" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
-        <SortHeader label={s.fieldProject} field="project" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
-        <SortHeader label={s.fieldCategory} field="category" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
-        <SortHeader label={s.fieldPriority} field="priority" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
-        <SortHeader label={s.hUpdated} field="updated" sortField={sortField} sortAsc={sortAsc} onSort={sortBy} />
+      <div className="hidden grid-cols-[minmax(0,1fr)_110px_90px_80px_95px_120px_96px] items-center gap-3 border-b border-white/[0.08] px-3.5 py-2 text-[10.5px] font-semibold tracking-wider text-zinc-500 uppercase lg:grid">
+        <SortHeader
+          label={s.hTitle}
+          field="title"
+          sortField={sortField}
+          sortAsc={sortAsc}
+          onSort={sortBy}
+        />
+        <SortHeader
+          label={s.fieldProject}
+          field="project"
+          sortField={sortField}
+          sortAsc={sortAsc}
+          onSort={sortBy}
+        />
+        <SortHeader
+          label={s.fieldCategory}
+          field="category"
+          sortField={sortField}
+          sortAsc={sortAsc}
+          onSort={sortBy}
+        />
+        <SortHeader
+          label={s.fieldPriority}
+          field="priority"
+          sortField={sortField}
+          sortAsc={sortAsc}
+          onSort={sortBy}
+        />
+        <SortHeader
+          label={s.hUpdated}
+          field="updated"
+          sortField={sortField}
+          sortAsc={sortAsc}
+          onSort={sortBy}
+        />
         <span className="truncate">{s.fieldStatus}</span>
         <span className="sr-only">actions</span>
       </div>
@@ -185,7 +227,10 @@ export function IdeasListView({
                           <span className="min-w-0 truncate">{idea.title}</span>
                         </button>
                         {/* Inline status on small screens, where the table columns collapse. */}
-                        <div className="mt-1 max-w-44 lg:hidden" onClick={(event) => event.stopPropagation()}>
+                        <div
+                          className="mt-1 max-w-44 lg:hidden"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <CustomDropdown
                             value={idea.status}
                             ariaLabel={s.fieldStatus}

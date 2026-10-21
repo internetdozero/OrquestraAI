@@ -45,9 +45,13 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
 
   useEffect(() => {
     if (!open) return;
-    listVaultPresets().then(setPresets).catch(() => setPresets([]));
-    vaultListServices().then(setServices).catch(() => setServices([]));
-  }, [open ]);
+    listVaultPresets()
+      .then(setPresets)
+      .catch(() => setPresets([]));
+    vaultListServices()
+      .then(setServices)
+      .catch(() => setServices([]));
+  }, [open]);
 
   if (!open) return null;
 
@@ -59,7 +63,10 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
     setError(null);
     setSaving(true);
     try {
-      const keys = keysText.split("\n").map((key) => key.trim()).filter(Boolean);
+      const keys = keysText
+        .split("\n")
+        .map((key) => key.trim())
+        .filter(Boolean);
       await vaultSaveService({
         id: serviceId.trim(),
         label: label.trim() || serviceId.trim(),
@@ -84,12 +91,16 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
     >
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-zinc-100">Blind Credential Vault</h2>
-        <button onClick={onClose} className="rounded px-2 py-1 text-sm text-zinc-400 hover:bg-white/10">
+        <button
+          onClick={onClose}
+          className="rounded px-2 py-1 text-sm text-zinc-400 hover:bg-white/10"
+        >
           Close
         </button>
       </div>
       <p className="mb-4 text-xs text-zinc-400">
-        Agents never see raw keys. The backend injects the active key in memory for HTTP and exec calls.
+        Agents never see raw keys. The backend injects the active key in memory for HTTP and exec
+        calls.
       </p>
 
       <span className="mb-1 block text-xs text-zinc-400">Preset</span>
@@ -134,22 +145,32 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
           <div key={service.id} className="rounded border border-white/10 bg-zinc-900/60 p-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-zinc-100">{service.label}</span>
-              <span className={`rounded border px-1.5 py-0.5 text-[11px] ${healthBadge(service.health)}`}>
+              <span
+                className={`rounded border px-1.5 py-0.5 text-[11px] ${healthBadge(service.health)}`}
+              >
                 {service.health}
               </span>
             </div>
             <p className="mt-1 text-[11px] text-zinc-500">
-              {service.id} · {service.preset} · {service.totalKeys} key(s) · active #{service.activeKeyIndex}
+              {service.id} · {service.preset} · {service.totalKeys} key(s) · active #
+              {service.activeKeyIndex}
             </p>
             <div className="mt-2 space-y-1">
               {service.maskedKeys.map((masked, index) => (
-                <div key={`${service.id}-${index}`} className="flex items-center justify-between text-xs">
+                <div
+                  key={`${service.id}-${index}`}
+                  className="flex items-center justify-between text-xs"
+                >
                   <code className="text-zinc-300">{masked}</code>
                   {index === service.activeKeyIndex ? (
                     <span className="text-emerald-300">primary</span>
                   ) : (
                     <button
-                      onClick={() => vaultSetPrimary(service.id, index).then(refresh).catch(() => undefined)}
+                      onClick={() =>
+                        vaultSetPrimary(service.id, index)
+                          .then(refresh)
+                          .catch(() => undefined)
+                      }
                       className="text-zinc-400 underline hover:text-zinc-200"
                     >
                       make primary
@@ -159,7 +180,11 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
               ))}
             </div>
             <button
-              onClick={() => vaultDeleteService(service.id).then(refresh).catch(() => undefined)}
+              onClick={() =>
+                vaultDeleteService(service.id)
+                  .then(refresh)
+                  .catch(() => undefined)
+              }
               className="mt-2 text-xs text-red-300 hover:text-red-200"
             >
               Remove

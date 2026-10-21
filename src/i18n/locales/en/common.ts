@@ -21,8 +21,7 @@ export const common: TranslationSchema["common"] = {
   edit: "Edit",
   notInstalled: "not installed",
   loadingResources: "Loading resources...",
-  loadingResourcesHint:
-    "Essentials come in now. Everything else keeps loading in the background.",
+  loadingResourcesHint: "Essentials come in now. Everything else keeps loading in the background.",
 };
 
 export const scopes: TranslationSchema["scopes"] = {
@@ -31,8 +30,7 @@ export const scopes: TranslationSchema["scopes"] = {
 
 export const sidebar: TranslationSchema["sidebar"] = {
   workspace: "Workspace",
-  counts: (skills: number, harnesses: number) =>
-    `${skills} skills · ${harnesses} harnesses`,
+  counts: (skills: number, harnesses: number) => `${skills} skills · ${harnesses} harnesses`,
   views: {
     skills: {
       label: "Skills",
@@ -75,11 +73,9 @@ export const footer: TranslationSchema["footer"] = {
   core: "Core",
   browserPreview: "Browser preview",
   checking: "Checking…",
-  connectedAll: (count: number) =>
-    `Connected (All ${count} Harnesses Bridged)`,
+  connectedAll: (count: number) => `Connected (All ${count} Harnesses Bridged)`,
   notConnected: "Not connected",
-  linkedOf: (bridged: number, total: number) =>
-    `${bridged} of ${total} linked`,
+  linkedOf: (bridged: number, total: number) => `${bridged} of ${total} linked`,
   connectBridge: "Connect Harness Bridge",
   linking: "Linking…",
   harnessBridge: "Harness Bridge",
@@ -114,16 +110,14 @@ export const store: TranslationSchema["store"] = {
   libraryTab: "Library",
   storeTab: "Official Store",
   title: "Official Store",
-  subtitle:
-    "Skills and MCP servers maintained by OrquestraAI, with one-click install.",
+  subtitle: "Skills and MCP servers maintained by OrquestraAI, with one-click install.",
   install: "Install",
   enable: "Enable",
   add: "Add",
   installed: "Installed",
   unpublished: "No published repository yet",
   loading: "Loading the official store…",
-  loadFailed: (detail: string) =>
-    `Could not load the official store: ${detail}`,
+  loadFailed: (detail: string) => `Could not load the official store: ${detail}`,
   viewRepo: "View repository",
   actionFailed: (detail: string) => `The store action failed: ${detail}`,
   filterAll: "All",
@@ -137,8 +131,7 @@ export const store: TranslationSchema["store"] = {
   projectHint: (scope: string) => `Projects into ${scope} right after install`,
   scriptsWarning: (count: number) =>
     `${count} executable script${count === 1 ? "" : "s"} — review before installing`,
-  communitySubtitle:
-    "Community curation with script audit and one-click projection.",
+  communitySubtitle: "Community curation with script audit and one-click projection.",
 };
 
 export const tokens: TranslationSchema["tokens"] = {
@@ -146,8 +139,7 @@ export const tokens: TranslationSchema["tokens"] = {
   full: "full",
   unit: "tok",
   entryHint: "Name and description sent on every turn while the item is on.",
-  fullSkillHint:
-    "Whole SKILL.md, estimated. It enters context only when the skill is opened.",
+  fullSkillHint: "Whole SKILL.md, estimated. It enters context only when the skill is opened.",
   fullMcpHint:
     "Whole catalog definition: name, description, command and arguments. Env secrets and the live server schema are not included.",
   agentsHint: "Estimate of the whole file. AGENTS.md is sent on every turn.",

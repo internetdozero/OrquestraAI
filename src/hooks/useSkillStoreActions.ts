@@ -7,11 +7,7 @@ import {
   type OfficialMcpEntry,
   type OfficialSkillEntry,
 } from "../lib/tauri";
-import type {
-  StoreEntry,
-  StoreRowAction,
-  StoreStatus,
-} from "../components/OfficialStore";
+import type { StoreEntry, StoreRowAction, StoreStatus } from "../components/OfficialStore";
 
 interface SkillStoreDeps {
   /** Currently selected scope (`global` or harness id) for instant projection. */
@@ -23,10 +19,7 @@ interface SkillStoreDeps {
 }
 
 /** Live status + one-click install-and-project actions for the skills hub. */
-export function useSkillStoreActions(
-  skills: SkillItem[],
-  deps: SkillStoreDeps,
-) {
+export function useSkillStoreActions(skills: SkillItem[], deps: SkillStoreDeps) {
   const { t } = useI18n();
   const { scope, toggleSkill, invalidate, onSummaryStale, onToast } = deps;
 
@@ -45,19 +38,14 @@ export function useSkillStoreActions(
   );
 
   const actionFor = useCallback(
-    (
-      entry: OfficialSkillEntry | OfficialMcpEntry,
-      status: StoreStatus,
-    ): StoreRowAction | null => {
+    (entry: OfficialSkillEntry | OfficialMcpEntry, status: StoreStatus): StoreRowAction | null => {
       if (status === "idle") {
         return { kind: "enable", run: () => toggleSkill(entry.id) };
       }
       if (status === "missing" && entry.repoUrl) {
         const urls = [
           entry.repoUrl,
-          ...("fallbackRepoUrl" in entry && entry.fallbackRepoUrl
-            ? [entry.fallbackRepoUrl]
-            : []),
+          ...("fallbackRepoUrl" in entry && entry.fallbackRepoUrl ? [entry.fallbackRepoUrl] : []),
         ];
         return {
           kind: "install",

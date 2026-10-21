@@ -145,10 +145,7 @@ export function GeneralSettingsTab({
                   : "border-white/10 bg-white/[0.02] text-zinc-400 hover:text-zinc-200",
               )}
             >
-              <span
-                className="size-3.5 rounded-full"
-                style={{ backgroundColor: accent.swatch }}
-              />
+              <span className="size-3.5 rounded-full" style={{ backgroundColor: accent.swatch }} />
               {g.accents[accent.id]}
             </button>
           ))}

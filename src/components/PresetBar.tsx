@@ -59,17 +59,10 @@ function PresetPill({
         {busy ? (
           <Loader2 className="size-3.5 animate-spin" />
         ) : (
-          <Icon
-            className={cn(
-              "size-3.5",
-              preset.active ? "accent-text" : "text-zinc-400",
-            )}
-          />
+          <Icon className={cn("size-3.5", preset.active ? "accent-text" : "text-zinc-400")} />
         )}
         <span className="whitespace-nowrap">{copy.name}</span>
-        {preset.active && !busy && (
-          <span className="accent-dot size-1.5 rounded-full" />
-        )}
+        {preset.active && !busy && <span className="accent-dot size-1.5 rounded-full" />}
       </button>
 
       {/* Floating overlay: out of flow, so revealing it never pushes sibling
@@ -163,11 +156,7 @@ export function PresetBar({
       </div>
 
       {saveOpen && (
-        <PresetSaveModal
-          saving={saving}
-          onClose={() => setSaveOpen(false)}
-          onSave={onSave}
-        />
+        <PresetSaveModal saving={saving} onClose={() => setSaveOpen(false)} onSave={onSave} />
       )}
 
       {editingPreset && (

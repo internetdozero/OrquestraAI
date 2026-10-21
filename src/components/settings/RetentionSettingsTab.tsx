@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
-import {
-  getRetentionPolicy,
-  saveRetentionPolicy,
-  type RetentionPolicy,
-} from "../../lib/sessions";
+import { getRetentionPolicy, saveRetentionPolicy, type RetentionPolicy } from "../../lib/sessions";
 import { cn, confirmOnEnter } from "../../lib/utils";
 
 function toMessage(cause: unknown): string {
@@ -31,7 +27,9 @@ export function RetentionSettingsTab({
 
   useEffect(() => {
     if (!isTauri) return;
-    void getRetentionPolicy().then(setPolicy).catch(() => undefined);
+    void getRetentionPolicy()
+      .then(setPolicy)
+      .catch(() => undefined);
   }, [isTauri]);
 
   const patch = (next: Partial<RetentionPolicy>) => {
@@ -67,10 +65,7 @@ export function RetentionSettingsTab({
   useEffect(() => undefined, []);
 
   return (
-    <div
-      className="space-y-4"
-      onKeyDown={(event) => confirmOnEnter(event, () => void save())}
-    >
+    <div className="space-y-4" onKeyDown={(event) => confirmOnEnter(event, () => void save())}>
       <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
         <div>
           <p className="flex items-center gap-1.5 text-[12.5px] text-zinc-100">

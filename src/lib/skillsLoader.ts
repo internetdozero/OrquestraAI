@@ -1,15 +1,8 @@
-import {
-  skillsCacheGeneration,
-  writeSkillsCache,
-  writeSkillsCacheStale,
-} from "./skillsCache";
+import { skillsCacheGeneration, writeSkillsCache, writeSkillsCacheStale } from "./skillsCache";
 import type { SkillItem } from "./skills";
 import { listSkills } from "./tauri";
 
-const inflight = new Map<
-  string,
-  { generation: number; promise: Promise<SkillItem[]> }
->();
+const inflight = new Map<string, { generation: number; promise: Promise<SkillItem[]> }>();
 
 /**
  * One evaluation per scope, shared by the grid and the background preload.

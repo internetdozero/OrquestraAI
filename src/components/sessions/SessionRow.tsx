@@ -61,7 +61,10 @@ export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: 
       </div>
 
       <div className="hidden shrink-0 text-right sm:block">
-        <p className="font-mono text-[11px] text-zinc-300" title={absoluteDate(session.updatedAt, locale)}>
+        <p
+          className="font-mono text-[11px] text-zinc-300"
+          title={absoluteDate(session.updatedAt, locale)}
+        >
           {formatDateTime(session.updatedAt)}
         </p>
         <p className="text-[10px] text-zinc-500">

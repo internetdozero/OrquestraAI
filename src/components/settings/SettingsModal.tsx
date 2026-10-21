@@ -172,9 +172,7 @@ export function SettingsModal({
                   prefs.setAutoCheckAppUpdates(!prefs.settings.autoCheckAppUpdates)
                 }
                 onToggleExtensionUpdates={() =>
-                  prefs.setAutoCheckExtensionUpdates(
-                    !prefs.settings.autoCheckExtensionUpdates,
-                  )
+                  prefs.setAutoCheckExtensionUpdates(!prefs.settings.autoCheckExtensionUpdates)
                 }
                 onToast={onToast}
                 onError={onError}

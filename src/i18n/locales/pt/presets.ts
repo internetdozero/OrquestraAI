@@ -4,16 +4,14 @@ export const presets = {
   save: "Salvar",
   saveTitle: "Salvar a configuração atual como preset",
   saveHeading: "Salvar configuração atual",
-  saveBody:
-    "Nomeia as skills e os servidores MCP ativos agora para restaurá-los em um clique.",
+  saveBody: "Nomeia as skills e os servidores MCP ativos agora para restaurá-los em um clique.",
   nameLabel: "Nome",
   descriptionLabel: "Descrição",
   optional: "(opcional)",
   saveAction: "Salvar preset",
   cancel: "Cancelar",
   saved: (name: string) => `Preset “${name}” salvo`,
-  applyFailed: (name: string, detail: string) =>
-    `Não foi possível aplicar “${name}”: ${detail}`,
+  applyFailed: (name: string, detail: string) => `Não foi possível aplicar “${name}”: ${detail}`,
   deleteTitle: (name: string) => `Excluir ${name}`,
   deleted: (name: string) => `Preset “${name}” excluído`,
   editHeading: "Editar Preset",
@@ -38,12 +36,9 @@ export const presets = {
   mcpCount: (count: number) => (count === 1 ? "1 MCP" : `${count} MCPs`),
   applied: (name: string, skills: number, mcps: number) =>
     `${name} aplicado · ${skills} skills · ${mcps} MCPs`,
-  readFailed: (detail: string) =>
-    `Não foi possível ler os presets: ${detail}`,
-  saveFailed: (detail: string) =>
-    `Não foi possível salvar o preset: ${detail}`,
-  deleteFailed: (name: string, detail: string) =>
-    `Não foi possível excluir “${name}”: ${detail}`,
+  readFailed: (detail: string) => `Não foi possível ler os presets: ${detail}`,
+  saveFailed: (detail: string) => `Não foi possível salvar o preset: ${detail}`,
+  deleteFailed: (name: string, detail: string) => `Não foi possível excluir “${name}”: ${detail}`,
   namePlaceholder: "Dev de jogos",
   descriptionPlaceholder: "Trabalho de engine, sem ferramentas de nuvem",
   warnSkillMissing: (id: string) => `a skill “${id}” não está no cofre`,

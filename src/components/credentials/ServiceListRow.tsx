@@ -78,9 +78,7 @@ export function ServiceListRow({
           <BrandIcon presetId={presetId} size={32} />
         </span>
         <div className="min-w-0 w-44 shrink-0">
-          <h3 className="truncate text-[13px] font-semibold text-zinc-100">
-            {service.label}
-          </h3>
+          <h3 className="truncate text-[13px] font-semibold text-zinc-100">{service.label}</h3>
           <p className="truncate font-mono text-[10px] text-zinc-500">{service.id}</p>
         </div>
         <span className="hidden shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10.5px] font-medium text-zinc-300 sm:inline">

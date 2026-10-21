@@ -38,12 +38,14 @@ export function entryTokens(name: string, description: string, full: number): nu
 }
 
 /** Sum the listing and the catalog definition for the servers `include` keeps. */
-export function sumMcpTokens<T extends {
-  name: string;
-  description: string;
-  command: string;
-  args: string[];
-}>(servers: readonly T[], include: (server: T) => boolean): { entry: number; full: number } {
+export function sumMcpTokens<
+  T extends {
+    name: string;
+    description: string;
+    command: string;
+    args: string[];
+  },
+>(servers: readonly T[], include: (server: T) => boolean): { entry: number; full: number } {
   let entry = 0;
   let full = 0;
   for (const server of servers) {

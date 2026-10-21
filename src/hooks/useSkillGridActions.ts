@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { sortSkills, type SkillItem, type SortMode } from "../lib/skills";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { markSkillsCacheStale, projectSkillState } from "../lib/skillsCache";
@@ -161,7 +168,17 @@ export function useSkillGridActions(input: {
         setBatchPending(false);
       }
     },
-    [t, isTauri, scope, skills.length, updateSkills, reload, setError, onSummaryStale, setBatchPending],
+    [
+      t,
+      isTauri,
+      scope,
+      skills.length,
+      updateSkills,
+      reload,
+      setError,
+      onSummaryStale,
+      setBatchPending,
+    ],
   );
 
   const [pendingDeleteSkill, setPendingDeleteSkill] = useState<SkillItem | null>(null);

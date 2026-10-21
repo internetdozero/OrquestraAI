@@ -57,12 +57,18 @@ export function ServiceDetailModal({
   if (!open) return null;
 
   async function handleAdd(): Promise<void> {
-    const keys = newKey.split("\n").map((key) => key.trim()).filter(Boolean);
+    const keys = newKey
+      .split("\n")
+      .map((key) => key.trim())
+      .filter(Boolean);
     if (keys.length === 0) return;
     const tag = newTag.trim() || null;
     setBusy(true);
     try {
-      await onAddKeys(keys, keys.map(() => tag));
+      await onAddKeys(
+        keys,
+        keys.map(() => tag),
+      );
       setNewKey("");
       setNewTag("");
       setAdding(false);
@@ -135,12 +141,8 @@ export function ServiceDetailModal({
             <BrandIcon presetId={presetId} size={40} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold text-zinc-100">
-              {service.label}
-            </h2>
-            <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
-              {service.id}
-            </p>
+            <h2 className="truncate text-base font-semibold text-zinc-100">{service.label}</h2>
+            <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">{service.id}</p>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10.5px] font-medium text-zinc-300">
                 {presetLabel}
@@ -166,9 +168,7 @@ export function ServiceDetailModal({
         </div>
 
         {service.description !== "" && (
-          <p className="mt-2.5 text-xs leading-relaxed text-zinc-400">
-            {service.description}
-          </p>
+          <p className="mt-2.5 text-xs leading-relaxed text-zinc-400">{service.description}</p>
         )}
 
         {metaEntries.length > 0 && (
@@ -227,8 +227,8 @@ export function ServiceDetailModal({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void handleAdd();
                 }}
-              placeholder={s.newTagPlaceholder}
-              aria-label={s.newTagAria}
+                placeholder={s.newTagPlaceholder}
+                aria-label={s.newTagAria}
                 spellCheck={false}
                 className="w-24 shrink-0 rounded-md border border-white/10 bg-zinc-950 px-2 py-1.5 font-mono text-xs text-violet-200 placeholder:text-zinc-600"
               />
@@ -240,8 +240,8 @@ export function ServiceDetailModal({
                 disabled={busy || newKey.trim().length === 0}
                 className="rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
               >
-              {s.addToPool}
-            </button>
+                {s.addToPool}
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -251,18 +251,18 @@ export function ServiceDetailModal({
                 }}
                 className="rounded px-2.5 py-1 text-xs text-zinc-400 hover:bg-white/[0.06]"
               >
-              {s.cancel}
-            </button>
+                {s.cancel}
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
             className="mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition hover:bg-white/[0.05] hover:text-zinc-100"
           >
-          <Plus className="size-3.5" /> {s.addBackupKey}
-        </button>
+            <Plus className="size-3.5" /> {s.addBackupKey}
+          </button>
         )}
 
         {testNote !== null && (
@@ -285,20 +285,20 @@ export function ServiceDetailModal({
 
         <div className="mt-4 flex items-center gap-1.5 border-t border-white/[0.07] pt-3">
           {!editing && (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            title={s.editTitle}
-            className={cn(
-              "flex items-center gap-1 rounded px-1.5 py-1 text-[11.5px] transition",
-              editing
-                ? "bg-white/[0.08] text-zinc-100"
-                : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100",
-            )}
-          >
-            <Pencil className="size-3.5" />
-            {s.editService}
-          </button>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              title={s.editTitle}
+              className={cn(
+                "flex items-center gap-1 rounded px-1.5 py-1 text-[11.5px] transition",
+                editing
+                  ? "bg-white/[0.08] text-zinc-100"
+                  : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100",
+              )}
+            >
+              <Pencil className="size-3.5" />
+              {s.editService}
+            </button>
           )}
           <button
             type="button"

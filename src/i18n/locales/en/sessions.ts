@@ -81,8 +81,7 @@ export const sessions: TranslationSchema["sessions"] = {
   updatedAt: "Updated",
   transcriptTitle: "Transcript",
   transcriptLoading: "Loading transcript…",
-  transcriptEmpty:
-    "No messages found or transcript parsing for this harness is in development.",
+  transcriptEmpty: "No messages found or transcript parsing for this harness is in development.",
   turnUser: "You",
   turnAssistant: "Assistant",
   turnSystem: "System",

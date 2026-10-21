@@ -46,9 +46,7 @@ export function VirtualCardGrid<T>({
     const grid = gridRef.current;
     if (!grid) return;
 
-    const card = grid.querySelector<HTMLElement>(
-      `[data-card-id="${CSS.escape(focusKey)}"]`,
-    );
+    const card = grid.querySelector<HTMLElement>(`[data-card-id="${CSS.escape(focusKey)}"]`);
     if (card) {
       card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       revealed.current = focusKey;
@@ -77,33 +75,25 @@ export function VirtualCardGrid<T>({
     // `overflowAnchor: "none"` opts out of native scroll anchoring: when the
     // top/bottom spacers resize, Blink/WebKit must not shift the scroll
     // position to compensate — the spacer math already accounts for it.
-    <div ref={gridRef} className={`${className} [overflow-anchor:none]`} style={{ overflowAnchor: "none" }}>
+    <div
+      ref={gridRef}
+      className={`${className} [overflow-anchor:none]`}
+      style={{ overflowAnchor: "none" }}
+    >
       {rows.topSpace > 0 && <Spacer slot="top" height={rows.topSpace} />}
 
       {visible.map((item) => (
         <Fragment key={keyOf(item)}>{renderItem(item)}</Fragment>
       ))}
 
-      {rows.bottomSpace > 0 && (
-        <Spacer slot="bottom" height={rows.bottomSpace} />
-      )}
+      {rows.bottomSpace > 0 && <Spacer slot="bottom" height={rows.bottomSpace} />}
     </div>
   );
 }
 
 /** Full-width gap standing in for the rows outside the window. */
-function Spacer({
-  slot,
-  height,
-}: {
-  slot: "top" | "bottom";
-  height: number;
-}) {
+function Spacer({ slot, height }: { slot: "top" | "bottom"; height: number }) {
   return (
-    <div
-      aria-hidden="true"
-      data-virtual-slot={slot}
-      style={{ height, gridColumn: "1 / -1" }}
-    />
+    <div aria-hidden="true" data-virtual-slot={slot} style={{ height, gridColumn: "1 / -1" }} />
   );
 }

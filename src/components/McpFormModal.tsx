@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Save, Sparkles, X } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
-import {
-  formatEnv,
-  parseEnv,
-  slugify,
-  type McpServer,
-} from "../lib/mcps";
+import { formatEnv, parseEnv, slugify, type McpServer } from "../lib/mcps";
 import { type McpPreset } from "../lib/mcpPresets";
 import { parseSmartMcpCommand } from "../lib/smartCommandParser";
 import { cn, confirmOnEnter } from "../lib/utils";
@@ -26,8 +21,7 @@ interface McpFormModalProps {
 
 const inputClass =
   "h-9 w-full rounded-lg border border-white/10 bg-zinc-900/60 px-2.5 font-mono text-[12px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-emerald-500/10";
-const labelClass =
-  "mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase";
+const labelClass = "mb-1 block text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase";
 
 export function McpFormModal({
   server,
@@ -49,9 +43,7 @@ export function McpFormModal({
   const [env, setEnv] = useState(formatEnv(server?.env ?? {}));
   const [url, setUrl] = useState(server?.url ?? "");
   const [headers, setHeaders] = useState(server?.headers ?? {});
-  const [globalEnabled, setGlobalEnabled] = useState(
-    server?.globalEnabled ?? false,
-  );
+  const [globalEnabled, setGlobalEnabled] = useState(server?.globalEnabled ?? false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [smartPaste, setSmartPaste] = useState("");
   const [smartNotice, setSmartNotice] = useState<string | null>(null);
@@ -118,15 +110,10 @@ export function McpFormModal({
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
           <div>
-            <h2
-              id="mcp-form-title"
-              className="text-sm font-semibold tracking-tight text-zinc-100"
-            >
+            <h2 id="mcp-form-title" className="text-sm font-semibold tracking-tight text-zinc-100">
               {creating ? t.mcps.addServer : t.mcps.editTitle(server.name)}
             </h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              {t.mcps.formBlurb}
-            </p>
+            <p className="mt-0.5 text-[11px] text-zinc-500">{t.mcps.formBlurb}</p>
           </div>
           <button
             type="button"
@@ -223,10 +210,7 @@ export function McpFormModal({
                 }}
                 placeholder="github"
                 spellCheck={false}
-                className={cn(
-                  inputClass,
-                  idTaken && "border-amber-500/50 focus:ring-amber-500/15",
-                )}
+                className={cn(inputClass, idTaken && "border-amber-500/50 focus:ring-amber-500/15")}
               />
             </div>
           </div>
@@ -260,8 +244,7 @@ export function McpFormModal({
 
           <div>
             <label className={labelClass} htmlFor="mcp-args">
-              {t.mcps.arguments}{" "}
-              <span className="text-zinc-600">· {t.mcps.argsHint}</span>
+              {t.mcps.arguments} <span className="text-zinc-600">· {t.mcps.argsHint}</span>
             </label>
             <textarea
               id="mcp-args"
@@ -276,8 +259,7 @@ export function McpFormModal({
 
           <div>
             <label className={labelClass} htmlFor="mcp-env">
-              {t.mcps.environment}{" "}
-              <span className="text-zinc-600">· {t.mcps.envHint}</span>
+              {t.mcps.environment} <span className="text-zinc-600">· {t.mcps.envHint}</span>
             </label>
             <textarea
               id="mcp-env"
@@ -288,9 +270,7 @@ export function McpFormModal({
               placeholder="GITHUB_PERSONAL_ACCESS_TOKEN=…"
               className={cn(inputClass, "h-auto resize-y py-2 leading-relaxed")}
             />
-            <p className="mt-1 text-[10.5px] leading-relaxed text-zinc-600">
-              {t.mcps.envNote}
-            </p>
+            <p className="mt-1 text-[10.5px] leading-relaxed text-zinc-600">{t.mcps.envNote}</p>
           </div>
 
           <McpConnectionFields
@@ -309,9 +289,7 @@ export function McpFormModal({
             />
             <span className="text-[12px] text-zinc-300">
               {t.mcps.enableGlobally}
-              <span className="ml-1.5 text-[11px] text-zinc-500">
-                {t.mcps.enableGloballyHint}
-              </span>
+              <span className="ml-1.5 text-[11px] text-zinc-500">{t.mcps.enableGloballyHint}</span>
             </span>
           </label>
 

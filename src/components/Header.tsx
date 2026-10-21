@@ -95,9 +95,7 @@ export function Header({
                   <span className="accent-dot absolute inline-flex size-full animate-ping rounded-full opacity-60" />
                   <span className="accent-dot relative inline-flex size-2 rounded-full" />
                 </span>
-                <span className="accent-text text-xs font-medium">
-                  {t.common.activeSkills}
-                </span>
+                <span className="accent-text text-xs font-medium">{t.common.activeSkills}</span>
                 <span className="accent-text font-mono text-xs opacity-70">
                   {activeCount}/{totalCount}
                 </span>

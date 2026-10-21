@@ -72,19 +72,13 @@ interface AddCredentialModalProps {
 
 /** New-service credential modal: brand grid, companion fields, key rows. Backup
  * keys join an existing pool from the pool's own card, not from here. */
-export function AddCredentialModal({
-  open,
-  presets,
-  onClose,
-  onSave,
-}: AddCredentialModalProps) {
+export function AddCredentialModal({ open, presets, onClose, onSave }: AddCredentialModalProps) {
   const [presetSearch, setPresetSearch] = useState("");
   const [category, setCategory] = useState<PresetCategory>("All");
   const [presetId, setPresetId] = useState("github");
   const [serviceId, setServiceId] = useState("");
   const [label, setLabel] = useState("");
-  const { rows, primaryIdx, setPrimaryIdx, patchRow, removeRow, resetRows, addRow } =
-    useKeyRows();
+  const { rows, primaryIdx, setPrimaryIdx, patchRow, removeRow, resetRows, addRow } = useKeyRows();
   const [meta, setMeta] = useState<Record<string, string>>({});
   const [customHeader, setCustomHeader] = useState("");
   const [customPrefix, setCustomPrefix] = useState("");
@@ -130,9 +124,15 @@ export function AddCredentialModal({
         return;
       }
       const ordered = rows
-        .map((row, position) => ({ value: row.value.trim(), tag: row.tag.trim() || null, position }))
+        .map((row, position) => ({
+          value: row.value.trim(),
+          tag: row.tag.trim() || null,
+          position,
+        }))
         .filter((row) => row.value !== "")
-        .sort((a, b) => (a.position === primaryIdx ? -1 : b.position === primaryIdx ? 1 : a.position - b.position));
+        .sort((a, b) =>
+          a.position === primaryIdx ? -1 : b.position === primaryIdx ? 1 : a.position - b.position,
+        );
       await onSave({
         id: serviceId.trim(),
         label: label.trim() || serviceId.trim(),
@@ -178,129 +178,127 @@ export function AddCredentialModal({
         <div className="flex items-center gap-2.5">
           {preset !== undefined && <BrandIcon presetId={preset.id} size={36} />}
           <div>
-            <h2 className="text-base font-semibold text-zinc-100">
-              {s.modalTitle}
-            </h2>
-            <p className="text-[11.5px] text-zinc-500">
-              {s.modalSubtitle}
-            </p>
+            <h2 className="text-base font-semibold text-zinc-100">{s.modalTitle}</h2>
+            <p className="text-[11.5px] text-zinc-500">{s.modalSubtitle}</p>
           </div>
         </div>
 
         <p className="mt-4 text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
           {s.chooseProvider}
         </p>
-            <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={s.filterCategoryAria}>
-              {CATEGORY_CHIPS.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => setCategory(chip)}
-                  className={
-                    category === chip
-                      ? "rounded-full border border-emerald-500/50 bg-emerald-500/15 px-3 py-1 text-[11.5px] font-medium text-emerald-200"
-                      : "rounded-full border border-white/10 bg-white/[0.02] px-3 py-1 text-[11.5px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
-                  }
-                >
-                  {chip === "All" ? s.allCategory : (s.categoryNames[chip] ?? chip)}
-                </button>
-              ))}
-            </div>
-            <div className="relative mt-2.5">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
-              <input
-                value={presetSearch}
-                onChange={(event) => setPresetSearch(event.target.value)}
-                placeholder={s.searchProviders}
-                aria-label={s.searchProvidersAria}
-                data-no-enter
-                className="w-full rounded-lg border border-white/10 bg-zinc-900 py-2 pr-2 pl-8 text-[12.5px] text-zinc-100 placeholder:text-zinc-600"
-              />
-            </div>
-            <div
-              className="mt-2 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto px-0.5 py-0.5 sm:grid-cols-2"
-              style={{
-                maskImage: "linear-gradient(to bottom, black 88%, transparent)",
-                WebkitMaskImage: "linear-gradient(to bottom, black 88%, transparent)",
-              }}
+        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={s.filterCategoryAria}>
+          {CATEGORY_CHIPS.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => setCategory(chip)}
+              className={
+                category === chip
+                  ? "rounded-full border border-emerald-500/50 bg-emerald-500/15 px-3 py-1 text-[11.5px] font-medium text-emerald-200"
+                  : "rounded-full border border-white/10 bg-white/[0.02] px-3 py-1 text-[11.5px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
+              }
             >
-              {filtered.map((entry) => (
-                <PresetCard
-                  key={entry.id}
-                  preset={entry}
-                  selected={entry.id === preset?.id}
-                  onSelect={() => {
-                    setPresetId(entry.id);
-                    setMeta({});
-                  }}
-                />
-              ))}
-              {filtered.length === 0 && (
-                <p className="col-span-full py-3 text-center text-xs text-zinc-500">{s.noProviderMatch}</p>
-              )}
-            </div>
-            <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-3">
-              <p className="text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
-                {s.configureService(preset?.label ?? "service")}
-              </p>
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              {chip === "All" ? s.allCategory : (s.categoryNames[chip] ?? chip)}
+            </button>
+          ))}
+        </div>
+        <div className="relative mt-2.5">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
+          <input
+            value={presetSearch}
+            onChange={(event) => setPresetSearch(event.target.value)}
+            placeholder={s.searchProviders}
+            aria-label={s.searchProvidersAria}
+            data-no-enter
+            className="w-full rounded-lg border border-white/10 bg-zinc-900 py-2 pr-2 pl-8 text-[12.5px] text-zinc-100 placeholder:text-zinc-600"
+          />
+        </div>
+        <div
+          className="mt-2 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto px-0.5 py-0.5 sm:grid-cols-2"
+          style={{
+            maskImage: "linear-gradient(to bottom, black 88%, transparent)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 88%, transparent)",
+          }}
+        >
+          {filtered.map((entry) => (
+            <PresetCard
+              key={entry.id}
+              preset={entry}
+              selected={entry.id === preset?.id}
+              onSelect={() => {
+                setPresetId(entry.id);
+                setMeta({});
+              }}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <p className="col-span-full py-3 text-center text-xs text-zinc-500">
+              {s.noProviderMatch}
+            </p>
+          )}
+        </div>
+        <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-3">
+          <p className="text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
+            {s.configureService(preset?.label ?? "service")}
+          </p>
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <input
+              value={serviceId}
+              onChange={(event) => setServiceId(event.target.value)}
+              placeholder={s.serviceIdPlaceholder}
+              aria-label={s.serviceIdAria}
+              className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
+            />
+            <input
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder={s.labelPlaceholder}
+              aria-label={s.labelAria}
+              className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-600"
+            />
+          </div>
+          {preset !== undefined &&
+            preset.metaFields.map((field) => (
               <input
-                value={serviceId}
-                onChange={(event) => setServiceId(event.target.value)}
-                placeholder={s.serviceIdPlaceholder}
-                aria-label={s.serviceIdAria}
+                key={field.key}
+                value={meta[field.key] ?? ""}
+                onChange={(event) =>
+                  setMeta((current) => ({
+                    ...current,
+                    [field.key]: event.target.value,
+                  }))
+                }
+                placeholder={`${field.label} — ${field.placeholder}`}
+                aria-label={field.label}
+                className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
+              />
+            ))}
+          {preset?.id === "custom" && (
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <input
+                value={customHeader}
+                onChange={(event) => setCustomHeader(event.target.value)}
+                placeholder={s.customHeader}
+                aria-label={s.customHeaderAria}
                 className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
               />
               <input
-                value={label}
-                onChange={(event) => setLabel(event.target.value)}
-                placeholder={s.labelPlaceholder}
-                aria-label={s.labelAria}
-                className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-600"
+                value={customPrefix}
+                onChange={(event) => setCustomPrefix(event.target.value)}
+                placeholder={s.customPrefix}
+                aria-label={s.customPrefixAria}
+                className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
+              />
+              <input
+                value={customEnv}
+                onChange={(event) => setCustomEnv(event.target.value)}
+                placeholder={s.customEnv}
+                aria-label={s.customEnvAria}
+                className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
               />
             </div>
-            {preset !== undefined &&
-              preset.metaFields.map((field) => (
-                <input
-                  key={field.key}
-                  value={meta[field.key] ?? ""}
-                  onChange={(event) =>
-                    setMeta((current) => ({
-                      ...current,
-                      [field.key]: event.target.value,
-                    }))
-                  }
-                  placeholder={`${field.label} — ${field.placeholder}`}
-                  aria-label={field.label}
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
-                />
-              ))}
-            {preset?.id === "custom" && (
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                <input
-                  value={customHeader}
-                  onChange={(event) => setCustomHeader(event.target.value)}
-                  placeholder={s.customHeader}
-                  aria-label={s.customHeaderAria}
-                  className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
-                />
-                <input
-                  value={customPrefix}
-                  onChange={(event) => setCustomPrefix(event.target.value)}
-                  placeholder={s.customPrefix}
-                  aria-label={s.customPrefixAria}
-                  className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
-                />
-                <input
-                  value={customEnv}
-                  onChange={(event) => setCustomEnv(event.target.value)}
-                  placeholder={s.customEnv}
-                  aria-label={s.customEnvAria}
-                  className="rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600"
-                />
-              </div>
-            )}
-            </div>
+          )}
+        </div>
 
         <p className="mt-4 text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
           {s.keysStep}
@@ -323,7 +321,11 @@ export function AddCredentialModal({
             />
           ))}
         </div>
-        <button type="button" onClick={addRow} className="mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition hover:bg-white/[0.05] hover:text-zinc-100">
+        <button
+          type="button"
+          onClick={addRow}
+          className="mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition hover:bg-white/[0.05] hover:text-zinc-100"
+        >
           <Plus className="size-3.5" /> {s.addBackupKey}
         </button>
         {preset !== undefined && preset.keyUrl !== "" && (
@@ -339,8 +341,19 @@ export function AddCredentialModal({
         {error !== null && <p className="mt-2 text-xs text-red-300">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.06]">{s.cancel}</button>
-          <button type="button" onClick={() => void handleSave()} disabled={saving} className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.06]"
+          >
+            {s.cancel}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
+          >
             {saving ? s.saving : s.saveService}
           </button>
         </div>

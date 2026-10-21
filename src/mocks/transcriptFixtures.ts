@@ -143,8 +143,6 @@ export function fixtureTranscript(
   harness: string,
   sessionId: string,
 ): TranscriptTurn[] | undefined {
-  const fixture = FIXTURES.find(
-    (entry) => entry.harness === harness && entry.id === sessionId,
-  );
+  const fixture = FIXTURES.find((entry) => entry.harness === harness && entry.id === sessionId);
   return fixture ? fixture.turns.map((turn) => ({ ...turn })) : undefined;
 }

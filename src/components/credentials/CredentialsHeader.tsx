@@ -13,20 +13,11 @@ import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { CustomDropdown } from "../CustomDropdown.tsx";
 
-export type CredentialStatusFilter =
-  | "All"
-  | "Healthy"
-  | "RateLimited"
-  | "QuotaExceeded";
+export type CredentialStatusFilter = "All" | "Healthy" | "RateLimited" | "QuotaExceeded";
 
 export type CredentialViewMode = "grid" | "list";
 
-const STATUS_FILTERS: CredentialStatusFilter[] = [
-  "All",
-  "Healthy",
-  "RateLimited",
-  "QuotaExceeded",
-];
+const STATUS_FILTERS: CredentialStatusFilter[] = ["All", "Healthy", "RateLimited", "QuotaExceeded"];
 
 interface Metric {
   label: string;
@@ -114,9 +105,7 @@ export function CredentialsHeader({
             className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 backdrop-blur transition-colors hover:border-white/20"
           >
             <div className="flex items-center justify-between">
-              <p className={cn("font-mono text-xl tabular-nums", metric.tint)}>
-                {metric.value}
-              </p>
+              <p className={cn("font-mono text-xl tabular-nums", metric.tint)}>{metric.value}</p>
               <metric.icon className={cn("size-4", metric.iconTint)} />
             </div>
             <p className="mt-0.5 text-[10px] font-medium tracking-[0.12em] text-zinc-500 uppercase">

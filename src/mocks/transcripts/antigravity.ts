@@ -16,8 +16,7 @@ export const ANTIGRAVITY_TURNS: TranscriptTurn[] = [
   },
   {
     role: "user",
-    content:
-      "Also stop the system prompt from showing up as a bubble in the transcript.",
+    content: "Also stop the system prompt from showing up as a bubble in the transcript.",
     timestamp: "2026-10-18T09:13:10Z",
   },
   {

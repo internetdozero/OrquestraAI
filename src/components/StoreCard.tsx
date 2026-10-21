@@ -35,15 +35,7 @@ function tierOf(entry: OfficialSkillEntry): "official" | "community" {
 }
 
 /** One hub row: security badge, description, tags, repo link and action. */
-export function StoreCard({
-  entry,
-  meta,
-  status,
-  action,
-  busy,
-  onRun,
-  scopeHint,
-}: StoreCardProps) {
+export function StoreCard({ entry, meta, status, action, busy, onRun, scopeHint }: StoreCardProps) {
   const { t } = useI18n();
   const s = t.store;
   const ActionIcon = action ? ACTION_ICON[action.kind] : null;

@@ -93,3 +93,17 @@ jobs:
       # Typecheck the frontend without emitting output.
       - name: Typecheck frontend
         run: npx tsc --noEmit
+
+      # Full frontend build validation: check:ui + tsc + vite build.
+      # Catches Vite, Tailwind v4 and check-card-motion breakages that
+      # unit tests and tsc alone cannot detect.
+      - name: Build frontend
+        run: npm run build
+
+      # Enforce ESLint recommended rules (incl. react-hooks) and Prettier
+      # formatting so hooks bugs and style drift fail CI, not review.
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check

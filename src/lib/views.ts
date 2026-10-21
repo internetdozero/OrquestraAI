@@ -13,13 +13,7 @@ import {
  * tabs inside the skills view, the same way the MCP registry already presents
  * Global and the harnesses as one screen with an inner scope selector.
  */
-export type ActiveView =
-  | "skills"
-  | "mcps"
-  | "agents"
-  | "sessions"
-  | "ideas"
-  | "credentials";
+export type ActiveView = "skills" | "mcps" | "agents" | "sessions" | "ideas" | "credentials";
 
 export interface ViewDefinition {
   id: ActiveView;

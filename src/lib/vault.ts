@@ -2,11 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { devMockMode } from "./fixtures.ts";
 
 /** Masked key health from the Rust vault. */
-export type VaultKeyHealth =
-  | "healthy"
-  | "rateLimited"
-  | "quotaExceeded"
-  | "invalidKey";
+export type VaultKeyHealth = "healthy" | "rateLimited" | "quotaExceeded" | "invalidKey";
 
 /** One non-secret companion field (account id, region, project URL). */
 export interface VaultMetaField {
@@ -71,15 +67,45 @@ export interface VaultExecResult {
 
 const MOCK_PRESET_TABLE: Array<[string, string, string, string]> = [
   ["openai", "OpenAI", "GPT models and embeddings.", "https://platform.openai.com/api-keys"],
-  ["anthropic", "Anthropic", "Claude models via x-api-key.", "https://console.anthropic.com/settings/keys"],
-  ["gemini", "Google Gemini", "Gemini models via API key header.", "https://aistudio.google.com/apikey"],
+  [
+    "anthropic",
+    "Anthropic",
+    "Claude models via x-api-key.",
+    "https://console.anthropic.com/settings/keys",
+  ],
+  [
+    "gemini",
+    "Google Gemini",
+    "Gemini models via API key header.",
+    "https://aistudio.google.com/apikey",
+  ],
   ["groq", "Groq", "Ultra-low-latency inference.", "https://console.groq.com/keys"],
-  ["deepseek", "DeepSeek", "DeepSeek chat and reasoning.", "https://platform.deepseek.com/api_keys"],
-  ["cloudflare", "Cloudflare", "Zone, DNS and Workers API.", "https://dash.cloudflare.com/profile/api-tokens"],
-  ["supabase", "Supabase", "Postgres, auth and storage.", "https://supabase.com/dashboard/account/tokens"],
+  [
+    "deepseek",
+    "DeepSeek",
+    "DeepSeek chat and reasoning.",
+    "https://platform.deepseek.com/api_keys",
+  ],
+  [
+    "cloudflare",
+    "Cloudflare",
+    "Zone, DNS and Workers API.",
+    "https://dash.cloudflare.com/profile/api-tokens",
+  ],
+  [
+    "supabase",
+    "Supabase",
+    "Postgres, auth and storage.",
+    "https://supabase.com/dashboard/account/tokens",
+  ],
   ["aws", "AWS", "CLI/SDK use via env vars.", "https://console.aws.amazon.com/iam/home"],
   ["vercel", "Vercel", "Deployments and projects API.", "https://vercel.com/account/tokens"],
-  ["neon", "Neon", "Serverless Postgres management.", "https://console.neon.tech/app/settings/api-keys"],
+  [
+    "neon",
+    "Neon",
+    "Serverless Postgres management.",
+    "https://console.neon.tech/app/settings/api-keys",
+  ],
   ["github", "GitHub", "Repos, issues and Actions.", "https://github.com/settings/tokens"],
   ["stripe", "Stripe", "Payments and billing API.", "https://dashboard.stripe.com/apikeys"],
   ["tavily", "Tavily", "Search API for agents.", "https://app.tavily.com"],
@@ -94,19 +120,17 @@ const MOCK_PRESET_TABLE: Array<[string, string, string, string]> = [
   ["custom", "Custom / Generic", "Configurable header template or env var.", ""],
 ];
 
-const mockPresets: VaultPreset[] = MOCK_PRESET_TABLE.map(
-  ([id, label, description, keyUrl]) => ({
-    id,
-    label,
-    header: "authorization",
-    prefix: "Bearer ",
-    extraHeaders: id === "github" ? [["user-agent", "OrquestraAI"]] : [],
-    envVar: `${id.toUpperCase()}_API_KEY`,
-    description,
-    keyUrl,
-    metaFields: [],
-  }),
-);
+const mockPresets: VaultPreset[] = MOCK_PRESET_TABLE.map(([id, label, description, keyUrl]) => ({
+  id,
+  label,
+  header: "authorization",
+  prefix: "Bearer ",
+  extraHeaders: id === "github" ? [["user-agent", "OrquestraAI"]] : [],
+  envVar: `${id.toUpperCase()}_API_KEY`,
+  description,
+  keyUrl,
+  metaFields: [],
+}));
 
 const mockServices: VaultService[] = [
   {
@@ -193,10 +217,7 @@ export function vaultDeleteService(id: string): Promise<void> {
   return invoke<void>("vault_delete_service", { id });
 }
 
-export function vaultSetPrimary(
-  id: string,
-  index: number,
-): Promise<VaultService> {
+export function vaultSetPrimary(id: string, index: number): Promise<VaultService> {
   return invoke<VaultService>("vault_set_primary", { id, index });
 }
 
@@ -224,10 +245,7 @@ export function vaultHttpRequest(input: {
  * Array only — the backend allowlists argv[0] and runs with no shell, so
  * shell strings are rejected server-side and must not be sent.
  */
-export function vaultExec(
-  service: string,
-  command: string[],
-): Promise<VaultExecResult> {
+export function vaultExec(service: string, command: string[]): Promise<VaultExecResult> {
   return invoke<VaultExecResult>("vault_exec", { service, command });
 }
 
@@ -243,10 +261,7 @@ export interface VaultTestResult {
  * Ping a pooled key against its preset's canonical verify endpoint.
  * Persists the observed health; the secret never crosses IPC.
  */
-export function vaultTestConnection(
-  service: string,
-  keyIndex?: number,
-): Promise<VaultTestResult> {
+export function vaultTestConnection(service: string, keyIndex?: number): Promise<VaultTestResult> {
   return invoke<VaultTestResult>("vault_test_connection", {
     service,
     keyIndex: keyIndex ?? null,
@@ -254,9 +269,6 @@ export function vaultTestConnection(
 }
 
 /** Remove one key from a pool (re-indexes, keeps a valid primary). */
-export function vaultRemoveKey(
-  id: string,
-  index: number,
-): Promise<VaultService> {
+export function vaultRemoveKey(id: string, index: number): Promise<VaultService> {
   return invoke<VaultService>("vault_remove_key", { id, index });
 }

@@ -30,7 +30,8 @@ export const skills = {
   disableAll: "Desativar todas",
   symlinkAllInto: (label: string) => `Criar symlinks de todas as skills em ${label}`,
   unlinkAllGlobal: "Remover symlinks de todas as skills do Global e de todos os harnesses",
-  unlinkAllHarness: (label: string) => `Remover symlinks de todas as skills não herdadas de ${label}`,
+  unlinkAllHarness: (label: string) =>
+    `Remover symlinks de todas as skills não herdadas de ${label}`,
   activeGroup: "Ativas",
   idleGroup: "Inativas",
   inheritedFromGlobal: "Herdada do Global",
@@ -71,8 +72,7 @@ export const skills = {
   editLoading: "Lendo SKILL.md…",
   editSaved: (name: string) => `Skill “${name}” salva`,
   editFailed: (detail: string) => `Não foi possível salvar: ${detail}`,
-  deleteConfirm: (name: string) =>
-    `Tem certeza que deseja excluir “${name}” do cofre?`,
+  deleteConfirm: (name: string) => `Tem certeza que deseja excluir “${name}” do cofre?`,
   deleteDeleted: (name: string) => `Skill “${name}” excluída do cofre`,
   deleteFailed: (detail: string) => `Não foi possível excluir: ${detail}`,
   deleteTitle: "Excluir skill",

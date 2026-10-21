@@ -38,9 +38,7 @@ function readUserOpened(): ReadonlySet<string> {
     if (!raw) return new Set();
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
-    return new Set(
-      parsed.filter((entry): entry is string => typeof entry === "string"),
-    );
+    return new Set(parsed.filter((entry): entry is string => typeof entry === "string"));
   } catch {
     return new Set();
   }
@@ -62,13 +60,10 @@ export function IdeasBoard({
 }: IdeasBoardProps) {
   const { t } = useI18n();
   const s = t.ideas;
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-    () => new Set(["completed"]),
-  );
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set(["completed"]));
   // Columns the user explicitly opened: shields them from the auto-collapse
   // rule for empty columns below. Persisted so remounts keep the choice.
-  const [userOpened, setUserOpened] =
-    useState<ReadonlySet<string>>(readUserOpened);
+  const [userOpened, setUserOpened] = useState<ReadonlySet<string>>(readUserOpened);
   /** Update the set and persist it; storage failure keeps memory state. */
   const persistOpened = (next: ReadonlySet<string>) => {
     setUserOpened(next);
@@ -90,8 +85,7 @@ export function IdeasBoard({
     // an auto-collapsed empty column must open on click, not sink into
     // the manual set and stay shut.
     const isEmpty = !ideas.some((idea) => idea.status === status);
-    const effectivelyCollapsed =
-      collapsed.has(status) || (isEmpty && !userOpened.has(status));
+    const effectivelyCollapsed = collapsed.has(status) || (isEmpty && !userOpened.has(status));
     if (effectivelyCollapsed) {
       setCollapsed((previous) => {
         const next = new Set(previous);
@@ -121,11 +115,9 @@ export function IdeasBoard({
         // Empty columns auto-collapse to the slim strip so zero-card
         // statuses cost no horizontal space; an explicit user open wins.
         const isCollapsed =
-          collapsed.has(column.status) ||
-          (rows.length === 0 && !userOpened.has(column.status));
+          collapsed.has(column.status) || (rows.length === 0 && !userOpened.has(column.status));
         const isCompleted = column.status === "completed";
-        const shown =
-          isCompleted && !expandedCompleted ? rows.slice(0, COMPLETED_PAGE) : rows;
+        const shown = isCompleted && !expandedCompleted ? rows.slice(0, COMPLETED_PAGE) : rows;
         const hidden = rows.length - shown.length;
 
         if (isCollapsed) {
@@ -246,19 +238,19 @@ export function IdeasBoard({
               />
             ))}
             {rows.length === 0 && (
-                  <p className="rounded-lg border border-dashed border-white/[0.07] px-3 py-6 text-center text-[11px] text-zinc-600">
-                    —
-                  </p>
-                )}
-                {isCompleted && hidden > 0 && !expandedCompleted && (
-                  <button
-                    type="button"
-                    onClick={() => setExpandedCompleted(true)}
-                    className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2 py-1.5 text-[11px] font-medium text-zinc-400 transition hover:border-amber-500/30 hover:text-amber-200"
-                  >
-                    {s.showMoreCompleted(hidden)}
-                  </button>
-                )}
+              <p className="rounded-lg border border-dashed border-white/[0.07] px-3 py-6 text-center text-[11px] text-zinc-600">
+                —
+              </p>
+            )}
+            {isCompleted && hidden > 0 && !expandedCompleted && (
+              <button
+                type="button"
+                onClick={() => setExpandedCompleted(true)}
+                className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2 py-1.5 text-[11px] font-medium text-zinc-400 transition hover:border-amber-500/30 hover:text-amber-200"
+              >
+                {s.showMoreCompleted(hidden)}
+              </button>
+            )}
             {isCompleted && expandedCompleted && rows.length > COMPLETED_PAGE && (
               <button
                 type="button"

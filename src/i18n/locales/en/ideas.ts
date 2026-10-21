@@ -88,8 +88,7 @@ export const ideas: TranslationSchema["ideas"] = {
   emptyNotes: "No notes on the board",
   emptyNotesHint: "Agents post notes over MCP; they show up here.",
   unavailable: "Vault unavailable outside the desktop app.",
-  mockBanner:
-    "Browser demo mode: in-memory mock data, nothing is saved to the real Vault.",
+  mockBanner: "Browser demo mode: in-memory mock data, nothing is saved to the real Vault.",
   noteFrom: "From",
   noteTo: "To",
   markRead: "Mark as read",

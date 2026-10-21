@@ -1,12 +1,5 @@
 import { useEffect } from "react";
-import {
-  AlertTriangle,
-  HardDriveDownload,
-  Link2,
-  Loader2,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { AlertTriangle, HardDriveDownload, Link2, Loader2, ShieldCheck, X } from "lucide-react";
 import { bridgeNote, bridgeRationale } from "../i18n/bridgeCopy";
 import { useI18n } from "../hooks/useI18n";
 import type { TranslationSchema } from "../i18n/locales/pt";
@@ -95,9 +88,7 @@ function HarnessRow({ status }: { status: HarnessStatus }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Link2 className="size-3 shrink-0 text-zinc-600" />
-          <span className="truncate text-[12.5px] font-medium text-zinc-200">
-            {status.label}
-          </span>
+          <span className="truncate text-[12.5px] font-medium text-zinc-200">{status.label}</span>
         </div>
         <StatePill status={status} />
       </div>
@@ -107,9 +98,7 @@ function HarnessRow({ status }: { status: HarnessStatus }) {
           {status.skillsPaths.map((path) => (
             <Route key={path} from={path} to={projection} />
           ))}
-          {status.instructionsPath && (
-            <Route from={status.instructionsPath} to={master} />
-          )}
+          {status.instructionsPath && <Route from={status.instructionsPath} to={master} />}
           {status.configPath && (
             <p className="font-mono text-[10px] leading-relaxed text-zinc-500">
               <span className="text-zinc-400">{shortenPath(status.configPath)}</span>
@@ -144,20 +133,13 @@ function HarnessRow({ status }: { status: HarnessStatus }) {
           )}
         </div>
       ) : (
-        <p className="mt-1.5 pl-5 text-[10.5px] text-zinc-600">
-          {t.bridge.untouched}
-        </p>
+        <p className="mt-1.5 pl-5 text-[10.5px] text-zinc-600">{t.bridge.untouched}</p>
       )}
     </li>
   );
 }
 
-export function BridgeModal({
-  statuses,
-  deploying,
-  onClose,
-  onConfirm,
-}: BridgeModalProps) {
+export function BridgeModal({ statuses, deploying, onClose, onConfirm }: BridgeModalProps) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !deploying) onClose();
@@ -234,9 +216,7 @@ export function BridgeModal({
             <span className="text-[10px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
               {t.bridge.linkPlan}
             </span>
-            <span className="font-mono text-[10px] text-zinc-600">
-              {t.bridge.masterLabel}
-            </span>
+            <span className="font-mono text-[10px] text-zinc-600">{t.bridge.masterLabel}</span>
           </div>
 
           <ul className="space-y-2">

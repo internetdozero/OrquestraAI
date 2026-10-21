@@ -3,12 +3,7 @@ import { createPortal } from "react-dom";
 import { Check, Copy, Pin, Trash2, X } from "lucide-react";
 import { scopeLabel } from "../../lib/harnesses";
 import type { UnifiedSession } from "../../lib/sessions";
-import {
-  absoluteDate,
-  formatBytes,
-  formatDateTime,
-  harnessColor,
-} from "../../lib/sessionFormat";
+import { absoluteDate, formatBytes, formatDateTime, harnessColor } from "../../lib/sessionFormat";
 import { cn } from "../../lib/utils";
 import { useI18n } from "../../hooks/useI18n";
 import { useClipboard } from "../../hooks/useClipboard";
@@ -23,7 +18,15 @@ interface SessionDetailDrawerProps {
 }
 
 /** Copy affordance for one metadata value, with a 1.5s checkmark. */
-function CopyButton({ value, label, onCopied }: { value: string; label: string; onCopied: () => void }) {
+function CopyButton({
+  value,
+  label,
+  onCopied,
+}: {
+  value: string;
+  label: string;
+  onCopied: () => void;
+}) {
   const { copied, copy } = useClipboard(1500);
   return (
     <button
@@ -36,9 +39,7 @@ function CopyButton({ value, label, onCopied }: { value: string; label: string; 
       }}
       className={cn(
         "grid size-5 shrink-0 place-items-center rounded transition",
-        copied
-          ? "text-emerald-400"
-          : "text-zinc-600 hover:text-emerald-300",
+        copied ? "text-emerald-400" : "text-zinc-600 hover:text-emerald-300",
       )}
     >
       {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
@@ -79,9 +80,7 @@ export function SessionDetailDrawer({
     {
       term: s.workDir,
       value: session.projectPath ?? "—",
-      copy: session.projectPath
-        ? { value: session.projectPath, label: s.copyPath }
-        : undefined,
+      copy: session.projectPath ? { value: session.projectPath, label: s.copyPath } : undefined,
     },
     { term: s.turns, value: `${session.turnsCount}` },
     { term: s.diskSize, value: formatBytes(session.sizeBytes) },
@@ -111,7 +110,10 @@ export function SessionDetailDrawer({
             <p className="text-[9.5px] font-medium tracking-[0.14em] text-zinc-600 uppercase">
               {s.drawerMeta}
             </p>
-            <h2 className="truncate text-[13px] font-medium text-zinc-100" title={session.title || session.id}>
+            <h2
+              className="truncate text-[13px] font-medium text-zinc-100"
+              title={session.title || session.id}
+            >
               {session.title || session.id}
             </h2>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">

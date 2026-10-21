@@ -102,10 +102,12 @@ export function ArchivedIdeasModal({
                       </p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-px text-[10.5px] font-medium text-emerald-300">
-                          {s.categories[idea.category as keyof typeof s.categories] ?? idea.category}
+                          {s.categories[idea.category as keyof typeof s.categories] ??
+                            idea.category}
                         </span>
                         <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-px text-[10.5px] font-medium text-amber-300">
-                          {s.priorities[idea.priority as keyof typeof s.priorities] ?? idea.priority}
+                          {s.priorities[idea.priority as keyof typeof s.priorities] ??
+                            idea.priority}
                         </span>
                         <span className="font-mono text-[10.5px] text-zinc-500 tabular-nums">
                           {formatDay(idea.updatedAt)}

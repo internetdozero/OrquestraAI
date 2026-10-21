@@ -1,10 +1,6 @@
 import { useCallback, useState } from "react";
 import { useI18n } from "./useI18n";
-import {
-  applyAppUpdate,
-  restartApp,
-  syncOfficialExtensions,
-} from "../lib/tauri";
+import { applyAppUpdate, restartApp, syncOfficialExtensions } from "../lib/tauri";
 
 interface AppUpdaterDeps {
   onToast: (message: string) => void;
@@ -49,11 +45,7 @@ export function useAppUpdater({ onToast, onError }: AppUpdaterDeps) {
     setSyncing(true);
     try {
       const result = await syncOfficialExtensions();
-      onToast(
-        a.syncExtensionsSuccess(
-          result.updatedSkills.length + result.updatedMcps.length,
-        ),
-      );
+      onToast(a.syncExtensionsSuccess(result.updatedSkills.length + result.updatedMcps.length));
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
       onError(a.updateAppFailed(detail));

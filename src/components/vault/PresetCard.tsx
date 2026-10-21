@@ -32,9 +32,7 @@ export function PresetCard({ preset, selected, onSelect }: PresetCardProps) {
         <span className="block truncate text-[12.5px] font-semibold text-zinc-100">
           {preset.label}
         </span>
-        <span className="block truncate text-[10.5px] text-zinc-500">
-          {preset.description}
-        </span>
+        <span className="block truncate text-[10.5px] text-zinc-500">{preset.description}</span>
       </span>
       {preset.keyUrl !== "" && (
         <a

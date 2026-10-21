@@ -64,11 +64,7 @@ function compareMcpNames(left: McpServer, right: McpServer): number {
  * Order the grid. `active` floats every in-scope server above the rest (A–Z
  * inside each band); `official` floats official servers first (A–Z inside).
  */
-export function sortMcps(
-  servers: McpServer[],
-  mode: McpSortMode,
-  scope: string,
-): McpServer[] {
+export function sortMcps(servers: McpServer[], mode: McpSortMode, scope: string): McpServer[] {
   const ranked = [...servers];
   switch (mode) {
     case "alpha":
@@ -94,16 +90,11 @@ export function sortMcps(
 /** `global` or a harness that inherits the baseline on top of its own opt-ins. */
 export function coversHarness(server: McpServer, harnessId: string): boolean {
   if (harnessId === "global") return server.globalEnabled;
-  return (
-    server.globalEnabled || server.enabledHarnesses.includes(harnessId)
-  );
+  return server.globalEnabled || server.enabledHarnesses.includes(harnessId);
 }
 
 /** True when the scope inherits the server and so cannot switch it off here. */
-export function isLockedByGlobal(
-  server: McpServer,
-  harnessId: string,
-): boolean {
+export function isLockedByGlobal(server: McpServer, harnessId: string): boolean {
   return harnessId !== "global" && server.globalEnabled;
 }
 
@@ -117,9 +108,7 @@ export function isSecretValue(value: string): boolean {
 }
 
 export function isEnvironmentTemplate(value: string): boolean {
-  return /\$(?:\{[A-Za-z_][A-Za-z0-9_]*(?::-.*?)?\}|[A-Za-z_][A-Za-z0-9_]*)/.test(
-    value,
-  );
+  return /\$(?:\{[A-Za-z_][A-Za-z0-9_]*(?::-.*?)?\}|[A-Za-z_][A-Za-z0-9_]*)/.test(value);
 }
 
 /** Full command line as the harness will execute it. */
@@ -171,12 +160,8 @@ export function listMcpTargets(): Promise<McpTarget[]> {
 }
 
 /** Enable or disable every server for one scope in a single atomic write. */
-export function batchSetMcpAll(
-  harnessId: string | null,
-  enabled: boolean,
-): Promise<void> {
-  if (devMockMode())
-    return Promise.resolve(fixtureBatchSetMcpAll(harnessId, enabled));
+export function batchSetMcpAll(harnessId: string | null, enabled: boolean): Promise<void> {
+  if (devMockMode()) return Promise.resolve(fixtureBatchSetMcpAll(harnessId, enabled));
   return invoke<void>("batch_set_mcp_all", {
     harnessId: harnessId === "global" ? null : harnessId,
     enabled,
@@ -184,13 +169,8 @@ export function batchSetMcpAll(
 }
 
 /** `harnessId` `null` (or `global`) edits the universal baseline. */
-export function setMcpState(
-  id: string,
-  harnessId: string | null,
-  enabled: boolean,
-): Promise<void> {
-  if (devMockMode())
-    return Promise.resolve(fixtureSetMcpState(id, harnessId, enabled));
+export function setMcpState(id: string, harnessId: string | null, enabled: boolean): Promise<void> {
+  if (devMockMode()) return Promise.resolve(fixtureSetMcpState(id, harnessId, enabled));
   return invoke<void>("set_mcp_state", {
     id,
     harnessId: harnessId === "global" ? null : harnessId,

@@ -14,8 +14,7 @@ export const presets: TranslationSchema["presets"] = {
   saveAction: "Save preset",
   cancel: "Cancel",
   saved: (name: string) => `Preset “${name}” saved`,
-  applyFailed: (name: string, detail: string) =>
-    `Could not apply “${name}”: ${detail}`,
+  applyFailed: (name: string, detail: string) => `Could not apply “${name}”: ${detail}`,
   deleteTitle: (name: string) => `Delete ${name}`,
   deleted: (name: string) => `Preset “${name}” deleted`,
   editHeading: "Edit Preset",
@@ -42,8 +41,7 @@ export const presets: TranslationSchema["presets"] = {
     `${name} applied · ${skills} skills · ${mcps} MCPs`,
   readFailed: (detail: string) => `Could not read the presets: ${detail}`,
   saveFailed: (detail: string) => `Could not save the preset: ${detail}`,
-  deleteFailed: (name: string, detail: string) =>
-    `Could not delete “${name}”: ${detail}`,
+  deleteFailed: (name: string, detail: string) => `Could not delete “${name}”: ${detail}`,
   namePlaceholder: "Game Dev",
   descriptionPlaceholder: "Engine work, no cloud tooling",
   warnSkillMissing: (id: string) => `skill “${id}” is not in the vault`,

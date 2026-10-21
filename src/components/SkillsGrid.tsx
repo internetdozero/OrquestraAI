@@ -5,8 +5,7 @@ import { useI18n } from "../hooks/useI18n";
 import { VirtualCardGrid } from "./VirtualCardGrid";
 
 /** Shared card grid: one column until there is room for two or three. */
-export const SKILL_GRID_CLASS =
-  "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3";
+export const SKILL_GRID_CLASS = "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3";
 
 const skillKey = (skill: SkillItem) => skill.id;
 
@@ -23,10 +22,7 @@ function GridGroupLabel({
   return (
     <div className="mb-2 flex items-center gap-2">
       <span
-        className={cn(
-          "size-1.5 shrink-0 rounded-full",
-          active ? "accent-dot" : "bg-zinc-600",
-        )}
+        className={cn("size-1.5 shrink-0 rounded-full", active ? "accent-dot" : "bg-zinc-600")}
       />
       <span
         className={cn(
@@ -82,8 +78,7 @@ export function GroupedSkillGrid({
       {idleSkills.length > 0 && (
         <section
           className={cn(
-            activeSkills.length > 0 &&
-              "rounded-2xl border border-white/[0.06] bg-zinc-900/20 p-3",
+            activeSkills.length > 0 && "rounded-2xl border border-white/[0.06] bg-zinc-900/20 p-3",
           )}
         >
           <GridGroupLabel label={t.skills.idleGroup} count={idleSkills.length} active={false} />

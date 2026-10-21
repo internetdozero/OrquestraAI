@@ -30,24 +30,12 @@ test("active floats in-scope servers first, A-Z inside each band", () => {
     server("a", "Alpha"),
     server("c", "Charlie", { enabledHarnesses: ["codex"] }),
   ];
-  assert.deepEqual(names(sortMcps(servers, "active", "global")), [
-    "Bravo",
-    "Alpha",
-    "Charlie",
-  ]);
-  assert.deepEqual(names(sortMcps(servers, "active", "codex")), [
-    "Bravo",
-    "Charlie",
-    "Alpha",
-  ]);
+  assert.deepEqual(names(sortMcps(servers, "active", "global")), ["Bravo", "Alpha", "Charlie"]);
+  assert.deepEqual(names(sortMcps(servers, "active", "codex")), ["Bravo", "Charlie", "Alpha"]);
 });
 
 test("alpha orders A-Z with an id tie-break", () => {
-  const servers = [
-    server("b2", "Bravo"),
-    server("a", "Alpha"),
-    server("b1", "Bravo"),
-  ];
+  const servers = [server("b2", "Bravo"), server("a", "Alpha"), server("b1", "Bravo")];
   assert.deepEqual(
     sortMcps(servers, "alpha", "global").map((server) => server.id),
     ["a", "b1", "b2"],
@@ -56,11 +44,7 @@ test("alpha orders A-Z with an id tie-break", () => {
 
 test("alphaDesc orders Z-A", () => {
   const servers = [server("a", "Alpha"), server("c", "Charlie"), server("b", "Bravo")];
-  assert.deepEqual(names(sortMcps(servers, "alphaDesc", "global")), [
-    "Charlie",
-    "Bravo",
-    "Alpha",
-  ]);
+  assert.deepEqual(names(sortMcps(servers, "alphaDesc", "global")), ["Charlie", "Bravo", "Alpha"]);
 });
 
 test("official floats official servers first, A-Z inside each band", () => {
@@ -69,11 +53,7 @@ test("official floats official servers first, A-Z inside each band", () => {
     server("a", "Alpha", { official: true }),
     server("m", "Mike"),
   ];
-  assert.deepEqual(names(sortMcps(servers, "official", "global")), [
-    "Alpha",
-    "Zulu",
-    "Mike",
-  ]);
+  assert.deepEqual(names(sortMcps(servers, "official", "global")), ["Alpha", "Zulu", "Mike"]);
 });
 
 test("sort never mutates the input array", () => {

@@ -67,9 +67,7 @@ function ViewButton({
       <Icon
         className={cn(
           "size-4 shrink-0 transition-colors",
-          active
-            ? "accent-text"
-            : "text-zinc-500 group-hover:text-zinc-300",
+          active ? "accent-text" : "text-zinc-500 group-hover:text-zinc-300",
         )}
       />
       <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
@@ -86,7 +84,14 @@ function ViewButton({
  * Platform navigation. Harness scopes live *inside* the skills and MCP views as
  * inner scope tabs, so this list stays at the three things the app manages.
  */
-export function Sidebar({ view, onSelect, skillStats, mcpCount, onOpenSettings, hasAppUpdate = false }: SidebarProps) {
+export function Sidebar({
+  view,
+  onSelect,
+  skillStats,
+  mcpCount,
+  onOpenSettings,
+  hasAppUpdate = false,
+}: SidebarProps) {
   const { t } = useI18n();
   const counts: Record<ActiveView, number | null> = {
     skills: skillStats.active,

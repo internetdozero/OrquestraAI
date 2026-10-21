@@ -98,7 +98,9 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
 
       <ProductivitySubPanel projects={state.projects} />
 
-      {state.error && <ErrorBanner message={state.error} onDismiss={() => void state.refreshAll()} />}
+      {state.error && (
+        <ErrorBanner message={state.error} onDismiss={() => void state.refreshAll()} />
+      )}
 
       {state.activeTab === "ideas" ? (
         <>
@@ -140,7 +142,11 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
           )}
         </>
       ) : (
-        <BlackboardFeed notes={state.notes} loading={state.loading} onMarkRead={(id) => void state.markRead(id)} />
+        <BlackboardFeed
+          notes={state.notes}
+          loading={state.loading}
+          onMarkRead={(id) => void state.markRead(id)}
+        />
       )}
 
       {archivedOpen && (

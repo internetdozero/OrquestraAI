@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { ArrowRight, Boxes, Bug, Check, Copy, GripVertical, Lightbulb, Palette, Pencil, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Boxes,
+  Bug,
+  Check,
+  Copy,
+  GripVertical,
+  Lightbulb,
+  Palette,
+  Pencil,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { nextStatusOf } from "../../hooks/useIdeas";
 import type { IdeaItem } from "../../lib/ideas";
@@ -37,7 +49,15 @@ interface IdeaCardProps {
  * Draggable vault card. Clicking anywhere outside the action buttons opens
  * the detail viewer; completed columns render the compact variant.
  */
-export function IdeaCard({ idea, compact = false, isNew = false, onAdvance, onEdit, onDelete, onOpen }: IdeaCardProps) {
+export function IdeaCard({
+  idea,
+  compact = false,
+  isNew = false,
+  onAdvance,
+  onEdit,
+  onDelete,
+  onOpen,
+}: IdeaCardProps) {
   const { t } = useI18n();
   const s = t.ideas;
   const next = nextStatusOf(idea.status);
@@ -134,7 +154,9 @@ export function IdeaCard({ idea, compact = false, isNew = false, onAdvance, onEd
       </div>
 
       {!compact && idea.description && (
-        <p className="line-clamp-3 text-[11.5px] leading-relaxed text-zinc-400">{idea.description}</p>
+        <p className="line-clamp-3 text-[11.5px] leading-relaxed text-zinc-400">
+          {idea.description}
+        </p>
       )}
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -169,9 +191,7 @@ export function IdeaCard({ idea, compact = false, isNew = false, onAdvance, onEd
           </span>
         )}
         {!Number.isNaN(updated.getTime()) && (
-          <span className="ml-auto text-[10px] text-zinc-600">
-            {updated.toLocaleDateString()}
-          </span>
+          <span className="ml-auto text-[10px] text-zinc-600">{updated.toLocaleDateString()}</span>
         )}
       </div>
 

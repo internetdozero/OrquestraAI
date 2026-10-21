@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, ShieldCheck, X } from "lucide-react";
-import {
-  listOfficialStore,
-  type OfficialMcpEntry,
-  type OfficialSkillEntry,
-} from "../lib/tauri";
+import { listOfficialStore, type OfficialMcpEntry, type OfficialSkillEntry } from "../lib/tauri";
 import { useI18n } from "../hooks/useI18n";
 import { StoreCard } from "./StoreCard";
 import { StoreFilters, type StoreTierFilter } from "./StoreFilters";
@@ -41,12 +37,7 @@ function toMessage(cause: unknown, fallback: string): string {
  * Row spinners live here; the parent refreshes catalog data inside each
  * action so `statusOf` re-evaluates on the next render.
  */
-export function OfficialStore({
-  kind,
-  statusOf,
-  actionFor,
-  projectScope,
-}: OfficialStoreProps) {
+export function OfficialStore({ kind, statusOf, actionFor, projectScope }: OfficialStoreProps) {
   const { t } = useI18n();
   const s = t.store;
   const [entries, setEntries] = useState<StoreEntry[] | null>(null);
@@ -64,9 +55,7 @@ export function OfficialStore({
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setLoadError(
-            s.loadFailed(toMessage(cause, t.common.unexpected)),
-          );
+          setLoadError(s.loadFailed(toMessage(cause, t.common.unexpected)));
         }
       });
     return () => {
@@ -85,18 +74,19 @@ export function OfficialStore({
     if (!entries) return [];
     return entries.filter((entry) => {
       const skill = entry as OfficialSkillEntry;
-      const entryTier =
-        skill.tier ?? (skill.official === false ? "community" : "official");
+      const entryTier = skill.tier ?? (skill.official === false ? "community" : "official");
       if (kind === "skill" && tier !== "all" && entryTier !== tier) return false;
-      if (kind === "skill" && category !== "All" && skill.category !== category)
-        return false;
+      if (kind === "skill" && category !== "All" && skill.category !== category) return false;
       return true;
     });
   }, [entries, kind, tier, category]);
 
   if (loadError) {
     return (
-      <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/[0.07] px-4 py-3 text-[12px] text-red-200">
+      <div
+        role="alert"
+        className="rounded-xl border border-red-500/25 bg-red-500/[0.07] px-4 py-3 text-[12px] text-red-200"
+      >
         {loadError}
       </div>
     );
@@ -166,10 +156,9 @@ export function OfficialStore({
           const meta =
             kind === "skill"
               ? (entry as OfficialSkillEntry).category
-              : [
-                  (entry as OfficialMcpEntry).command,
-                  ...(entry as OfficialMcpEntry).args,
-                ].join(" ");
+              : [(entry as OfficialMcpEntry).command, ...(entry as OfficialMcpEntry).args].join(
+                  " ",
+                );
           return (
             <StoreCard
               key={entry.id}
@@ -186,9 +175,7 @@ export function OfficialStore({
                 try {
                   await action.run();
                 } catch (cause: unknown) {
-                  setActionError(
-                    s.actionFailed(toMessage(cause, t.common.unexpected)),
-                  );
+                  setActionError(s.actionFailed(toMessage(cause, t.common.unexpected)));
                 } finally {
                   setBusyId(null);
                 }

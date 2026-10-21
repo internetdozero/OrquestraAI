@@ -3,11 +3,7 @@ import { vaultPath } from "../lib/skills";
 import { useI18n } from "../hooks/useI18n";
 import { actionButtonClass, StatePanel } from "./ui";
 
-export type SkillsStateKind =
-  | "unavailable"
-  | "read-error"
-  | "empty-vault"
-  | "no-match";
+export type SkillsStateKind = "unavailable" | "read-error" | "empty-vault" | "no-match";
 
 /**
  * Full-panel state for the skill grid. One component keeps the four messages
@@ -50,11 +46,7 @@ export function SkillsState({
           title={t.skills.stateReadErrorTitle}
           description={error ?? t.common.unexpected}
         >
-          <button
-            type="button"
-            onClick={onRescan}
-            className={actionButtonClass}
-          >
+          <button type="button" onClick={onRescan} className={actionButtonClass}>
             <RefreshCw className="mr-1 inline size-3" />
             {t.skills.tryAgain}
           </button>
@@ -74,11 +66,7 @@ export function SkillsState({
             </>
           }
         >
-          <button
-            type="button"
-            onClick={onRescan}
-            className={actionButtonClass}
-          >
+          <button type="button" onClick={onRescan} className={actionButtonClass}>
             <RefreshCw className="mr-1 inline size-3" />
             {t.common.rescanVault}
           </button>
@@ -92,11 +80,7 @@ export function SkillsState({
           title={t.skills.stateNoMatchTitle(query.trim())}
           description={t.skills.stateNoMatchDesc}
         >
-          <button
-            type="button"
-            onClick={onClearQuery}
-            className={actionButtonClass}
-          >
+          <button type="button" onClick={onClearQuery} className={actionButtonClass}>
             {t.skills.clearSearch}
           </button>
         </StatePanel>

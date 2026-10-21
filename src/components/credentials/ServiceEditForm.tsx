@@ -109,7 +109,12 @@ export function ServiceEditForm({ service, presets, onSave, onCancel }: ServiceE
             <span className="min-w-0 flex-1 truncate text-left">
               {selectedPreset?.label ?? presetId}
             </span>
-            <ChevronDown className={cn("size-3.5 shrink-0 text-zinc-500 transition-transform", presetOpen && "rotate-180")} />
+            <ChevronDown
+              className={cn(
+                "size-3.5 shrink-0 text-zinc-500 transition-transform",
+                presetOpen && "rotate-180",
+              )}
+            />
           </button>
           {presetOpen && (
             <>
@@ -203,7 +208,9 @@ export function ServiceEditForm({ service, presets, onSave, onCancel }: ServiceE
             />
             <button
               type="button"
-              onClick={() => setMetaRows((current) => current.filter((_, position) => position !== index))}
+              onClick={() =>
+                setMetaRows((current) => current.filter((_, position) => position !== index))
+              }
               title={s.removeMetaAria}
               aria-label={s.removeMetaAria}
               className="shrink-0 rounded p-1 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"

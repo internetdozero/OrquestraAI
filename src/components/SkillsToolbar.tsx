@@ -16,13 +16,7 @@ import { CustomDropdown } from "./CustomDropdown";
 import { actionButtonClass, StatTile } from "./ui";
 
 /** Order control for the skill grid, sat with the other grid controls. */
-function SortSelect({
-  value,
-  onChange,
-}: {
-  value: SortMode;
-  onChange: (mode: SortMode) => void;
-}) {
+function SortSelect({ value, onChange }: { value: SortMode; onChange: (mode: SortMode) => void }) {
   const { t } = useI18n();
 
   const options: { id: SortMode; label: string }[] = [
@@ -87,9 +81,7 @@ export function SkillsToolbar({
 }: SkillsToolbarProps) {
   const { t } = useI18n();
   const isGlobal = scope === GLOBAL_SCOPE.id;
-  const definition = isGlobal
-    ? GLOBAL_SCOPE
-    : HARNESSES.find((harness) => harness.id === scope);
+  const definition = isGlobal ? GLOBAL_SCOPE : HARNESSES.find((harness) => harness.id === scope);
   const label = definition?.label ?? "Global";
   const ScopeIcon = definition?.icon ?? GLOBAL_SCOPE.icon;
 
@@ -105,11 +97,7 @@ export function SkillsToolbar({
         <StatTile
           label={t.skills.activeSkills}
           value={`${activeCount} / ${totalCount}`}
-          hint={
-            isGlobal
-              ? t.skills.projectedBaseline
-              : t.skills.effectiveInHarness
-          }
+          hint={isGlobal ? t.skills.projectedBaseline : t.skills.effectiveInHarness}
           icon={Layers}
           accent
         />
@@ -185,11 +173,7 @@ export function SkillsToolbar({
             onClick={() => onApplyAll(false)}
             disabled={!canBatch}
             className={actionButtonClass}
-            title={
-              isGlobal
-                ? t.skills.unlinkAllGlobal
-                : t.skills.unlinkAllHarness(label)
-            }
+            title={isGlobal ? t.skills.unlinkAllGlobal : t.skills.unlinkAllHarness(label)}
           >
             {batchPending ? (
               <Loader2 className="mr-1 inline size-3 animate-spin" />

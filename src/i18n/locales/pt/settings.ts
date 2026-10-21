@@ -64,26 +64,21 @@ export const settings = {
     autoCheckAppDesc:
       "Verifica automaticamente no GitHub por novas versões do OrquestraAI para desktop.",
     autoCheckExtTitle: "Verificar atualizações das extensões oficiais",
-    autoCheckExtDesc:
-      "Busca melhorias do upstream para as skills oficiais e MCPs instalados.",
+    autoCheckExtDesc: "Busca melhorias do upstream para as skills oficiais e MCPs instalados.",
     checkNow: "Verificar atualizações agora",
     checking: "Verificando…",
-    upToDate: (version: string) =>
-      `Você está na versão mais recente — v${version}`,
-    newVersionAvailable: (version: string) =>
-      `Nova versão v${version} disponível!`,
+    upToDate: (version: string) => `Você está na versão mais recente — v${version}`,
+    newVersionAvailable: (version: string) => `Nova versão v${version} disponível!`,
     viewRelease: "Ver release",
     updateNow: "Atualizar agora",
     updatingApp: "Baixando e instalando atualização…",
-    downloadingUpdate:
-      "Baixando versão e validando integridade SHA-256...",
+    downloadingUpdate: "Baixando versão e validando integridade SHA-256...",
     updateAppSuccess: "Atualização instalada! Reinicie o OrquestraAI para aplicar.",
     updateAppFailed: (detail: string) => `Falha ao atualizar: ${detail}`,
     restart: "Reiniciar",
     syncExtensions: "Sincronizar extensões oficiais",
     syncingExtensions: "Sincronizando skills e MCPs oficiais…",
-    syncExtensionsSuccess: (count: number) =>
-      `${count} extensões atualizadas com sucesso.`,
+    syncExtensionsSuccess: (count: number) => `${count} extensões atualizadas com sucesso.`,
   },
   sidebarAction: "Configurações",
   sidebarHint: "Preferências, idioma, retenção e sobre",
