@@ -49,3 +49,6 @@ secrets.json
 mcp_config.json
 *.tar.gz
 PRD.md
+
+# Orquestra audits
+.orquestra/audits/
