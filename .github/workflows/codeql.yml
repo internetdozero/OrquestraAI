@@ -39,7 +39,6 @@ jobs:
         sudo apt-get install -y --no-install-recommends \
           libwebkit2gtk-4.1-dev build-essential libssl-dev \
           libayatana-appindicator3-dev librsvg2-dev
-        rm -f .cargo/config.toml
         npm ci
 
     # Manual build for Rust so CodeQL can intercept compiler invocations.

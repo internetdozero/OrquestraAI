@@ -110,26 +110,68 @@ fn exec_env_uses_preset_var_and_custom_override() {
 }
 
 #[test]
-fn exec_command_accepts_string_and_string_array() {
+fn exec_rejects_shell_strings_and_non_allowlisted_programs() {
     let service = test_service("openai", &["sk-secret-9999"]);
     let secret = "sk-secret-9999";
 
-    let string_form = serde_json::Value::String("echo hello".to_string());
-    let (code, stdout, _) = super::exec::run_command(&service, secret, &string_form)
-        .expect("string command should run");
-    assert_eq!(code, 0);
-    assert!(stdout.contains("hello"));
+    // Shell strings are rejected outright — no `sh -c` path exists anymore,
+    // so pipes, redirections and expansions never reach an interpreter.
+    for hostile in [
+        "echo hello",
+        "echo hello; rm -rf /",
+        "echo $(touch /tmp/pwned)",
+        "echo `touch /tmp/pwned`",
+        "echo hello | tee /tmp/pwned",
+        "echo hi > /tmp/pwned",
+        "echo $OPENAI_API_KEY",
+    ] {
+        let payload = serde_json::Value::String(hostile.to_string());
+        assert!(
+            super::exec::run_command(&service, secret, &payload).is_err(),
+            "{hostile:?} must be refused"
+        );
+    }
 
+    // Array form: only bare allowlisted names. Shells, script runtimes,
+    // downloaders and any path (absolute, relative, traversal) are refused
+    // before the OS loader is ever consulted.
+    for argv in [
+        vec!["sh", "-c", "echo hi"],
+        vec!["bash", "-c", "echo hi"],
+        vec!["python3", "-c", "print(1)"],
+        vec!["curl", "https://example.com"],
+        vec!["./echo", "hi"],
+        vec!["/bin/echo", "hi"],
+        vec!["/usr/bin/printf", "%s", "hi"],
+        vec!["echo; rm -rf /", "hi"],
+        vec!["echo\0hi", "hi"],
+        vec!["echo", ""],
+        vec!["echo", "hi\0"],
+    ] {
+        let payload = serde_json::Value::Array(
+            argv.into_iter().map(|part| serde_json::Value::String(part.to_string())).collect(),
+        );
+        assert!(super::exec::run_command(&service, secret, &payload).is_err());
+    }
+
+    // Oversized input fails validation without spawning anything.
+    let huge_argv = vec!["echo".to_string()].into_iter().chain(vec!["x".to_string(); 200]).collect::<Vec<_>>();
+    assert!(super::exec::run_argv(&service, secret, &huge_argv).is_err());
+    let huge_arg = vec!["echo".to_string(), "x".repeat(1_000_001)];
+    assert!(super::exec::run_argv(&service, secret, &huge_arg).is_err());
+
+    // Legit array form still runs, and `$VAR` stays literal with no shell.
     let array_form = serde_json::json!(["echo", "hello-array"]);
     let (code, stdout, _) = super::exec::run_command(&service, secret, &array_form)
-        .expect("array command should run");
+        .expect("allowlisted array command should run");
     assert_eq!(code, 0);
     assert!(stdout.contains("hello-array"));
 
     // A secret echoed by the child must never come back verbatim.
-    let leak = serde_json::Value::String("echo $OPENAI_API_KEY".to_string());
-    let (_, stdout, _) = super::exec::run_command(&service, secret, &leak)
+    let literal = serde_json::json!(["echo", "$OPENAI_API_KEY"]);
+    let (_, stdout, _) = super::exec::run_command(&service, secret, &literal)
         .expect("env echo should run");
+    assert!(stdout.contains("$OPENAI_API_KEY"));
     assert!(!stdout.contains(secret));
 
     assert!(super::exec::run_command(&service, secret, &serde_json::json!([])).is_err());
@@ -266,6 +308,41 @@ fn saved_tag_resolution_distinguishes_clear_from_keep() {
     // No entry (no array / short array) keeps the previous tag.
     assert_eq!(resolve_saved_tag(None, Some("old".to_string())), Some("old".to_string()));
     assert_eq!(resolve_saved_tag(None, None), None);
+}
+
+#[test]
+fn vault_exec_drains_large_output_without_deadlock() {
+    // Regression: piped stdout/stderr must be drained while the child runs.
+    // ~100KB per stream saturates the 64KB OS pipe buffer under the old
+    // try_wait-then-read loop and deadlocked until the 60s timeout.
+    let service = test_service("openai", &["sk-secret-9999"]);
+    let secret = "sk-secret-9999";
+    // No shell is available, so the flood is many `echo` arguments: a single
+    // 200KB argument would exceed the OS per-argument limit (E2BIG), while
+    // one hundred 2KB arguments total ~200KB and stay well under it.
+    let mut flood_argv = vec![serde_json::Value::String("echo".to_string())];
+    flood_argv.extend((0..100).map(|_| serde_json::Value::String("x".repeat(2_000))));
+    let flood = serde_json::Value::Array(flood_argv);
+    let start = std::time::Instant::now();
+    let (code, stdout, _) =
+        super::exec::run_command(&service, secret, &flood).expect("large output should complete");
+    assert_eq!(code, 0);
+    assert!(stdout.len() > 64 * 1024, "stdout should exceed pipe buffer");
+    assert!(start.elapsed() < std::time::Duration::from_secs(60), "must not hit the 60s timeout");
+}
+
+#[test]
+fn vault_exec_captures_stderr_without_shell() {
+    // `printf` with a bad conversion writes to stderr and exits nonzero —
+    // deterministically, with no network and no shell redirection.
+    let service = test_service("openai", &["sk-secret-9999"]);
+    let secret = "sk-secret-9999";
+    let (code, _, stderr) =
+        super::exec::run_command(&service, secret, &serde_json::json!(["printf", "%d", "not-a-number"]))
+            .expect("printf should run");
+    assert_ne!(code, 0);
+    assert!(!stderr.is_empty(), "stderr must be captured");
+    assert!(!stderr.contains(secret));
 }
 
 #[test]

@@ -50,5 +50,10 @@ mcp_config.json
 *.tar.gz
 PRD.md
 
+# Local-only Cargo overrides (machine-specific sccache/clang/mold).
+# See .cargo/config.local.toml.example — the committed .cargo/config.toml
+# stays portable and auto-includes this file when present.
+.cargo/config.local.toml
+
 # Orquestra audits
 .orquestra/audits/

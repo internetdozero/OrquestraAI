@@ -1,14 +1,16 @@
-# Single source of truth for Cargo build configuration.
-# `src-tauri/.cargo/config.toml` used to repeat these flags; Cargo merges all
-# ancestor config files, so the duplicate caused the wrapper/linker/rustflags
-# to be applied twice depending on the directory the command ran from.
+# Portable Cargo build configuration — safe to commit.
+# Must work on a clean clone with stock Rust (no sccache/mold/clang required).
+#
+# Machine-specific speedups (sccache, clang, mold) live in the OPTIONAL
+# `.cargo/config.local.toml` next door (gitignored). Cargo merges it on top
+# of this file when present. Copy the example to opt in:
+#   cp .cargo/config.local.toml.example .cargo/config.local.toml
+
+include = [
+    { path = "config.local.toml", optional = true },
+]
 
 [build]
-rustc-wrapper = "/usr/bin/sccache"
-# 2 cores / 4 threads: leaving one thread free keeps the desktop responsive
-# instead of swapping while every LLVM codegen unit runs at once.
-jobs = 3
-
-[target.x86_64-unknown-linux-gnu]
-linker = "/usr/bin/clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+# 2 cores / 4 threads: limiting to 2 parallel jobs preserves thermal headroom (<80 °C)
+# and prevents aggressive thermal throttling on dual-core hardware.
+jobs = 2

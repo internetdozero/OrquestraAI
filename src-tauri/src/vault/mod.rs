@@ -261,7 +261,9 @@ pub struct VaultExecResult {
 }
 
 /// Blind `vault_exec`: spawn with env-injected secrets, scrub output.
-/// `command` accepts a shell string or a string array (exact argv, no shell).
+/// `command` accepts ONLY a string array: `argv[0]` must be a bare name on
+/// the exec allowlist (`exec::ALLOWED_BINARIES`) and runs with no shell, so
+/// shell strings, pipes and redirections are rejected instead of executed.
 #[tauri::command]
 pub fn vault_exec(
     service: String,

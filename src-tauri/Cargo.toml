@@ -46,6 +46,7 @@ toml_edit = "0.22"
 rusqlite = { version = "0.31", features = ["bundled"] }
 # Blind vault HTTP proxy: in-memory key injection via `vault_http_request`.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+minisign-verify = "0.3.0"
 
 # Release profiles live in the workspace root `Cargo.toml`; Cargo ignores (and
 # warns about) profiles declared by a non-root workspace member.

@@ -4,14 +4,14 @@ members = [
     "src-tauri",
 ]
 
-# Fast rebuilds for our own crates (incremental), while dependencies stay at
-# opt-level 1 so debug runs are usable on a small machine without paying for
-# full codegen of Tauri/GTK/Serde.
+# Fast rebuilds and thermal preservation on dual-core hardware.
+# Incremental is disabled so sccache can achieve high cache hit rates (sccache cannot
+# cache incremental builds). Dependencies stay at opt-level 0 to eliminate LLVM churn.
 [profile.dev]
-incremental = true
+incremental = false
 
 [profile.dev.package."*"]
-opt-level = 1
+opt-level = 0
 
 [profile.release]
 # 4 codegen units matches the 4 CPU threads (avoids thrashing the scheduler)

@@ -219,10 +219,14 @@ export function vaultHttpRequest(input: {
   });
 }
 
-/** Blind exec: secret lives only in the child env, output is scrubbed. */
+/**
+ * Blind exec: secret lives only in the child env, output is scrubbed.
+ * Array only — the backend allowlists argv[0] and runs with no shell, so
+ * shell strings are rejected server-side and must not be sent.
+ */
 export function vaultExec(
   service: string,
-  command: string | string[],
+  command: string[],
 ): Promise<VaultExecResult> {
   return invoke<VaultExecResult>("vault_exec", { service, command });
 }

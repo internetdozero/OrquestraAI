@@ -2,7 +2,8 @@
 //!
 //! Staging always lives under `/var/tmp/testing` (disk-backed, never `/tmp`)
 //! and is removed on every exit path via a [`Staging`] drop guard. Binary
-//! downloads are fail-closed on SHA-256 mismatch, and the live executable is
+//! downloads are fail-closed on minisign signature mismatch first (see
+//! `update_sig`) and then on SHA-256 mismatch, and the live executable is
 //! replaced atomically (sibling temp file + rename in the same directory).
 
 use std::fs;
@@ -77,6 +78,19 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
     }
     let sums_path = staging.0.join("SHA256SUMS.txt");
     download(&release_asset_url(&version, "SHA256SUMS.txt"), &sums_path)?;
+    // Detached Ed25519 signature over the exact checksums bytes. A forged
+    // release (malicious binary + matching malicious checksums) cannot forge
+    // this without the offline signing key, so verify before trusting the sums.
+    let sig_path = staging.0.join(crate::update_sig::SUMS_SIGNATURE_ASSET);
+    download(
+        &release_asset_url(&version, crate::update_sig::SUMS_SIGNATURE_ASSET),
+        &sig_path,
+    )?;
+    let sums_bytes =
+        fs::read(&sums_path).map_err(|error| format!("failed to read {}: {error}", sums_path.display()))?;
+    let sig_text = fs::read_to_string(&sig_path)
+        .map_err(|error| format!("failed to read {}: {error}", sig_path.display()))?;
+    crate::update_sig::verify_release_file(&sums_bytes, &sig_text)?;
 
     let expected = expected_hash(&sums_path, &asset)?;
     let actual = sha256_of(&binary_path)?;

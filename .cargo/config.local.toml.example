@@ -1,0 +1,15 @@
+# Local-only Cargo overrides — DO NOT COMMIT.
+# Copy to `config.local.toml` (same directory) to opt in on your machine:
+#   cp .cargo/config.local.toml.example .cargo/config.local.toml
+#
+# Requires: sccache, clang, mold installed (e.g. `sudo apt install sccache clang mold`).
+# Bare names (no /usr/bin prefix) resolve via PATH, so this works across distros.
+# If any tool is missing, either install it or delete/rename config.local.toml —
+# `cargo build` works fine without this file.
+
+[build]
+rustc-wrapper = "sccache"
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]

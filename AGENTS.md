@@ -36,4 +36,8 @@
     rtk gh run download -n orquestra-linux-x86_64 && chmod +x orquestra-linux-x86_64/orquestra-linux-x86_64
     ```
 - **Local Dev vs. Release:** For day-to-day code changes, use `npm run dev` or fast incremental builds (`cargo check`, `npm run build:fast`). Avoid consecutive local release builds (`npm run build:release`).
+- **Targeted Checks over Blanket Builds:**
+  - If changes only touch frontend or docs (`src/`, `docs/`, `*.md`), DO NOT run `cargo check`. Use `npm run typecheck` or `npm run build:fast`.
+  - When verifying Rust changes locally, target the specific crate (`rtk cargo check -p orquestra-ai --lib`) rather than blanket `cargo check --workspace`.
+  - Keep `jobs = 2` to avoid 100% CPU core saturation and thermal trip points.
 

@@ -23,6 +23,7 @@ pub mod single_instance;
 mod skills;
 mod tray;
 pub mod vault;
+mod update_sig;
 mod updater;
 
 use bridge::{BridgeReport, HarnessStatus};
