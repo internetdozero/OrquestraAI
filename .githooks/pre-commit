@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# Card-motion gate before every commit.
+#
+# Runs scripts/check-card-motion.mjs whenever the staged set touches TS, TSX or
+# CSS, so the jitter patterns it detects (transition-all, hover geometry shifts)
+# are rejected before they ever reach a build. The build keeps running the same
+# script through `npm run check:ui`; this only moves the failure earlier.
+#
+# Installed by the `prepare` npm script, which points core.hooksPath here.
+set -eu
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.css')
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found, skipping the ui-motion gate" >&2
+  exit 0
+fi
+
+exec node scripts/check-card-motion.mjs

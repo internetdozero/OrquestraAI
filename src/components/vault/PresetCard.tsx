@@ -19,7 +19,7 @@ export function PresetCard({ preset, selected, onSelect }: PresetCardProps) {
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "group flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all",
+        "group flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-[border-color,background-color,box-shadow]",
         selected
           ? "border-emerald-500/60 bg-emerald-500/[0.08] shadow-[0_0_18px_-4px_rgba(16,185,129,0.5)]"
           : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.18] hover:bg-white/[0.05]",
