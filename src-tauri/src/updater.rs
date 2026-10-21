@@ -172,9 +172,17 @@ pub fn sync_official_extensions() -> Result<ExtensionSyncResult, String> {
 }
 
 /// Relaunch the (possibly just updated) binary and exit this process.
+///
+/// The single-instance socket file is removed *before* spawning: the child
+/// checks for a live socket on startup, and `process::exit` runs no cleanup,
+/// so spawning first lets the child connect to this still-dying parent and
+/// terminate itself. Removing the file first makes the child the primary
+/// instance deterministically — no delay needed, and the parent's still-open
+/// listener fd does not block the child from binding the freed path.
 #[tauri::command]
 pub fn restart_app() -> Result<(), String> {
     let exe = active_binary()?;
+    crate::single_instance::cleanup();
     std::process::Command::new(&exe)
         .spawn()
         .map_err(|error| format!("failed to relaunch {}: {error}", exe.display()))?;
