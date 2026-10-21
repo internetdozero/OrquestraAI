@@ -135,156 +135,35 @@ pub fn create_orquestra_backup() -> Result<String, String> {
     Ok(archive.to_string_lossy().to_string())
 }
 
-const ICON_512: &[u8] = include_bytes!("../icons/icon.png");
-const ICON_256: &[u8] = include_bytes!("../icons/128x128@2x.png");
-const ICON_128: &[u8] = include_bytes!("../icons/128x128.png");
-const ICON_64: &[u8] = include_bytes!("../icons/64x64.png");
-const ICON_32: &[u8] = include_bytes!("../icons/32x32.png");
-
-const DESKTOP_ENTRY: &str = r#"[Desktop Entry]
-Name=OrquestraAI
-GenericName=AI Harness Control Plane
-Comment=Universal AI Harness Administration Platform
-Exec=orquestra %U
-Icon=orquestra-ai
-Terminal=false
-Type=Application
-Categories=Development;Utility;System;
-StartupNotify=true
-StartupWMClass=orquestra
-Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;
-"#;
-
 /// On Linux desktop environments, automatically install the .desktop launcher and
 /// application icon theme assets so docks/taskbars (Wayland/X11) show the official icon.
+///
+/// Runs off the setup path: a detached worker thread performs the file writes
+/// and the icon-cache refresh, so the first window never waits on
+/// `gtk-update-icon-cache` / `update-desktop-database` / `kbuildsycoca6`.
+/// The refresh subprocesses only fire when launcher or icon bytes actually
+/// changed, so steady-state launches cost one thread spawn and a cheap
+/// content comparison.
 #[cfg(target_os = "linux")]
 pub fn ensure_desktop_integration() {
+    let worker = std::thread::Builder::new().name("desktop-integration".to_string());
+    if worker.spawn(refresh_integration_once).is_err() {
+        // Threading is best-effort like every write below: a missed refresh
+        // only delays icon pickup until the next launch.
+        refresh_integration_once();
+    }
+}
+
+/// Install assets, then refresh caches only when something changed.
+#[cfg(target_os = "linux")]
+fn refresh_integration_once() {
     let Some(home) = std::env::var_os("HOME").map(PathBuf::from) else {
         return;
     };
     let data_dir = home.join(".local/share");
-    install_linux_assets(&data_dir);
-    refresh_linux_desktop(&data_dir);
-}
-
-/// Write the launcher and icons under `data_dir` (`~/.local/share`).
-#[cfg(target_os = "linux")]
-fn install_linux_assets(data_dir: &std::path::Path) {
-    let apps_dir = data_dir.join("applications");
-    let icons_base = data_dir.join("icons/hicolor");
-
-    if !is_symlink(&apps_dir) {
-        let _ = std::fs::create_dir_all(&apps_dir);
+    if crate::desktop_icons::install_linux_assets(&data_dir) {
+        crate::desktop_icons::refresh_linux_desktop(&data_dir);
     }
-    for name in ["orquestra.desktop", "orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
-        let dest = apps_dir.join(name);
-        if is_symlink(&apps_dir) || is_symlink(&dest) {
-            continue;
-        }
-        let needs_write = match std::fs::read_to_string(&dest) {
-            Ok(existing) => existing != DESKTOP_ENTRY,
-            Err(_) => true,
-        };
-        if needs_write {
-            let _ = std::fs::write(&dest, DESKTOP_ENTRY);
-        }
-    }
-
-    let icon_map: &[(&str, &[u8])] = &[
-        ("32x32/apps", ICON_32),
-        ("64x64/apps", ICON_64),
-        ("128x128/apps", ICON_128),
-        ("256x256/apps", ICON_256),
-        ("512x512/apps", ICON_512),
-    ];
-    for (rel_dir, bytes) in icon_map {
-        let target_dir = icons_base.join(rel_dir);
-        if ancestor_is_symlink(data_dir, &target_dir) || is_symlink(&target_dir) {
-            continue;
-        }
-        let _ = std::fs::create_dir_all(&target_dir);
-        for icon_name in ["orquestra.png", "orquestra-ai.png"] {
-            let icon_file = target_dir.join(icon_name);
-            if is_symlink(&icon_file) {
-                continue;
-            }
-            let needs_write = match std::fs::read(&icon_file) {
-                Ok(existing) => existing != *bytes,
-                Err(_) => true,
-            };
-            if needs_write {
-                let _ = std::fs::write(&icon_file, bytes);
-            }
-        }
-    }
-
-    // Clean up legacy 1024x1024 icons from early alpha builds that override theme colors
-    let legacy_1024 = icons_base.join("1024x1024/apps");
-    for legacy_name in ["orquestra.png", "orquestra-ai.png"] {
-        let legacy = legacy_1024.join(legacy_name);
-        if ancestor_is_symlink(data_dir, &legacy) || is_symlink(&legacy) {
-            continue;
-        }
-        let _ = std::fs::remove_file(&legacy);
-    }
-
-    for root_name in ["icons/orquestra.png", "icons/orquestra-ai.png"] {
-        let root_icon = data_dir.join(root_name);
-        if ancestor_is_symlink(data_dir, &root_icon) || is_symlink(&root_icon) {
-            continue;
-        }
-        let needs_root_write = match std::fs::read(&root_icon) {
-            Ok(existing) => existing != ICON_512,
-            Err(_) => true,
-        };
-        if needs_root_write {
-            let _ = std::fs::write(&root_icon, ICON_512);
-        }
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn ancestor_is_symlink(root: &std::path::Path, path: &std::path::Path) -> bool {
-    let Ok(relative) = path.strip_prefix(root) else {
-        return true;
-    };
-    let mut current = root.to_path_buf();
-    let mut components = relative.components().peekable();
-    while let Some(component) = components.next() {
-        if components.peek().is_none() {
-            break;
-        }
-        current.push(component);
-        match std::fs::symlink_metadata(&current) {
-            Ok(metadata) if metadata.file_type().is_symlink() => return true,
-            Ok(_) => {}
-            Err(_) => return false,
-        }
-    }
-    false
-}
-
-#[cfg(target_os = "linux")]
-fn is_symlink(path: &std::path::Path) -> bool {
-    std::fs::symlink_metadata(path)
-        .ok()
-        .is_some_and(|metadata| metadata.file_type().is_symlink())
-}
-
-/// Ask the desktop environment to pick up new launchers and icons.
-#[cfg(target_os = "linux")]
-fn refresh_linux_desktop(data_dir: &std::path::Path) {
-    let icons_base = data_dir.join("icons/hicolor");
-    let apps_dir = data_dir.join("applications");
-    let _ = std::process::Command::new("gtk-update-icon-cache")
-        .args(["-f", "-t", &icons_base.to_string_lossy()])
-        .output();
-    let _ = std::process::Command::new("update-desktop-database")
-        .arg(&apps_dir)
-        .output();
-    let _ = std::process::Command::new("kbuildsycoca6")
-        .arg("--noincremental")
-        .output();
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -332,7 +211,7 @@ mod tests {
         let link = data.join("applications/orquestra.desktop");
         std::os::unix::fs::symlink(&outside, &link).unwrap();
 
-        super::install_linux_assets(&data);
+        crate::desktop_icons::install_linux_assets(&data);
 
         assert!(
             std::fs::symlink_metadata(&link)
@@ -365,7 +244,7 @@ mod tests {
         let link = data.join("applications");
         std::os::unix::fs::symlink(&outside, &link).unwrap();
 
-        super::install_linux_assets(&data);
+        crate::desktop_icons::install_linux_assets(&data);
 
         assert!(
             !outside.join("orquestra.desktop").exists(),
@@ -378,5 +257,36 @@ mod tests {
                 .is_symlink()
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Steady-state launches must not fire the icon-cache subprocesses: the
+    /// install reports a change only on the first run, so the refresh gate
+    /// in `refresh_integration_once` stays shut afterwards.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn desktop_install_reports_change_only_once() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let data = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-desktop-idem-{}-{unique}",
+            std::process::id()
+        ));
+
+        assert!(
+            crate::desktop_icons::install_linux_assets(&data),
+            "first install writes launcher and icons"
+        );
+        assert_eq!(
+            std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap(),
+            crate::desktop_icons::DESKTOP_ENTRY,
+        );
+        assert!(
+            !crate::desktop_icons::install_linux_assets(&data),
+            "nothing changed, so no cache refresh is warranted"
+        );
+
+        let _ = std::fs::remove_dir_all(&data);
     }
 }
