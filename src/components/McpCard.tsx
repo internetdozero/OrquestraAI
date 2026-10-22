@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { CircleSlash, Info, Plug, Power, Trash2 } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import { coversHarness, executionKind, isLockedByGlobal, type McpServer } from "../lib/mcps";
@@ -75,8 +75,14 @@ export function McpToggle({
   );
 }
 
-/** One entry in the MCP catalog, with its scope switch and card actions. */
-export function McpCard({
+/**
+ * One entry in the MCP catalog, with its scope switch and card actions.
+ * Memoized: the grid re-renders every keystroke while filtering, and only
+ * cards whose server, scope or busy flags actually changed may re-render —
+ * which requires every callback prop to hold a stable identity (see the
+ * useCallback handlers in McpView and useMcpMutations).
+ */
+export const McpCard = memo(function McpCard({
   server,
   scope,
   scopeLabel,
@@ -267,4 +273,4 @@ export function McpCard({
       </div>
     </article>
   );
-}
+});

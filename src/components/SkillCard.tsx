@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Globe, Link2, Loader2, Lock, Pencil, Trash2, Unlink2 } from "lucide-react";
 import { skillIcon, type SkillItem } from "../lib/skills";
 import { entryTokens } from "../lib/tokens";
@@ -64,7 +65,7 @@ function Toggle({
   );
 }
 
-export function SkillCard({
+export const SkillCard = memo(function SkillCard({
   skill,
   onToggle,
   onEdit,
@@ -218,4 +219,4 @@ export function SkillCard({
       </div>
     </article>
   );
-}
+});

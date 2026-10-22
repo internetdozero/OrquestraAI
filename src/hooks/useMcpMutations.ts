@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useI18n } from "./useI18n";
 import {
   batchSetMcpAll,
@@ -58,37 +58,48 @@ export function useMcpMutations({
       return next;
     });
 
-  const toggle = async (server: McpServer) => {
-    const harnessId = scope === GLOBAL_SCOPE.id ? null : scope;
-    const enabled = !coversHarness(server, scope);
+  // Stable identities: McpCard is memoized and compares onToggle/onDelete
+  // by reference, so these must not churn per render. Deps below are all
+  // stable (state setters, useCallback'd load/replaceServers, memo'd i18n)
+  // except scope/scopeLabel, which legitimately rebind on scope switch.
+  const toggle = useCallback(
+    async (server: McpServer) => {
+      const harnessId = scope === GLOBAL_SCOPE.id ? null : scope;
+      const enabled = !coversHarness(server, scope);
 
-    replaceServers((previous) =>
-      previous.map((item) => {
-        if (item.id !== server.id) return item;
-        if (harnessId === null) return { ...item, globalEnabled: enabled };
-        return {
-          ...item,
-          enabledHarnesses: enabled
-            ? [...new Set([...item.enabledHarnesses, harnessId])]
-            : item.enabledHarnesses.filter((id) => id !== harnessId),
-        };
-      }),
-    );
-    setPending(server.id, true);
-    setError(null);
-
-    try {
-      await setMcpState(server.id, harnessId, enabled);
-      onToast(
-        t.mcps.toggled(server.name, enabled ? t.mcps.enabledVerb : t.mcps.disabledVerb, scopeLabel),
+      replaceServers((previous) =>
+        previous.map((item) => {
+          if (item.id !== server.id) return item;
+          if (harnessId === null) return { ...item, globalEnabled: enabled };
+          return {
+            ...item,
+            enabledHarnesses: enabled
+              ? [...new Set([...item.enabledHarnesses, harnessId])]
+              : item.enabledHarnesses.filter((id) => id !== harnessId),
+          };
+        }),
       );
-    } catch (cause) {
-      setError(toMessage(cause, t.common.unexpected));
-      await load();
-    } finally {
-      setPending(server.id, false);
-    }
-  };
+      setPending(server.id, true);
+      setError(null);
+
+      try {
+        await setMcpState(server.id, harnessId, enabled);
+        onToast(
+          t.mcps.toggled(
+            server.name,
+            enabled ? t.mcps.enabledVerb : t.mcps.disabledVerb,
+            scopeLabel,
+          ),
+        );
+      } catch (cause) {
+        setError(toMessage(cause, t.common.unexpected));
+        await load();
+      } finally {
+        setPending(server.id, false);
+      }
+    },
+    [scope, scopeLabel, replaceServers, load, setError, onToast, t],
+  );
 
   const applyAll = async (enabled: boolean, serverCount: number) => {
     if (serverCount === 0 || batchPending) return;
@@ -120,20 +131,23 @@ export function useMcpMutations({
     }
   };
 
-  const remove = async (server: McpServer) => {
-    setPending(server.id, true);
-    setError(null);
+  const remove = useCallback(
+    async (server: McpServer) => {
+      setPending(server.id, true);
+      setError(null);
 
-    try {
-      await deleteMcp(server.id);
-      replaceServers((previous) => previous.filter((item) => item.id !== server.id));
-      onToast(t.mcps.deletedFromConfigs(server.name));
-    } catch (cause) {
-      setError(t.mcps.deleteFailed(server.name, toMessage(cause, t.common.unexpected)));
-    } finally {
-      setPending(server.id, false);
-    }
-  };
+      try {
+        await deleteMcp(server.id);
+        replaceServers((previous) => previous.filter((item) => item.id !== server.id));
+        onToast(t.mcps.deletedFromConfigs(server.name));
+      } catch (cause) {
+        setError(t.mcps.deleteFailed(server.name, toMessage(cause, t.common.unexpected)));
+      } finally {
+        setPending(server.id, false);
+      }
+    },
+    [replaceServers, setError, onToast, t],
+  );
 
   const save = async (server: McpServer) => {
     setSaving(true);

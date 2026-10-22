@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Loader2, Plug, Plus, RefreshCw, Unplug, Waypoints } from "lucide-react";
 import { coversHarness, sortMcps, type McpServer, type McpSortMode } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { devMockMode } from "../lib/fixtures";
 import { useMcpCatalog } from "../hooks/useMcpCatalog";
 import { useMcpMutations } from "../hooks/useMcpMutations";
@@ -73,15 +74,21 @@ export function McpView({
       ? "Global"
       : (targets.find((target) => target.id === scope)?.label ?? scope);
 
+  // Debounced filter text (mirrors SkillsView): the header input stays
+  // responsive per keystroke while the grid re-evaluates once per pause.
+  // Clearing snaps back instantly instead of waiting out the delay.
+  const debouncedQuery = useDebouncedValue(query, 200);
+  const activeQuery = query === "" ? "" : debouncedQuery;
+
   const filteredServers = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = activeQuery.trim().toLowerCase();
     if (!needle) return servers;
     return servers.filter((server) =>
       [server.name, server.id, server.description, server.command].some((field) =>
         field?.toLowerCase().includes(needle),
       ),
     );
-  }, [query, servers]);
+  }, [activeQuery, servers]);
 
   const visibleServers = useMemo(
     () => sortMcps(filteredServers, sortMode, scope),
@@ -112,6 +119,21 @@ export function McpView({
       setEditing(null);
     },
   });
+
+  // Stable callback identities: McpCard is memoized and compares props by
+  // reference, so inline arrows in renderItem would re-render every card
+  // per keystroke. toggle/remove are useCallback'd at the hook layer.
+  const handleToggleServer = useCallback((server: McpServer) => void toggle(server), [toggle]);
+  const handleInspectServer = useCallback((server: McpServer) => setInspecting(server), []);
+  const handleEditServer = useCallback(
+    (server: McpServer) => {
+      setEditing(server);
+      setFormError(null);
+      setFormOpen(true);
+    },
+    [setFormError],
+  );
+  const handleDeleteServer = useCallback((server: McpServer) => void remove(server), [remove]);
 
   const { statusOf: storeStatusOf, actionFor: storeActionFor } = useMcpStoreActions(servers, {
     scope,
@@ -265,14 +287,10 @@ export function McpView({
                   scope={scope}
                   scopeLabel={scopeLabel}
                   busy={busyIds.has(server.id)}
-                  onToggle={(item) => void toggle(item)}
-                  onInspect={(item) => setInspecting(item)}
-                  onEdit={(item) => {
-                    setEditing(item);
-                    setFormError(null);
-                    setFormOpen(true);
-                  }}
-                  onDelete={(item) => void remove(item)}
+                  onToggle={handleToggleServer}
+                  onInspect={handleInspectServer}
+                  onEdit={handleEditServer}
+                  onDelete={handleDeleteServer}
                 />
               )}
             />

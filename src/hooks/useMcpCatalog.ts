@@ -65,13 +65,16 @@ export function useMcpCatalog(isTauri: boolean, reloadToken: number) {
     void load(true);
   }, [reloadToken, load]);
 
-  const replaceServers = (updater: (items: McpServer[]) => McpServer[]) => {
+  // Stable identity (only setServers underneath): memoized cards downstream
+  // compare callback props by reference, so a fresh closure per render would
+  // defeat their memo and re-render the whole grid on every keystroke.
+  const replaceServers = useCallback((updater: (items: McpServer[]) => McpServer[]) => {
     setServers((previous) => {
       const next = updater(previous);
       updateMcpServers(next);
       return next;
     });
-  };
+  }, []);
 
   return { servers, targets, loading, error, setError, load, replaceServers };
 }

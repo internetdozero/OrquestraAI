@@ -5,6 +5,7 @@ import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { entryTokens } from "../lib/tokens";
 import { devMockMode } from "../lib/fixtures";
 import { useI18n } from "../hooks/useI18n";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useSkillsCache } from "../hooks/useSkillsCache";
 import { useSkillGridActions } from "../hooks/useSkillGridActions";
 import { useSkillStoreActions } from "../hooks/useSkillStoreActions";
@@ -140,6 +141,12 @@ export function SkillsView({
     onBusyChange(loading || refreshing);
   }, [loading, refreshing, onBusyChange]);
 
+  // Debounced filter text: the header input stays responsive per keystroke
+  // while the grid re-evaluates once per pause, and memoized cards skip
+  // every card whose props did not change. Clearing snaps back instantly.
+  const debouncedQuery = useDebouncedValue(query, 200);
+  const activeQuery = query === "" ? "" : debouncedQuery;
+
   const {
     filteredSkills,
     visibleSkills,
@@ -153,7 +160,7 @@ export function SkillsView({
     requestDeleteSkill,
     confirmDeleteSkill,
   } = useSkillGridActions({
-    query,
+    query: activeQuery,
     skills,
     sortMode,
     flash,
@@ -182,17 +189,37 @@ export function SkillsView({
 
   const editingSkill = editingId ? (skills.find((skill) => skill.id === editingId) ?? null) : null;
 
-  const renderSkillCard = (skill: SkillItem) => (
-    <SkillCard
-      key={skill.id}
-      skill={skill}
-      onToggle={(id) => void toggleSkill(id)}
-      onEdit={(id) => setEditingId(id)}
-      onDelete={(id) => requestDeleteSkill(id)}
-      busy={batchPending || pendingIds.has(skill.id)}
-      deleteBusy={deletingIds.has(skill.id)}
-      flash={flash?.id === skill.id}
-    />
+  // Stable callback identities: SkillCard is memoized and compares props by
+  // reference, so inline arrows here would re-render every card per keystroke.
+  const handleToggleSkill = useCallback((id: string) => void toggleSkill(id), [toggleSkill]);
+  const handleEditSkill = useCallback((id: string) => setEditingId(id), []);
+  const handleDeleteSkill = useCallback(
+    (id: string) => void requestDeleteSkill(id),
+    [requestDeleteSkill],
+  );
+
+  const renderSkillCard = useCallback(
+    (skill: SkillItem) => (
+      <SkillCard
+        key={skill.id}
+        skill={skill}
+        onToggle={handleToggleSkill}
+        onEdit={handleEditSkill}
+        onDelete={handleDeleteSkill}
+        busy={batchPending || pendingIds.has(skill.id)}
+        deleteBusy={deletingIds.has(skill.id)}
+        flash={flash?.id === skill.id}
+      />
+    ),
+    [
+      handleToggleSkill,
+      handleEditSkill,
+      handleDeleteSkill,
+      batchPending,
+      pendingIds,
+      deletingIds,
+      flash,
+    ],
   );
 
   const hasSkills = skills.length > 0;
