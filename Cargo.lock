@@ -2694,7 +2694,7 @@ dependencies = [
 
 [[package]]
 name = "orquestra-ai"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "aes-gcm",
  "base64 0.23.1",
