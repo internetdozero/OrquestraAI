@@ -172,11 +172,114 @@ pub(crate) fn open_paths() -> Result<OrquestraPaths, String> {
     Ok(paths)
 }
 
-/// App-specific scratch root under the OS temp directory (e.g.
-/// `$TMPDIR/orquestra-ai`, `/tmp/orquestra-ai`). Never a hardcoded
-/// `/var/tmp/testing`, which end-user machines do not have.
+/// App-specific runtime root: `$XDG_RUNTIME_DIR/orquestra-ai` when set,
+/// otherwise `<temp>/orquestra-ai-<uid>`. Never a shared world-writable
+/// directory without an owner check: on multi-user machines a predictable
+/// `/tmp/orquestra-ai` lets another local user pre-create it and race the
+/// staging writes inside.
 pub(crate) fn scratch_root() -> PathBuf {
-    std::env::temp_dir().join("orquestra-ai")
+    if let Some(runtime) = std::env::var_os("XDG_RUNTIME_DIR") {
+        if !runtime.is_empty() {
+            return PathBuf::from(runtime).join("orquestra-ai");
+        }
+    }
+    #[cfg(unix)]
+    {
+        // SAFETY: `getuid` takes no arguments and has no failure mode.
+        let uid = unsafe { libc::getuid() };
+        return std::env::temp_dir().join(format!("orquestra-ai-{uid}"));
+    }
+    #[cfg(not(unix))]
+    {
+        return std::env::temp_dir().join("orquestra-ai");
+    }
+}
+
+/// Create [`scratch_root`] when missing and verify it on every call: it must
+/// be a real directory (never a symlink), owned by this uid, with mode
+/// `0700` (Unix). Anything else fails closed instead of staging downloads
+/// into attacker-visible or attacker-writable storage.
+pub(crate) fn ensure_scratch_root() -> Result<PathBuf, String> {
+    let root = scratch_root();
+    match std::fs::symlink_metadata(&root) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            // One level only: every parent (`$XDG_RUNTIME_DIR`, the temp dir)
+            // must already exist, so a missing parent fails instead of
+            // building an unexpected tree.
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::DirBuilderExt;
+                std::fs::DirBuilder::new()
+                    .mode(0o700)
+                    .create(&root)
+                    .map_err(|error| format!("failed to create {}: {error}", root.display()))?;
+            }
+            #[cfg(not(unix))]
+            {
+                std::fs::create_dir(&root)
+                    .map_err(|error| format!("failed to create {}: {error}", root.display()))?;
+            }
+        }
+        Err(error) => {
+            return Err(format!("failed to inspect {}: {error}", root.display()));
+        }
+        Ok(_) => {}
+    }
+    verify_runtime_dir(&root)?;
+    Ok(root)
+}
+
+/// `lstat` the runtime root: no symlinks, real directory, ours, `0700`.
+/// `expected_uid` is injected so tests can prove the ownership refusal
+/// without needing a second Unix user.
+#[cfg(unix)]
+fn verify_runtime_dir_with_uid(dir: &Path, expected_uid: u32) -> Result<(), String> {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    let meta = std::fs::symlink_metadata(dir)
+        .map_err(|error| format!("failed to inspect {}: {error}", dir.display()))?;
+    if meta.file_type().is_symlink() {
+        return Err(format!(
+            "refusing to stage in {}: not a real directory",
+            dir.display()
+        ));
+    }
+    if !meta.is_dir() {
+        return Err(format!(
+            "refusing to stage in {}: not a directory",
+            dir.display()
+        ));
+    }
+    if meta.uid() != expected_uid {
+        return Err(format!(
+            "refusing to stage in {}: not owned by the current user",
+            dir.display()
+        ));
+    }
+    if meta.permissions().mode() & 0o777 != 0o700 {
+        return Err(format!(
+            "refusing to stage in {}: must be mode 0700",
+            dir.display()
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn verify_runtime_dir(dir: &Path) -> Result<(), String> {
+    // SAFETY: `getuid` takes no arguments and has no failure mode.
+    let uid = unsafe { libc::getuid() };
+    verify_runtime_dir_with_uid(dir, uid)
+}
+
+#[cfg(not(unix))]
+fn verify_runtime_dir(dir: &Path) -> Result<(), String> {
+    if !dir.is_dir() {
+        return Err(format!(
+            "refusing to stage in {}: not a directory",
+            dir.display()
+        ));
+    }
+    Ok(())
 }
 
 /// Unique suffix for atomic-write temp files (`.{name}.tmp-{suffix}` or
@@ -209,26 +312,25 @@ pub(crate) fn unique_tmp_suffix() -> String {
 pub(crate) fn fresh_scratch_dir(prefix: &str) -> Result<PathBuf, String> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let root = scratch_root();
-    fs::create_dir_all(&root)
-        .map_err(|error| format!("failed to create {}: {error}", root.display()))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(&root, fs::Permissions::from_mode(0o700));
-    }
+    let root = ensure_scratch_root()?;
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
     let dir = root.join(format!("{prefix}-{}-{unique}-{seq}", std::process::id()));
-    fs::create_dir_all(&dir)
-        .map_err(|error| format!("failed to create {}: {error}", dir.display()))?;
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(&dir, fs::Permissions::from_mode(0o700));
+        use std::os::unix::fs::DirBuilderExt;
+        std::fs::DirBuilder::new()
+            .mode(0o700)
+            .create(&dir)
+            .map_err(|error| format!("failed to create {}: {error}", dir.display()))?;
+    }
+    #[cfg(not(unix))]
+    {
+        fs::create_dir(&dir)
+            .map_err(|error| format!("failed to create {}: {error}", dir.display()))?;
     }
     Ok(dir)
 }
@@ -292,6 +394,100 @@ mod tests {
         seed_vault(&root, &vault).expect("seed");
         assert!(vault.join("demo/SKILL.md").is_file());
         let _ = fs::remove_dir_all(&root);
+    }
+
+    /// Task #325: `$XDG_RUNTIME_DIR` wins when set; otherwise the fallback
+    /// is per-uid (`orquestra-ai-<uid>`), never a shared predictable path.
+    #[test]
+    fn scratch_root_prefers_xdg_runtime_dir() {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let xdg =
+            std::env::temp_dir().join(format!("orquestra-xdg-{}-{nanos}", std::process::id()));
+        let previous = std::env::var_os("XDG_RUNTIME_DIR");
+        std::env::set_var("XDG_RUNTIME_DIR", &xdg);
+        let root = scratch_root();
+        match previous {
+            Some(value) => std::env::set_var("XDG_RUNTIME_DIR", value),
+            None => std::env::remove_var("XDG_RUNTIME_DIR"),
+        }
+        assert_eq!(root, xdg.join("orquestra-ai"));
+        let _ = fs::remove_dir_all(&xdg);
+    }
+
+    /// Task #325: without `XDG_RUNTIME_DIR` the fallback carries the uid.
+    #[cfg(unix)]
+    #[test]
+    fn scratch_root_fallback_is_per_uid() {
+        let previous = std::env::var_os("XDG_RUNTIME_DIR");
+        std::env::remove_var("XDG_RUNTIME_DIR");
+        let root = scratch_root();
+        match previous {
+            Some(value) => std::env::set_var("XDG_RUNTIME_DIR", value),
+            None => {}
+        }
+        // SAFETY: `getuid` takes no arguments and has no failure mode.
+        let uid = unsafe { libc::getuid() };
+        assert_eq!(
+            root,
+            std::env::temp_dir().join(format!("orquestra-ai-{uid}"))
+        );
+    }
+
+    /// Task #325: `ensure_scratch_root` creates the runtime dir `0700`.
+    #[test]
+    fn ensure_scratch_root_creates_0700() {
+        let root = ensure_scratch_root().expect("runtime root");
+        assert_eq!(root, scratch_root());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(&root).unwrap().permissions().mode() & 0o777,
+                0o700
+            );
+        }
+    }
+
+    /// Task #325: a symlinked or foreign runtime dir is refused (Unix).
+    /// Ownership is proven by injecting a wrong uid — no second user needed.
+    #[cfg(unix)]
+    #[test]
+    fn runtime_dir_refuses_symlinks_foreign_owners_and_loose_modes() {
+        use std::os::unix::fs::PermissionsExt;
+        let base = temp_seed_root("runtime-refuse");
+        // Symlink fails closed.
+        let real = base.join("real");
+        fs::create_dir_all(&real).expect("real dir");
+        std::os::unix::fs::symlink(&real, base.join("linked")).expect("link");
+        assert!(
+            verify_runtime_dir_with_uid(&base.join("linked"), unsafe { libc::getuid() }).is_err(),
+            "a symlinked runtime dir must be refused"
+        );
+        // A directory owned by someone else fails closed.
+        let owned = base.join("owned");
+        fs::create_dir_all(&owned).expect("owned dir");
+        fs::set_permissions(&owned, fs::Permissions::from_mode(0o700)).expect("chmod");
+        // SAFETY: `getuid` takes no arguments and has no failure mode.
+        let uid = unsafe { libc::getuid() };
+        assert!(
+            verify_runtime_dir_with_uid(&owned, uid.wrapping_add(1)).is_err(),
+            "a foreign-owned runtime dir must be refused"
+        );
+        assert!(verify_runtime_dir_with_uid(&owned, uid).is_ok());
+        // A group/world-accessible directory fails closed.
+        fs::set_permissions(&owned, fs::Permissions::from_mode(0o755)).expect("loosen");
+        assert!(
+            verify_runtime_dir_with_uid(&owned, uid).is_err(),
+            "a 0755 runtime dir must be refused"
+        );
+        // A regular file is not a directory.
+        let file = base.join("file");
+        fs::write(&file, b"x").expect("file");
+        assert!(verify_runtime_dir_with_uid(&file, uid).is_err());
+        let _ = fs::remove_dir_all(&base);
     }
 
     /// Task #281: a symlinked seed root fails closed instead of seeding the

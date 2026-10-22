@@ -54,6 +54,9 @@ url = "2"
 # the lock file as a reqwest transitive dep, so this adds no new crates.
 futures-util = { version = "0.3", default-features = false }
 minisign-verify = "0.3.0"
+# Strict `target_version > CARGO_PKG_VERSION` anti-downgrade gate in the
+# updater (prerelease ordering: `alpha.5 < alpha.10`).
+semver = "1"
 aes-gcm = "0.10.3"
 rand = "0.9.5"
 # One persistent backend per OS: Secret Service on Linux, Keychain on
