@@ -103,7 +103,8 @@ async (worktree sizing walks `node_modules`). OrquestraAI-owned layers on top:
 ### Adapter native formats
 
 Every adapter translates one harness's on-disk layout into `UnifiedSession`
-listing rows and `TranscriptTurn` feeds. All paths are relative to `$HOME`;
+listing rows and `TranscriptTurn` feeds. All paths are relative to `$HOME`,
+resolved once through `paths::home_dir` (`HOME`, then `USERPROFILE` on Windows);
 ids are path-segment-checked so `../` escapes and symlinks pointing outside
 the store resolve to an empty feed, never to outside bytes.
 

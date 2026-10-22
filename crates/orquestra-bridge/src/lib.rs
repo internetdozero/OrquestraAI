@@ -73,10 +73,12 @@ pub struct BridgeReport {
     pub errors: Vec<String>,
 }
 
+/// The operator's home directory: the harnesses live under it, so this is
+/// exactly what [`orquestra_core::paths::require_home`] resolves.
 pub fn home_dir() -> Result<PathBuf, String> {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate harness directories".to_string())
+    Ok(orquestra_core::paths::require_home(
+        "locate harness directories",
+    )?)
 }
 
 /// Current bridge state for every known harness.

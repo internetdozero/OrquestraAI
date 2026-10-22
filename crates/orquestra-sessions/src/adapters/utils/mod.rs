@@ -35,9 +35,10 @@ pub use text::{decode_path_hint, trim_title};
 pub use super::time::{iso8601_from_secs, normalized_timestamp, now_secs, timestamp_secs};
 
 /// The user's home directory. Adapters take it as a constructor argument so
-/// tests can point them at a fixture tree instead.
+/// tests can point them at a fixture tree instead; this resolves the real one
+/// through the single helper in `orquestra-core`.
 pub fn home() -> Result<PathBuf, String> {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate harness session stores".to_string())
+    Ok(orquestra_core::paths::require_home(
+        "locate harness session stores",
+    )?)
 }

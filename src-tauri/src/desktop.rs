@@ -11,10 +11,7 @@ use std::path::PathBuf;
 
 /// Root everything here is confined to.
 fn orquestra_root() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate ~/.orquestra".to_string())?;
-    Ok(home.join(".orquestra"))
+    Ok(crate::paths::require_home("locate ~/.orquestra")?.join(".orquestra"))
 }
 
 /// Open an external HTTP(S) URL in the default system browser.
@@ -59,10 +56,7 @@ fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), St
 pub fn open_in_file_manager(path: String) -> Result<(), String> {
     let root = orquestra_root()?;
     let expanded = if let Some(rest) = path.strip_prefix("~/") {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| "HOME is not set".to_string())?;
-        home.join(rest)
+        crate::paths::require_home("expand ~")?.join(rest)
     } else {
         PathBuf::from(path)
     };
@@ -142,7 +136,7 @@ pub fn ensure_desktop_integration() {
 /// Install assets, then refresh caches only when something changed.
 #[cfg(target_os = "linux")]
 fn refresh_integration_once() {
-    let Some(home) = std::env::var_os("HOME").map(PathBuf::from) else {
+    let Some(home) = crate::paths::home_dir() else {
         return;
     };
     let data_dir = home.join(".local/share");
@@ -296,8 +290,7 @@ mod tests {
             std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap();
         assert!(!canonical.contains("NoDisplay"), "canonical stays visible");
         for alias in ["orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
-            let text =
-                std::fs::read_to_string(data.join(format!("applications/{alias}"))).unwrap();
+            let text = std::fs::read_to_string(data.join(format!("applications/{alias}"))).unwrap();
             assert!(text.contains("Name=OrquestraAI"));
             assert!(
                 text.lines().any(|line| line == "NoDisplay=true"),

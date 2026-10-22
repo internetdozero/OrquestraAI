@@ -206,9 +206,7 @@ fn active_binary() -> Result<PathBuf, String> {
             return Ok(exe);
         }
     }
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate the active binary".to_string())?;
+    let home = crate::paths::require_home("locate the active binary")?;
     let fallback = home.join(".local/bin/orquestra");
     if fallback.is_file() {
         return Ok(fallback);

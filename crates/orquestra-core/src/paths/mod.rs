@@ -2,12 +2,15 @@
 //! master instruction file, plus the first-run bootstrap that creates
 //! them.
 //!
-//! [`scratch`] owns the per-process runtime and staging storage; [`seed`]
-//! owns first-launch seeding of an empty vault.
+//! [`home`] is the single place that knows which variables name the operator's
+//! home directory; [`scratch`] owns the per-process runtime and staging
+//! storage; [`seed`] owns first-launch seeding of an empty vault.
 
+mod home;
 mod scratch;
 mod seed;
 
+pub use home::{home_dir, home_dir_with, require_home, require_home_with, HOME_VARS};
 pub use scratch::{ensure_scratch_root, fresh_scratch_dir, scratch_root, unique_tmp_suffix};
 pub use seed::copy_dir_all;
 
@@ -30,10 +33,7 @@ pub struct OrquestraPaths {
 
 impl OrquestraPaths {
     pub fn resolve() -> CoreResult<Self> {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| CoreError::missing_env("HOME", "locate ~/.orquestra"))?;
-        let root = home.join(".orquestra");
+        let root = require_home("locate ~/.orquestra")?.join(".orquestra");
 
         Ok(Self {
             vault: root.join("skills-library"),
