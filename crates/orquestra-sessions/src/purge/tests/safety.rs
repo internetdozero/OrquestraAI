@@ -6,7 +6,8 @@
 
 use std::fs;
 
-use super::{adapter, estimate, execute, opencode_fixture, Fixture};
+use super::super::{estimate, execute};
+use super::{adapter, opencode_fixture, Fixture};
 use crate::adapters::{adapters_by_id, fsops};
 use crate::types::PurgeFilter;
 
@@ -174,4 +175,96 @@ fn a_purge_is_idempotent() {
         "deleting what is gone is not a failure"
     );
     assert!(!fixture.exists(".local/share/opencode/storage/session_diff/ses_1"));
+}
+
+// ---------------------------------------------------------------------------
+// Unreadable age
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_session_with_no_readable_age_is_never_age_purged() {
+    let fixture = Fixture::new();
+    fixture.database(
+        ".local/share/opencode/opencode.db",
+        "CREATE TABLE session (id TEXT, title TEXT, directory TEXT, time_updated INTEGER);
+         INSERT INTO session VALUES ('fresh', 'Fresh', '/work', NULL);",
+    );
+
+    let aged = estimate(
+        &fixture.store(),
+        &PurgeFilter {
+            older_than_days: Some(1),
+            ..PurgeFilter::default()
+        },
+    )
+    .expect("estimate");
+    assert_eq!(aged.sessions_count, 0, "no timestamp means no known age");
+
+    // Without an age rule the same session is fair game.
+    let all = estimate(&fixture.store(), &PurgeFilter::default()).expect("estimate");
+    assert_eq!(all.sessions_count, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Pin protection
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_pinned_session_survives_a_purge_that_deletes_its_neighbours() {
+    let fixture = opencode_fixture(&["ses_1", "ses_2"]);
+    fixture.pin("opencode", "ses_1");
+
+    let filter = PurgeFilter {
+        older_than_days: Some(7),
+        ..PurgeFilter::default()
+    };
+    let report = execute(&fixture.store(), &filter).expect("purge");
+
+    assert_eq!(report.deleted_count, 1);
+    assert_eq!(report.failed_count, 0);
+
+    assert!(fixture.exists(".local/share/opencode/storage/session_diff/ses_1/part.json"));
+    assert!(!fixture.exists(".local/share/opencode/storage/session_diff/ses_2/part.json"));
+    assert_eq!(
+        fixture.scalar(
+            ".local/share/opencode/opencode.db",
+            "SELECT COUNT(*) FROM session WHERE id = 'ses_1'"
+        ),
+        1
+    );
+    assert_eq!(
+        fixture.scalar(
+            ".local/share/opencode/opencode.db",
+            "SELECT COUNT(*) FROM session"
+        ),
+        1
+    );
+
+    // The operator is told what was protected, not left guessing.
+    let dry = estimate(&fixture.store(), &filter).expect("estimate");
+    assert_eq!(dry.skipped_pinned_count, 1);
+}
+
+#[test]
+fn an_explicit_request_can_delete_a_pinned_session() {
+    let fixture = opencode_fixture(&["ses_1"]);
+    fixture.pin("opencode", "ses_1");
+
+    let report = execute(
+        &fixture.store(),
+        &PurgeFilter {
+            ignore_pinned: false,
+            ..PurgeFilter::default()
+        },
+    )
+    .expect("purge");
+
+    assert_eq!(report.deleted_count, 1);
+    assert_eq!(
+        fixture.scalar(
+            ".local/share/opencode/opencode.db",
+            "SELECT COUNT(*) FROM session"
+        ),
+        0
+    );
 }
