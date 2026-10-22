@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::super::*;
 use super::{assert_linked, TestHome};
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 #[test]
 fn fusion_neutralises_secondary_discovery_paths() {

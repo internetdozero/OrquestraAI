@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::status::{is_link, is_linked_to};
-use crate::harness::HarnessSpec;
-use crate::paths::{copy_dir_all, OrquestraPaths};
+use orquestra_core::harness::HarnessSpec;
+use orquestra_core::paths::{copy_dir_all, OrquestraPaths};
 
 /// Move every entry out of `source` into `destination`, leaving an empty
 /// directory behind so a harness that expects the folder still finds it.
@@ -278,7 +278,7 @@ pub(crate) fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
         path.file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| "config".to_string()),
-        crate::paths::unique_tmp_suffix()
+        orquestra_core::paths::unique_tmp_suffix()
     ));
 
     fs::write(&temporary, content).map_err(|error| {
@@ -301,7 +301,7 @@ fn escape_json(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-pub(crate) fn timestamp_label() -> String {
+pub fn timestamp_label() -> String {
     let seconds = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs())

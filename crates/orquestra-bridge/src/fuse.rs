@@ -13,12 +13,13 @@ use super::status::{
     statuses_at, Walk, PRIMARY_WALK, SECONDARY_WALK,
 };
 use super::BridgeReport;
-use crate::harness::{self, HarnessSpec, SecondaryAction};
-use crate::paths::{copy_dir_all, OrquestraPaths};
-use crate::skills;
+use orquestra_core::agents::{read_agents, write_agents, DEFAULT_AGENTS};
+use orquestra_core::harness::{self, HarnessSpec, SecondaryAction};
+use orquestra_core::paths::{copy_dir_all, OrquestraPaths};
+use orquestra_core::skills::SKILL_FILE;
 
 mod fuse_io;
-pub(crate) use fuse_io::timestamp_label;
+pub use fuse_io::timestamp_label;
 use fuse_io::{
     backup_move, backup_slot, create_dir_all, ensure_config, ensure_symlink, link_instructions,
     move_entry, quarantine_dir,
@@ -33,7 +34,7 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
 
     // Capture the master instructions before anything is replaced so a pristine
     // file can absorb the harness instruction files instead of dropping them.
-    let master_before = skills::read_agents(paths)?;
+    let master_before = read_agents(paths)?;
 
     let before = statuses_at(home, paths);
     let needs_work = before
@@ -74,7 +75,7 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
             }
         }
 
-        if master_before == skills::DEFAULT_AGENTS {
+        if master_before == DEFAULT_AGENTS {
             if let Err(error) = import_instructions(paths, &imported) {
                 errors.push(format!("AGENTS.md import: {error}"));
             }
@@ -208,7 +209,7 @@ fn adopt_missing_skills(
 fn import_visible_skills(source: &Path, vault: &Path, projection: &Path) -> Result<(), String> {
     for (name, _) in skill_folders(source, PRIMARY_WALK)? {
         let vault_item = vault.join(&name);
-        if !vault_item.join(skills::SKILL_FILE).is_file() {
+        if !vault_item.join(SKILL_FILE).is_file() {
             continue;
         }
 
@@ -365,7 +366,7 @@ fn import_instructions(
     paths: &OrquestraPaths,
     imported: &[(String, String)],
 ) -> Result<(), String> {
-    let mut merged = skills::DEFAULT_AGENTS.to_string();
+    let mut merged = DEFAULT_AGENTS.to_string();
     let mut seen: Vec<String> = Vec::new();
 
     for (label, content) in imported {
@@ -378,9 +379,9 @@ fn import_instructions(
         seen.push(trimmed.to_string());
     }
 
-    if merged == skills::DEFAULT_AGENTS {
+    if merged == DEFAULT_AGENTS {
         return Ok(());
     }
 
-    skills::write_agents(paths, &merged)
+    write_agents(paths, &merged)
 }

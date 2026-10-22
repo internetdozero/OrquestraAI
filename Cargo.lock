@@ -2699,6 +2699,7 @@ dependencies = [
  "json5",
  "libc",
  "minisign-verify",
+ "orquestra-bridge",
  "orquestra-core",
  "orquestra-harness",
  "orquestra-vault",
@@ -2712,6 +2713,16 @@ dependencies = [
  "tauri",
  "tauri-build",
  "toml_edit 0.22.27",
+]
+
+[[package]]
+name = "orquestra-bridge"
+version = "0.1.0"
+dependencies = [
+ "json5",
+ "orquestra-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

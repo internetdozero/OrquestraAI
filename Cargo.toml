@@ -5,6 +5,7 @@ members = [
     "crates/orquestra-core",
     "crates/orquestra-harness",
     "crates/orquestra-vault",
+    "crates/orquestra-bridge",
 ]
 
 # Shared dependency versions. Every member opts in with `dep.workspace = true`,

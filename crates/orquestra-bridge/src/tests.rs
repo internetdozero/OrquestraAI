@@ -7,7 +7,7 @@ use super::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 #[cfg(test)]
 mod tests {

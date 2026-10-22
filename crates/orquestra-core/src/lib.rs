@@ -8,10 +8,13 @@
 //! modules, so existing `crate::paths::…` and `crate::harness::…` imports —
 //! and the crate's public API — are unchanged.
 
+pub mod agents;
 pub mod error;
 pub mod harness;
 pub mod paths;
+pub mod skills;
 
+pub use agents::{read_agents, write_agents, DEFAULT_AGENTS};
 pub use error::{CoreError, CoreResult};
 pub use harness::{find, harness_ids, HarnessSpec, GLOBAL_SCOPE, HARNESSES};
 pub use paths::OrquestraPaths;

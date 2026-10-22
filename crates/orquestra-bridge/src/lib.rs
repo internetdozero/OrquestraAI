@@ -2,25 +2,25 @@
 //! OrquestraAI projection.
 //!
 //! [`status`] reports what a harness currently resolves and [`fuse`] performs
-//! the backup-and-link work. This file exposes the two operations the Tauri
-//! layer and the terminal flags call.
+//! the backup-and-link work. This file exposes the two operations the desktop
+//! shell's IPC commands and terminal flags call; nothing here touches Tauri.
 
 use serde::Serialize;
 use std::path::PathBuf;
 
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 mod fuse;
 mod status;
 #[cfg(test)]
 mod tests;
 
-pub use crate::harness::SecondaryAction;
+pub use orquestra_core::harness::SecondaryAction;
 
 use fuse::*;
 use status::*;
 
-pub(crate) use fuse::timestamp_label;
+pub use fuse::timestamp_label;
 
 /// Live state of one secondary discovery location.
 #[derive(Debug, Clone, Serialize)]

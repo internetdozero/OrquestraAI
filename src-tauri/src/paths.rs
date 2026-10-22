@@ -8,7 +8,6 @@ pub use orquestra_core::paths::OrquestraPaths;
 
 pub(crate) use orquestra_core::paths::{
     copy_dir_all, create_dir, fresh_scratch_dir, open_paths, scratch_root, unique_tmp_suffix,
-    AGENTS_FILE,
 };
 
 // Reached only from the updater's test module, so `cargo check --lib` (which

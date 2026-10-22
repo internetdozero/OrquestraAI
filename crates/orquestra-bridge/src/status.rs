@@ -6,9 +6,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::{HarnessStatus, SecondaryStatus};
-use crate::harness::{self, SecondaryAction};
-use crate::paths::OrquestraPaths;
-use crate::skills;
+use orquestra_core::harness::{self, SecondaryAction};
+use orquestra_core::paths::OrquestraPaths;
+use orquestra_core::skills::SKILL_FILE;
 
 /// How far a skill walk may look, and whether it may enter hidden folders.
 #[derive(Clone, Copy)]
@@ -159,7 +159,7 @@ pub(super) fn skill_folders(root: &Path, walk: Walk) -> Result<Vec<(String, Path
             // A dotted folder is harness bookkeeping rather than a skill, but
             // it can still contain one, so only the VCS folders are skipped
             // outright on a descending walk.
-            if !name.starts_with('.') && regular_file(&path.join(skills::SKILL_FILE)) {
+            if !name.starts_with('.') && regular_file(&path.join(SKILL_FILE)) {
                 found.push((name, path));
             } else if depth < walk.max_depth
                 && (walk.descend_hidden || !name.starts_with('.'))
@@ -227,7 +227,7 @@ fn all_archived(source: &Path, vault: &Path) -> bool {
     match skill_folders(source, SECONDARY_WALK) {
         Ok(folders) => folders
             .iter()
-            .all(|(name, _)| vault.join(name).join(skills::SKILL_FILE).is_file()),
+            .all(|(name, _)| vault.join(name).join(SKILL_FILE).is_file()),
         Err(_) => false,
     }
 }

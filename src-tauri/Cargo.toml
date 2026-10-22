@@ -32,6 +32,8 @@ orquestra-core = { path = "../crates/orquestra-core" }
 orquestra-harness = { path = "../crates/orquestra-harness" }
 # Credential vault, at-rest encryption and the blind HTTP/exec proxies.
 orquestra-vault = { path = "../crates/orquestra-vault" }
+# Harness fusion: backups, projections and fleet status.
+orquestra-bridge = { path = "../crates/orquestra-bridge" }
 # `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }

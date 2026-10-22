@@ -16,7 +16,7 @@ use super::{SkillItem, GLOBAL_SCOPE};
 use crate::paths::OrquestraPaths;
 
 /// Folder name expected at the root of every skill in the vault.
-pub(crate) const SKILL_FILE: &str = "SKILL.md";
+pub(crate) use orquestra_core::skills::SKILL_FILE;
 
 pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<SkillItem>, String> {
     let global_dir = paths.global_dir();

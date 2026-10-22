@@ -23,9 +23,10 @@ pub(crate) use subpath::refresh_skill_dir;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use agents::{read_agents, write_agents, DEFAULT_AGENTS};
 pub use agents::{read_master_agents_md, write_master_agents_md};
+// Only the skills test module reads the constant through this path.
 pub use import::{import_skill, import_skill_from_git};
+#[cfg(test)]
 pub(crate) use vault::SKILL_FILE;
 
 use projection::{batch_from, clear_global_baseline, projected_ids, set_global, set_scope};
