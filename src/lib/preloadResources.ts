@@ -34,6 +34,27 @@ function whenIdle(isCancelled: () => boolean, timeoutMs = 3000): Promise<void> {
 }
 
 /**
+ * Warm the lazily-split view/modal chunks during idle time so the first
+ * tab switch rarely hits the Suspense fallback. Fire-and-forget: dynamic
+ * imports are cached by the module loader, and a rejection is ignored —
+ * the fallback covers a cache miss.
+ */
+export async function preloadViewChunks(isCancelled: () => boolean): Promise<void> {
+  await whenIdle(isCancelled);
+  if (isCancelled()) return;
+  await Promise.allSettled([
+    import("../components/McpView"),
+    import("../components/AgentsView"),
+    import("../components/sessions/SessionsView"),
+    import("../components/ideas/IdeasView"),
+    import("../components/credentials/CredentialsView"),
+    import("../components/JanitorModal"),
+    import("../components/settings/SettingsModal"),
+    import("../components/BridgeModal"),
+  ]);
+}
+
+/**
  * Everything else, one idle window at a time, after the shell is on screen.
  * Boot used to fire MCP + agents + the full session scan + every harness
  * scope back-to-back the moment the shell painted, saturating I/O while the

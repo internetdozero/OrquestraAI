@@ -1,20 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { AgentsView } from "./components/AgentsView";
 import { BootScreen } from "./components/BootScreen";
-import { BridgeModal } from "./components/BridgeModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
-import { IdeasView } from "./components/ideas/IdeasView";
-import { JanitorModal } from "./components/JanitorModal";
-import { McpView } from "./components/McpView";
 import { PresetBar } from "./components/PresetBar";
-import { SettingsModal } from "./components/settings/SettingsModal";
 import { Sidebar } from "./components/Sidebar";
-import { SessionsView } from "./components/sessions/SessionsView";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
-import { CredentialsView } from "./components/credentials/CredentialsView";
+import { ModalFallback, ViewFallback } from "./components/ui";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
@@ -26,10 +19,44 @@ import { useToast } from "./hooks/useToast";
 import { ensureMcpCatalog, refreshMcpCatalog } from "./lib/mcpCache";
 import { dropSkillsCache } from "./lib/skillsCache";
 import { setMinimizeToTray } from "./lib/tauri";
-import { preloadBackground, preloadEssentials } from "./lib/preloadResources";
+import { preloadBackground, preloadEssentials, preloadViewChunks } from "./lib/preloadResources";
 import { useCoreStatus } from "./lib/tauri";
 import { cn } from "./lib/utils";
 import type { ActiveView } from "./lib/views";
+
+/** Secondary views and modals load on demand: the first paint only needs
+ *  the shell around SkillsView. Idle preloading (see `preloadViewChunks`)
+ *  warms these chunks so tab switches rarely hit the Suspense fallback. */
+const IdeasView = lazy(() =>
+  import("./components/ideas/IdeasView").then((module) => ({ default: module.IdeasView })),
+);
+const AgentsView = lazy(() =>
+  import("./components/AgentsView").then((module) => ({ default: module.AgentsView })),
+);
+const SessionsView = lazy(() =>
+  import("./components/sessions/SessionsView").then((module) => ({
+    default: module.SessionsView,
+  })),
+);
+const CredentialsView = lazy(() =>
+  import("./components/credentials/CredentialsView").then((module) => ({
+    default: module.CredentialsView,
+  })),
+);
+const McpView = lazy(() =>
+  import("./components/McpView").then((module) => ({ default: module.McpView })),
+);
+const JanitorModal = lazy(() =>
+  import("./components/JanitorModal").then((module) => ({ default: module.JanitorModal })),
+);
+const SettingsModal = lazy(() =>
+  import("./components/settings/SettingsModal").then((module) => ({
+    default: module.SettingsModal,
+  })),
+);
+const BridgeModal = lazy(() =>
+  import("./components/BridgeModal").then((module) => ({ default: module.BridgeModal })),
+);
 
 /**
  * Application shell: owns the active platform view and the data the header
@@ -162,6 +189,9 @@ export default function App() {
 
     let cancelled = false;
     void preloadBackground(() => cancelled);
+    // Warm the split view/modal chunks while idle so the first tab switch
+    // rarely hits the Suspense fallback.
+    void preloadViewChunks(() => cancelled);
     return () => {
       cancelled = true;
     };
@@ -283,51 +313,53 @@ export default function App() {
               reload: t.common.reloadApp,
             }}
           >
-            {view === "ideas" ? (
-              <IdeasView isTauri={isTauri} onToast={showToast} onError={setError} />
-            ) : view === "agents" ? (
-              <AgentsView
-                isTauri={isTauri}
-                error={error}
-                onToast={showToast}
-                onError={setError}
-                onClear={clearError}
-              />
-            ) : view === "sessions" ? (
-              <SessionsView
-                isTauri={isTauri}
-                notifyOnPurge={prefs.settings.notifyOnPurge}
-                onToast={showToast}
-                onError={setError}
-              />
-            ) : view === "credentials" ? (
-              <CredentialsView isTauri={isTauri} onToast={showToast} onError={setError} />
-            ) : view === "mcps" ? (
-              <McpView
-                isTauri={isTauri}
-                onToast={showToast}
-                onActiveCountChange={setMcpCount}
-                reloadToken={reloadToken}
-                query={query}
-                onQueryChange={setQuery}
-              />
-            ) : (
-              <SkillsView
-                isTauri={isTauri}
-                harnessCounts={summaries.counts}
-                harnessTotal={summaries.total}
-                installedHarnessIds={installedHarnessIds}
-                query={query}
-                onQueryChange={setQuery}
-                reloadToken={reloadToken}
-                onStatsChange={setSkillStats}
-                onSummaryStale={() => void summaries.refresh()}
-                onBusyChange={setSkillsBusy}
-                externalError={error}
-                onDismissExternalError={clearError}
-                onToast={showToast}
-              />
-            )}
+            <Suspense fallback={<ViewFallback />}>
+              {view === "ideas" ? (
+                <IdeasView isTauri={isTauri} onToast={showToast} onError={setError} />
+              ) : view === "agents" ? (
+                <AgentsView
+                  isTauri={isTauri}
+                  error={error}
+                  onToast={showToast}
+                  onError={setError}
+                  onClear={clearError}
+                />
+              ) : view === "sessions" ? (
+                <SessionsView
+                  isTauri={isTauri}
+                  notifyOnPurge={prefs.settings.notifyOnPurge}
+                  onToast={showToast}
+                  onError={setError}
+                />
+              ) : view === "credentials" ? (
+                <CredentialsView isTauri={isTauri} onToast={showToast} onError={setError} />
+              ) : view === "mcps" ? (
+                <McpView
+                  isTauri={isTauri}
+                  onToast={showToast}
+                  onActiveCountChange={setMcpCount}
+                  reloadToken={reloadToken}
+                  query={query}
+                  onQueryChange={setQuery}
+                />
+              ) : (
+                <SkillsView
+                  isTauri={isTauri}
+                  harnessCounts={summaries.counts}
+                  harnessTotal={summaries.total}
+                  installedHarnessIds={installedHarnessIds}
+                  query={query}
+                  onQueryChange={setQuery}
+                  reloadToken={reloadToken}
+                  onStatsChange={setSkillStats}
+                  onSummaryStale={() => void summaries.refresh()}
+                  onBusyChange={setSkillsBusy}
+                  externalError={error}
+                  onDismissExternalError={clearError}
+                  onToast={showToast}
+                />
+              )}
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>
@@ -343,41 +375,47 @@ export default function App() {
         onOpenJanitor={() => setJanitorOpen(true)}
       />
 
-      {janitorOpen && (
-        <JanitorModal
-          health={janitor.health}
-          ramWarning={prefs.settings.ramAlertThreshold}
-          loading={janitor.loading}
-          sweeping={janitor.sweeping}
-          onClose={() => setJanitorOpen(false)}
-          onRefresh={() => void janitor.refresh()}
-          onSweep={() => void janitor.sweep()}
-        />
-      )}
+      <Suspense fallback={janitorOpen ? <ModalFallback /> : null}>
+        {janitorOpen && (
+          <JanitorModal
+            health={janitor.health}
+            ramWarning={prefs.settings.ramAlertThreshold}
+            loading={janitor.loading}
+            sweeping={janitor.sweeping}
+            onClose={() => setJanitorOpen(false)}
+            onRefresh={() => void janitor.refresh()}
+            onSweep={() => void janitor.sweep()}
+          />
+        )}
+      </Suspense>
 
-      {settingsOpen && (
-        <SettingsModal
-          prefs={prefs}
-          status={status}
-          isTauri={isTauri}
-          onClose={() => setSettingsOpen(false)}
-          onToast={showToast}
-          onError={setError}
-          onOpenSessions={() => {
-            setSettingsOpen(false);
-            selectView("sessions");
-          }}
-        />
-      )}
+      <Suspense fallback={settingsOpen ? <ModalFallback /> : null}>
+        {settingsOpen && (
+          <SettingsModal
+            prefs={prefs}
+            status={status}
+            isTauri={isTauri}
+            onClose={() => setSettingsOpen(false)}
+            onToast={showToast}
+            onError={setError}
+            onOpenSessions={() => {
+              setSettingsOpen(false);
+              selectView("sessions");
+            }}
+          />
+        )}
+      </Suspense>
 
-      {bridge.open && (
-        <BridgeModal
-          statuses={bridge.statuses}
-          deploying={bridge.deploying}
-          onClose={() => bridge.setOpen(false)}
-          onConfirm={() => void bridge.deploy()}
-        />
-      )}
+      <Suspense fallback={bridge.open ? <ModalFallback /> : null}>
+        {bridge.open && (
+          <BridgeModal
+            statuses={bridge.statuses}
+            deploying={bridge.deploying}
+            onClose={() => bridge.setOpen(false)}
+            onConfirm={() => void bridge.deploy()}
+          />
+        )}
+      </Suspense>
 
       {toast && (
         <div
