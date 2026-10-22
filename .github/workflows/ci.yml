@@ -111,6 +111,51 @@ jobs:
       - name: Cargo check (workspace)
         run: cargo check --workspace
 
+  macos-check:
+    # The Darwin half of the janitor health collector only exists behind
+    # `#[cfg(target_os = "macos")]`, so nothing on the Linux runner ever parses
+    # it: `src-tauri/src/janitor/health/macos/native.rs` (sysctl,
+    # `host_statistics64`, libproc) could break without a single job noticing.
+    # This job compiles it. It stays non-blocking like the Windows baseline
+    # because no macOS runner has ever built this workspace — the first runs
+    # establish the state rather than assume it. Remove `continue-on-error`
+    # once it is green, and it becomes the gate that keeps the collector
+    # compiling.
+    name: macOS check
+    runs-on: macos-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      # Check out the repository.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Tauri's build script resolves the frontend, as in the Linux job.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      # The runner ships aarch64 Apple Clang and the macOS SDK, so rusqlite's
+      # bundled SQLite compiles without extra packages.
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # `--all-targets` so the Darwin-gated test modules compile too, not just
+      # the library the app links.
+      - name: Cargo check (workspace)
+        run: cargo check --workspace --all-targets
+
   node-tests:
     # Node test job: runs frontend unit tests and the TS typecheck.
     name: Node tests
