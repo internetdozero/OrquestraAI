@@ -11,79 +11,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0-alpha.5] - 2026-10-22
 
-### Fixed
+> **Resumo da Versão:** Consolidação dos avanços entre `alpha.3` e `alpha.5`. Esta versão eleva o OrquestraAI para uma plataforma segura de execução: introduz o **Blind Vault** com criptografia em repouso AES-256-GCM, motor de streaming de transcripts linha a linha (eliminando picos de memória em históricos massivos), concorrência atômica com autoridade `flock`, updater assinado com Ed25519 nativo e portões de segurança 100% limpos no CodeQL. _(A release `alpha.4` foi imediatamente substituída por esta versão para resolução de alertas estáticos)._
 
-- **CodeQL Cryptographic Value Alerts:**
-  - Resolved static analysis alerts by generating nonces and encryption keys dynamically via `Aes256Gcm` and `OsRng` without fixed-size zeroed byte buffers.
-  - Replaced test hardcoded keys with dynamic test keys.
-- **Skill Security Scanning:**
-  - Preserved live security scans across skill directories to avoid stale cache hits when scripts are added to subdirectories.
-- **Code Style & Formatting:**
-  - Formatted `src-tauri/tests/fixtures/ipc-contract.json` and `src/lib/vault.ts` with Prettier.
+### 🔐 Blind Vault & Segurança de Credenciais
 
-### Added
+- **Criptografia em Repouso (AES-256-GCM):** Chaves e segredos em `vault.json` e `mcps.json` agora são lacrados via AES-256-GCM com chave derivada do Keyring do SO (Secret Service, Keychain, Credential Manager) ou fallback seguro `0600`.
+- **Proxy Cego de Execução (`vault_http_request` / `vault_exec`):** Chamadas HTTP e ferramentas MCP injetam segredos no nível nativo em Rust, impedindo que credenciais transitem pela memória JavaScript ou pelo contexto dos LLMs.
+- **Proteção Anti-Exfiltração & Allowlist:** Requisições blindadas validam domínios HTTPS permitidos por preset e aplicam scrubbing em múltiplas codificações (Base64, URL, Hex) contra vazamentos em logs e respostas.
+- **Isolamento de Capacidades IPC:** Escopos granulares no Tauri v2 restringem comandos sensíveis da janela principal.
 
-- **Vault Health Status Dots:**
-  - Replaced the textual `healthy`/`saudável` badges with a shared circular `StatusDot` in service cards, list rows, detail-modal headers and per-key rows; the translated health name moved into `title` and `aria-label` for tooltips and screen readers.
-  - Healthy reads from the accent-independent `green-*` ramp, because `index.css` remaps `emerald-*` onto the operator's accent and would otherwise paint a healthy dot in the brand colour.
-- **Task IDs and `NEW` Chip in the Idea Vault:**
-  - Board cards and list rows now lead with `#<id>` in mono, truncated tabular type, keeping the full title in the row tooltip.
-  - Tasks created in the last 10 minutes that were never opened carry a dismissible `NEW` chip; opening an idea records it in `localStorage` (`orquestra:seen-ideas`, capped at 500 ids), so the chip clears on click and survives reloads.
-- **Card-Motion Guardrail Before the Build:**
-  - Extended `scripts/check-card-motion.mjs` beyond TSX class strings to stylesheets (`transition: all`, transforms inside `:hover` blocks), inline style objects and shared `.ts` class constants, with brace tracking so `@keyframes` and `transform: none` stay exempt.
-  - Added a versioned pre-commit hook (`.githooks/pre-commit`, installed through the `prepare` npm script) that runs the same guard whenever TS, TSX or CSS is staged, plus `scripts/git-hooks.test.mjs` to keep the hook wiring intact.
-- **Official Autonomous Code Audit Skill (`orquestra-autonomous-audit` / `autonomous-audit`):** Time-boxed autonomous code audit and hardening shift protocol across the multi-harness fleet, supporting dynamic durations ($X$ minutes), 4 universal scopes (Security, Performance, Logic, DX), atomic reproduction tests, formal negative passes, and optional Idea Vault / Agent Board lifecycle.
+### ⚡ Performance & Streaming
 
-### Fixed
+- **Streaming de Sessões Linha a Linha:** Leitura de arquivos `.jsonl` e rollouts (Claude, Codex, Grok) convertida para streaming sob demanda (`for_each_jsonl`), eliminando carregamento de arquivos inteiros na RAM.
+- **Virtualização de Transcripts:** Feed com renderização virtualizada e busca com debounce, mantendo fluidez mesmo em conversas gigantescas.
+- **Divisão de Pacotes (_Bundle Splitting_):** Lazy-loading de modais e diálogos secundários, acelerando a inicialização da aplicação.
+- **Otimização de Projeções:** Resolução em lote (`projected_ids`) substituindo centenas de chamadas de canonicalização por uma única passada em disco.
 
-- **PresetCard Hover Jank:** `PresetCard` no longer transitions every property; it lists the three it actually animates (`border-color`, `background-color`, `box-shadow`), clearing the `no-transition-all` guardrail violation that blocked `npm run build`, `build:fast` and `build:release`.
-- **Freebuff Skill Discovery (`~/.agents/skills`):**
-  - Registered `~/.agents/skills` as Freebuff's primary skills link, matching the Codebuff SDK's canonical global skill root so enabling a skill for Freebuff makes it visible immediately instead of only through the Claude fallback.
-  - Added shared-path ownership to the harness registry: Codex and Grok now defer to Freebuff's projection of the shared agent root instead of quarantining the link, and still empty the folder when Freebuff is not installed.
-  - `deploy_harness_bridge` adopts, backs up, and replaces an existing physical `~/.agents/skills` directory with the Freebuff projection symlink.
-- **Official Store Resilience & Error Masking:**
-  - Separated store catalog load errors from row action errors (install/enable), displaying action failures in an inline dismissible banner without unmounting the store cards.
-  - Corrected error extraction in `OfficialStore.tsx` to preserve Tauri string error rejections instead of masking them as "Unexpected error".
-  - Cleared stale or dangling symlinks at target destination in `import_dir`, preventing collisions when importing skills into the vault.
-- **Vault Deduplication & Legacy Alias Suppression:**
-  - Automatically suppressed legacy alias folders (e.g. `autonomous-audit`, `modular-start`, `smart-build-router`, `agent-orchestrator`) when their canonical unified `orquestra-*` folder is present in the vault, eliminating duplicate cards in the library UI.
-  - Extended projection resolution (`is_projected`) and unlinking (`unlink_skill`) to recognize legacy aliases seamlessly.
+### 🛡️ Concorrência & Robustez do Sistema
 
-### Security & Hardening
+- **Instância Única Confiável (`flock`):** Trava nativa em nível de SO (`.orquestra.lock`) com encerramento de sockets e limpeza de sinais em reinicializações.
+- **Gravações Atômicas Concorrentes:** Sufixos temporários únicos por thread e processo (`unique_tmp_suffix`), prevenindo entrelaçamento de bytes em gravações concorrentes de IPC.
+- **Updater Nativo Assinado via Ed25519:** Download e verificação de integridade via crates nativas do Rust (sem dependência de `curl`/`wget`), com assinatura criptográfica `SHA256SUMS.txt.minisig`.
+- **CSP Estrita:** Remoção de `unsafe-inline` em estilos e adequação a padrões de Content Security Policy seguros.
 
-- **Comprehensive Path & Symlink Traversal Protection Across Fleet Adapters:**
-  - Hardened `delete_session`, `read_transcript`, and artifact sizing across all 9 session adapters (Antigravity, Claude Code, Codex, Copilot CLI, Freebuff/Manicode, Grok, Hermes Agent, OpenCode, Kilo).
-  - Enforced strict single-segment validation on session IDs before path joining (`single_segment` rejecting `/`, `\`, `.`, `..` and empty strings), eliminating arbitrary file deletion through directory symlinks.
-  - Replaced naive `is_dir()` and `exists()` checks with `symlink_metadata()` and `real_dir()` guards to prevent following symlinks outside harness stores.
-  - Hardened Bridge, Skills, MCP, and Presets engines against symlinked projections, vault entries, `.git` roots, and configuration stores.
-- **Timestamp & Dialect Sanitization:**
-  - Added strict validation in `sessions/adapters/time.rs` rejecting impossible calendar dates (e.g. Feb 31, leap-year anomalies), invalid UTC offsets (`>14:00`, `< -12:00`, non-digit offset characters), and trailing garbage strings.
-- **Desktop & Updater Hardening:**
-  - Guarded launcher creation and `.desktop` writes against directory symlinks.
-  - Replaced `cmd.exe` URL execution on Windows with direct platform opening for HTTP/HTTPS links.
-  - Enforced confirmed release tag verification in in-app updater download routines.
+### 🎨 Experiência do Usuário (UI/UX)
 
-### Performance
+- **Status Dots no Vault:** Indicadores visuais circulares de integridade com rampa de cor independente do tema de destaque.
+- **Melhorias no Idea Vault:** Chips `#id` em fonte mono, indicador visual `NEW` para tarefas recentes, confirmação ágil com tecla Enter e persistência via cache SWR.
+- **Guardrail de Animações:** Verificação automatizada pré-commit (`scripts/check-card-motion.mjs`) que barra `transition: all` desnecessário na UI.
 
-- **Bounded Session Log Parsing:**
-  - Enforced a 32 MiB size ceiling (`MAX_JSONL_BYTES`) on Freebuff/Manicode `list_sessions`, preventing memory bloat and UI freezes on oversized `chat-messages.json` files.
-  - Prevented cyclical and out-of-tree walks in directory size calculations (`dir_size`).
+### 🧩 Ecossistema de Skills & MCPs
 
-### Reliability & Logic
+- **MCP Oficial de Busca:** Integração e registro do servidor oficial `orquestra-web-search`.
+- **Compatibilidade Freebuff:** Adoção de `~/.agents/skills` como raiz canônica sem colisão com outros harnesses da frota.
+- **Auditoria de Segurança Ativa:** Inspeção recursiva de scripts maliciosos em tempo real, sem falsos positivos ou bypasses de cache.
+- **Deduplicação de Aliases:** Supressão automática de pastas legadas quando o pacote canônico `orquestra-*` está ativo.
 
-- **Maintenance Lock Validation:**
-  - Hardened lock detection in Codex (`.sqlite-maintenance.lock`) and Copilot (`.session-operation-locks`) to require real regular files, eliminating denial-of-service locks caused by dangling or external symlinks.
-  - Corrected ISO timezone offset sign handling during timestamp normalization.
-- **Updater Version Ordering:**
-  - Improved semver comparison to rank pre-releases strictly behind corresponding stable releases.
+### 🐛 Correções & Qualidade
 
-### Refactored (Anti-Monolith File Cap)
-
-- Decomposed modules approaching the 400-line project limit into focused submodules:
-  - Extracted `freebuff_tests.rs` from `freebuff.rs` and `subpath_tests.rs` from `subpath.rs`.
-  - Split MCP catalog mutations into `mcp/catalog/mutate.rs` and secrets into `mcp/secrets_tests.rs`.
-  - Extracted fusion IO into `bridge/fuse/fuse_io.rs` and secondary bridge tests into `bridge/tests/tests/secondary.rs`.
-  - Modularized session adapter ID escape tests into `sessions/adapters/tests/id_escape.rs`.
+- **CodeQL (Zero Alertas Abertos):** Geração dinâmica de chaves e nonces via `Aes256Gcm` e `OsRng`, encerrando todos os alertas de valores criptográficos estáticos.
+- **Prettier & Cargo Fmt:** Sincronização e formatação estrita do contrato IPC e tipagens TypeScript.
+- **Tratamento de Erros no Frontend:** Error Boundaries com recuperação graciosa e log estruturado no backend.
 
 ## [0.1.0-alpha.3] - 2026-10-19
 
