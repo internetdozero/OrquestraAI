@@ -23,7 +23,9 @@ const RELEASE_PUBLIC_KEY: &str = "untrusted comment: orquestra release signing k
 /// Verify a detached minisign signature over the exact `SHA256SUMS.txt` bytes.
 /// Prehashed mode only: the release signer always emits modern signatures, so
 /// accepting legacy mode would widen the attack surface for no benefit.
-pub(super) fn verify_release_file(sums_bytes: &[u8], signature_text: &str) -> Result<(), String> {
+/// Public so integration tests can cover the updater's signature gate
+/// without network access; production calls flow through `updater.rs`.
+pub fn verify_release_file(sums_bytes: &[u8], signature_text: &str) -> Result<(), String> {
     verify_with_key(RELEASE_PUBLIC_KEY, sums_bytes, signature_text)
 }
 

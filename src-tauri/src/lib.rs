@@ -26,7 +26,7 @@ pub mod sessions;
 pub mod single_instance;
 mod skills;
 mod tray;
-mod update_sig;
+pub mod update_sig;
 mod updater;
 pub mod vault;
 
@@ -48,7 +48,10 @@ use sessions::{
 use skills::{HarnessSummary, SkillItem};
 use tauri::Manager;
 use tray::set_minimize_to_tray;
-use updater::{apply_app_update, restart_app, sync_official_extensions};
+use updater::{restart_app, sync_official_extensions};
+// Re-exported (not just a Tauri command) so integration tests can prove the
+// updater fails closed on hostile versions without touching the network.
+pub use updater::apply_app_update;
 use vault::{
     list_vault_presets, vault_delete_service, vault_exec, vault_http_request, vault_list_services,
     vault_remove_key, vault_save_service, vault_set_primary, vault_test_connection,
