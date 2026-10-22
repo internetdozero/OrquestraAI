@@ -3,6 +3,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::type_complexity)]
 
+mod at_rest;
 pub mod bridge;
 mod cli;
 mod community;

@@ -1,10 +1,10 @@
-//! Encrypted-at-rest-by-permissions vault storage + multi-key rotation.
+//! Encrypted-at-rest vault storage + multi-key rotation.
 //!
-//! Design decision: secrets live in `~/.orquestra/vault.json` with `0600`
-//! (same pattern as `mcps.json`), written atomically via tmp+rename and
-//! never crossing IPC in plaintext. `list` returns masked previews only.
-//! OS keyring / AES-GCM would need an interactive unlock on headless hosts,
-//! so file permissions + in-memory-only injection is the pragmatic default.
+//! Secrets live in `~/.orquestra/vault.json` sealed with AES-256-GCM under
+//! a per-install file key (OS keyring, `0600` key-file fallback on headless
+//! hosts), written atomically via tmp+rename with `0600` as defense in
+//! depth, and never crossing IPC in plaintext. `list` returns masked
+//! previews only. See `crate::at_rest` for the envelope and migration.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -212,13 +212,32 @@ pub(super) fn load_vault(paths: &OrquestraPaths) -> Result<VaultFile, String> {
             path.display()
         ));
     }
-    match fs::read_to_string(&path) {
-        Ok(content) if content.trim().is_empty() => Ok(VaultFile::default()),
-        Ok(content) => serde_json::from_str(&content)
-            .map_err(|error| format!("failed to parse {}: {error}", path.display())),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(VaultFile::default()),
-        Err(error) => Err(format!("failed to read {}: {error}", path.display())),
+    let content = match fs::read_to_string(&path) {
+        Ok(content) if content.trim().is_empty() => return Ok(VaultFile::default()),
+        Ok(content) => content,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(VaultFile::default()),
+        Err(error) => {
+            return Err(format!("failed to read {}: {error}", path.display()));
+        }
+    };
+    let (plaintext, legacy) = crate::at_rest::open_text(paths, &content)
+        .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
+    let vault: VaultFile = serde_json::from_str(&plaintext)
+        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+    // First read of a pre-encryption file migrates it: plaintext backup +
+    // sealed rewrite. Reads stay available even if the rewrite fails — the
+    // next save seals it — and dual-read covers crashes in between.
+    if legacy {
+        match crate::at_rest::migrate_legacy_file(&path, &plaintext, paths) {
+            Ok(sealed) => {
+                if let Err(error) = super::atomic::write_private(&path, &sealed) {
+                    crate::log_warn!("vault migration rewrite failed: {error}");
+                }
+            }
+            Err(error) => crate::log_warn!("vault migration backup failed: {error}"),
+        }
     }
+    Ok(vault)
 }
 
 pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<(), String> {
@@ -235,7 +254,8 @@ pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<()
     let mut content = serde_json::to_string_pretty(vault)
         .map_err(|error| format!("failed to serialize the credential vault: {error}"))?;
     content.push('\n');
-    super::atomic::write_private(&path, &content)
+    let sealed = crate::at_rest::seal_text(paths, &content)?;
+    super::atomic::write_private(&path, &sealed)
 }
 
 pub(super) fn validate_id(id: &str) -> Result<(), String> {

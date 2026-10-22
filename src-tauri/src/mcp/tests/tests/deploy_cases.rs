@@ -1,6 +1,7 @@
 //! Deploy and selection tests. Split out of the MCP suite to stay under the file cap.
 
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -10,8 +11,13 @@ use serde_json::Value as JsonValue;
 use super::super::super::catalog::*;
 use super::super::super::deploy::*;
 use super::super::is_target;
-use super::{mode_of, server, TestHome};
+#[cfg(unix)]
+use super::mode_of;
+use super::{server, TestHome};
 
+/// Mode tightening is POSIX-only: the 0600 assertions below hold on Unix,
+/// where `write_config` enforces them.
+#[cfg(unix)]
 #[test]
 fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     let test = TestHome::new("deploy");
@@ -176,6 +182,7 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     test.cleanup();
 }
 
+#[cfg(unix)]
 #[test]
 fn write_never_loosens_a_mode_and_tightens_files_holding_secrets() {
     let test = TestHome::new("modes");
@@ -367,4 +374,34 @@ fn catalog_does_not_read_a_symlinked_mcps_file() {
     );
     assert_eq!(fs::read_to_string(&outside).unwrap(), original);
     let _ = fs::remove_dir_all(&base);
+}
+
+/// Task #282: `mcps.json` on disk must never hold a readable token — sealed
+/// envelope only — while the catalog still round-trips the values.
+#[test]
+fn catalog_file_on_disk_holds_no_plaintext_tokens() {
+    let test = TestHome::new("sealed");
+    let mut server = server("gh", "npx", &[]);
+    server
+        .env
+        .insert("GITHUB_TOKEN".to_string(), "ghp-very-secret".to_string());
+    let mut catalog = Catalog::default();
+    catalog.mcps.insert("gh".to_string(), server);
+    save_catalog(&test.paths, &catalog).expect("save sealed");
+    let raw = fs::read_to_string(test.paths.root.join("mcps.json")).expect("raw catalog");
+    assert!(
+        !raw.contains("ghp-very-secret"),
+        "token leaked to disk in plaintext"
+    );
+    assert!(
+        raw.contains("orquestraSealed"),
+        "expected a sealed envelope on disk"
+    );
+    let reloaded =
+        load_catalog(&test.paths, std::path::Path::new("missing-seed.json")).expect("reload");
+    assert_eq!(
+        reloaded.mcps["gh"].env["GITHUB_TOKEN"], "ghp-very-secret",
+        "sealed round-trip must restore the token"
+    );
+    test.cleanup();
 }

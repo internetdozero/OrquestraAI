@@ -1,7 +1,8 @@
 //! Master catalog storage: seeding, CRUD, and enabled-state mutation.
 //!
 //! The catalog lives at `~/.orquestra/mcps.json` and always carries API
-//! tokens, so it is written `0600`. Neither this module nor any other owns
+//! tokens, so it is sealed with AES-256-GCM (see `crate::at_rest`) and
+//! written `0600`. Neither this module nor any other owns
 //! the harness configs: mutations here always hand off to [`super::deploy`].
 
 use serde::{Deserialize, Serialize};
@@ -283,17 +284,36 @@ fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
 pub(super) fn load_catalog(paths: &OrquestraPaths, seed: &Path) -> Result<Catalog, String> {
     let path = catalog_path(paths);
     refuse_catalog_symlink(&path, "read")?;
-    match fs::read_to_string(&path) {
-        Ok(content) if !content.trim().is_empty() => serde_json::from_str(&content)
-            .map_err(|error| format!("failed to parse {}: {error}", path.display())),
-        Ok(_) => Ok(Catalog::default()),
+    let content = match fs::read_to_string(&path) {
+        Ok(content) if !content.trim().is_empty() => content,
+        Ok(_) => return Ok(Catalog::default()),
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
             let catalog = seed_catalog(seed)?;
             save_catalog(paths, &catalog)?;
-            Ok(catalog)
+            return Ok(catalog);
         }
-        Err(error) => Err(format!("failed to read {}: {error}", path.display())),
+        Err(error) => {
+            return Err(format!("failed to read {}: {error}", path.display()));
+        }
+    };
+    let (plaintext, legacy) = crate::at_rest::open_text(paths, &content)
+        .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
+    let catalog: Catalog = serde_json::from_str(&plaintext)
+        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+    // First read of a pre-encryption file migrates it (backup + sealed
+    // rewrite), mirroring the vault loader. Reads stay available if the
+    // rewrite fails; dual-read covers crashes in between.
+    if legacy {
+        match crate::at_rest::migrate_legacy_file(&path, &plaintext, paths) {
+            Ok(sealed) => {
+                if let Err(error) = write_config(&path, &sealed, true) {
+                    crate::log_warn!("catalog migration rewrite failed: {error}");
+                }
+            }
+            Err(error) => crate::log_warn!("catalog migration backup failed: {error}"),
+        }
     }
+    Ok(catalog)
 }
 
 /// Populate a first-run catalog from the audited machine dataset. A missing
@@ -344,8 +364,9 @@ pub(super) fn save_catalog(paths: &OrquestraPaths, catalog: &Catalog) -> Result<
         .map_err(|error| format!("failed to serialize the MCP catalog: {error}"))?;
     content.push('\n');
 
-    // The catalog carries API tokens, so it is always private.
-    write_config(&path, &content, true).map(|_| ())
+    // The catalog carries API tokens, so it is sealed and always private.
+    let sealed = crate::at_rest::seal_text(paths, &content)?;
+    write_config(&path, &sealed, true).map(|_| ())
 }
 
 fn refuse_catalog_symlink(path: &Path, verb: &str) -> Result<(), String> {

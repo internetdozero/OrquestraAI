@@ -696,3 +696,87 @@ fn unwritable_vault_dir_fails_loudly() {
     std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).expect("unlock dir");
     std::fs::remove_dir_all(&root).expect("cleanup");
 }
+
+fn temp_paths(label: &str) -> crate::paths::OrquestraPaths {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    let root = std::env::temp_dir().join(format!(
+        "orquestra-vault-sealed-{label}-{}-{nanos}",
+        std::process::id()
+    ));
+    crate::paths::OrquestraPaths {
+        root: root.clone(),
+        vault: root.clone(),
+        active: root,
+    }
+}
+
+/// Task #282: the vault file on disk must never hold a readable secret —
+/// sealed envelope only — while the backend still round-trips the values.
+#[test]
+fn vault_file_on_disk_holds_no_plaintext_secrets() {
+    use super::atomic::update_vault;
+    use super::store::{load_vault, vault_path};
+
+    let paths = temp_paths("disk");
+    update_vault(&paths, |vault| {
+        vault.services.insert(
+            "svc".to_string(),
+            test_service("openai", &["sk-topsecret-disk"]),
+        );
+        Ok(())
+    })
+    .expect("save");
+    let raw = std::fs::read_to_string(vault_path(&paths)).expect("read raw vault");
+    assert!(
+        !raw.contains("sk-topsecret-disk"),
+        "secret leaked to disk in plaintext"
+    );
+    assert!(
+        raw.contains("orquestraSealed"),
+        "expected a sealed envelope on disk"
+    );
+    let reloaded = load_vault(&paths).expect("reload");
+    assert_eq!(
+        reloaded.services["svc"].keys[0].secret, "sk-topsecret-disk",
+        "sealed round-trip must restore the secret"
+    );
+    std::fs::remove_dir_all(&paths.root).expect("cleanup");
+}
+
+/// Task #282: a pre-encryption plaintext vault migrates on first load — a
+/// `0600` backup keeps the original bytes, the file is rewritten sealed,
+/// and every value survives.
+#[test]
+fn legacy_plaintext_vault_migrates_on_first_load() {
+    use super::store::{load_vault, vault_path};
+
+    let paths = temp_paths("legacy");
+    std::fs::create_dir_all(&paths.root).expect("scratch");
+    let legacy = serde_json::to_string_pretty(&serde_json::json!({
+        "services": { "svc": test_service("openai", &["sk-legacy-plain"]) }
+    }))
+    .expect("legacy JSON");
+    let path = vault_path(&paths);
+    std::fs::write(&path, &legacy).expect("write legacy vault");
+    let reloaded = load_vault(&paths).expect("load legacy");
+    assert_eq!(
+        reloaded.services["svc"].keys[0].secret, "sk-legacy-plain",
+        "legacy values must survive migration"
+    );
+    let backup = path.with_extension("json.migrate-bak");
+    assert_eq!(
+        std::fs::read_to_string(&backup).expect("read backup"),
+        legacy,
+        "migration must keep a byte-identical plaintext backup"
+    );
+    let raw = std::fs::read_to_string(&path).expect("read migrated vault");
+    assert!(
+        !raw.contains("sk-legacy-plain"),
+        "migrated file must not hold the secret in plaintext"
+    );
+    assert!(raw.contains("orquestraSealed"));
+    std::fs::remove_dir_all(&paths.root).expect("cleanup");
+}

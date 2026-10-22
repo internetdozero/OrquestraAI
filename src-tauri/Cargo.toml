@@ -50,6 +50,15 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 # the lock file as a reqwest transitive dep, so this adds no new crates.
 futures-util = { version = "0.3", default-features = false }
 minisign-verify = "0.3.0"
+aes-gcm = "0.10.3"
+rand = "0.9.5"
+# One persistent backend per OS: Secret Service on Linux, Keychain on
+# macOS, Credential Manager on Windows. `linux-native` (the kernel
+# keyring) is deliberately NOT enabled: kernel keys vanish on reboot, so a
+# fresh boot would generate a new file key and strand every sealed secret.
+# `crypto-rust` keeps the D-Bus crypto pure-Rust (no OpenSSL system dep).
+keyring = { version = "3.6.3", features = ["sync-secret-service", "crypto-rust", "apple-native", "windows-native"] }
+base64 = "0.23.1"
 
 [dev-dependencies]
 # Integration tests simulate a live peer by holding the lockfile `flock`.
