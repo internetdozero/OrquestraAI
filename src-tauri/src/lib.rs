@@ -10,6 +10,8 @@ mod community;
 mod desktop;
 mod desktop_backup;
 mod desktop_icons;
+// `paths` and `harness` are re-exports of `orquestra-core` (task #326); the
+// items moved there, the import paths did not.
 pub mod harness;
 pub mod ideas;
 #[cfg(test)]

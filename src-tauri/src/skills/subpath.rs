@@ -217,7 +217,7 @@ fn refresh_from_clone(
         };
         fs::remove_dir_all(vault_dir)
             .map_err(|error| format!("failed to clear {}: {error}", vault_dir.display()))?;
-        return crate::paths::copy_dir_all(&source, vault_dir);
+        return crate::paths::copy_dir_all(&source, vault_dir).map_err(String::from);
     }
     Err(last_error)
 }

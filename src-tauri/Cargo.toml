@@ -25,15 +25,18 @@ custom-protocol = ["tauri/custom-protocol"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Foundational types (harness registry, storage paths, common errors). The
+# `paths` and `harness` modules here are thin re-exports of this crate.
+orquestra-core = { path = "../crates/orquestra-core" }
 # `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }
-serde = { version = "1", features = ["derive"] }
-libc = "0.2"
+serde.workspace = true
+libc.workspace = true
 # `preserve_order` keeps the key order of the configs we edit, so a harness
 # whose config is already correct is left byte-identical instead of being
 # rewritten just to reorder its keys.
-serde_json = { version = "1", features = ["preserve_order"] }
+serde_json.workspace = true
 serde_yaml = "0.9"
 json5 = "1.3"
 # Format-preserving TOML editing: the Codex adapter rewrites `[mcp_servers.*]`
@@ -70,7 +73,7 @@ sha2 = "0.10.9"
 
 [dev-dependencies]
 # Integration tests simulate a live peer by holding the lockfile `flock`.
-libc = "0.2"
+libc.workspace = true
 
 # Release profiles live in the workspace root `Cargo.toml`; Cargo ignores (and
 # warns about) profiles declared by a non-root workspace member.

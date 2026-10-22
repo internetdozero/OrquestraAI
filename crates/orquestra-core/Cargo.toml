@@ -1,0 +1,15 @@
+[package]
+name = "orquestra-core"
+version = "0.1.0"
+description = "Foundational types for OrquestraAI: harness registry, storage paths and common errors"
+authors = ["Operator"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[dependencies]
+serde.workspace = true
+
+# `getuid` backs the per-uid fallback and the ownership check on the runtime
+# scratch directory; both are Unix-only.
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true

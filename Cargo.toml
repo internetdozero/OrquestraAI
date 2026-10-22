@@ -2,7 +2,19 @@
 resolver = "2"
 members = [
     "src-tauri",
+    "crates/orquestra-core",
 ]
+
+# Shared dependency versions. Every member opts in with `dep.workspace = true`,
+# so the whole workspace compiles one copy of each crate and a version bump
+# happens exactly once.
+[workspace.dependencies]
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+# `preserve_order` keeps the key order of the configs we edit, so a harness
+# whose config is already correct is left byte-identical instead of being
+# rewritten just to reorder its keys.
+serde_json = { version = "1", features = ["preserve_order"] }
 
 # Fast rebuilds and thermal preservation on dual-core hardware.
 # Incremental is disabled so sccache can achieve high cache hit rates (sccache cannot
