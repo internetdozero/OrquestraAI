@@ -20,6 +20,35 @@ fn bridge_status_reports_json_on_empty_home() {
     });
 }
 
+/// Windows has no `HOME`: the app must resolve the operator's directory from
+/// `USERPROFILE` instead. Before that fallback existed, this exact call failed
+/// with "HOME is not set", which is why nothing under `~/.orquestra` worked on
+/// a Windows launch.
+#[test]
+fn bridge_status_falls_back_to_userprofile_without_home() {
+    common::with_userprofile_only("cli-bridge-userprofile", |home| {
+        let report = parse(&bridge_status_json().expect("bridge status without HOME"));
+        let rows = report.as_array().expect("status is one row per harness");
+        assert!(!rows.is_empty(), "the catalog is never empty");
+
+        for row in rows {
+            let mut paths = vec![row["target"].as_str().expect("target path")];
+            for secondary in row["secondaryPaths"].as_array().expect("secondary paths") {
+                paths.push(secondary["path"].as_str().expect("secondary path"));
+            }
+
+            for path in paths {
+                assert!(
+                    std::path::Path::new(path).starts_with(home),
+                    "{} escaped the USERPROFILE home {}: {path}",
+                    row["id"],
+                    home.display()
+                );
+            }
+        }
+    });
+}
+
 #[test]
 fn bridge_deploy_is_a_noop_report_without_harnesses() {
     common::with_temp_home("cli-deploy", |_| {
