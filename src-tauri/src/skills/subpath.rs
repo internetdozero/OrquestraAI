@@ -185,14 +185,7 @@ pub(crate) fn refresh_skill_dir(
             return Ok(());
         }
     }
-    let staging =
-        PathBuf::from("/var/tmp/testing").join(format!("orquestra-sync-{}", std::process::id()));
-    if staging.exists() {
-        fs::remove_dir_all(&staging)
-            .map_err(|error| format!("failed to clear {}: {error}", staging.display()))?;
-    }
-    fs::create_dir_all(&staging)
-        .map_err(|error| format!("failed to create {}: {error}", staging.display()))?;
+    let staging = crate::paths::fresh_scratch_dir("orquestra-sync")?;
     let result = refresh_from_clone(&staging, vault_dir, primary_url, fallback_url);
     let _ = fs::remove_dir_all(&staging);
     result

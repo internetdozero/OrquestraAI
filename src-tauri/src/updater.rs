@@ -1,7 +1,8 @@
 //! 1-click updates: desktop binary replacement and official extension sync.
 //!
-//! Staging always lives under `/var/tmp/testing` (disk-backed, never `/tmp`)
-//! and is removed on every exit path via a [`Staging`] drop guard. Binary
+//! Staging always lives under the OS temp scratch root
+//! (`crate::paths::scratch_root`) and is removed on every exit path via a
+//! [`Staging`] drop guard. Binary
 //! downloads are fail-closed on minisign signature mismatch first (see
 //! `update_sig`) and then on SHA-256 mismatch, and the live executable is
 //! replaced atomically (sibling temp file + rename in the same directory).
@@ -14,8 +15,6 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 const REPO: &str = "internetdozero/OrquestraAI";
-/// Disk-backed scratch root; never memory-backed `/tmp`.
-const STAGING_ROOT: &str = "/var/tmp/testing";
 
 /// Summary of an upstream sync of installed official extensions.
 #[derive(Debug, Clone, Serialize)]
@@ -30,15 +29,7 @@ struct Staging(PathBuf);
 
 impl Staging {
     fn fresh(prefix: &str) -> Result<Self, String> {
-        let dir = PathBuf::from(STAGING_ROOT)
-            .join(format!("{prefix}-{}", std::process::id()));
-        if dir.exists() {
-            fs::remove_dir_all(&dir)
-                .map_err(|error| format!("failed to clear {}: {error}", dir.display()))?;
-        }
-        fs::create_dir_all(&dir)
-            .map_err(|error| format!("failed to create {}: {error}", dir.display()))?;
-        Ok(Self(dir))
+        Ok(Self(crate::paths::fresh_scratch_dir(prefix)?))
     }
 }
 
@@ -347,11 +338,8 @@ mod tests {
 
     #[test]
     fn checksum_parsing_is_exact_and_unambiguous() {
-        let dir = PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-updater-test-{}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&dir).expect("scratch");
+        let dir = crate::paths::fresh_scratch_dir("orquestra-updater-test")
+            .expect("scratch");
         let sums = dir.join("SHA256SUMS.txt");
         fs::write(&sums, "abc123  orquestra-linux-x86_64\n Antenna\n").expect("write");
         assert_eq!(
@@ -369,8 +357,11 @@ mod tests {
     }
 
     #[test]
-    fn staging_never_uses_memory_backed_tmp() {
-        assert_eq!(STAGING_ROOT, "/var/tmp/testing");
-        assert!(!Path::new(STAGING_ROOT).starts_with("/tmp"));
+    fn staging_uses_system_temp_scratch_root() {
+        let staging = Staging::fresh("orquestra-update-test").expect("staging");
+        let root = crate::paths::scratch_root();
+        assert_eq!(root, std::env::temp_dir().join("orquestra-ai"));
+        assert!(staging.0.starts_with(&root));
+        // `Staging` removes the tree on drop.
     }
 }

@@ -19,7 +19,7 @@ pub fn import_skill(source_path: String) -> Result<SkillItem, String> {
     import_dir(&source)
 }
 
-/// Clone a git URL shallowly into `/var/tmp/testing` and import the skill it
+/// Clone a git URL shallowly into the OS temp scratch root and import the skill it
 /// holds. A `#subpath` fragment targets a skill inside a monorepo (e.g.
 /// `repo.git#skills/foo`); without one, discovery checks the root, one
 /// level down, then monorepo layouts up to 3 levels deep.
@@ -38,13 +38,22 @@ pub fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
     }
 
     let staging = staging_dir()?;
+    // `staging` is `<fresh>/repo`; failures must remove the whole fresh tree.
+    let fresh = staging.parent().map(Path::to_path_buf);
+    let cleanup = || {
+        if let Some(dir) = &fresh {
+            let _ = fs::remove_dir_all(dir);
+        } else {
+            let _ = fs::remove_dir_all(&staging);
+        }
+    };
     if let Err(error) = clone_shallow(&clone_url, &staging) {
-        let _ = fs::remove_dir_all(&staging);
+        cleanup();
         return Err(error);
     }
 
     let source = locate_skill_dir(&staging, subpath.as_deref()).ok_or_else(|| {
-        let _ = fs::remove_dir_all(&staging);
+        cleanup();
         match subpath {
             Some(anchor) => format!(
                 "cloned repo holds no SKILL.md under subpath {anchor:?} — \
@@ -55,19 +64,20 @@ pub fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
     })?;
 
     let imported = import_dir(&source);
-    let _ = fs::remove_dir_all(&staging);
+    if let Some(dir) = staging.parent() {
+        let _ = fs::remove_dir_all(dir);
+    } else {
+        let _ = fs::remove_dir_all(&staging);
+    }
     imported
 }
 
 fn staging_dir() -> Result<PathBuf, String> {
-    let staging = staging_root().join(format!("orquestra-git-import-{}", std::process::id()));
-    if staging.exists() {
-        fs::remove_dir_all(&staging)
-            .map_err(|error| format!("failed to clear {}: {error}", staging.display()))?;
-    }
-    fs::create_dir_all(&staging)
-        .map_err(|error| format!("failed to create {}: {error}", staging.display()))?;
-    Ok(staging.join("repo"))
+    let staging = crate::paths::fresh_scratch_dir("orquestra-git-import")?;
+    let repo = staging.join("repo");
+    fs::create_dir_all(&repo)
+        .map_err(|error| format!("failed to create {}: {error}", repo.display()))?;
+    Ok(repo)
 }
 
 fn import_dir(source: &Path) -> Result<SkillItem, String> {
@@ -123,12 +133,6 @@ fn import_dir(source: &Path) -> Result<SkillItem, String> {
     finish(&paths, &folder, &destination)
 }
 
-/// Staging root for git clones. Always `/var/tmp/testing` (disk-backed);
-/// never memory-backed `/tmp`, so large clones cannot pressure RAM.
-fn staging_root() -> PathBuf {
-    PathBuf::from("/var/tmp/testing")
-}
-
 /// Remove a half-copied destination on failure, then evaluate the new skill.
 fn finish(paths: &OrquestraPaths, id: &str, destination: &Path) -> Result<SkillItem, String> {
     match list_from(paths, GLOBAL_SCOPE)
@@ -151,14 +155,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn import_refuses_a_symlinked_directory() {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("clock")
-            .as_nanos();
-        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-import-link-{}-{unique}",
-            std::process::id()
-        ));
+        let root = crate::paths::fresh_scratch_dir("orquestra-import-link")
+            .expect("scratch");
         let outside = root.join("outside");
         fs::create_dir_all(&outside).expect("outside");
         fs::write(outside.join("SKILL.md"), "secret-outside\n").expect("skill");
@@ -172,25 +170,21 @@ mod tests {
     }
 
     #[test]
-    fn staging_stays_on_disk_backed_var_tmp() {
-        let root = staging_root();
-        assert_eq!(root, PathBuf::from("/var/tmp/testing"));
-        assert!(
-            !root.starts_with("/tmp"),
-            "staging must never use memory-backed /tmp"
-        );
+    fn staging_uses_system_temp_scratch_root() {
+        let root = crate::paths::scratch_root();
+        assert_eq!(root, crate::paths::scratch_root());
+        assert_eq!(root, std::env::temp_dir().join("orquestra-ai"));
         let staged = staging_dir().expect("staging dir");
-        assert!(staged.starts_with("/var/tmp/testing"));
-        let _ = fs::remove_dir_all(root.join(format!(
-            "orquestra-git-import-{}",
-            std::process::id()
-        )));
+        assert!(staged.starts_with(&root));
+        // `staging_dir` returns `<fresh>/repo`; remove the whole fresh tree.
+        let fresh = staged.parent().expect("fresh parent");
+        let _ = fs::remove_dir_all(fresh);
     }
 
     #[test]
     fn rejects_unsupported_git_urls() {
         assert!(import_skill_from_git(String::new()).is_err());
         assert!(import_skill_from_git("ftp://example.com/repo.git".to_string()).is_err());
-        assert!(import_skill_from_git("/var/tmp/testing/local".to_string()).is_err());
+        assert!(import_skill_from_git("/tmp/local".to_string()).is_err());
     }
 }

@@ -25,7 +25,7 @@ pub fn sweep_system_caches() -> Result<SweepReport, String> {
 
     sweep::sweep_at(
         &home.join(".orquestra"),
-        std::path::Path::new("/var/tmp/testing"),
+        &crate::paths::scratch_root(),
         &active_sockets,
         std::time::SystemTime::now(),
     )

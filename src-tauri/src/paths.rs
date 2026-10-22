@@ -149,3 +149,41 @@ pub(crate) fn open_paths() -> Result<OrquestraPaths, String> {
     paths.bootstrap()?;
     Ok(paths)
 }
+
+/// App-specific scratch root under the OS temp directory (e.g.
+/// `$TMPDIR/orquestra-ai`, `/tmp/orquestra-ai`). Never a hardcoded
+/// `/var/tmp/testing`, which end-user machines do not have.
+pub(crate) fn scratch_root() -> PathBuf {
+    std::env::temp_dir().join("orquestra-ai")
+}
+
+/// Create a fresh unique scratch dir under [`scratch_root`] with `0o700`
+/// permissions on Unix. The caller owns cleanup (`remove_dir_all`).
+/// Uniqueness comes from pid + nanos + an atomic counter, so concurrent
+/// imports/updates never share a staging tree.
+pub(crate) fn fresh_scratch_dir(prefix: &str) -> Result<PathBuf, String> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let root = scratch_root();
+    fs::create_dir_all(&root)
+        .map_err(|error| format!("failed to create {}: {error}", root.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&root, fs::Permissions::from_mode(0o700));
+    }
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let dir = root.join(format!("{prefix}-{}-{unique}-{seq}", std::process::id()));
+    fs::create_dir_all(&dir)
+        .map_err(|error| format!("failed to create {}: {error}", dir.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&dir, fs::Permissions::from_mode(0o700));
+    }
+    Ok(dir)
+}
