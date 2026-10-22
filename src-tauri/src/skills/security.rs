@@ -8,8 +8,11 @@
 //! The walk is bounded (depth + file cap) and skips `.git`, `target` and
 //! `node_modules` so a large checkout cannot stall the import path.
 
+use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::UNIX_EPOCH;
 
 /// Script extensions that mark a skill as executable.
 const SCRIPT_EXTENSIONS: &[&str] = &["sh", "bash", "py", "js", "mjs"];
@@ -89,6 +92,102 @@ pub(crate) fn scan_skill_security(dir: &Path) -> (bool, Vec<String>) {
     found.dedup();
     let has_scripts = !found.is_empty();
     (has_scripts, found)
+}
+
+/// Fingerprint proving a cached scan is still fresh: the skill directory
+/// mtime (bumps on every add/remove/rename inside it) plus each found
+/// script's own (mtime nanos, size) — an in-place edit of a flagged helper
+/// invalidates even though the directory listing is unchanged. Only the
+/// name, extension and file kind feed the verdict, and every one of those
+/// changes bumps one of the two clocks, so a fingerprint match proves the
+/// cached verdict is still correct.
+struct SecurityCacheEntry {
+    dir_mtime: u128,
+    files: Vec<(String, u128, u64)>,
+    has_scripts: bool,
+    script_files: Vec<String>,
+}
+
+static SECURITY_CACHE: OnceLock<Mutex<HashMap<PathBuf, SecurityCacheEntry>>> = OnceLock::new();
+
+fn security_cache() -> &'static Mutex<HashMap<PathBuf, SecurityCacheEntry>> {
+    SECURITY_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn locked_security_cache() -> std::sync::MutexGuard<'static, HashMap<PathBuf, SecurityCacheEntry>> {
+    security_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn mtime_nanos(path: &Path) -> Option<u128> {
+    path.symlink_metadata()
+        .ok()?
+        .modified()
+        .ok()?
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|elapsed| elapsed.as_nanos())
+}
+
+/// Cached [`scan_skill_security`]: a hit serves the stored verdict without
+/// walking the tree; any add, remove, rename or in-place helper edit
+/// misses and rescans. Symlink-heavy or concurrently mutated trees always
+/// miss rather than serve a stale answer.
+pub(crate) fn cached_scan(dir: &Path) -> (bool, Vec<String>) {
+    let Some(dir_mtime) = mtime_nanos(dir) else {
+        return scan_skill_security(dir);
+    };
+    if let Some(hit) = locked_security_cache().get(dir) {
+        let fresh = hit.dir_mtime == dir_mtime
+            && hit.files.iter().all(|(relative, mtime, size)| {
+                let path = dir.join(relative);
+                let Ok(metadata) = path.symlink_metadata() else {
+                    return false;
+                };
+                // Kind, size and mtime are all re-checked: any swap, edit
+                // or type change misses instead of serving stale data.
+                if !metadata.file_type().is_file() && !metadata.file_type().is_symlink() {
+                    return false;
+                }
+                if metadata.len() != *size {
+                    return false;
+                }
+                mtime_nanos(&path).is_some_and(|stated| stated == *mtime)
+            });
+        if fresh {
+            return (hit.has_scripts, hit.script_files.clone());
+        }
+    }
+    let (has_scripts, script_files) = scan_skill_security(dir);
+    let files = script_files
+        .iter()
+        .map(|relative| {
+            let path = dir.join(relative);
+            let fingerprint = path
+                .symlink_metadata()
+                .ok()
+                .and_then(|metadata| mtime_nanos(&path).map(|mtime| (mtime, metadata.len())))
+                .unwrap_or((0, 0));
+            (relative.clone(), fingerprint.0, fingerprint.1)
+        })
+        .collect();
+    locked_security_cache().insert(
+        dir.to_path_buf(),
+        SecurityCacheEntry {
+            dir_mtime,
+            files,
+            has_scripts,
+            script_files: script_files.clone(),
+        },
+    );
+    (has_scripts, script_files)
+}
+
+/// Drop entries for skills that left the vault, so deleted skills and
+/// ad-hoc test vaults never pin memory.
+pub(crate) fn prune_security_cache(keep: &HashSet<PathBuf>) {
+    locked_security_cache().retain(|path, _| keep.contains(path));
 }
 
 #[cfg(test)]

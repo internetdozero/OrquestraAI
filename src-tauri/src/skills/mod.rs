@@ -28,7 +28,7 @@ pub use agents::{read_master_agents_md, write_master_agents_md};
 pub use import::{import_skill, import_skill_from_git};
 pub(crate) use vault::SKILL_FILE;
 
-use projection::{batch_from, clear_global_baseline, is_projected, set_global, set_scope};
+use projection::{batch_from, clear_global_baseline, projected_ids, set_global, set_scope};
 use vault::{list_from, skill_directories};
 
 /// A skill discovered in the master vault, evaluated for one selected scope.
@@ -80,22 +80,22 @@ pub fn list_skills(harness_id: Option<String>) -> Result<Vec<SkillItem>, String>
 fn summary_from(paths: &OrquestraPaths) -> Result<Vec<HarnessSummary>, String> {
     let directories = skill_directories(&paths.vault)?;
     let total = directories.len();
-    let global_dir = paths.global_dir();
-    let mut global_active = 0usize;
+    // One `read_dir` per scope: the old loop paid two `canonicalize`
+    // calls per skill per scope (see `projected_ids`).
+    let global = projected_ids(&paths.global_dir(), &paths.vault);
+    let global_active = directories
+        .iter()
+        .filter(|(id, _)| global.contains(id))
+        .count();
     let mut harnesses: Vec<(&str, usize)> =
         harness_ids().map(|harness| (harness, 0usize)).collect();
 
-    for (id, _) in &directories {
-        let is_global = is_projected(&global_dir, &paths.vault, id);
-        if is_global {
-            global_active += 1;
-        }
-
-        for (harness, active) in harnesses.iter_mut() {
-            if is_global || is_projected(&paths.projection_dir(harness), &paths.vault, id) {
-                *active += 1;
-            }
-        }
+    for (harness, active) in harnesses.iter_mut() {
+        let scoped = projected_ids(&paths.projection_dir(harness), &paths.vault);
+        *active = directories
+            .iter()
+            .filter(|(id, _)| global.contains(id) || scoped.contains(id))
+            .count();
     }
 
     let mut summaries = Vec::with_capacity(harnesses.len() + 1);

@@ -5,6 +5,7 @@
 //! propagated into every harness folder and cannot be turned off per
 //! harness.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -75,12 +76,15 @@ pub(super) fn set_scope(
 
 pub(super) fn batch_from(paths: &OrquestraPaths, scope: &str, enabled: bool) -> Result<(), String> {
     let global_dir = paths.global_dir();
+    // One `read_dir` for the inherited check instead of two `canonicalize`
+    // calls per skill (see `projected_ids`).
+    let global_set = projected_ids(&global_dir, &paths.vault);
     let mut failures = Vec::new();
 
     for (id, _) in skill_directories(&paths.vault)? {
         // Inherited skills cannot be disabled per harness; skipping keeps the
         // batch operation successful while Global stays authoritative.
-        if scope != GLOBAL_SCOPE && !enabled && is_projected(&global_dir, &paths.vault, &id) {
+        if scope != GLOBAL_SCOPE && !enabled && global_set.contains(&id) {
             continue;
         }
 
@@ -222,18 +226,80 @@ pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
     real_projection_dir(directory)?;
     remove_projection_entry(directory, id)?;
 
-    for (legacy, canonical) in [
-        ("modular-start", "orquestra-modular-start"),
-        ("agent-orchestrator", "orquestra-agent-orchestrator"),
-        ("autonomous-audit", "orquestra-autonomous-audit"),
-        ("smart-build-router", "orquestra-smart-build-router"),
-    ] {
+    for (legacy, canonical) in LEGACY_ALIASES {
         if canonical == id {
             let _ = remove_projection_entry(directory, legacy);
         }
     }
 
     Ok(())
+}
+
+/// Historical skill ids that still resolve to their canonical vault folder.
+const LEGACY_ALIASES: [(&str, &str); 4] = [
+    ("modular-start", "orquestra-modular-start"),
+    ("agent-orchestrator", "orquestra-agent-orchestrator"),
+    ("autonomous-audit", "orquestra-autonomous-audit"),
+    ("smart-build-router", "orquestra-smart-build-router"),
+];
+
+/// Every skill id projected in `projection_dir`, read with a single
+/// `read_dir` instead of two `canonicalize` calls per skill.
+///
+/// A name counts only when it is a symlink whose target is exactly the
+/// vault folder for that skill — the same validity rule as
+/// [`is_projected`], checked without resolving anything: the vault is
+/// canonicalized once, and each entry costs one `lstat` plus one
+/// `read_link`. Relative links (never created by [`ensure_link`], but
+/// possible by hand) fall back to one `canonicalize` for that entry only.
+/// Legacy aliases resolve to their canonical id. A set built this way
+/// answers membership exactly like [`is_projected`] for every id the
+/// caller looks up, so hot loops (`summary_from`, `list_from`) pay
+/// ~12 syscalls per scope instead of ~8000 path resolutions.
+pub(super) fn projected_ids(projection_dir: &Path, vault: &Path) -> HashSet<String> {
+    let mut projected = HashSet::new();
+    let Ok(vault_canon) = fs::canonicalize(vault) else {
+        return projected;
+    };
+    let Ok(entries) = fs::read_dir(projection_dir) else {
+        return projected;
+    };
+    for entry in entries.flatten() {
+        // `file_type` does not follow symlinks: a real directory or file
+        // wearing a skill's name is not a projection, and this stays one
+        // `lstat` with no path resolution.
+        if !entry
+            .file_type()
+            .map(|kind| kind.is_symlink())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let canonical = LEGACY_ALIASES
+            .iter()
+            .find(|(legacy, _)| *legacy == name)
+            .map(|(_, canonical)| *canonical)
+            .unwrap_or_else(|| name.as_str());
+        let expected = vault_canon.join(canonical);
+        // A dangling link whose target string happens to match must not
+        // count: `is_projected` refuses it because the resolution fails.
+        if !expected.is_dir() {
+            continue;
+        }
+        let path = entry.path();
+        let matches = match fs::read_link(&path) {
+            Ok(target) if target.is_absolute() => target == expected,
+            // Hand-made relative link: resolve this one entry the slow way.
+            _ => fs::canonicalize(&path)
+                .map(|resolved| resolved == expected)
+                .unwrap_or(false),
+        };
+        if matches {
+            projected.insert(canonical.to_string());
+        }
+    }
+    projected
 }
 
 /// A projection is only valid when it is a symlink that resolves to the vault
@@ -262,12 +328,7 @@ pub(super) fn is_projected(projection_dir: &Path, vault: &Path, id: &str) -> boo
         return true;
     }
 
-    for (legacy, canonical) in [
-        ("modular-start", "orquestra-modular-start"),
-        ("agent-orchestrator", "orquestra-agent-orchestrator"),
-        ("autonomous-audit", "orquestra-autonomous-audit"),
-        ("smart-build-router", "orquestra-smart-build-router"),
-    ] {
+    for (legacy, canonical) in LEGACY_ALIASES {
         if canonical == id && check_link(legacy) {
             return true;
         }

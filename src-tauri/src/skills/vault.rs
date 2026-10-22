@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 
 use std::collections::HashSet;
 
-use super::projection::is_projected;
-use super::security::scan_skill_security;
+use super::projection::projected_ids;
+use super::security::{cached_scan, prune_security_cache};
 use super::vault_cache::{cached_content, prune_content_cache};
 use super::{SkillItem, GLOBAL_SCOPE};
 use crate::paths::OrquestraPaths;
@@ -22,6 +22,14 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
     let global_dir = paths.global_dir();
     let scope_dir = paths.projection_dir(scope);
     let is_global = scope == GLOBAL_SCOPE;
+    // Projection state for the whole listing: two `read_dir` calls instead
+    // of two `canonicalize` pairs per skill (see `projected_ids`).
+    let global_set = projected_ids(&global_dir, &paths.vault);
+    let scope_set = if is_global {
+        HashSet::new()
+    } else {
+        projected_ids(&scope_dir, &paths.vault)
+    };
     let mut skills = Vec::new();
     let mut seen = HashSet::new();
 
@@ -40,15 +48,17 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
         };
         seen.insert(directory.clone());
 
-        let global_enabled = is_projected(&global_dir, &paths.vault, &id);
+        let global_enabled = global_set.contains(&id);
         let inherited_from_global = !is_global && global_enabled;
         let harness_enabled = if is_global {
             global_enabled
         } else {
-            global_enabled || is_projected(&scope_dir, &paths.vault, &id)
+            global_enabled || scope_set.contains(&id)
         };
 
-        let (has_scripts, script_files) = scan_skill_security(&directory);
+        // Security verdicts are cached on the skill tree fingerprint; any
+        // new, removed or edited helper misses and rescans.
+        let (has_scripts, script_files) = cached_scan(&directory);
 
         skills.push(SkillItem {
             id,
@@ -66,6 +76,7 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
     }
 
     prune_content_cache(&seen);
+    prune_security_cache(&seen);
     skills.sort_by_key(|skill| skill.name.to_lowercase());
     Ok(skills)
 }

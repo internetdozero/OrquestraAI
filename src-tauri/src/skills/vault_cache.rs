@@ -8,9 +8,9 @@
 //! (mtime nanos + size): any content edit bumps mtime, so a fingerprint
 //! match proves the cached parse is still fresh.
 //!
-//! Deliberately NOT cached: projection state (scope-dependent, stays live)
-//! and the security walk (no stat-only fingerprint can prove a deep file
-//! tree unchanged, so it runs live and is always correct).
+//! Deliberately NOT cached here: projection state (scope-dependent, stays
+//! live) and the security walk (cached separately in `security.rs` on the
+//! skill tree fingerprint, since only it knows which files feed its verdict).
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};

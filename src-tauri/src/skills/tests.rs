@@ -301,4 +301,124 @@ mod tests {
     }
 
     mod projection_cases;
+
+    #[test]
+    fn projected_ids_matches_is_projected() {
+        use super::projection::{is_projected, projected_ids};
+        let paths = setup_two_skills();
+        set_global(&paths, "alpha", true).unwrap();
+        set_scope(&paths, "beta", "codex", true).unwrap();
+
+        // Decoys: a plain file and a dangling link are not projections.
+        fs::write(paths.projection_dir("codex").join("gamma"), "not a link").unwrap();
+        std::os::unix::fs::symlink(
+            paths.vault.join("missing"),
+            paths.projection_dir("codex").join("delta"),
+        )
+        .unwrap();
+
+        for scope in std::iter::once(GLOBAL_SCOPE).chain(crate::harness::harness_ids()) {
+            let dir = paths.projection_dir(scope);
+            let set = projected_ids(&dir, &paths.vault);
+            for id in ["alpha", "beta", "gamma", "delta", "missing"] {
+                assert_eq!(
+                    set.contains(id),
+                    is_projected(&dir, &paths.vault, id),
+                    "{scope}/{id} diverges"
+                );
+            }
+        }
+        // Global authorizes everywhere; beta stays codex-only.
+        for scope in crate::harness::harness_ids() {
+            let set = projected_ids(&paths.projection_dir(scope), &paths.vault);
+            assert!(set.contains("alpha"), "{scope} misses inherited alpha");
+        }
+        let global = projected_ids(&paths.global_dir(), &paths.vault);
+        assert!(global.contains("alpha"));
+        assert!(!global.contains("beta"));
+
+        // A dangling link whose target string matches a vault path still
+        // counts as nothing, exactly like `is_projected`.
+        let dangling = temp_paths("dangling");
+        dangling.ensure_layout().unwrap();
+        let real = dangling.vault.join("real");
+        fs::create_dir_all(&real).unwrap();
+        fs::write(
+            real.join(SKILL_FILE),
+            "---\nname: Real\ndescription: Real skill.\n---\n\nBody.\n",
+        )
+        .unwrap();
+        let scope = dangling.projection_dir("codex");
+        fs::create_dir_all(&scope).unwrap();
+        std::os::unix::fs::symlink(&real, scope.join("real")).unwrap();
+        assert!(is_projected(&scope, &dangling.vault, "real"));
+        assert!(projected_ids(&scope, &dangling.vault).contains("real"));
+        fs::remove_dir_all(&real).unwrap();
+        assert!(!is_projected(&scope, &dangling.vault, "real"));
+        assert!(!projected_ids(&scope, &dangling.vault).contains("real"));
+
+        // A hand-made relative link to the right folder counts in both.
+        fs::create_dir_all(&real).unwrap();
+        fs::write(
+            real.join(SKILL_FILE),
+            "---\nname: Real\ndescription: Real skill.\n---\n\nBody.\n",
+        )
+        .unwrap();
+        fs::remove_file(scope.join("real")).unwrap();
+        std::os::unix::fs::symlink(
+            std::path::Path::new("../../skills-library/real"),
+            scope.join("real"),
+        )
+        .unwrap();
+        assert!(is_projected(&scope, &dangling.vault, "real"));
+        assert!(projected_ids(&scope, &dangling.vault).contains("real"));
+
+        // Legacy aliases resolve to their canonical id in both.
+        let canon = "orquestra-modular-start";
+        let canon_dir = paths.vault.join(canon);
+        fs::create_dir_all(&canon_dir).unwrap();
+        fs::write(
+            canon_dir.join(SKILL_FILE),
+            "---\nname: Modular\ndescription: Modular skill.\n---\n\nBody.\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&canon_dir, paths.global_dir().join("modular-start")).unwrap();
+        let global = projected_ids(&paths.global_dir(), &paths.vault);
+        assert!(global.contains(canon));
+        assert!(!global.contains("modular-start"));
+        assert!(is_projected(&paths.global_dir(), &paths.vault, canon));
+
+        fs::remove_dir_all(&paths.root).unwrap();
+        fs::remove_dir_all(&dangling.root).unwrap();
+    }
+
+    #[test]
+    fn security_cache_tracks_tree_changes() {
+        use super::security::{cached_scan, scan_skill_security};
+        let root = temp_paths("seccache");
+        fs::create_dir_all(&root.root).unwrap();
+        let dir = root.root.join("skill");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(SKILL_FILE), "# Demo\n").unwrap();
+
+        assert_eq!(cached_scan(&dir), (false, Vec::<String>::new()));
+        // Parity with the uncached walk on a nested tree.
+        fs::create_dir_all(dir.join("scripts")).unwrap();
+        fs::write(dir.join("scripts/deploy"), "#!/bin/sh\n").unwrap();
+        fs::write(dir.join("notes.md"), "# notes\n").unwrap();
+        assert_eq!(cached_scan(&dir), scan_skill_security(&dir));
+        assert!(cached_scan(&dir).0);
+
+        // An in-place helper edit keeps the verdict (fingerprint refreshes).
+        fs::write(dir.join("scripts/deploy"), "#!/bin/sh\necho v2\n").unwrap();
+        let (has_scripts, files) = cached_scan(&dir);
+        assert!(has_scripts);
+        assert_eq!(files, vec!["scripts/deploy".to_string()]);
+
+        // Removing every helper reads clean again.
+        fs::remove_file(dir.join("scripts/deploy")).unwrap();
+        assert_eq!(cached_scan(&dir), (false, Vec::<String>::new()));
+
+        fs::remove_dir_all(&root.root).unwrap();
+    }
 }
