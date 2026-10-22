@@ -9,16 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Idea Vault clears an idea's `NEW` badge after it is opened or acted on.
+
 ### Fixed
 
-- Removed CodeQL findings from security tests by generating fallback encryption keys with the OS random source and keeping refresh error details out of assertion messages.
+- Vault recovery preserves the original file and migration backup if verification fails, and keeps fallback-key reads available when keyring promotion fails.
+- Session imports recognize text blocks without exposing tool results; Codex remote headers serialize correctly.
+- Azure CLI policy continues to block access-token generation when global options precede the operation.
 
 ### Security
 
-- Plaintext migration backups (`.migrate-bak`): the at-rest encryption migration kept readable copies of the secrets in `vault.json.migrate-bak` and `mcps.json.migrate-bak` as a safety net. These files stay on disk with mode `0600`, but any secret stored before `v0.1.0-alpha.5` may have existed as plaintext.
-- Recommended action: (1) confirm every service loads normally; (2) use the **"Purge plaintext backups"** button on the Credentials screen (command `vault_purge_migration_backups`, behind an explicit confirmation) to overwrite the backups with zeroes and delete them; (3) **rotate the provider API keys** stored before `alpha.5` in their dashboards (GitHub, OpenAI, Anthropic, Cloudflare, and others). Deletion is best-effort on SSDs and copy-on-write filesystems — rotation removes the residual risk.
-- Purging never destroys the only readable copy: each backup is deleted only if its sealed file still opens under the current key.
-- Encryption hardening: sealed envelopes are now version `2` and bind the payload domain (`vault.v1` / `mcps.v1`) as AES-GCM Additional Authenticated Data, so a `vault.json` envelope pasted into `mcps.json` (or vice versa) fails closed; `alpha.5` v1 envelopes still open and are re-sealed as v2 on load. Key resolution tries the OS keyring first with the `0600` key file as fallback (created `0600` from birth, mode/owner verified), promotes fallback bytes into the keyring on first unseal, and never mints a key as a side effect of a read. New migrations leave no plaintext behind — the backup is unlinked once the sealed file verifies — and once an install completes the migration, plaintext `vault.json` / `mcps.json` files are refused instead of re-sealed. Secrets stored before encryption existed were left in plaintext backups: users of earlier alphas should still rotate those keys.
+- Installer requires a valid signature bound to the selected release by default; `--allow-unsigned-legacy` opts into checksum-only installs for older releases.
+- Upgrades from before `alpha.5` may leave plaintext `.migrate-bak` files. Verify credentials, purge remaining backups in Credentials, and rotate keys stored before encryption.
 
 ## [0.1.0-alpha.5] - 2026-10-22
 
