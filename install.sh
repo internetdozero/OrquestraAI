@@ -3,11 +3,38 @@ set -e
 
 # OrquestraAI Official Secure Installer
 # https://github.com/internetdozero/OrquestraAI
+#
+# Trust model: the release's SHA256SUMS.txt carries a detached Minisign /
+# Ed25519 signature (SHA256SUMS.txt.minisig) from the offline release key.
+# The installer verifies that signature BEFORE trusting any checksum, so a
+# compromised release page serving a forged binary + matching forged
+# checksums still fails closed. Same model as the in-app updater
+# (src-tauri/src/update_sig.rs); see docs/security.md for the key and
+# manual verification commands.
 REPO="internetdozero/OrquestraAI"
+# Embedded release public key (minisign .pub key-id + base64 body). The
+# matching secret lives only in the maintainer's offline copy and the
+# UPDATE_SIGNING_SEED CI secret. Must equal
+# src-tauri/src/update_sig.rs::RELEASE_PUBLIC_KEY.
+RELEASE_PUBKEY="RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1"
 BIN_DIR="${HOME}/.local/bin"
 TARGET_BIN="${BIN_DIR}/orquestra"
 APP_DIR="${HOME}/.local/share/applications"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
+
+# 0. CLI Flags
+REQUIRE_SIG=0
+for arg in "$@"; do
+    case "$arg" in
+        --require-sig) REQUIRE_SIG=1 ;;
+        -h|--help)
+            echo "Usage: install.sh [--require-sig]"
+            echo "  --require-sig  Fail unless the release signature verifies"
+            echo "                 (without a verifier or .minisig asset)."
+            exit 0 ;;
+        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig)." >&2; exit 1 ;;
+    esac
+done
 
 # 1. Dependency Checks
 command -v curl >/dev/null 2>&1 || {
@@ -91,6 +118,65 @@ if [ -z "$ASSET" ]; then
 fi
 echo "ℹ️  Release asset: ${ASSET}"
 curl -fsSL "${RELEASE_URL}/SHA256SUMS.txt" -o "${TMP_DIR}/SHA256SUMS.txt"
+# Older releases predate signing; a missing asset degrades to the
+# no-verifier path below (warning, or hard fail with --require-sig).
+curl -fsSL "${RELEASE_URL}/SHA256SUMS.txt.minisig" -o "${TMP_DIR}/SHA256SUMS.txt.minisig" 2>/dev/null || true
+
+# 3b. Detached-signature gate over the exact SHA256SUMS.txt bytes.
+# Runs BEFORE any checksum is trusted: without the offline secret key no
+# valid signature can exist for forged checksums. Verification order:
+# reference `minisign`, then an inline PyNaCl prehashed check (same math
+# as scripts/sign-release.py and update_sig.rs), then a loud warning
+# that --require-sig turns into a hard failure.
+SIG_STATUS=""
+if [ -s "${TMP_DIR}/SHA256SUMS.txt" ] && [ -s "${TMP_DIR}/SHA256SUMS.txt.minisig" ]; then
+    if command -v minisign >/dev/null 2>&1; then
+        if minisign -Vm "${TMP_DIR}/SHA256SUMS.txt" -P "$RELEASE_PUBKEY" \
+                -x "${TMP_DIR}/SHA256SUMS.txt.minisig"; then
+            SIG_STATUS="verified (minisign)"
+        else
+            echo "❌ Security Error: release signature INVALID — refusing an unsigned release." >&2
+            exit 1
+        fi
+    elif command -v python3 >/dev/null 2>&1 && python3 -c "import nacl.signing" 2>/dev/null; then
+        if python3 - "$RELEASE_PUBKEY" "${TMP_DIR}/SHA256SUMS.txt" \
+                "${TMP_DIR}/SHA256SUMS.txt.minisig" << 'PYEOF'; then
+import base64, hashlib, sys
+from nacl.signing import VerifyKey
+from nacl.exceptions import BadSignatureError
+pub = base64.b64decode(sys.argv[1])
+sums = open(sys.argv[2], 'rb').read()
+lines = open(sys.argv[3]).read().splitlines()
+sig = base64.b64decode(lines[1].strip())
+if sig[2:10] != pub[2:10]:
+    sys.exit(1)
+digest = hashlib.blake2b(sums, digest_size=64).digest()
+try:
+    VerifyKey(pub[10:42]).verify(sig[10:74] + digest)
+except BadSignatureError:
+    sys.exit(1)
+PYEOF
+            SIG_STATUS="verified (pynacl prehashed)"
+        else
+            echo "❌ Security Error: release signature INVALID — refusing an unsigned release." >&2
+            exit 1
+        fi
+    elif [ "$REQUIRE_SIG" = "1" ]; then
+        echo "❌ Security Error: --require-sig given but no verifier available (install minisign or python3-pynacl)." >&2
+        exit 1
+    else
+        echo "⚠️  Warning: no signature verifier found (minisign or python3 with PyNaCl);" >&2
+        echo "   proceeding on SHA-256 alone. Prefer '--require-sig' on an equipped host." >&2
+    fi
+elif [ "$REQUIRE_SIG" = "1" ]; then
+    echo "❌ Security Error: --require-sig given but SHA256SUMS.txt(.minisig) is missing or empty." >&2
+    exit 1
+else
+    echo "⚠️  Warning: release carries no verifiable signature asset; proceeding on SHA-256 alone." >&2
+fi
+if [ -n "$SIG_STATUS" ]; then
+    echo "✓ Release signature $SIG_STATUS: checksums authentic."
+fi
 
 # 4. Strict Cryptographic Integrity Check
 if [ ! -s "${TMP_DIR}/SHA256SUMS.txt" ]; then
