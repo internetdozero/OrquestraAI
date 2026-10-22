@@ -6,8 +6,7 @@
 
 use std::fs;
 
-use super::super::super::execute;
-use super::super::Fixture;
+use super::{execute, Fixture};
 use crate::types::PurgeFilter;
 
 #[test]

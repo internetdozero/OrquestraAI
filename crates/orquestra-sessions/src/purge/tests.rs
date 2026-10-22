@@ -9,9 +9,11 @@
 //! never deleted by accident, and nothing outside the harness store is touched
 //! — are asserted on the filesystem, not on the report.
 //!
-//! This file holds only the shared fixture and the module wiring:
+//! This file holds the shared fixture, the module wiring and the purge entry
+//! points every case module needs:
 //!
 //! * [`deletion`] — what a purge actually removes, and what it reports;
+//! * [`per_harness`] — the removals each store's own layout obliges;
 //! * [`safety`] — the guards that stop it removing the wrong thing;
 //! * [`policy`] — when an automatic purge is due, and on whose terms.
 
@@ -23,6 +25,10 @@ use rusqlite::Connection;
 
 use super::Store;
 use crate::policy::toggle_pin_at;
+
+/// Re-exported next to the fixture so a case module imports what it needs from
+/// one place, `super`, instead of counting how many levels up `purge` sits.
+pub(super) use super::{estimate, execute, execute_selection, select_by_ttl};
 
 struct Fixture {
     home: PathBuf,
@@ -141,5 +147,6 @@ fn adapter<'a>(
 }
 
 mod deletion;
+mod per_harness;
 mod policy;
 mod safety;

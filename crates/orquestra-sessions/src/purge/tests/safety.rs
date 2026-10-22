@@ -6,8 +6,7 @@
 
 use std::fs;
 
-use super::super::{estimate, execute};
-use super::{adapter, opencode_fixture, Fixture};
+use super::{adapter, estimate, execute, opencode_fixture, Fixture};
 use crate::adapters::{adapters_by_id, fsops};
 use crate::types::PurgeFilter;
 

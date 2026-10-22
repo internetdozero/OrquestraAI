@@ -4,17 +4,14 @@
 //! Deletion: what a purge removes, what it leaves, and what it reports.
 //!
 //! The per-harness removals — the ones that depend on each store's own layout —
-//! live in [`per_harness`]; this file holds the generic cases that any store
-//! has to satisfy, plus the dry run that must never delete anything.
+//! live next door in `per_harness`; this file holds the generic cases that any
+//! store has to satisfy, plus the dry run that must never delete anything.
 
 use std::fs;
 
-use super::super::{estimate, execute};
-use super::{opencode_fixture, Fixture};
+use super::{estimate, execute, opencode_fixture, Fixture};
 use crate::policy;
 use crate::types::PurgeFilter;
-
-mod per_harness;
 
 // ---------------------------------------------------------------------------
 // SQLite cascade and VACUUM

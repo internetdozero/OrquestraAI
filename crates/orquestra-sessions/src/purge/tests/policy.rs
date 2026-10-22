@@ -4,8 +4,7 @@
 //! Policy: when an automatic purge becomes due, how each harness's own TTL is
 //! honoured, and why a scheduled run is still subject to the pin guard.
 
-use super::super::{execute_selection, select_by_ttl};
-use super::{opencode_fixture, Fixture};
+use super::{execute_selection, opencode_fixture, select_by_ttl, Fixture};
 use crate::scheduler;
 use crate::types::RetentionPolicy;
 
