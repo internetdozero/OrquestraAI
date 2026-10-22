@@ -158,6 +158,18 @@ export const credentials = {
   toastRotated: (index: number, label: string) => `Chave #${index} rotacionada em ${label}`,
   toastUpdated: (label: string) => `Serviço ${label} atualizado`,
   toastSaved: (id: string) => `Serviço ${id} salvo`,
+  purgeBackups: "Expurgar backups em texto puro",
+  purgeBackupsTitle: "Expurgar backups de migração em texto puro?",
+  purgeBackupsLead:
+    "A migração da criptografia em repouso deixou cópias em texto puro dos seus segredos no disco. O expurgo sobrescreve os bytes com zeros e os exclui.",
+  purgeBackupsRotateWarning:
+    "Segredos salvos antes da v0.1.0-alpha.5 podem ter ficado legíveis no disco. Rotacione essas chaves de provedor após o expurgo.",
+  confirmPurgeBackups: "Sobrescrever e excluir",
+  purging: "Expurgando…",
+  toastBackupsPurged: (purged: boolean, catalogPurged: boolean) =>
+    purged || catalogPurged
+      ? `Backups em texto puro expurgados: ${[purged ? "cofre" : null, catalogPurged ? "catálogo" : null].filter(Boolean).join(", ")}`
+      : "Não havia backups em texto puro para expurgar",
   detailsFor: (label: string) => `Detalhes de ${label}`,
   presetDescriptions: {
     openai: "Modelos GPT e embeddings.",

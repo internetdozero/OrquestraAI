@@ -1,9 +1,10 @@
 //! Global and per-harness MCP server management.
 //!
 //! One master catalog lives in `~/.orquestra/mcps.json`; every harness wants
-//! a different envelope around the same server definition, so
-//! [`serializers`] is the adapter layer, [`deploy`] owns the atomic writes
-//! and backups, and [`catalog`] owns the storage behind both. Every write
+//! a different envelope around the same server definition, so the adapter
+//! layer lives in `orquestra_harness` (see `McpServer::to_harness_server`),
+//! [`deploy`] owns the atomic writes and backups, and [`catalog`] owns the
+//! storage behind both. Every write
 //! starts from the file already on disk, so keys OrquestraAI does not own
 //! (project state, hooks, plugin tables, hand-added servers) survive
 //! untouched.
@@ -14,7 +15,6 @@ use std::collections::HashMap;
 mod catalog;
 mod deploy;
 mod secrets;
-mod serializers;
 #[cfg(test)]
 mod tests;
 
@@ -22,6 +22,15 @@ pub use catalog::{
     apply_global_selection, apply_harness_selections, batch_set_mcp_all, delete_mcp, list_mcps,
     list_mcps_masked, reveal_mcp_secret, save_mcp, set_mcp_state,
 };
+
+/// Zeroize and unlink the catalog's `.migrate-bak` plaintext backup. The
+/// sealed catalog must still open under the current key, so this never
+/// destroys the only readable copy; see `crate::at_rest`.
+pub fn purge_catalog_migration_backup() -> Result<bool, String> {
+    let paths = crate::paths::OrquestraPaths::resolve()?;
+    let path = catalog::catalog_path(&paths);
+    crate::at_rest::purge_migration_backup(&paths, &path, crate::at_rest::AAD_MCPS)
+}
 pub use deploy::{deploy_mcps, deploy_mcps_reporting, list_targets};
 pub use secrets::mask_secret;
 
@@ -81,6 +90,19 @@ impl McpServer {
 }
 
 impl McpServer {
+    /// Project the catalog entry into the dialect-neutral shape the harness
+    /// serializers consume, dropping state that only the app cares about.
+    pub(super) fn to_harness_server(&self) -> orquestra_harness::HarnessServer {
+        orquestra_harness::HarnessServer {
+            id: self.id.clone(),
+            command: self.command.clone(),
+            args: self.args.clone(),
+            env: self.env.clone(),
+            url: self.url.clone(),
+            headers: self.headers.clone(),
+        }
+    }
+
     /// Enabled for a specific harness, directly or through the global baseline.
     pub(super) fn covers(&self, harness: &str) -> bool {
         self.global_enabled || self.enabled_harnesses.iter().any(|id| id == harness)

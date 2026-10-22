@@ -1,0 +1,10 @@
+# orquestra installer edge worker: serves /install.sh byte-identical to the
+# canonical GitHub release tag (see worker.js). Deploy with
+# scripts/deploy-installer-worker.sh after `wrangler login`.
+name = "orquestra-installer"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Custom domain + route are bound in the Cloudflare dashboard (or here):
+# orquestra.internetdozero.com.br/install.sh -> this worker.
+# routes = [{ pattern = "orquestra.internetdozero.com.br/install.sh", zone_name = "internetdozero.com.br" }]

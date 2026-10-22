@@ -134,6 +134,22 @@ fn proc_parsers_and_memory_math_handle_linux_formats() {
     assert!(parse_load_one("invalid").is_err());
 }
 
+/// The Darwin twin of the `/proc` smoke test: real syscalls, so it only runs
+/// on a Mac runner. Everything it asserts is shape, not a specific number.
+#[cfg(target_os = "macos")]
+#[test]
+fn snapshot_reads_native_darwin_metrics() {
+    let health = snapshot().expect("Darwin sysctl and Mach VM metrics should be readable");
+    assert!(health.ram.total_mb > 0);
+    assert!(health.ram.free_mb <= health.ram.total_mb);
+    assert!(health.ram.used_percent.is_finite());
+    assert!(health.swap.used_percent.is_finite());
+    assert!(health.tmp.total_mb > 0);
+    assert!(!health.tmp.is_tmpfs, "macOS has no tmpfs");
+    assert!(health.cpu.cores > 0);
+    assert!(health.top_processes.len() <= 5);
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn snapshot_reads_live_proc_and_tmp_metrics() {
@@ -185,7 +201,7 @@ fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
     let link = scratch.join("old-link");
     symlink(&old_file, &link).unwrap();
 
-    let report = sweep_at(&orquestra, &scratch, &live_table, SystemTime::now()).unwrap();
+    let report = sweep_at(&orquestra, &scratch, Some(&live_table), SystemTime::now()).unwrap();
     assert_eq!(report.removed_count, 2);
     assert!(!dead_path.exists());
     assert!(live_path.exists());
@@ -198,6 +214,48 @@ fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
         .file_type()
         .is_symlink());
     assert_eq!(report.status, "Sweep completed.");
+    drop(listener);
+}
+
+/// macOS regression: `/proc/net/unix` does not exist there, and the caller
+/// used to hand the sweep an empty table. "Empty" and "unavailable" are
+/// different facts — only an empty table may justify deleting a socket — so
+/// the unavailable case must leave the tree untouched, including a socket
+/// that is dead.
+#[cfg(unix)]
+#[test]
+fn sweep_never_removes_sockets_when_liveness_is_unavailable() {
+    let test = TestRoot::new();
+    let orquestra = test.0.join(".orquestra");
+    let scratch = test.0.join("scratch");
+    fs::create_dir_all(&orquestra).unwrap();
+    fs::create_dir_all(&scratch).unwrap();
+
+    let live_path = orquestra.join("orquestra.sock");
+    let listener = UnixListener::bind(&live_path).unwrap();
+    let dead_path = orquestra.join("stale.sock");
+    drop(UnixListener::bind(&dead_path).unwrap());
+
+    let report = sweep_at(&orquestra, &scratch, None, SystemTime::now()).unwrap();
+    assert_eq!(report.removed_count, 0, "unknown liveness deletes nothing");
+    assert!(
+        live_path.exists(),
+        "the running instance's socket must survive"
+    );
+    assert!(
+        dead_path.exists(),
+        "even a dead socket is kept when liveness cannot be proven"
+    );
+
+    // The same tree swept with a real table: only the dead socket goes.
+    let table = format!(
+        "Num RefCount Protocol Flags Type St Inode Path\n00000000: 00000002 00000000 00010000 0001 01 77 {}\n",
+        live_path.display()
+    );
+    let swept = sweep_at(&orquestra, &scratch, Some(&table), SystemTime::now()).unwrap();
+    assert_eq!(swept.removed_count, 1);
+    assert!(live_path.exists());
+    assert!(!dead_path.exists());
     drop(listener);
 }
 
@@ -219,7 +277,7 @@ fn sweep_does_not_follow_symlinked_roots_or_remove_future_dated_files() {
     let report = sweep_at(
         &test.0.join("missing-orquestra"),
         &linked_root,
-        "",
+        Some(""),
         SystemTime::now(),
     )
     .unwrap();

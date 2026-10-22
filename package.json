@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:ui": "node scripts/check-card-motion.mjs",
+    "check:lines": "node scripts/check-line-cap.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "prepare": "git config core.hooksPath .githooks || true",
     "test": "node --test 'scripts/**/*.test.mjs'",

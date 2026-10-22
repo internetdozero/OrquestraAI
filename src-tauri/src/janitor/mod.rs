@@ -1,7 +1,10 @@
-//! System health snapshots (Linux-only `/proc` metrics) and narrowly scoped
-//! stale-cache cleanup. Off Linux the health snapshot reports an explicit
-//! error and socket sweeping is a no-op: without `/proc/net/unix` liveness
-//! cannot be proven, so nothing is deleted.
+//! System health snapshots and narrowly scoped stale-cache cleanup.
+//!
+//! Health is collected natively per OS: `/proc` on Linux, sysctl and
+//! `host_statistics64` on macOS. On any other platform the snapshot reports
+//! an explicit error instead of inventing numbers. Socket sweeping reads
+//! liveness from `/proc/net/unix`, which only Linux has; off Linux it fails
+//! closed, so no socket is ever deleted on a guess.
 
 mod health;
 mod sweep;
@@ -11,8 +14,9 @@ mod tests;
 pub use health::{CpuStats, MemoryStats, SystemHealth, TmpStats, TopProcess};
 pub use sweep::SweepReport;
 
-/// Collect live Linux memory, tmpfs, load and process metrics.
-/// Returns an explicit error off Linux, where `/proc` does not exist.
+/// Collect live memory, swap, scratch-volume, load and process metrics from
+/// the platform's native source. Returns an explicit error on platforms
+/// without a collector.
 #[tauri::command]
 pub fn get_system_health() -> Result<SystemHealth, String> {
     health::snapshot()
@@ -21,21 +25,23 @@ pub fn get_system_health() -> Result<SystemHealth, String> {
 /// Remove only dead Orquestra socket files and aged direct-child scratch files.
 #[tauri::command]
 pub fn sweep_system_caches() -> Result<SweepReport, String> {
-    let home = std::env::var_os("HOME")
-        .map(std::path::PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate ~/.orquestra".to_string())?;
-    // `/proc/net/unix` is Linux-only; elsewhere socket sweeping is a
-    // no-op (see `sweep::clean_sockets`), so there is nothing to match.
+    let home = crate::paths::require_home("locate ~/.orquestra")?;
+    // `/proc/net/unix` is Linux-only. Elsewhere liveness is reported as
+    // `None`, which `sweep::clean_sockets` reads as "unknown, delete
+    // nothing" — an empty table would instead mean "no socket is live" and
+    // would unlink the running instance's own socket on macOS.
     #[cfg(target_os = "linux")]
-    let active_sockets = std::fs::read_to_string("/proc/net/unix")
-        .map_err(|error| format!("could not inspect live Unix sockets: {error}"))?;
+    let active_sockets: Option<String> = Some(
+        std::fs::read_to_string("/proc/net/unix")
+            .map_err(|error| format!("could not inspect live Unix sockets: {error}"))?,
+    );
     #[cfg(not(target_os = "linux"))]
-    let active_sockets = String::new();
+    let active_sockets: Option<String> = None;
 
     sweep::sweep_at(
         &home.join(".orquestra"),
         &crate::paths::scratch_root(),
-        &active_sockets,
+        active_sockets.as_deref(),
         std::time::SystemTime::now(),
     )
 }

@@ -11,10 +11,7 @@ use std::path::PathBuf;
 
 /// Root everything here is confined to.
 fn orquestra_root() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate ~/.orquestra".to_string())?;
-    Ok(home.join(".orquestra"))
+    Ok(crate::paths::require_home("locate ~/.orquestra")?.join(".orquestra"))
 }
 
 /// Open an external HTTP(S) URL in the default system browser.
@@ -59,10 +56,7 @@ fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), St
 pub fn open_in_file_manager(path: String) -> Result<(), String> {
     let root = orquestra_root()?;
     let expanded = if let Some(rest) = path.strip_prefix("~/") {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| "HOME is not set".to_string())?;
-        home.join(rest)
+        crate::paths::require_home("expand ~")?.join(rest)
     } else {
         PathBuf::from(path)
     };
@@ -142,7 +136,7 @@ pub fn ensure_desktop_integration() {
 /// Install assets, then refresh caches only when something changed.
 #[cfg(target_os = "linux")]
 fn refresh_integration_once() {
-    let Some(home) = std::env::var_os("HOME").map(PathBuf::from) else {
+    let Some(home) = crate::paths::home_dir() else {
         return;
     };
     let data_dir = home.join(".local/share");
@@ -270,6 +264,57 @@ mod tests {
         assert!(
             !crate::desktop_icons::install_linux_assets(&data),
             "nothing changed, so no cache refresh is warranted"
+        );
+
+        let _ = std::fs::remove_dir_all(&data);
+    }
+
+    /// Only the canonical launcher is menu-visible: the technical aliases
+    /// carry `NoDisplay=true`, so GNOME/KDE/XFCE show a single OrquestraAI
+    /// icon. A pre-dedup alias (canonical text from an older install)
+    /// converges to hidden on the next run.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn desktop_alias_entries_stay_hidden_from_menus() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let data = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-desktop-nodisplay-{}-{unique}",
+            std::process::id()
+        ));
+
+        assert!(crate::desktop_icons::install_linux_assets(&data));
+        let canonical =
+            std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap();
+        assert!(!canonical.contains("NoDisplay"), "canonical stays visible");
+        for alias in ["orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
+            let text = std::fs::read_to_string(data.join(format!("applications/{alias}"))).unwrap();
+            assert!(text.contains("Name=OrquestraAI"));
+            assert!(
+                text.lines().any(|line| line == "NoDisplay=true"),
+                "{alias} must stay hidden from menus"
+            );
+        }
+
+        // An older install left the canonical text in the alias: one pass
+        // converges it to hidden, then the install is steady again.
+        std::fs::write(
+            data.join("applications/orquestra-ai.desktop"),
+            crate::desktop_icons::DESKTOP_ENTRY,
+        )
+        .unwrap();
+        assert!(
+            crate::desktop_icons::install_linux_assets(&data),
+            "pre-dedup alias must converge to hidden"
+        );
+        let converged =
+            std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
+        assert!(converged.lines().any(|line| line == "NoDisplay=true"));
+        assert!(
+            !crate::desktop_icons::install_linux_assets(&data),
+            "steady state must not rewrite"
         );
 
         let _ = std::fs::remove_dir_all(&data);

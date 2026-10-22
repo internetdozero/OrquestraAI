@@ -13,6 +13,7 @@ interface IdeaDetailModalProps {
   onEdit: (idea: IdeaItem) => void;
   onDelete: (idea: IdeaItem) => void;
   onClose: () => void;
+  onInteract: (id: number) => void;
 }
 
 function formatStamp(raw: string): string {
@@ -27,6 +28,7 @@ export function IdeaDetailModal({
   onEdit,
   onDelete,
   onClose,
+  onInteract,
 }: IdeaDetailModalProps) {
   const { t } = useI18n();
   const s = t.ideas;
@@ -134,6 +136,7 @@ export function IdeaDetailModal({
           <button
             type="button"
             onClick={() => {
+              onInteract(idea.id);
               void copyIdeaForAi(idea).then((ok) => {
                 if (!ok) return;
                 setCopied(true);

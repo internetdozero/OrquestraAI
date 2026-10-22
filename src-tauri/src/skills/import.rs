@@ -168,10 +168,12 @@ mod tests {
     }
 
     #[test]
-    fn staging_uses_system_temp_scratch_root() {
+    fn staging_uses_the_secure_runtime_root() {
+        // Task #325: the runtime root is XDG-aware, so only assert it is
+        // self-consistent and actually stages — the exact parent depends on
+        // the ambient `XDG_RUNTIME_DIR`.
         let root = crate::paths::scratch_root();
         assert_eq!(root, crate::paths::scratch_root());
-        assert_eq!(root, std::env::temp_dir().join("orquestra-ai"));
         let staged = staging_dir().expect("staging dir");
         assert!(staged.starts_with(&root));
         // `staging_dir` returns `<fresh>/repo`; remove the whole fresh tree.

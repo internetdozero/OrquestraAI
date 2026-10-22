@@ -143,9 +143,10 @@ fn deployment_projection_resolves_templates_without_mutating_the_catalog_value()
     remote.id = "remote".to_string();
     remote.args.clear();
     remote.env.clear();
-    let rendered = super::super::serializers::render_mcp_servers(
+    let rendered = crate::harness::render_mcp_config(
+        crate::harness::McpFormat::JsonMcpServers,
         "",
-        &[local, remote],
+        &[local.to_harness_server(), remote.to_harness_server()],
         &Default::default(),
         None,
     )

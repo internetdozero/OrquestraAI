@@ -43,6 +43,7 @@ interface IdeaCardProps {
   onEdit: (idea: IdeaItem) => void;
   onDelete: (idea: IdeaItem) => void;
   onOpen: (idea: IdeaItem) => void;
+  onInteract: (id: number) => void;
 }
 
 /**
@@ -57,6 +58,7 @@ export function IdeaCard({
   onEdit,
   onDelete,
   onOpen,
+  onInteract,
 }: IdeaCardProps) {
   const { t } = useI18n();
   const s = t.ideas;
@@ -109,6 +111,7 @@ export function IdeaCard({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
+              onInteract(idea.id);
               void copyIdeaForAi(idea).then((ok) => {
                 if (!ok) return;
                 setCopied(true);

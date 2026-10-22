@@ -16,6 +16,7 @@ interface IdeasBoardProps {
   onDelete: (idea: IdeaItem) => void;
   onOpen: (idea: IdeaItem) => void;
   onDropIdea: (ideaId: number, status: string) => void;
+  onInteract: (id: number) => void;
 }
 
 const COLUMNS = [
@@ -57,6 +58,7 @@ export function IdeasBoard({
   onDelete,
   onOpen,
   onDropIdea,
+  onInteract,
 }: IdeasBoardProps) {
   const { t } = useI18n();
   const s = t.ideas;
@@ -234,6 +236,7 @@ export function IdeasBoard({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onOpen={onOpen}
+                onInteract={onInteract}
               />
             ))}
             {rows.length === 0 && (

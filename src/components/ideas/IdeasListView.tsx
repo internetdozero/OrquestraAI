@@ -27,6 +27,7 @@ interface IdeasListViewProps {
   onStatusChange: (id: number, status: string) => void;
   onEdit: (idea: IdeaItem) => void;
   onDelete: (idea: IdeaItem) => void;
+  onInteract: (id: number) => void;
 }
 
 const SECTIONS = [
@@ -92,6 +93,7 @@ export function IdeasListView({
   onStatusChange,
   onEdit,
   onDelete,
+  onInteract,
 }: IdeasListViewProps) {
   const { t } = useI18n();
   const s = t.ideas;
@@ -279,6 +281,7 @@ export function IdeasListView({
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
+                            onInteract(idea.id);
                             void copyIdeaForAi(idea).then((ok) => {
                               if (!ok) return;
                               setCopiedId(idea.id);

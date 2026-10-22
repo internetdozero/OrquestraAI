@@ -10,6 +10,8 @@ mod community;
 mod desktop;
 mod desktop_backup;
 mod desktop_icons;
+// `paths` and `harness` are re-exports of `orquestra-core` (task #326); the
+// items moved there, the import paths did not.
 pub mod harness;
 pub mod ideas;
 #[cfg(test)]
@@ -17,7 +19,6 @@ mod ipc_acl;
 #[cfg(test)]
 mod ipc_contract;
 pub mod janitor;
-pub(crate) mod log;
 pub mod mcp;
 mod official;
 mod official_mcps;
@@ -30,6 +31,11 @@ mod tray;
 pub mod update_sig;
 mod updater;
 pub mod vault;
+
+// Logging lives in `orquestra-core` so every crate emits the same line format;
+// re-exported here so each `crate::log_warn!` / `log_error!` / `log_info!`
+// call site keeps working unchanged.
+pub use orquestra_core::{log_error, log_info, log_warn};
 
 use crate::paths::OrquestraPaths;
 use bridge::{BridgeReport, HarnessStatus};
@@ -55,7 +61,8 @@ use updater::{restart_app, sync_official_extensions};
 pub use updater::apply_app_update;
 use vault::{
     list_vault_presets, vault_delete_service, vault_exec, vault_http_request, vault_list_services,
-    vault_remove_key, vault_save_service, vault_set_primary, vault_test_connection,
+    vault_purge_migration_backups, vault_remove_key, vault_save_service, vault_set_primary,
+    vault_test_connection,
 };
 
 /// Runtime identity of the native core, surfaced in the UI footer so the
@@ -378,7 +385,8 @@ pub fn run() {
             vault_http_request,
             vault_exec,
             vault_test_connection,
-            vault_remove_key
+            vault_remove_key,
+            vault_purge_migration_backups
         ])
         .run(tauri::generate_context!())
     {

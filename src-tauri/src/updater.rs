@@ -1,8 +1,8 @@
 //! 1-click updates: desktop binary replacement and official extension sync.
 //!
-//! Staging always lives under the OS temp scratch root
-//! (`crate::paths::scratch_root`) and is removed on every exit path via a
-//! [`Staging`] drop guard. Binary
+//! Staging always lives under the secure runtime root
+//! (`crate::paths::ensure_scratch_root`) and is removed on every exit path
+//! via a [`Staging`] drop guard. Binary
 //! downloads are fail-closed on minisign signature mismatch first (see
 //! `update_sig`) and then on SHA-256 mismatch, and the live executable is
 //! replaced atomically (sibling temp file + rename in the same directory).
@@ -39,11 +39,19 @@ impl Drop for Staging {
     }
 }
 
+/// Download caps: the binary is bounded at 100 MiB, the checksums at 1 MiB
+/// and the detached signature at 64 KiB. Anything larger fails closed
+/// instead of filling the staging disk.
+const BINARY_MAX_BYTES: u64 = 100 * 1024 * 1024;
+const SUMS_MAX_BYTES: u64 = 1024 * 1024;
+const SIG_MAX_BYTES: u64 = 64 * 1024;
+
 /// Download `target_version` of the desktop binary, verify its SHA-256, and
 /// atomically replace the running executable. Returns a human message.
 #[tauri::command]
 pub fn apply_app_update(target_version: String) -> Result<String, String> {
     let version = validate_version(&target_version)?;
+    require_newer_version(&version)?;
     let assets = asset_candidates(std::env::consts::OS, std::env::consts::ARCH)?;
     let staging = Staging::fresh("orquestra-update")?;
 
@@ -55,7 +63,12 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
     let mut last_error = String::new();
     for candidate in &assets {
         let path = staging.0.join(candidate);
-        match download(&release_asset_url(&version, candidate), &path) {
+        match download(
+            &release_asset_url(&version, candidate),
+            &path,
+            BINARY_MAX_BYTES,
+            std::time::Duration::from_secs(600),
+        ) {
             Ok(()) => {
                 asset = candidate.to_string();
                 binary_path = path;
@@ -68,20 +81,30 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
         return Err(last_error);
     }
     let sums_path = staging.0.join("SHA256SUMS.txt");
-    download(&release_asset_url(&version, "SHA256SUMS.txt"), &sums_path)?;
+    download(
+        &release_asset_url(&version, "SHA256SUMS.txt"),
+        &sums_path,
+        SUMS_MAX_BYTES,
+        std::time::Duration::from_secs(30),
+    )?;
     // Detached Ed25519 signature over the exact checksums bytes. A forged
     // release (malicious binary + matching malicious checksums) cannot forge
     // this without the offline signing key, so verify before trusting the sums.
+    // The trusted comment binds the validated target version: a signature
+    // lifted from an older release (replay/downgrade) names the wrong
+    // version and fails closed even though it verifies cryptographically.
     let sig_path = staging.0.join(crate::update_sig::SUMS_SIGNATURE_ASSET);
     download(
         &release_asset_url(&version, crate::update_sig::SUMS_SIGNATURE_ASSET),
         &sig_path,
+        SIG_MAX_BYTES,
+        std::time::Duration::from_secs(30),
     )?;
     let sums_bytes = fs::read(&sums_path)
         .map_err(|error| format!("failed to read {}: {error}", sums_path.display()))?;
     let sig_text = fs::read_to_string(&sig_path)
         .map_err(|error| format!("failed to read {}: {error}", sig_path.display()))?;
-    crate::update_sig::verify_release_file(&sums_bytes, &sig_text)?;
+    crate::update_sig::verify_release_file(&sums_bytes, &sig_text, &version)?;
 
     let expected = expected_hash(&sums_path, &asset)?;
     let actual = sha256_of(&binary_path)?;
@@ -183,9 +206,7 @@ fn active_binary() -> Result<PathBuf, String> {
             return Ok(exe);
         }
     }
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set; cannot locate the active binary".to_string())?;
+    let home = crate::paths::require_home("locate the active binary")?;
     let fallback = home.join(".local/bin/orquestra");
     if fallback.is_file() {
         return Ok(fallback);
@@ -206,6 +227,7 @@ fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
     match (os, arch) {
         ("linux", "x86_64") => Ok(vec!["orquestra-linux-x86_64", "orquestra-ai"]),
         ("macos", "aarch64") => Ok(vec!["orquestra-macos-arm64"]),
+        ("macos", "x86_64") => Ok(vec!["orquestra-macos-x86_64"]),
         _ => Err(format!("unsupported platform for updates: {os}-{arch}")),
     }
 }
@@ -216,20 +238,31 @@ fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
 /// containers and bare Windows installs have no curl in `PATH`, and the
 /// release host redirects across origins, so this client keeps the default
 /// redirect policy instead of the vault proxy's same-host-only one.
-fn download(url: &str, destination: &Path) -> Result<(), String> {
-    tauri::async_runtime::block_on(download_async(url, destination))
+fn download(
+    url: &str,
+    destination: &Path,
+    max_bytes: u64,
+    timeout: std::time::Duration,
+) -> Result<(), String> {
+    tauri::async_runtime::block_on(download_async(url, destination, max_bytes, timeout))
 }
 
-async fn download_async(url: &str, destination: &Path) -> Result<(), String> {
+async fn download_async(
+    url: &str,
+    destination: &Path,
+    max_bytes: u64,
+    timeout: std::time::Duration,
+) -> Result<(), String> {
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
+        .timeout(timeout)
         .build()
         .map_err(|error| format!("failed to build the HTTP client: {error}"))?;
     // Mirror `curl --retry 2`: transport failures retry, HTTP error
     // statuses (a missing candidate asset 404s by design) do not.
     let mut last_error = format!("download failed for {url:?}");
     for _ in 0..3 {
-        match download_once(&client, url, destination).await {
+        match download_once(&client, url, destination, max_bytes).await {
             Ok(()) => return Ok(()),
             Err(error) if error.retryable => last_error = error.message,
             Err(error) => return Err(error.message),
@@ -247,6 +280,7 @@ async fn download_once(
     client: &reqwest::Client,
     url: &str,
     destination: &Path,
+    max_bytes: u64,
 ) -> Result<(), DownloadError> {
     let fail = |message: String, retryable: bool| DownloadError { message, retryable };
     let mut response = client
@@ -267,9 +301,19 @@ async fn download_once(
             false,
         )
     })?;
+    let mut total: u64 = 0;
     loop {
         match response.chunk().await {
             Ok(Some(chunk)) => {
+                total = total.saturating_add(chunk.len() as u64);
+                if total > max_bytes {
+                    return Err(fail(
+                        format!(
+                            "download failed for {url:?}: response exceeds the {max_bytes}-byte cap"
+                        ),
+                        false,
+                    ));
+                }
                 use std::io::Write;
                 file.write_all(&chunk).map_err(|error| {
                     fail(
@@ -323,6 +367,23 @@ fn sha256_of(path: &Path) -> Result<String, String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+/// Anti-replay/anti-downgrade gate: `target` must parse as SemVer and be
+/// strictly greater than the running binary. Equal and lower versions fail
+/// closed with a clear error before any network access. Prerelease ordering
+/// follows SemVer, so `alpha.5 < alpha.10`.
+fn require_newer_version(version: &str) -> Result<(), String> {
+    let current = semver::Version::parse(env!("CARGO_PKG_VERSION"))
+        .map_err(|error| format!("running version is not valid SemVer: {error}"))?;
+    let target = semver::Version::parse(version)
+        .map_err(|_| format!("refusing to update to {version:?}: not a valid semantic version"))?;
+    if target <= current {
+        return Err(format!(
+            "refusing to update to {target}: not newer than the running version {current} (downgrades and replays are refused)"
+        ));
+    }
+    Ok(())
+}
+
 /// Non-empty dotted tag without any path semantics.
 fn validate_version(raw: &str) -> Result<String, String> {
     let version = raw.trim().trim_start_matches(['v', 'V']).to_string();
@@ -354,6 +415,10 @@ mod tests {
             asset_candidates("macos", "aarch64").expect("macos"),
             vec!["orquestra-macos-arm64"]
         );
+        assert_eq!(
+            asset_candidates("macos", "x86_64").expect("macos intel"),
+            vec!["orquestra-macos-x86_64"]
+        );
         assert!(asset_candidates("windows", "x86_64").is_err());
         assert!(asset_candidates("linux", "aarch64").is_err());
     }
@@ -384,6 +449,28 @@ mod tests {
                 "{hostile:?} must be refused"
             );
         }
+    }
+
+    /// Task #325: equal and lower versions fail closed before any network
+    /// access; prerelease ordering is numeric (`alpha.5 < alpha.10`).
+    #[test]
+    fn downgrades_and_replays_are_refused() {
+        let current = env!("CARGO_PKG_VERSION");
+        assert!(
+            require_newer_version(current).is_err(),
+            "re-applying the running version must be refused"
+        );
+        for older in ["0.1.0-alpha.4", "0.1.0-alpha.1", "0.0.9"] {
+            let error =
+                require_newer_version(older).expect_err(&format!("{older} must be refused"));
+            assert!(error.contains("not newer"), "says why: {error}");
+        }
+        // The gate relies on numeric prerelease ordering, not string order.
+        let v5 = semver::Version::parse("0.1.0-alpha.5").expect("v5");
+        let v10 = semver::Version::parse("0.1.0-alpha.10").expect("v10");
+        assert!(v5 < v10, "alpha.5 < alpha.10");
+        assert!(require_newer_version("not-a-version").is_err());
+        assert!(require_newer_version("").is_err());
     }
 
     #[test]
@@ -419,11 +506,19 @@ mod tests {
     }
 
     #[test]
-    fn staging_uses_system_temp_scratch_root() {
+    fn staging_uses_the_secure_runtime_root() {
         let staging = Staging::fresh("orquestra-update-test").expect("staging");
-        let root = crate::paths::scratch_root();
-        assert_eq!(root, std::env::temp_dir().join("orquestra-ai"));
+        let root = crate::paths::ensure_scratch_root().expect("runtime root");
+        assert_eq!(root, crate::paths::scratch_root());
         assert!(staging.0.starts_with(&root));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&root).unwrap().permissions().mode() & 0o777,
+                0o700
+            );
+        }
         // `Staging` removes the tree on drop.
     }
 }

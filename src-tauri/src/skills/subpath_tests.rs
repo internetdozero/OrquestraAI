@@ -168,7 +168,7 @@ fn refresh_does_not_pull_through_a_symlinked_git_dir() {
     let result = refresh_skill_dir(&skill, &root.join("missing-remote").to_string_lossy(), None);
     assert!(
         result.is_err(),
-        "a linked .git must not count as a checkout: {result:?}"
+        "a linked .git must not count as a checkout"
     );
     assert_eq!(
         head(&other),
@@ -234,7 +234,7 @@ fn refresh_does_not_pull_through_a_symlinked_vault_dir() {
     let result = refresh_skill_dir(&skill, &root.join("missing-remote").to_string_lossy(), None);
     assert!(
         result.is_err(),
-        "a symlinked vault folder must not be refreshed: {result:?}"
+        "a symlinked vault folder must not be refreshed"
     );
     assert_eq!(
         head(&other),

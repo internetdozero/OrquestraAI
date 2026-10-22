@@ -48,4 +48,21 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // Cloudflare Workers runtime globals (explicit: no package env covers them).
+    files: ["workers/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: {
+        fetch: "readonly",
+        caches: "readonly",
+        crypto: "readonly",
+        Request: "readonly",
+        Response: "readonly",
+        Headers: "readonly",
+        URL: "readonly",
+        console: "readonly",
+      },
+    },
+  },
 );

@@ -39,7 +39,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
 
-  /** Opening a task is what clears its [NEW] chip, in either view. */
+  /** Opening a task clears its [NEW] chip, in either view — like every other interaction below. */
   const openDetail = (idea: IdeaItem) => {
     state.markSeenIdea(idea.id);
     setDetail(idea);
@@ -49,6 +49,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
     setFormOpen(true);
   };
   const openEdit = (idea: IdeaItem) => {
+    state.noteInteraction(idea.id);
     setEditing(idea);
     setFormOpen(true);
   };
@@ -61,10 +62,16 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
           : idea.status === "completed"
             ? "archived"
             : null;
-    if (next) void state.changeStatus(idea.id, next);
+    if (next) {
+      state.noteInteraction(idea.id);
+      void state.changeStatus(idea.id, next);
+    }
   };
   const [deleteTarget, setDeleteTarget] = useState<IdeaItem | null>(null);
-  const confirmDelete = (idea: IdeaItem) => setDeleteTarget(idea);
+  const confirmDelete = (idea: IdeaItem) => {
+    state.noteInteraction(idea.id);
+    setDeleteTarget(idea);
+  };
   const archivedIdeas = state.ideas.filter((idea) => idea.status === "archived");
 
   if (!isTauri && !mockMode) {
@@ -127,7 +134,11 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
               onEdit={openEdit}
               onDelete={confirmDelete}
               onOpen={openDetail}
-              onDropIdea={(id, status) => void state.changeStatus(id, status)}
+              onDropIdea={(id, status) => {
+                state.noteInteraction(id);
+                void state.changeStatus(id, status);
+              }}
+              onInteract={state.noteInteraction}
             />
           ) : (
             <IdeasListView
@@ -135,7 +146,11 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
               loading={state.loading}
               newIds={state.newIds}
               onOpen={openDetail}
-              onStatusChange={(id, status) => void state.changeStatus(id, status)}
+              onStatusChange={(id, status) => {
+                state.noteInteraction(id);
+                void state.changeStatus(id, status);
+              }}
+              onInteract={state.noteInteraction}
               onEdit={openEdit}
               onDelete={confirmDelete}
             />
@@ -157,7 +172,10 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
             setArchivedOpen(false);
             openDetail(idea);
           }}
-          onRestore={(id) => void state.changeStatus(id, "open")}
+          onRestore={(id) => {
+            state.noteInteraction(id);
+            void state.changeStatus(id, "open");
+          }}
           onDelete={confirmDelete}
         />
       )}
@@ -168,6 +186,7 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
           onAdvance={advance}
           onEdit={openEdit}
           onDelete={confirmDelete}
+          onInteract={state.noteInteraction}
           onClose={() => setDetail(null)}
         />
       )}

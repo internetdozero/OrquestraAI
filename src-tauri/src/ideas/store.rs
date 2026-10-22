@@ -59,9 +59,8 @@ pub fn resolve_db_path() -> Result<PathBuf, String> {
         return Ok(PathBuf::from(data_home).join("idea-vault/ideas.sqlite3"));
     }
 
-    std::env::var_os("HOME")
-        .map(|home| PathBuf::from(home).join(".local/share/idea-vault/ideas.sqlite3"))
-        .ok_or_else(|| "HOME is not set; cannot locate the idea vault".to_string())
+    Ok(crate::paths::require_home("locate the idea vault")?
+        .join(".local/share/idea-vault/ideas.sqlite3"))
 }
 
 /// Open the vault: create parents, wait on writers, enable WAL, ensure schema.

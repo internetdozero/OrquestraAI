@@ -149,6 +149,7 @@ mod tests {
             "vault_delete_service",
             "vault_set_primary",
             "vault_remove_key",
+            "vault_purge_migration_backups",
             "vault_test_connection",
             "reveal_mcp_secret",
             "apply_app_update",

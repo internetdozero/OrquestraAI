@@ -66,7 +66,7 @@ export function useIdeas(options: {
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  // Ids the operator already opened; the [NEW] chip keys off this set.
+  // Ids the operator already interacted with; the [NEW] chip keys off this set.
   const [seenIds, setSeenIds] = useState<ReadonlySet<number>>(() => new Set(readSeenIdeaIds()));
 
   const refreshIdeas = useCallback(async () => {
@@ -150,8 +150,13 @@ export function useIdeas(options: {
     });
   }, [ideas, selectedProject, selectedCategory, selectedPriority, search]);
 
-  /** Record one opened idea and persist it so [NEW] never comes back. */
-  const markSeenIdea = useCallback((id: number) => {
+  /**
+   * Any operator interaction clears [NEW] — opening, copying the AI prompt,
+   * editing, advancing, deleting or moving the card. One persisted set for
+   * every entry point, so the chip disappears for good instead of returning
+   * on the next poll.
+   */
+  const noteInteraction = useCallback((id: number) => {
     setSeenIds((current) => {
       if (current.has(id)) return current;
       const next = new Set(current).add(id);
@@ -159,6 +164,9 @@ export function useIdeas(options: {
       return next;
     });
   }, []);
+
+  /** Opening a task is one interaction among others; kept as a named entry point. */
+  const markSeenIdea = useCallback((id: number) => noteInteraction(id), [noteInteraction]);
 
   // Recomputed on every poll, so a chip expires within one refresh cycle of
   // the freshness window closing.
@@ -268,6 +276,7 @@ export function useIdeas(options: {
     refreshAll,
     newIds,
     markSeenIdea,
+    noteInteraction,
     create,
     update,
     changeStatus,

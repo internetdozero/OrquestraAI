@@ -1,0 +1,15 @@
+[package]
+name = "orquestra-bridge"
+version = "0.1.0"
+description = "OrquestraAI harness fusion: backups, projections, secondary-location cleanup and status"
+authors = ["Operator"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[dependencies]
+# Harness registry and storage layout the fusion reads.
+orquestra-core = { path = "../orquestra-core" }
+# JSONC rewriting of each harness's `skills.paths` list.
+json5.workspace = true
+serde.workspace = true
+serde_json.workspace = true

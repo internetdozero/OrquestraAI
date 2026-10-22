@@ -287,7 +287,7 @@ pub fn apply_harness_selections_at(
     Ok(changed)
 }
 
-fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
+pub(super) fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
     paths.root.join(CATALOG_FILE)
 }
 
@@ -307,23 +307,13 @@ pub(super) fn load_catalog(paths: &OrquestraPaths, seed: &Path) -> Result<Catalo
             return Err(format!("failed to read {}: {error}", path.display()));
         }
     };
-    let (plaintext, legacy) = crate::at_rest::open_text(paths, &content)
-        .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
+    // The at-rest layer owns legacy migration, v1 → v2 upgrades, keyring
+    // promotion, and backup self-healing — the loader just parses.
+    let (plaintext, _) =
+        crate::at_rest::open_stored(paths, &path, &content, crate::at_rest::AAD_MCPS)
+            .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
     let catalog: Catalog = serde_json::from_str(&plaintext)
         .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
-    // First read of a pre-encryption file migrates it (backup + sealed
-    // rewrite), mirroring the vault loader. Reads stay available if the
-    // rewrite fails; dual-read covers crashes in between.
-    if legacy {
-        match crate::at_rest::migrate_legacy_file(&path, &plaintext, paths) {
-            Ok(sealed) => {
-                if let Err(error) = write_config(&path, &sealed, true) {
-                    crate::log_warn!("catalog migration rewrite failed: {error}");
-                }
-            }
-            Err(error) => crate::log_warn!("catalog migration backup failed: {error}"),
-        }
-    }
     Ok(catalog)
 }
 
@@ -380,7 +370,7 @@ pub(super) fn save_catalog(paths: &OrquestraPaths, catalog: &Catalog) -> Result<
     content.push('\n');
 
     // The catalog carries API tokens, so it is sealed and always private.
-    let sealed = crate::at_rest::seal_text(paths, &content)?;
+    let sealed = crate::at_rest::seal_text(paths, &content, crate::at_rest::AAD_MCPS)?;
     write_config(&path, &sealed, true).map(|_| ())
 }
 
