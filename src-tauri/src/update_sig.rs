@@ -9,7 +9,7 @@
 //! The format is stock minisign prehashed mode (`ED` algorithm marker), so any
 //! signature this module accepts also verifies with the reference
 //! `minisign -V` tool. `tauri-plugin-updater`'s native scheme was considered
-//! but rejected to keep the change surgical: the existing curl + SHA-256 +
+//! but rejected to keep the change surgical: the existing reqwest + SHA-256 +
 //! atomic-replace flow in `updater.rs` stays untouched apart from this gate.
 
 /// Asset name of the detached signature published next to `SHA256SUMS.txt`.

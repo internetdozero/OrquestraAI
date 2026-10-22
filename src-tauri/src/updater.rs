@@ -211,22 +211,79 @@ fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
 }
 
 /// Try each candidate asset in order until one downloads.
+///
+/// Native `reqwest` (rustls) instead of a `curl` subprocess: minimal
+/// containers and bare Windows installs have no curl in `PATH`, and the
+/// release host redirects across origins, so this client keeps the default
+/// redirect policy instead of the vault proxy's same-host-only one.
 fn download(url: &str, destination: &Path) -> Result<(), String> {
-    let output = std::process::Command::new("curl")
-        .args(["-fsSL", "--retry", "2", "-o"])
-        .arg(destination)
-        .arg(url)
-        .output()
-        .map_err(|error| format!("curl is not available: {error}"))?;
-    if output.status.success() {
-        return Ok(());
+    tauri::async_runtime::block_on(download_async(url, destination))
+}
+
+async fn download_async(url: &str, destination: &Path) -> Result<(), String> {
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .build()
+        .map_err(|error| format!("failed to build the HTTP client: {error}"))?;
+    // Mirror `curl --retry 2`: transport failures retry, HTTP error
+    // statuses (a missing candidate asset 404s by design) do not.
+    let mut last_error = format!("download failed for {url:?}");
+    for _ in 0..3 {
+        match download_once(&client, url, destination).await {
+            Ok(()) => return Ok(()),
+            Err(error) if error.retryable => last_error = error.message,
+            Err(error) => return Err(error.message),
+        }
     }
-    let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    Err(if detail.is_empty() {
-        format!("download failed for {url:?}")
-    } else {
-        format!("download failed: {detail}")
-    })
+    Err(last_error)
+}
+
+struct DownloadError {
+    message: String,
+    retryable: bool,
+}
+
+async fn download_once(
+    client: &reqwest::Client,
+    url: &str,
+    destination: &Path,
+) -> Result<(), DownloadError> {
+    let fail = |message: String, retryable: bool| DownloadError { message, retryable };
+    let mut response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|error| fail(format!("download failed for {url:?}: {error}"), true))?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(fail(
+            format!("download failed for {url:?}: HTTP {status}"),
+            false,
+        ));
+    }
+    let mut file = fs::File::create(destination).map_err(|error| {
+        fail(
+            format!("failed to write {}: {error}", destination.display()),
+            false,
+        )
+    })?;
+    loop {
+        match response.chunk().await {
+            Ok(Some(chunk)) => {
+                use std::io::Write;
+                file.write_all(&chunk).map_err(|error| {
+                    fail(
+                        format!("failed to write {}: {error}", destination.display()),
+                        false,
+                    )
+                })?;
+            }
+            Ok(None) => return Ok(()),
+            Err(error) => {
+                return Err(fail(format!("download failed for {url:?}: {error}"), true));
+            }
+        }
+    }
 }
 
 /// Exactly one `SHA256SUMS.txt` line must name `asset`; fail closed otherwise.
@@ -254,32 +311,16 @@ fn expected_hash(sums: &Path, asset: &str) -> Result<String, String> {
     }
 }
 
-/// Hash a file with `sha256sum` (`shasum -a 256` fallback on macOS).
+/// Hash a file with SHA-256 from the `sha2` crate: no external
+/// `sha256sum`/`shasum` needed, so minimal containers update fine.
 fn sha256_of(path: &Path) -> Result<String, String> {
-    let text = path
-        .to_str()
-        .ok_or_else(|| "unrepresentable download path".to_string())?;
-    for program in [&["sha256sum"][..], &["shasum", "-a", "256"][..]] {
-        let Some((exe, args)) = program.split_first() else {
-            continue;
-        };
-        let Ok(output) = std::process::Command::new(exe)
-            .args(args)
-            .arg(text)
-            .output()
-        else {
-            continue;
-        };
-        if output.status.success() {
-            if let Some(hash) = String::from_utf8_lossy(&output.stdout)
-                .split_whitespace()
-                .next()
-            {
-                return Ok(hash.to_lowercase());
-            }
-        }
-    }
-    Err("no SHA-256 tool available (tried sha256sum, shasum)".to_string())
+    use sha2::Digest;
+    let mut file = fs::File::open(path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let mut hasher = sha2::Sha256::new();
+    std::io::copy(&mut file, &mut hasher)
+        .map_err(|error| format!("failed to hash {}: {error}", path.display()))?;
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 /// Non-empty dotted tag without any path semantics.
@@ -361,6 +402,19 @@ mod tests {
         )
         .expect("rewrite");
         assert!(expected_hash(&sums, "orquestra-linux-x86_64").is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn sha256_of_matches_the_nist_vector_without_external_tools() {
+        let dir = crate::paths::fresh_scratch_dir("orquestra-updater-hash").expect("scratch");
+        let file = dir.join("input.bin");
+        fs::write(&file, b"abc").expect("write");
+        assert_eq!(
+            sha256_of(&file).expect("hash"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert!(sha256_of(&dir.join("missing.bin")).is_err());
         let _ = fs::remove_dir_all(&dir);
     }
 

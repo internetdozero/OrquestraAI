@@ -59,6 +59,7 @@ rand = "0.9.5"
 # `crypto-rust` keeps the D-Bus crypto pure-Rust (no OpenSSL system dep).
 keyring = { version = "3.6.3", features = ["sync-secret-service", "crypto-rust", "apple-native", "windows-native"] }
 base64 = "0.23.1"
+sha2 = "0.10.9"
 
 [dev-dependencies]
 # Integration tests simulate a live peer by holding the lockfile `flock`.
