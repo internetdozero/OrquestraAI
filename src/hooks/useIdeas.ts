@@ -109,16 +109,19 @@ export function useIdeas(options: {
     void refreshAll();
   }, [refreshAll]);
 
-  // Auto-sync: background polling plus an immediate refresh when the window
-  // regains focus or becomes visible. The timer is module-agnostic and torn
-  // down on unmount so tab switches never stack intervals.
+  // Auto-sync: a slow 60s safety net plus an immediate refresh when the
+  // window regains focus or becomes visible (the event-driven part), plus
+  // the header's manual refresh button. Mutations already revalidate
+  // eagerly, so the interval only catches edits from outside this window
+  // (the idea-vault MCP, another agent). The timer is torn down on unmount
+  // so tab switches never stack intervals.
   useEffect(() => {
     if (!active) return;
 
     const interval = window.setInterval(() => {
       if (document.hidden) return;
       void refreshAll();
-    }, 12_000);
+    }, 60_000);
 
     const onFocus = () => void refreshAll();
     const onVisibility = () => {

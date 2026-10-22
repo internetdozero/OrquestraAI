@@ -6,7 +6,7 @@
 use rusqlite::{params_from_iter, Connection};
 
 use super::store::{
-    db_error, get_idea, idea_from_row, optional_filter, require_choice, require_text,
+    clamp_page, db_error, get_idea, idea_from_row, optional_filter, require_choice, require_text,
 };
 use super::types::{CreateIdeaInput, IdeaItem, UpdateIdeaInput, CATEGORIES, PRIORITIES, STATUSES};
 
@@ -55,11 +55,14 @@ pub fn create_idea(connection: &Connection, input: CreateIdeaInput) -> Result<Id
 }
 
 /// List ideas, highest priority first. A missing status defaults to `open`
-/// (MCP parity); `"all"` disables the status filter.
+/// (MCP parity); `"all"` disables the status filter. Paging is mandatory
+/// and clamped (`store::clamp_page`): the IPC payload stays bounded.
 pub fn list_ideas(
     connection: &Connection,
     project: Option<&str>,
     status: Option<&str>,
+    limit: Option<i64>,
+    offset: Option<i64>,
 ) -> Result<Vec<IdeaItem>, String> {
     let mut clauses = Vec::new();
     let mut params: Vec<String> = Vec::new();
@@ -84,8 +87,10 @@ pub fn list_ideas(
     } else {
         format!("WHERE {} ", clauses.join(" AND "))
     };
+    let (capped, skipped) = clamp_page(limit, offset);
     let sql = format!(
-        "SELECT * FROM ideas {where_sql}ORDER BY {PRIORITY_RANK}, created_at DESC, id DESC"
+        "SELECT * FROM ideas {where_sql}ORDER BY {PRIORITY_RANK}, created_at DESC, id DESC \
+         LIMIT {capped} OFFSET {skipped}"
     );
 
     let mut statement = connection.prepare(&sql).map_err(db_error)?;

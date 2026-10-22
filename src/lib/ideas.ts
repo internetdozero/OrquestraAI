@@ -84,13 +84,21 @@ export interface PostNoteInput {
 
 /**
  * Ideas, highest priority first. A missing status defaults to `"open"`;
- * pass `"all"` to disable the status filter.
+ * pass `"all"` to disable the status filter. `limit`/`offset` page the
+ * result; omitting them returns the backend's default first page (500).
  */
-export function listIdeas(project?: string | null, status?: string | null): Promise<IdeaItem[]> {
+export function listIdeas(
+  project?: string | null,
+  status?: string | null,
+  limit?: number | null,
+  offset?: number | null,
+): Promise<IdeaItem[]> {
   if (devMockMode()) return Promise.resolve(fixtureListIdeas(project, status));
   return invoke<IdeaItem[]>("list_ideas", {
     project: project ?? null,
     status: status ?? null,
+    limit: limit ?? null,
+    offset: offset ?? null,
   });
 }
 
@@ -124,15 +132,21 @@ export function deleteIdea(id: number): Promise<void> {
   return invoke<void>("delete_idea", { id });
 }
 
-/** Blackboard notes oldest first, optionally unread only and/or one project. */
+/**
+ * Blackboard notes oldest first, optionally unread only and/or one project.
+ * Paged like ideas; omitting `limit` returns the default page.
+ */
 export function listBlackboardNotes(
   project?: string | null,
   unreadOnly?: boolean,
+  limit?: number | null,
 ): Promise<BlackboardNote[]> {
   if (devMockMode()) return Promise.resolve(fixtureListNotes(project, unreadOnly));
   return invoke<BlackboardNote[]>("list_blackboard_notes", {
     project: project ?? null,
     unreadOnly: unreadOnly ?? true,
+    limit: limit ?? null,
+    offset: null,
   });
 }
 

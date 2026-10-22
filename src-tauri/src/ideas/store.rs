@@ -138,6 +138,23 @@ pub fn connect() -> Result<Connection, String> {
 // Validation (same rules as the MCP)
 // ---------------------------------------------------------------------------
 
+/// Default page size when the caller passes no limit: the vault is personal
+/// scale, so this is effectively complete, while the IPC payload stays
+/// bounded no matter how long the app runs.
+pub(super) const PAGE_DEFAULT_LIMIT: i64 = 500;
+/// Hard ceiling: even an explicit huge limit cannot turn a list call into
+/// an unbounded `SELECT *`.
+pub(super) const PAGE_MAX_LIMIT: i64 = 2000;
+
+/// Clamp caller paging into `(limit, offset)`. Both interpolate into SQL as
+/// plain integers (never as bound text), so clamping here is also the
+/// injection story: no caller input reaches the statement as SQL.
+pub(super) fn clamp_page(limit: Option<i64>, offset: Option<i64>) -> (i64, i64) {
+    let capped = limit.unwrap_or(PAGE_DEFAULT_LIMIT).clamp(1, PAGE_MAX_LIMIT);
+    let skipped = offset.unwrap_or(0).max(0);
+    (capped, skipped)
+}
+
 pub(super) fn require_text(value: &str, field: &str) -> Result<String, String> {
     let text = value.trim();
     if text.is_empty() {

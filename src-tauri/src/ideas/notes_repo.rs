@@ -5,7 +5,7 @@
 
 use rusqlite::{params_from_iter, Connection};
 
-use super::store::{db_error, get_note, note_from_row, require_text};
+use super::store::{clamp_page, db_error, get_note, note_from_row, require_text};
 use super::types::{BlackboardNote, PostNoteInput};
 
 /// Post a note; the topic is lowercased and the target defaults to `all`.
@@ -31,10 +31,13 @@ pub fn post_note(connection: &Connection, input: PostNoteInput) -> Result<Blackb
 }
 
 /// Read notes oldest first, optionally unread only and/or one project.
+/// Paging is mandatory and clamped like ideas: bounded IPC payloads.
 pub fn list_notes(
     connection: &Connection,
     project: Option<&str>,
     unread_only: bool,
+    limit: Option<i64>,
+    offset: Option<i64>,
 ) -> Result<Vec<BlackboardNote>, String> {
     let mut clauses = Vec::new();
     let mut params: Vec<String> = Vec::new();
@@ -54,7 +57,11 @@ pub fn list_notes(
     } else {
         format!("WHERE {} ", clauses.join(" AND "))
     };
-    let sql = format!("SELECT * FROM blackboard_notes {where_sql}ORDER BY created_at ASC, id ASC");
+    let (capped, skipped) = clamp_page(limit, offset);
+    let sql = format!(
+        "SELECT * FROM blackboard_notes {where_sql}ORDER BY created_at ASC, id ASC \
+         LIMIT {capped} OFFSET {skipped}"
+    );
 
     let mut statement = connection.prepare(&sql).map_err(db_error)?;
     let notes = statement

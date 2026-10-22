@@ -81,15 +81,16 @@ fn ideas_list_orders_by_priority_then_newest() {
     create(&connection, "vault", "Critical wins", Some("critical"));
     create(&connection, "vault", "Medium middle", None);
 
-    let ideas = ideas_repo::list_ideas(&connection, Some("vault"), None).expect("list");
+    let ideas = ideas_repo::list_ideas(&connection, Some("vault"), None, None, None).expect("list");
     let titles: Vec<_> = ideas.iter().map(|idea| idea.title.as_str()).collect();
     assert_eq!(titles, vec!["Critical wins", "Medium middle", "Low first"]);
 
     // The default status filter is `open`; `"all"` disables it.
     ideas_repo::update_idea_status(&connection, ideas[0].id, "completed").expect("complete");
-    let open = ideas_repo::list_ideas(&connection, Some("vault"), None).expect("open");
+    let open = ideas_repo::list_ideas(&connection, Some("vault"), None, None, None).expect("open");
     assert_eq!(open.len(), 2);
-    let all = ideas_repo::list_ideas(&connection, Some("vault"), Some("all")).expect("all");
+    let all =
+        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), None, None).expect("all");
     assert_eq!(all.len(), 3);
 }
 
@@ -143,7 +144,8 @@ fn prompt_roundtrips_through_create_update_and_list() {
         Some("### Mission: Prompted task\n\nDo the thing.")
     );
 
-    let listed = ideas_repo::list_ideas(&connection, Some("vault"), Some("all")).expect("list");
+    let listed =
+        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), None, None).expect("list");
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].prompt, created.prompt);
 
@@ -218,7 +220,7 @@ fn legacy_vaults_gain_completed_at_without_losing_rows() {
             .expect("legacy schema should apply");
     }
     let connection = store::connect_at(&path).expect("migration should open");
-    let ideas = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"))
+    let ideas = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), None, None)
         .expect("legacy rows stay readable");
     assert_eq!(ideas.len(), 1);
     assert_eq!(ideas[0].completed_at, None);
@@ -292,14 +294,15 @@ fn blackboard_posts_lists_unread_and_marks_read() {
     assert_eq!(note.target, "all");
     assert!(!note.is_read);
 
-    let unread = notes_repo::list_notes(&connection, Some("vault"), true).expect("unread");
+    let unread =
+        notes_repo::list_notes(&connection, Some("vault"), true, None, None).expect("unread");
     assert_eq!(unread.len(), 1);
 
     notes_repo::mark_note_read(&connection, note.id).expect("mark read");
-    assert!(notes_repo::list_notes(&connection, Some("vault"), true)
+    assert!(notes_repo::list_notes(&connection, Some("vault"), true, None, None)
         .expect("reread")
         .is_empty());
-    let all = notes_repo::list_notes(&connection, None, false).expect("all notes");
+    let all = notes_repo::list_notes(&connection, None, false, None, None).expect("all notes");
     assert_eq!(all.len(), 1);
     assert!(all[0].is_read);
 
@@ -325,4 +328,68 @@ fn database_paths_honor_env_and_xdg() {
         Path::new("/var/tmp/testing/xdg/idea-vault/ideas.sqlite3")
     );
     std::env::remove_var("XDG_DATA_HOME");
+}
+
+/// The audit's unbounded `SELECT *`: list calls must honor limit/offset so
+/// the IPC payload stays bounded no matter how long the vault grows.
+#[test]
+fn ideas_list_paginates_with_limit_and_offset() {
+    let connection = memory();
+    for index in 0..10 {
+        create(&connection, "vault", &format!("Idea {index:02}"), None);
+    }
+
+    let page =
+        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(3), None)
+            .expect("first page");
+    assert_eq!(page.len(), 3);
+
+    let rest =
+        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(20), Some(8))
+            .expect("tail page");
+    assert_eq!(rest.len(), 2);
+
+    // Pages partition the full list without overlap.
+    let full =
+        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), None, None)
+            .expect("full list");
+    assert_eq!(full.len(), 10);
+    assert_eq!(page[0].id, full[0].id);
+    assert_eq!(rest[0].id, full[8].id);
+
+    // Absurd limits clamp instead of dumping the table.
+    let capped =
+        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(999_999), None)
+            .expect("capped");
+    assert_eq!(capped.len(), 10);
+    let (limit, _) = store::clamp_page(Some(999_999), None);
+    assert_eq!(limit, store::PAGE_MAX_LIMIT);
+}
+
+#[test]
+fn notes_list_paginates_with_limit_and_offset() {
+    use super::types::PostNoteInput;
+
+    let connection = memory();
+    for index in 0..5 {
+        notes_repo::post_note(
+            &connection,
+            PostNoteInput {
+                project: "vault".to_string(),
+                topic: "handoff".to_string(),
+                sender: "agent".to_string(),
+                target: None,
+                note: format!("note {index}"),
+            },
+        )
+        .expect("note should post");
+    }
+
+    let page = notes_repo::list_notes(&connection, None, false, Some(2), Some(1))
+        .expect("middle page");
+    assert_eq!(page.len(), 2);
+    assert_eq!(page[0].note, "note 1");
+
+    let all = notes_repo::list_notes(&connection, None, false, None, None).expect("all");
+    assert_eq!(all.len(), 5);
 }

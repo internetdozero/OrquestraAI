@@ -16,13 +16,17 @@ pub mod types;
 use types::{BlackboardNote, CreateIdeaInput, IdeaItem, PostNoteInput, UpdateIdeaInput};
 
 /// Ideas, highest priority first; a missing status defaults to `open`.
+/// `limit`/`offset` page the result (defaults and ceiling in
+/// `store::clamp_page`); omitting them returns the default first page.
 #[tauri::command]
 pub fn list_ideas(
     project: Option<String>,
     status: Option<String>,
+    limit: Option<i64>,
+    offset: Option<i64>,
 ) -> Result<Vec<IdeaItem>, String> {
     let connection = store::connect()?;
-    ideas_repo::list_ideas(&connection, project.as_deref(), status.as_deref())
+    ideas_repo::list_ideas(&connection, project.as_deref(), status.as_deref(), limit, offset)
 }
 
 /// Distinct project names for the filter dropdown.
@@ -71,13 +75,16 @@ pub fn get_productivity_metrics(
 }
 
 /// Blackboard notes oldest first, optionally unread only and/or one project.
+/// Paged like ideas; omitting `limit`/`offset` returns the default page.
 #[tauri::command]
 pub fn list_blackboard_notes(
     project: Option<String>,
     unread_only: bool,
+    limit: Option<i64>,
+    offset: Option<i64>,
 ) -> Result<Vec<BlackboardNote>, String> {
     let connection = store::connect()?;
-    notes_repo::list_notes(&connection, project.as_deref(), unread_only)
+    notes_repo::list_notes(&connection, project.as_deref(), unread_only, limit, offset)
 }
 
 /// Post a note for other agents; the topic is lowercased like the MCP does.
