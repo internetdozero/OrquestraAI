@@ -86,6 +86,11 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      # package.json, tauri.conf.json and Cargo.toml must agree; the bump
+      # script owns all three, this gate catches manual edits that bypass it.
+      - name: Check version sync
+        run: npm run version:check
+
       # Run the Node test suite.
       - name: Run npm tests
         run: npm test

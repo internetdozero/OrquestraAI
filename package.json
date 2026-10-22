@@ -20,6 +20,8 @@
     "test": "node --test 'scripts/**/*.test.mjs'",
     "test:visual": "node scripts/visual-snapshots.mjs",
     "test:all": "node --test 'scripts/**/*.test.mjs' && cargo test",
+    "version:bump": "node scripts/bump-version.mjs",
+    "version:check": "node scripts/bump-version.mjs --check",
     "preview": "vite preview",
     "tauri": "tauri"
   },
