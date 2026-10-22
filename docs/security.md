@@ -4,7 +4,7 @@ Every OrquestraAI release signs its published `SHA256SUMS.txt` with an
 offline Ed25519 release key and uploads the detached Minisign signature as
 `SHA256SUMS.txt.minisig` next to it (see `scripts/sign-release.py` and the
 `Sign SHA256SUMS.txt` step in `.github/workflows/build.yml`). Verifying
-that signature *before* trusting any SHA-256 checksum closes the
+that signature _before_ trusting any SHA-256 checksum closes the
 trust-on-first-use gap: a compromised release page serving a forged binary
 with matching forged checksums still fails closed, because no valid
 signature can be produced without the secret key.
