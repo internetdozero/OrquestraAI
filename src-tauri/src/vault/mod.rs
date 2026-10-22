@@ -10,6 +10,7 @@ mod exec;
 mod http;
 mod presets;
 mod proxy;
+mod scrub;
 mod store;
 #[cfg(test)]
 #[path = "tests.rs"]

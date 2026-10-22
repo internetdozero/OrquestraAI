@@ -64,14 +64,13 @@ pub fn effective_headers(
 }
 
 /// Scrub every known secret from a response body before returning it.
+///
+/// Encoding-aware: besides the raw key, base64 (standard + URL-safe,
+/// padded + unpadded), hex, URL-encoded and reversed forms are masked, so
+/// a transformed echo cannot smuggle the key past the filter. See
+/// [`super::scrub`] for the variant table and its tests.
 pub fn scrub_body(body: &str, secrets: &[&str]) -> String {
-    let mut out = body.to_string();
-    for secret in secrets {
-        if secret.len() >= 4 {
-            out = out.replace(secret, "[REDACTED]");
-        }
-    }
-    out
+    super::scrub::scrub_with_variants(body, secrets)
 }
 
 /// Scrub secrets from free-form text (shared with `exec` output).
