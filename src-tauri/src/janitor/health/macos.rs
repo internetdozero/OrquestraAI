@@ -1,9 +1,9 @@
 //! macOS health collection, split in two halves on purpose.
 //!
-//! The pure half (page-counter arithmetic and the `/bin/ps` parser) has no
-//! syscalls, so it compiles and is tested on any host. The native half lives
-//! in `macos::native`, which only exists on Darwin: sysctl, `host_statistics64`
-//! and `/bin/ps` never leak into a Linux build.
+//! The pure half (page-counter arithmetic and the decoders for libproc's
+//! buffers) has no syscalls, so it compiles and is tested on any host. The
+//! native half lives in `macos::native`, which only exists on Darwin: sysctl,
+//! `host_statistics64` and libproc never leak into a Linux build.
 
 use super::{MemoryStats, TopProcess};
 
@@ -53,34 +53,43 @@ pub(super) fn darwin_memory_stats(
     }
 }
 
-/// Rows of `ps -axo pid=,rss=,comm=`: pid, resident set in KiB, then the
-/// executable path, which may contain spaces. Unparseable rows are dropped
-/// instead of aborting the list.
-pub(super) fn parse_ps(source: &str) -> Vec<TopProcess> {
-    let mut processes = source
-        .lines()
-        .filter_map(|line| {
-            let mut fields = line.split_whitespace();
-            let pid = fields.next()?.parse::<u32>().ok()?;
-            let rss_kb = fields.next()?.parse::<u64>().ok()?;
-            let name = fields.collect::<Vec<_>>().join(" ");
-            if name.is_empty() {
-                return None;
-            }
-            Some(TopProcess {
-                pid,
-                name,
-                rss_mb: rss_kb / 1024,
-            })
-        })
-        .collect::<Vec<_>>();
+/// Resident bytes from a `proc_taskinfo` buffer.
+///
+/// The kernel writes the struct for `PROC_PIDTASKINFO`; its first two fields
+/// are `u64 pti_virtual_size` and `u64 pti_resident_size`, unchanged since
+/// 10.5. Only those 16 leading bytes are read, so a struct that grows a field
+/// later cannot shift what this code trusts — and a buffer shorter than the
+/// two words yields `None` instead of a truncated number.
+pub(super) fn resident_bytes(taskinfo: &[u8]) -> Option<u64> {
+    let resident = taskinfo.get(8..16)?;
+    let mut raw = [0u8; 8];
+    raw.copy_from_slice(resident);
+    Some(u64::from_ne_bytes(raw))
+}
+
+/// Name from a `proc_name` buffer, which the kernel NUL-terminates. Trailing
+/// bytes after the terminator are ignored, so a reused buffer cannot leak an
+/// older, longer name.
+pub(super) fn process_name(buffer: &[u8]) -> Option<String> {
+    let end = buffer
+        .iter()
+        .position(|byte| *byte == 0)
+        .unwrap_or(buffer.len());
+    let name = std::str::from_utf8(&buffer[..end]).ok()?.trim();
+    (!name.is_empty()).then(|| name.to_string())
+}
+
+/// Keep the `limit` heaviest processes by resident size, ties broken by pid so
+/// the panel does not reshuffle between refreshes. Pure, so the ordering is
+/// pinned by a test that runs on any host.
+pub(super) fn rank_by_rss(processes: &mut Vec<TopProcess>, limit: usize) {
     processes.sort_by(|left, right| {
         right
             .rss_mb
             .cmp(&left.rss_mb)
             .then_with(|| left.pid.cmp(&right.pid))
     });
-    processes
+    processes.truncate(limit);
 }
 
 #[cfg(target_os = "macos")]

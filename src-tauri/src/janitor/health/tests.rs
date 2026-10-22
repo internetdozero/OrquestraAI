@@ -1,11 +1,14 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 
-//! Pure-layer tests: `/proc` parsing, Darwin page arithmetic and the `ps`
-//! parser. None of these need the OS they describe, so they run on every CI
-//! host — the macOS collector is otherwise only exercised by a Mac runner.
+//! Pure-layer tests: `/proc` parsing, Darwin page arithmetic and the decoders
+//! for libproc's buffers. None of these need the OS they describe, so they run
+//! on every CI host — the macOS collector is otherwise only exercised by a Mac
+//! runner.
 
-use super::macos::{darwin_memory_stats, parse_ps, DarwinMemoryCounts};
+use super::macos::{
+    darwin_memory_stats, process_name, rank_by_rss, resident_bytes, DarwinMemoryCounts,
+};
 use super::*;
 
 #[test]
@@ -81,30 +84,81 @@ fn darwin_pages_never_exceed_the_machine() {
     assert_eq!(empty.used_percent, 0.0);
 }
 
+/// `proc_taskinfo` opens with `u64 pti_virtual_size` then `u64
+/// pti_resident_size`; only the second word is the figure the panel shows.
 #[test]
-fn ps_rows_become_ranked_top_processes() {
-    let output = concat!(
-        "  123   5120 /usr/libexec/small\n",
-        "   42  20480 /Applications/Foo Bar.app/Contents/MacOS/Foo\n",
-        "    7  20480 /bin/tie\n",
-        "not-a-row\n",
-        "  9   1024\n",
-        " 10 4096\n"
-    );
-    let processes = parse_ps(output);
+fn resident_size_comes_from_the_second_taskinfo_word() {
+    let mut taskinfo = Vec::new();
+    taskinfo.extend_from_slice(&999_u64.to_ne_bytes());
+    taskinfo.extend_from_slice(&3_145_728_u64.to_ne_bytes());
+    // Trailing struct fields the collector never reads.
+    taskinfo.extend_from_slice(&[0xAB; 64]);
 
-    assert_eq!(processes.len(), 3, "malformed rows are dropped, not fatal");
+    assert_eq!(resident_bytes(&taskinfo), Some(3_145_728));
+    assert_eq!(
+        resident_bytes(&taskinfo[..16]),
+        Some(3_145_728),
+        "exactly the two leading words are enough"
+    );
+    assert_eq!(
+        resident_bytes(&taskinfo[..15]),
+        None,
+        "a short read is refused, never truncated into a wrong number"
+    );
+}
+
+#[test]
+fn proc_name_stops_at_the_terminator_and_drops_empties() {
+    assert_eq!(
+        process_name(b"WindowServer\0stale").as_deref(),
+        Some("WindowServer"),
+        "bytes after the NUL are ignored"
+    );
+    assert_eq!(process_name(b"  spaced  \0").as_deref(), Some("spaced"));
+    assert_eq!(process_name(b"unterminated"), Some("unterminated".into()));
+    assert_eq!(process_name(b"\0tail"), None);
+    assert_eq!(process_name(b"   \0"), None);
+    assert_eq!(
+        process_name(b"\xFF\xFE\0"),
+        None,
+        "invalid UTF-8 is skipped"
+    );
+}
+
+#[test]
+fn ranking_keeps_the_heaviest_and_breaks_ties_by_pid() {
+    let mut processes = vec![
+        TopProcess {
+            pid: 123,
+            name: "small".into(),
+            rss_mb: 5,
+        },
+        TopProcess {
+            pid: 42,
+            name: "Foo".into(),
+            rss_mb: 20,
+        },
+        TopProcess {
+            pid: 7,
+            name: "tie".into(),
+            rss_mb: 20,
+        },
+    ];
+
+    rank_by_rss(&mut processes, 2);
     assert_eq!(
         processes
             .iter()
             .map(|process| process.pid)
             .collect::<Vec<_>>(),
-        vec![7, 42, 123],
-        "RSS descending, pid ascending on ties"
+        vec![7, 42],
+        "RSS descending, pid ascending on ties, tail truncated"
     );
+
+    rank_by_rss(&mut processes, 10);
     assert_eq!(
-        processes[1].name, "/Applications/Foo Bar.app/Contents/MacOS/Foo",
-        "spaces inside comm survive"
+        processes.len(),
+        2,
+        "a limit above the input keeps all of it"
     );
-    assert_eq!(processes[2].rss_mb, 5);
 }

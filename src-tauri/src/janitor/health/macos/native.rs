@@ -1,24 +1,50 @@
-//! Darwin collection: sysctl, Mach VM statistics and `/bin/ps`.
+//! Darwin collection: sysctl, Mach VM statistics and libproc.
 //!
-//! Nothing here reads `/proc`. Memory comes from `host_statistics64` page
-//! counters, swap from `vm.swapusage`, load from `getloadavg`, and capacity
-//! from `statvfs` on the volume that actually holds the scratch root (macOS
-//! has no tmpfs, so `is_tmpfs` is always false).
+//! Nothing here reads `/proc` and nothing shells out. Memory comes from
+//! `host_statistics64` page counters, swap from `vm.swapusage`, load from
+//! `getloadavg`, capacity from `statvfs` on the volume that actually holds the
+//! scratch root (macOS has no tmpfs, so `is_tmpfs` is always false), and the
+//! top processes from `proc_listpids` + `proc_taskinfo` + `proc_name`.
 //!
-//! Top processes shell out to `/bin/ps` rather than calling libproc:
-//! `proc_pid_rusage` returns `rusage_info_v2`, whose layout would have to be
-//! mirrored by hand with fixed offsets, and a wrong offset is silent memory
-//! corruption instead of a compile error. `ps` is part of the base system and
-//! its output is parsed by a function the Linux CI can test.
+//! The kernel writes the whole `proc_taskinfo`, so the whole struct is asked
+//! for; only its first two fields (`pti_virtual_size`, then `pti_resident_size`)
+//! are ever read, and only when the kernel reported writing those 16 bytes. No
+//! later field can shift what this code trusts, and a short read is skipped
+//! instead of misread.
 
-use std::ffi::{c_void, CString};
+use std::ffi::{c_int, c_void, CString};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use super::{darwin_memory_stats, parse_ps, DarwinMemoryCounts};
+use super::{darwin_memory_stats, process_name, rank_by_rss, resident_bytes, DarwinMemoryCounts};
 use crate::janitor::health::{
     memory_stats, should_alert, tmp_stats, CpuStats, MemoryStats, SystemHealth, TopProcess,
 };
+
+/// `PROC_ALL_PIDS` from `<libproc.h>`. The pid list itself, `PROC_PIDTASKINFO`
+/// and `proc_name` all come from `libc`'s macOS-gated libproc bindings, so
+/// this module declares no FFI of its own and links nothing by hand.
+const PROC_ALL_PIDS: u32 = 1;
+/// `PROC_PIDTASKINFO` from `<libproc.h>`.
+const PROC_PIDTASKINFO: c_int = 4;
+/// Two `u64`s: virtual size then resident size.
+const LEADING_TASKINFO_BYTES: usize = 16;
+/// Size of the struct the kernel writes for `PROC_PIDTASKINFO`, taken from
+/// libc's own definition so no byte count is hardcoded here. Only
+/// [`LEADING_TASKINFO_BYTES`] of the result are ever read.
+const TASKINFO_BYTES: usize = std::mem::size_of::<libc::proc_taskinfo>();
+/// The slice [`resident_bytes`] reads must be `pti_resident_size`, not a
+/// neighbouring field. Checked while compiling for Darwin, so a libc that
+/// reorders the struct fails the build instead of reporting wrong numbers.
+const _: () = assert!(std::mem::offset_of!(libc::proc_taskinfo, pti_resident_size) == 8);
+const _: () = assert!(std::mem::offset_of!(libc::proc_taskinfo, pti_virtual_size) == 0);
+/// `proc_name` truncates to `PROC_PIDPATHINFO_MAXSIZE`; 256 covers a basename
+/// with room to spare.
+const NAME_BUFFER: usize = 256;
+/// Slack for processes that start between the size query and the read.
+const PID_SLACK: i32 = 128;
+/// Refuse to allocate more than 1 MiB of pid list, whatever the kernel says.
+const MAX_PID_BYTES: i32 = 1 << 20;
 
 pub(super) fn snapshot() -> Result<SystemHealth, String> {
     let page_size = sysctl_u64("hw.pagesize")?.max(1);
@@ -188,19 +214,100 @@ fn load_average() -> Result<f64, String> {
     Ok(loads[0])
 }
 
-/// Best-effort top RSS consumers. Metrics degrade, they never fail the
-/// snapshot: an empty list is what the panel already renders when a platform
-/// exposes nothing.
-fn top_processes(limit: usize) -> Vec<TopProcess> {
-    let output = match std::process::Command::new("/bin/ps")
-        .args(["-axo", "pid=,rss=,comm="])
-        .env("LC_ALL", "C")
-        .output()
-    {
-        Ok(output) if output.status.success() => output,
-        _ => return Vec::new(),
+/// Every pid the kernel reports. The size query answers with either a byte
+/// count or a pid count depending on the release, so the allocation is
+/// `(answer + slack) * size_of::<pid_t>()` — enough under both conventions —
+/// and the second call's byte count decides how many entries are real.
+fn all_pids() -> Vec<libc::pid_t> {
+    // SAFETY: a NULL buffer with size 0 is the documented size query.
+    let hint = unsafe { libc::proc_listpids(PROC_ALL_PIDS, 0, std::ptr::null_mut(), 0) };
+    if hint <= 0 {
+        return Vec::new();
+    }
+    let bytes = hint
+        .saturating_add(PID_SLACK)
+        .saturating_mul(std::mem::size_of::<libc::pid_t>() as i32)
+        .min(MAX_PID_BYTES);
+    let mut buffer: Vec<libc::pid_t> = vec![0; bytes as usize / std::mem::size_of::<libc::pid_t>()];
+
+    // SAFETY: `buffer` holds `bytes` writable bytes.
+    let written = unsafe {
+        libc::proc_listpids(
+            PROC_ALL_PIDS,
+            0,
+            buffer.as_mut_ptr().cast::<c_void>(),
+            bytes,
+        )
     };
-    let mut processes = parse_ps(&String::from_utf8_lossy(&output.stdout));
-    processes.truncate(limit);
+    if written <= 0 {
+        return Vec::new();
+    }
+    buffer.truncate(written as usize / std::mem::size_of::<libc::pid_t>());
+    buffer.retain(|pid| *pid > 0);
+    buffer
+}
+
+/// Resident bytes for one process, or `None` when the kernel refused the pid
+/// or wrote fewer than the two leading `u64`s.
+fn resident_of(pid: libc::pid_t) -> Option<u64> {
+    let mut buffer = [0u8; TASKINFO_BYTES];
+    // SAFETY: `buffer` is TASKINFO_BYTES writable bytes and the call reports
+    // how many it wrote; the length is checked before it is read.
+    let written = unsafe {
+        libc::proc_pidinfo(
+            pid,
+            PROC_PIDTASKINFO,
+            0,
+            buffer.as_mut_ptr().cast::<c_void>(),
+            TASKINFO_BYTES as c_int,
+        )
+    };
+    if written < LEADING_TASKINFO_BYTES as c_int {
+        return None;
+    }
+    let filled = (written as usize).min(TASKINFO_BYTES);
+    resident_bytes(&buffer[..filled])
+}
+
+/// Basename of a process, or `None` when `proc_name` had nothing to say
+/// (typically a pid that exited or belongs to another user's protected task).
+fn name_of(pid: libc::pid_t) -> Option<String> {
+    let mut buffer = [0u8; NAME_BUFFER];
+    // SAFETY: `buffer` is NAME_BUFFER writable bytes and `proc_name` writes at
+    // most that many.
+    let written = unsafe {
+        libc::proc_name(
+            pid,
+            buffer.as_mut_ptr().cast::<c_void>(),
+            NAME_BUFFER as u32,
+        )
+    };
+    if written <= 0 {
+        return None;
+    }
+    let filled = (written as usize).min(NAME_BUFFER);
+    process_name(&buffer[..filled])
+}
+
+/// Top processes by resident size, system-wide. Unlike the Linux collector
+/// this is not limited to the operator's own processes: libproc reports a
+/// uid only through a much larger struct, and the panel is a diagnostic —
+/// the busiest processes on the machine are the interesting ones.
+fn top_processes(limit: usize) -> Vec<TopProcess> {
+    let mut processes = Vec::new();
+    for pid in all_pids() {
+        let Some(resident) = resident_of(pid) else {
+            continue;
+        };
+        let Some(name) = name_of(pid) else {
+            continue;
+        };
+        processes.push(TopProcess {
+            pid: pid as u32,
+            name,
+            rss_mb: resident / 1_048_576,
+        });
+    }
+    rank_by_rss(&mut processes, limit);
     processes
 }
