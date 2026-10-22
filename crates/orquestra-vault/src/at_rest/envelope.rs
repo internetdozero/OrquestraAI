@@ -23,9 +23,9 @@ const ALG: &str = "AES-256-GCM";
 const NONCE_LEN: usize = 12;
 
 /// Payload domain for the credential vault (`vault.json`).
-pub(crate) const AAD_VAULT: &[u8] = b"vault.v1";
+pub const AAD_VAULT: &[u8] = b"vault.v1";
 /// Payload domain for the MCP catalog (`mcps.json`).
-pub(crate) const AAD_MCPS: &[u8] = b"mcps.v1";
+pub const AAD_MCPS: &[u8] = b"mcps.v1";
 
 /// True when the parsed file value is one of our sealed envelopes (v1 or
 /// v2). Legacy files (`services` / `mcps` at the top level) never carry

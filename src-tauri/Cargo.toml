@@ -30,6 +30,8 @@ tauri-build = { version = "2", features = [] }
 orquestra-core = { path = "../crates/orquestra-core" }
 # Harness config adapters: one MCP server, one dialect per harness.
 orquestra-harness = { path = "../crates/orquestra-harness" }
+# Credential vault, at-rest encryption and the blind HTTP/exec proxies.
+orquestra-vault = { path = "../crates/orquestra-vault" }
 # `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }
@@ -45,28 +47,13 @@ json5.workspace = true
 # inside the binary so a release build never depends on a system libsqlite3,
 # and sessions are opened read-only so a running agent keeps its locks.
 rusqlite = { version = "0.31", features = ["bundled"] }
-# Blind vault HTTP proxy: in-memory key injection via `vault_http_request`.
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
-# Same major as the `url` already in Cargo.lock (reqwest's own dep), so the
-# endpoint gate in `vault/endpoints.rs` parses with the identical WHATWG
-# rules the sender applies — parser disagreement is the SSRF bypass class.
-url = "2"
-# For bounded response streaming (`bytes_stream` + `StreamExt`); already in
-# the lock file as a reqwest transitive dep, so this adds no new crates.
-futures-util = { version = "0.3", default-features = false }
+# Download transport for the updater; the blind vault proxy in
+# `orquestra-vault` uses the same configuration.
+reqwest.workspace = true
 minisign-verify = "0.3.0"
 # Strict `target_version > CARGO_PKG_VERSION` anti-downgrade gate in the
 # updater (prerelease ordering: `alpha.5 < alpha.10`).
 semver = "1"
-aes-gcm = "0.10.3"
-rand = "0.9.5"
-# One persistent backend per OS: Secret Service on Linux, Keychain on
-# macOS, Credential Manager on Windows. `linux-native` (the kernel
-# keyring) is deliberately NOT enabled: kernel keys vanish on reboot, so a
-# fresh boot would generate a new file key and strand every sealed secret.
-# `crypto-rust` keeps the D-Bus crypto pure-Rust (no OpenSSL system dep).
-keyring = { version = "3.6.3", features = ["sync-secret-service", "crypto-rust", "apple-native", "windows-native"] }
-base64 = "0.23.1"
 sha2 = "0.10.9"
 
 [dev-dependencies]

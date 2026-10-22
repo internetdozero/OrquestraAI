@@ -28,7 +28,7 @@ use std::sync::{
 
 use base64::prelude::*;
 
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 use super::envelope;
 

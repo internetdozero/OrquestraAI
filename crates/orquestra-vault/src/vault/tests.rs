@@ -567,7 +567,7 @@ fn concurrent_vault_updates_lose_nothing() {
     // to drop concurrent writes. 8 threads × 25 bumps must sum exactly.
     use super::atomic::update_vault;
     use super::store::load_vault;
-    use crate::paths::OrquestraPaths;
+    use orquestra_core::paths::OrquestraPaths;
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
@@ -660,14 +660,23 @@ fn loopback_serve(response: Vec<u8>) -> String {
     format!("http://127.0.0.1:{port}/v1/models")
 }
 
-/// Drive the async helper on Tauri's runtime: the crate has no runtime of
-/// its own in production either (Tauri owns it), so tests reuse that same
-/// reactor instead of adding a tokio dev-dependency for a stub executor.
+/// Drive the async helpers on a Tokio runtime. In production the shell owns
+/// the reactor (the crate itself stays runtime-agnostic), so only the tests
+/// bring one — a single-threaded runtime with IO and timers enabled.
 fn block_on<F>(future: F) -> F::Output
 where
     F: std::future::Future,
 {
-    tauri::async_runtime::block_on(future)
+    use std::sync::OnceLock;
+    static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    RUNTIME
+        .get_or_init(|| {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("test runtime")
+        })
+        .block_on(future)
 }
 
 /// Build a redirect chain server: each hop 302s to `next`, the last serves
@@ -894,7 +903,7 @@ fn http_huge_body_is_refused_before_reading() {
 fn noop_vault_update_skips_disk_write() {
     use super::atomic::update_vault;
     use super::store::{load_vault, vault_path, VaultFile};
-    use crate::paths::OrquestraPaths;
+    use orquestra_core::paths::OrquestraPaths;
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
@@ -966,7 +975,7 @@ fn noop_vault_update_skips_disk_write() {
 #[test]
 fn unwritable_vault_dir_fails_loudly() {
     use super::atomic::update_vault;
-    use crate::paths::OrquestraPaths;
+    use orquestra_core::paths::OrquestraPaths;
     use std::os::unix::fs::PermissionsExt;
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -998,7 +1007,7 @@ fn unwritable_vault_dir_fails_loudly() {
     std::fs::remove_dir_all(&root).expect("cleanup");
 }
 
-fn temp_paths(label: &str) -> crate::paths::OrquestraPaths {
+fn temp_paths(label: &str) -> orquestra_core::paths::OrquestraPaths {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_nanos())
@@ -1007,7 +1016,7 @@ fn temp_paths(label: &str) -> crate::paths::OrquestraPaths {
         "orquestra-vault-sealed-{label}-{}-{nanos}",
         std::process::id()
     ));
-    crate::paths::OrquestraPaths {
+    orquestra_core::paths::OrquestraPaths {
         root: root.clone(),
         vault: root.clone(),
         active: root,

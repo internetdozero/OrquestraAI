@@ -56,10 +56,10 @@ pub struct VaultHttpResult {
     pub rotated: bool,
 }
 
-/// Blind `vault_http_request`: inject active key, fail over on 401/402/403/
-/// 429, strip auth response headers, scrub secrets from the body.
-#[tauri::command]
-pub async fn vault_http_request(
+/// Blind credentialed request: inject the active key, fail over on 401/402/
+/// 403/429, strip auth response headers, scrub secrets from the body. The
+/// shell's `vault_http_request` command wraps this.
+pub async fn request(
     service: String,
     endpoint: String,
     method: Option<String>,
@@ -73,7 +73,7 @@ pub async fn vault_http_request(
     let verb = method.unwrap_or_else(|| "GET".to_string());
     let extra = headers.unwrap_or_default();
     let tag = key_tag.as_deref().and_then(normalize_tag);
-    let paths = crate::paths::OrquestraPaths::resolve()?;
+    let paths = orquestra_core::paths::OrquestraPaths::resolve()?;
     // Short-lived snapshot for validation only — never held across `.await`.
     // Every mutation below reloads fresh under the vault lock, so a
     // concurrent `vault_save_service` is merged, not overwritten.
@@ -262,11 +262,10 @@ pub struct VaultTestResult {
     pub health: String,
 }
 
-/// Blind `vault_test_connection`: ping the preset's verify endpoint with one
-/// pooled key, persist the observed health, return latency + outcome. The
-/// secret never appears in the result.
-#[tauri::command]
-pub async fn vault_test_connection(
+/// Ping the preset's verify endpoint with one pooled key, persist the
+/// observed health, return latency + outcome. The secret never appears in the
+/// result. The shell's `vault_test_connection` command wraps this.
+pub async fn test_connection(
     service: String,
     key_index: Option<usize>,
 ) -> Result<VaultTestResult, String> {
@@ -274,7 +273,7 @@ pub async fn vault_test_connection(
     // parsed `Url`, so a compromised preset table cannot redirect a test
     // ping (and its key) off-allowlist.
     let endpoint = {
-        let paths = crate::paths::OrquestraPaths::resolve()?;
+        let paths = orquestra_core::paths::OrquestraPaths::resolve()?;
         let vault = load_vault(&paths)?;
         let current = vault
             .services
@@ -288,7 +287,7 @@ pub async fn vault_test_connection(
         })?;
         super::endpoints::validate_endpoint_for_service(&current.preset, raw, Some(current))?
     };
-    let paths = crate::paths::OrquestraPaths::resolve()?;
+    let paths = orquestra_core::paths::OrquestraPaths::resolve()?;
     // Snapshot released before the network call; health is applied to the
     // live vault afterwards so concurrent writers are never overwritten.
     let (live, used, secret) = {

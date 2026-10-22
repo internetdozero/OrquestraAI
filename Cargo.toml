@@ -4,6 +4,7 @@ members = [
     "src-tauri",
     "crates/orquestra-core",
     "crates/orquestra-harness",
+    "crates/orquestra-vault",
 ]
 
 # Shared dependency versions. Every member opts in with `dep.workspace = true`,
@@ -19,6 +20,24 @@ json5 = "1.3"
 # `[mcp_servers.*]` blocks inside a hand-maintained config.toml, and losing
 # its comments, key order or unrelated sections would be unacceptable.
 toml_edit = "0.22"
+aes-gcm = "0.10.3"
+base64 = "0.23.1"
+rand = "0.9.5"
+# Bounded response streaming (`bytes_stream` + `StreamExt`); already a
+# reqwest transitive dep, so this adds no new crates.
+futures-util = { version = "0.3", default-features = false }
+# Blind vault HTTP proxy: in-memory key injection via `vault_http_request`.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+# Same major as the `url` already in Cargo.lock (reqwest's own dep), so the
+# endpoint gate in `vault/endpoints.rs` parses with the identical WHATWG
+# rules the sender applies — parser disagreement is the SSRF bypass class.
+url = "2"
+# One persistent backend per OS: Secret Service on Linux, Keychain on
+# macOS, Credential Manager on Windows. `linux-native` (the kernel
+# keyring) is deliberately NOT enabled: kernel keys vanish on reboot, so a
+# fresh boot would generate a new file key and strand every sealed secret.
+# `crypto-rust` keeps the D-Bus crypto pure-Rust (no OpenSSL system dep).
+keyring = { version = "3.6.3", features = ["sync-secret-service", "crypto-rust", "apple-native", "windows-native"] }
 # `preserve_order` keeps the key order of the configs we edit, so a harness
 # whose config is already correct is left byte-identical instead of being
 # rewritten just to reorder its keys.

@@ -13,7 +13,7 @@ use std::io;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 const VAULT_FILE: &str = "vault.json";
 const COOLDOWN_SECS: u64 = 300;

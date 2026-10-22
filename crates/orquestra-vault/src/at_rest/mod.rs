@@ -25,7 +25,7 @@
 mod envelope;
 mod key;
 
-pub(crate) use envelope::{AAD_MCPS, AAD_VAULT};
+pub use envelope::{AAD_MCPS, AAD_VAULT};
 // Test-only surface: production code reaches the flag via `key::is_migrated`.
 #[cfg(test)]
 pub(crate) use key::is_migrated;
@@ -33,17 +33,13 @@ pub(crate) use key::is_migrated;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 static CLEANUP_NOTICED: AtomicBool = AtomicBool::new(false);
 
 /// Seal JSON text for disk under the file key. The returned envelope is JSON
 /// text, so the existing atomic writers are unchanged.
-pub(crate) fn seal_text(
-    paths: &OrquestraPaths,
-    plaintext: &str,
-    aad: &[u8],
-) -> Result<String, String> {
+pub fn seal_text(paths: &OrquestraPaths, plaintext: &str, aad: &[u8]) -> Result<String, String> {
     let key = key::file_key(paths)?;
     seal_with_key(&key, plaintext.as_bytes(), aad)
 }
@@ -66,7 +62,7 @@ fn seal_with_key(key: &[u8; 32], plaintext: &[u8], aad: &[u8]) -> Result<String,
 ///   only after the re-sealed files verify.
 /// - Unseal failure: self-heals from the `.migrate-bak` backup (plaintext
 ///   or sealed) when it holds valid JSON, re-sealing under the current key.
-pub(crate) fn open_stored(
+pub fn open_stored(
     paths: &OrquestraPaths,
     path: &Path,
     stored: &str,
@@ -345,7 +341,7 @@ pub(crate) fn recover_plaintext_from_backup(
 /// copy-on-write filesystems, where stale blocks may survive outside the
 /// filesystem's reach: rotate exposed provider keys regardless (see
 /// `docs/vault.md`).
-pub(crate) fn purge_migration_backup(
+pub fn purge_migration_backup(
     paths: &OrquestraPaths,
     path: &Path,
     aad: &[u8],
@@ -473,7 +469,10 @@ fn persist_sealed(path: &Path, sealed: &str) -> Result<(), String> {
                 .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
         }
     }
-    let tmp = path.with_extension(format!("json.tmp-{}", crate::paths::unique_tmp_suffix()));
+    let tmp = path.with_extension(format!(
+        "json.tmp-{}",
+        orquestra_core::paths::unique_tmp_suffix()
+    ));
     {
         use std::io::Write;
         let mut options = std::fs::OpenOptions::new();

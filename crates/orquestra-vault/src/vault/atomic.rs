@@ -13,7 +13,7 @@ use std::sync::{
     Mutex, MutexGuard, OnceLock,
 };
 
-use crate::paths::OrquestraPaths;
+use orquestra_core::paths::OrquestraPaths;
 
 use super::store::{load_vault, save_vault, VaultFile};
 
