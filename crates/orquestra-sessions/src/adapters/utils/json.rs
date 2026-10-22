@@ -137,7 +137,40 @@ pub fn message_text(value: &Value) -> Option<String> {
                     joined
                 })
         }
-        Value::Object(map) => map.get("content").and_then(message_text),
+        Value::Object(map) => match map.get("type").and_then(Value::as_str) {
+            Some("text" | "input_text" | "output_text") => map.get("text").and_then(message_text),
+            Some(_) => None,
+            None => map
+                .get("text")
+                .and_then(message_text)
+                .or_else(|| map.get("content").and_then(message_text)),
+        },
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod message_text_tests {
+    use super::message_text;
+    use serde_json::json;
+
+    #[test]
+    fn extracts_supported_text_blocks_and_ignores_tool_results() {
+        let value = json!([
+            {"type": "text", "text": "first"},
+            {"type": "input_text", "text": "second"},
+            {"type": "output_text", "text": "third"},
+            {"type": "tool_result", "content": "private tool output"}
+        ]);
+
+        assert_eq!(message_text(&value).as_deref(), Some("first second third"));
+    }
+
+    #[test]
+    fn retains_content_fallback_for_untyped_objects() {
+        assert_eq!(
+            message_text(&json!({"content": "message"})).as_deref(),
+            Some("message")
+        );
     }
 }

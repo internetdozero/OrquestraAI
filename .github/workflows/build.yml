@@ -139,13 +139,14 @@ jobs:
       - name: Sign SHA256SUMS.txt (Ed25519 detached signature)
         env:
           UPDATE_SIGNING_SEED: ${{ secrets.UPDATE_SIGNING_SEED }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           if [ -z "$UPDATE_SIGNING_SEED" ]; then
             echo "::error::UPDATE_SIGNING_SEED secret is not configured; refusing to publish an unsigned release"
             exit 1
           fi
           pip install --quiet pynacl
-          python3 scripts/sign-release.py release-assets/SHA256SUMS.txt --tag "${{ github.ref_name }}"
+          python3 scripts/sign-release.py release-assets/SHA256SUMS.txt --tag "$RELEASE_TAG"
           echo "=== Signature trusted comment ==="
           grep "^trusted comment:" release-assets/SHA256SUMS.txt.minisig
 

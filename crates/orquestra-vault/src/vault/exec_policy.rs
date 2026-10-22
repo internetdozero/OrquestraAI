@@ -21,6 +21,8 @@
 //! doctl and stripe (credential-minting audit per CLI).
 
 use super::exec::{MAX_ARGV_LEN, MAX_ARG_CHARS};
+mod azure;
+use azure::azure_account_operation;
 
 /// A global flag that may precede the subcommand: name plus whether it
 /// consumes the following token as its value (`--flag value` vs bare).
@@ -120,13 +122,18 @@ fn check_az(binary: &str, sub: &str, rest: &[String]) -> Result<(), String> {
     match sub {
         "group" | "vm" | "storage" | "webapp" => Ok(()),
         // `account` metadata reads are operational; the token-minter is not.
-        "account" => match first_positional(rest).as_deref() {
-            Some("get-access-token") => Err(deny(
+        "account" => match azure_account_operation(rest) {
+            Ok(Some(operation)) if operation == "get-access-token" => Err(deny(
                 binary,
                 "`account get-access-token`",
                 "it prints a derived token the output scrubber cannot know",
             )),
-            _ => Ok(()),
+            Ok(_) => Ok(()),
+            Err(()) => Err(deny(
+                binary,
+                "ambiguous `account` options",
+                "unknown global options are refused so they cannot hide a credential-minting operation",
+            )),
         },
         "extension" => Err(deny(
             binary,

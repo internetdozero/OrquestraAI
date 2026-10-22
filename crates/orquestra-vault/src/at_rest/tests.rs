@@ -277,6 +277,55 @@ fn fallback_key_migrates_to_keyring_on_unseal() {
     let _ = std::fs::remove_dir_all(&paths.root);
 }
 
+#[test]
+fn fallback_unseal_survives_a_keyring_promotion_failure() {
+    use aes_gcm::aead::KeyInit;
+    use base64::prelude::*;
+
+    let _serial = key::test_keyring_lock();
+    key::test_keyring_clear();
+    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-promotion-failure-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&root).expect("scratch");
+    let paths = OrquestraPaths {
+        root: root.clone(),
+        vault: root.clone(),
+        active: root.clone(),
+    };
+    key::test_keyring_force_usable(true);
+    assert!(key::keyring_usable(&root));
+
+    let fallback: [u8; 32] = aes_gcm::Aes256Gcm::generate_key(&mut aes_gcm::aead::OsRng).into();
+    write_private_new(
+        &root.join(".file-key"),
+        format!("{}\n", BASE64_STANDARD.encode(fallback)).as_bytes(),
+    )
+    .expect("write fallback key");
+    let target = root.join("vault.json");
+    let legacy = r#"{"services":{"svc":{"id":"svc","label":"S","keys":[]}}}"#;
+    let sealed = seal_with_key(&fallback, legacy.as_bytes(), AAD_VAULT).expect("seal");
+    persist_sealed(&target, &sealed).expect("write sealed");
+
+    key::test_keyring_fail_key_writes(true);
+    let result = open_stored(&paths, &target, &sealed, AAD_VAULT);
+    key::test_keyring_fail_key_writes(false);
+    key::test_keyring_force_usable(false);
+    let (text, was_legacy) = result.expect("fallback key already opened the data");
+
+    assert_eq!(text, legacy);
+    assert!(!was_legacy);
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), sealed);
+    assert_eq!(key::read_fallback_key(&root).unwrap(), Some(fallback));
+    key::test_keyring_clear();
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// Task #323: `startup_cleanup` removes alpha.5 plaintext backups once
 /// the sealed file verifies, and leaves sealed backups for the purge
 /// button — as well as backups whose sealed file does not open.

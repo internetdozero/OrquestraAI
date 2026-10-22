@@ -85,21 +85,59 @@ pub fn open_stored(
                 let text = String::from_utf8(plaintext)
                     .map_err(|error| format!("unsealed secrets are not valid text: {error}"))?;
                 if key::keyring_usable(&paths.root) {
-                    let active = key::promote_fallback_to_keyring(&kf)?;
-                    key::cache_insert(&paths.root, active);
-                    let resealed = seal_with_key(&active, text.as_bytes(), aad)?;
-                    persist_sealed(path, &resealed)?;
-                    verify_reopen(paths, path, aad, Some(&text))?;
-                    let _ = maybe_remove_fallback(paths);
-                    key::mark_migrated(&paths.root)?;
+                    key::cache_insert(&paths.root, kf);
+                    let migration = key::promote_fallback_to_keyring(&kf).and_then(|active| {
+                        let resealed = seal_with_key(&active, text.as_bytes(), aad)?;
+                        persist_sealed(path, &resealed)?;
+                        verify_reopen(paths, path, aad, Some(&text))?;
+                        Ok(active)
+                    });
+                    match migration {
+                        Ok(active) => {
+                            key::cache_insert(&paths.root, active);
+                            let _ = maybe_remove_fallback(paths);
+                            if let Err(error) = key::mark_migrated(&paths.root) {
+                                key::warn_once(format!(
+                                    "fallback key was promoted but migration state could not be saved ({error})"
+                                ));
+                            }
+                        }
+                        Err(error) => {
+                            if let Err(restore_error) = persist_sealed(path, stored) {
+                                key::warn_once(format!(
+                                    "keyring promotion failed ({error}) and the original sealed file could not be restored ({restore_error})"
+                                ));
+                            } else {
+                                key::warn_once(format!(
+                                    "keyring promotion failed ({error}); keeping the fallback key and retrying migration on a later read"
+                                ));
+                            }
+                            key::cache_insert(&paths.root, kf);
+                        }
+                    }
                 } else if version == 1 {
                     // Headless host with no keyring: no promotion target, but
                     // the v1 → v2 upgrade still applies under the same key.
                     key::cache_insert(&paths.root, kf);
-                    let resealed = seal_with_key(&kf, text.as_bytes(), aad)?;
-                    persist_sealed(path, &resealed)?;
-                    verify_reopen(paths, path, aad, Some(&text))?;
-                    key::mark_migrated(&paths.root)?;
+                    let migration = seal_with_key(&kf, text.as_bytes(), aad).and_then(|resealed| {
+                        persist_sealed(path, &resealed)?;
+                        verify_reopen(paths, path, aad, Some(&text))
+                    });
+                    if let Err(error) = migration {
+                        if let Err(restore_error) = persist_sealed(path, stored) {
+                            key::warn_once(format!(
+                                "v1 envelope upgrade failed ({error}) and the original sealed file could not be restored ({restore_error})"
+                            ));
+                        } else {
+                            key::warn_once(format!(
+                                "v1 envelope upgrade failed ({error}); keeping the original sealed file for a later retry"
+                            ));
+                        }
+                    } else if let Err(error) = key::mark_migrated(&paths.root) {
+                        key::warn_once(format!(
+                            "v1 envelope was upgraded but migration state could not be saved ({error})"
+                        ));
+                    }
                 } else {
                     key::cache_insert(&paths.root, kf);
                 }

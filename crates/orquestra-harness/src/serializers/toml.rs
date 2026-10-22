@@ -71,11 +71,11 @@ pub fn render_codex_toml(
 
         if !server.headers.is_empty() {
             let headers = entry
-                .entry("headers")
+                .entry("http_headers")
                 .or_insert(toml_edit::Item::Table(toml_edit::Table::new()));
             let Some(headers) = headers.as_table_mut() else {
                 return Err(format!(
-                    "[{CODEX_TABLE}.{}.headers] is not a table",
+                    "[{CODEX_TABLE}.{}.http_headers] is not a table",
                     server.id
                 ));
             };

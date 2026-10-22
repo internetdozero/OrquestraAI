@@ -26,20 +26,20 @@ The secret half lives only in the maintainer's offline copy and the
 
 ## What install.sh enforces
 
-1. Downloads the platform binary, `SHA256SUMS.txt`, and
-   `SHA256SUMS.txt.minisig` into a `0700` staging dir.
-2. Verifies the detached signature over the exact `SHA256SUMS.txt` bytes —
-   reference `minisign` when present, otherwise an inline PyNaCl
-   prehashed check (same math as the signer and the in-app updater).
+1. Downloads `SHA256SUMS.txt` via the latest-release redirect and resolves
+   its exact tag. It then downloads the binary and signature from that tag into
+   a `0700` staging dir.
+2. Verifies the detached signature and requires the trusted comment to name
+   `SHA256SUMS.txt` and that exact release version — reference `minisign` when
+   present, otherwise an inline PyNaCl prehashed check.
 3. Only then extracts the asset's SHA-256 entry and checks the binary.
 
-A bad signature always fails closed. When no verifier (or no `.minisig`
-asset) is available, the installer warns loudly and proceeds on SHA-256
-alone — unless `--require-sig` is passed, which turns that into a hard
-failure:
+A bad, missing, or unverifiable signature fails closed by default. Releases
+from before signing can still be installed with an explicit opt-in to
+checksum-only verification:
 
 ```sh
-curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash -s -- --require-sig
+curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash -s -- --allow-unsigned-legacy
 ```
 
 ## Manual verification
@@ -55,19 +55,24 @@ Without minisign, with Python + PyNaCl (`pip install pynacl`):
 
 ```sh
 python3 - RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1 \
-  SHA256SUMS.txt SHA256SUMS.txt.minisig <<'EOF'
+  SHA256SUMS.txt SHA256SUMS.txt.minisig 0.1.0-alpha.5 <<'EOF'
 import base64, hashlib, sys
 from nacl.signing import VerifyKey
-from nacl.exceptions import BadSignatureError
 pub = base64.b64decode(sys.argv[1])
 sums = open(sys.argv[2], 'rb').read()
-sig = base64.b64decode(open(sys.argv[3]).read().splitlines()[1].strip())
-assert sig[2:10] == pub[2:10], "signing key id mismatch"
+expected_version = sys.argv[4]
+lines = open(sys.argv[3]).read().splitlines()
+assert len(lines) == 4 and lines[2].startswith('trusted comment: ')
+sig = base64.b64decode(lines[1].strip(), validate=True)
+trusted = lines[2][len('trusted comment: '):]
+global_sig = base64.b64decode(lines[3].strip(), validate=True)
+assert sig[:2] == b'ED' and sig[2:10] == pub[2:10], "signing key id mismatch"
+fields = dict(field.split('=', 1) for field in trusted.split('\t') if '=' in field)
+assert fields.get('file') == 'SHA256SUMS.txt' and fields.get('version') == expected_version
 digest = hashlib.blake2b(sums, digest_size=64).digest()
-try:
-    VerifyKey(pub[10:42]).verify(sig[10:74] + digest)
-except BadSignatureError:
-    sys.exit("INVALID signature")
+key = VerifyKey(pub[10:42])
+key.verify(digest, sig[10:74])
+key.verify(sig[10:74] + trusted.encode(), global_sig)
 print("signature valid")
 EOF
 ```

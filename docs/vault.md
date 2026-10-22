@@ -19,18 +19,22 @@ re-seal under the active key instead of bricking unlock.
 
 ## Purging plaintext backups
 
-Backups are kept until the operator explicitly purges them: auto-deleting on
-first write would strand anyone whose new key cannot open the sealed files.
+Successful migrations remove their plaintext backups automatically after the
+sealed file verifies. The explicit purge action handles any remaining backups,
+including leftovers from a failed migration verification; it refuses to remove
+one while its sealed file cannot be opened.
 
 1. Confirm every service loads normally (Credentials screen, MCP list).
-2. Open Credentials → **Purge plaintext backups**, confirm the dialog.
+2. If backups remain, open Credentials → **Purge plaintext backups** and
+   confirm the dialog.
 3. The backend (`vault_purge_migration_backups`) verifies each sealed file
    still opens, then overwrites each backup with zeroes, syncs, and unlinks
    it. The toast reports per file (`vault`, `catalog`); a missing backup is
    not an error.
 
-The purge refuses while a sealed file does not open, refuses symlinks, and
-never touches harness configs.
+Startup cleanup also removes eligible legacy plaintext backups after verifying
+the corresponding sealed data. The purge refuses while a sealed file does not
+open, refuses symlinks, and never touches harness configs.
 
 ## Rotate pre-alpha.5 provider keys
 

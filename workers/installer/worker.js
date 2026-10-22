@@ -13,7 +13,7 @@
  */
 
 const REPO = "internetdozero/OrquestraAI";
-const TAG_API = `https://api.github.com/repos/${REPO}/releases/latest`;
+const LATEST_RELEASE = `https://github.com/${REPO}/releases/latest`;
 const RAW_AT = (tag) => `https://raw.githubusercontent.com/${REPO}/${tag}/install.sh`;
 const UA = "orquestra-installer-worker";
 /** How long a resolved tag is trusted before re-querying the API. */
@@ -26,17 +26,21 @@ async function latestTag() {
   if (tagCache.tag && now - tagCache.at < TAG_TTL_MS) {
     return tagCache.tag;
   }
-  const res = await fetch(TAG_API, {
-    headers: { "user-agent": UA, accept: "application/vnd.github+json" },
+  const res = await fetch(LATEST_RELEASE, {
+    redirect: "manual",
+    headers: { "user-agent": UA },
   });
-  if (!res.ok) {
+  const location = res.headers.get("location");
+  if (res.status < 300 || res.status >= 400 || !location) {
     if (tagCache.tag) return tagCache.tag;
     throw new Error(`release tag lookup failed: HTTP ${res.status}`);
   }
-  const { tag_name: tag } = await res.json();
-  if (typeof tag !== "string" || tag.length === 0) {
+  const releaseUrl = new URL(location, LATEST_RELEASE);
+  const match = releaseUrl.pathname.match(/\/releases\/tag\/([^/]+)$/);
+  const tag = match ? decodeURIComponent(match[1]) : null;
+  if (!tag) {
     if (tagCache.tag) return tagCache.tag;
-    throw new Error("release tag lookup returned no tag");
+    throw new Error("release tag redirect did not contain a release tag");
   }
   tagCache = { tag, at: now };
   return tag;

@@ -23,16 +23,17 @@ APP_DIR="${HOME}/.local/share/applications"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
 
 # 0. CLI Flags
-REQUIRE_SIG=0
+ALLOW_UNSIGNED_LEGACY=0
 for arg in "$@"; do
     case "$arg" in
-        --require-sig) REQUIRE_SIG=1 ;;
+        --require-sig) ALLOW_UNSIGNED_LEGACY=0 ;;
+        --allow-unsigned-legacy) ALLOW_UNSIGNED_LEGACY=1 ;;
         -h|--help)
-            echo "Usage: install.sh [--require-sig]"
-            echo "  --require-sig  Fail unless the release signature verifies"
-            echo "                 (without a verifier or .minisig asset)."
+            echo "Usage: install.sh [--require-sig | --allow-unsigned-legacy]"
+            echo "  --require-sig             Require a verifiable release signature (default)"
+            echo "  --allow-unsigned-legacy   Allow checksum-only verification for old unsigned releases"
             exit 0 ;;
-        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig)." >&2; exit 1 ;;
+        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig, --allow-unsigned-legacy)." >&2; exit 1 ;;
     esac
 done
 
@@ -105,7 +106,24 @@ echo "🔒 Downloading OrquestraAI release & SHA-256 checksum..."
 echo "ℹ️  Platform: ${OS}/${ARCH}"
 
 # 3. Fetch Release Binary and Checksums
-RELEASE_URL="https://github.com/${REPO}/releases/latest/download"
+LATEST_RELEASE_URL="https://github.com/${REPO}/releases/latest"
+EFFECTIVE_SUMS_URL=$(curl -fsSL -w '%{url_effective}' \
+    "${LATEST_RELEASE_URL}/download/SHA256SUMS.txt" \
+    -o "${TMP_DIR}/SHA256SUMS.txt") || {
+    echo "❌ Error: Could not download release checksums." >&2
+    exit 1
+}
+RELEASE_TAG=$(printf '%s' "$EFFECTIVE_SUMS_URL" | sed -n \
+    's#^.*/releases/download/\([^/]*\)/SHA256SUMS\.txt$#\1#p')
+case "$RELEASE_TAG" in
+    ""|*[!A-Za-z0-9._+-]*)
+        echo "❌ Security Error: could not safely resolve the release tag." >&2
+        exit 1
+        ;;
+esac
+RELEASE_VERSION=${RELEASE_TAG#v}
+RELEASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}"
+echo "ℹ️  Release tag: ${RELEASE_TAG}"
 ASSET=""
 for candidate in $ASSET_CANDIDATES; do
     if curl -fsSL "${RELEASE_URL}/${candidate}" -o "${TMP_DIR}/${candidate}" 2>/dev/null; then
@@ -118,22 +136,41 @@ if [ -z "$ASSET" ]; then
     exit 1
 fi
 echo "ℹ️  Release asset: ${ASSET}"
-curl -fsSL "${RELEASE_URL}/SHA256SUMS.txt" -o "${TMP_DIR}/SHA256SUMS.txt"
-# Older releases predate signing; a missing asset degrades to the
-# no-verifier path below (warning, or hard fail with --require-sig).
-curl -fsSL "${RELEASE_URL}/SHA256SUMS.txt.minisig" -o "${TMP_DIR}/SHA256SUMS.txt.minisig" 2>/dev/null || true
+# Older releases predate signing. They require the explicit
+# --allow-unsigned-legacy opt-in; current releases fail closed by default.
+SIGNATURE_AVAILABLE=1
+if ! curl -fsSL "${RELEASE_URL}/SHA256SUMS.txt.minisig" \
+        -o "${TMP_DIR}/SHA256SUMS.txt.minisig" 2>/dev/null ||
+        [ ! -s "${TMP_DIR}/SHA256SUMS.txt.minisig" ]; then
+    SIGNATURE_AVAILABLE=0
+    if [ "$ALLOW_UNSIGNED_LEGACY" != "1" ]; then
+        echo "❌ Security Error: release signature is missing; unsigned legacy releases require --allow-unsigned-legacy." >&2
+        exit 1
+    fi
+    echo "⚠️  Warning: explicitly allowing an unsigned legacy release; SHA-256 is the only integrity check." >&2
+fi
+
+verify_trusted_comment() {
+    trusted_comment=$(sed -n 's/^trusted comment: //p' "$TMP_DIR/SHA256SUMS.txt.minisig")
+    tab=$(printf '\t')
+    printf '%s\n' "$trusted_comment" | awk -F "$tab" -v version="$RELEASE_VERSION" \
+        '$1 ~ /^timestamp=[0-9][0-9]*$/ && $2 == "file=SHA256SUMS.txt" && $3 == "version=" version && NF == 3 { valid=1 } END { exit !valid }'
+}
 
 # 3b. Detached-signature gate over the exact SHA256SUMS.txt bytes.
 # Runs BEFORE any checksum is trusted: without the offline secret key no
 # valid signature can exist for forged checksums. Verification order:
 # reference `minisign`, then an inline PyNaCl prehashed check (same math
-# as scripts/sign-release.py and update_sig.rs), then a loud warning
-# that --require-sig turns into a hard failure.
+# as scripts/sign-release.py and update_sig.rs).
 SIG_STATUS=""
-if [ -s "${TMP_DIR}/SHA256SUMS.txt" ] && [ -s "${TMP_DIR}/SHA256SUMS.txt.minisig" ]; then
+if [ "$SIGNATURE_AVAILABLE" = "1" ]; then
     if command -v minisign >/dev/null 2>&1; then
         if minisign -Vm "${TMP_DIR}/SHA256SUMS.txt" -P "$RELEASE_PUBKEY" \
                 -x "${TMP_DIR}/SHA256SUMS.txt.minisig"; then
+            if ! verify_trusted_comment; then
+                echo "❌ Security Error: signature metadata does not match this release." >&2
+                exit 1
+            fi
             SIG_STATUS="verified (minisign)"
         else
             echo "❌ Security Error: release signature INVALID — refusing an unsigned release." >&2
@@ -141,39 +178,38 @@ if [ -s "${TMP_DIR}/SHA256SUMS.txt" ] && [ -s "${TMP_DIR}/SHA256SUMS.txt.minisig
         fi
     elif command -v python3 >/dev/null 2>&1 && python3 -c "import nacl.signing" 2>/dev/null; then
         if python3 - "$RELEASE_PUBKEY" "${TMP_DIR}/SHA256SUMS.txt" \
-                "${TMP_DIR}/SHA256SUMS.txt.minisig" << 'PYEOF'; then
+                "${TMP_DIR}/SHA256SUMS.txt.minisig" "$RELEASE_VERSION" << 'PYEOF'; then
 import base64, hashlib, sys
 from nacl.signing import VerifyKey
-from nacl.exceptions import BadSignatureError
 pub = base64.b64decode(sys.argv[1])
 sums = open(sys.argv[2], 'rb').read()
 lines = open(sys.argv[3]).read().splitlines()
-sig = base64.b64decode(lines[1].strip())
-if sig[2:10] != pub[2:10]:
+version = sys.argv[4]
+if len(lines) != 4 or not lines[2].startswith('trusted comment: '):
+    sys.exit(1)
+sig = base64.b64decode(lines[1].strip(), validate=True)
+trusted = lines[2][len('trusted comment: '):]
+global_sig = base64.b64decode(lines[3].strip(), validate=True)
+if len(pub) != 42 or len(sig) != 74 or sig[:2] != b'ED' or sig[2:10] != pub[2:10]:
+    sys.exit(1)
+fields = dict(field.split('=', 1) for field in trusted.split('\t') if '=' in field)
+if (len(fields) != 3 or not fields.get('timestamp', '').isdigit()
+        or fields.get('file') != 'SHA256SUMS.txt' or fields.get('version') != version):
     sys.exit(1)
 digest = hashlib.blake2b(sums, digest_size=64).digest()
-try:
-    VerifyKey(pub[10:42]).verify(sig[10:74] + digest)
-except BadSignatureError:
-    sys.exit(1)
+key = VerifyKey(pub[10:42])
+key.verify(digest, sig[10:74])
+key.verify(sig[10:74] + trusted.encode(), global_sig)
 PYEOF
             SIG_STATUS="verified (pynacl prehashed)"
         else
             echo "❌ Security Error: release signature INVALID — refusing an unsigned release." >&2
             exit 1
         fi
-    elif [ "$REQUIRE_SIG" = "1" ]; then
-        echo "❌ Security Error: --require-sig given but no verifier available (install minisign or python3-pynacl)." >&2
-        exit 1
     else
-        echo "⚠️  Warning: no signature verifier found (minisign or python3 with PyNaCl);" >&2
-        echo "   proceeding on SHA-256 alone. Prefer '--require-sig' on an equipped host." >&2
+        echo "❌ Security Error: signed release cannot be verified; install minisign or python3-pynacl." >&2
+        exit 1
     fi
-elif [ "$REQUIRE_SIG" = "1" ]; then
-    echo "❌ Security Error: --require-sig given but SHA256SUMS.txt(.minisig) is missing or empty." >&2
-    exit 1
-else
-    echo "⚠️  Warning: release carries no verifiable signature asset; proceeding on SHA-256 alone." >&2
 fi
 if [ -n "$SIG_STATUS" ]; then
     echo "✓ Release signature $SIG_STATUS: checksums authentic."
@@ -229,13 +265,11 @@ if [ "$OS" = "Linux" ]; then
     rm -f "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra.png" 2>/dev/null || true
     rm -f "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra-ai.png" 2>/dev/null || true
 
-    # Pinned icon: resolve the latest release tag first and fetch the icon
-    # at that tag, never the moving `main` branch. A miss is non-fatal: the
-    # app installs its bundled icons on first launch anyway.
+    # Pinned icon: reuse the tag whose checksums and binary were verified,
+    # never the moving `main` branch or a second latest-release lookup. A
+    # miss is non-fatal: the app installs its bundled icons on first launch.
     ICON_TMP="${TMP_DIR}/icon.png"
-    RELEASE_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
-        | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 || true)
-    if [ -n "$RELEASE_TAG" ] && curl -fsSL "https://raw.githubusercontent.com/${REPO}/${RELEASE_TAG}/src-tauri/icons/icon.png" -o "$ICON_TMP" 2>/dev/null && [ -s "$ICON_TMP" ]; then
+    if curl -fsSL "https://raw.githubusercontent.com/${REPO}/${RELEASE_TAG}/src-tauri/icons/icon.png" -o "$ICON_TMP" 2>/dev/null && [ -s "$ICON_TMP" ]; then
         cp "$ICON_TMP" "${ICON_DIR}/orquestra.png"
         cp "$ICON_TMP" "${ICON_DIR}/orquestra-ai.png"
         cp "$ICON_TMP" "${HOME}/.local/share/icons/orquestra.png" 2>/dev/null || true
@@ -286,4 +320,3 @@ echo "========================================================"
 echo "🎉 OrquestraAI installed successfully to ${TARGET_BIN}"
 echo "Run 'orquestra' in your terminal to launch the control plane."
 echo "========================================================"
-

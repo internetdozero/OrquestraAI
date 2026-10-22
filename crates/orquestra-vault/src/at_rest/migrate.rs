@@ -14,7 +14,7 @@ use super::unseal::verify_reopen;
 /// Migrate legacy plaintext: `0600` backup, atomic sealed write, reopen and
 /// compare. On success the plaintext backup is unlinked and the migrated
 /// flag is set, so no new plaintext backup lingers. On verification failure
-/// the backup is kept but overwritten sealed — never plaintext.
+/// the original bytes are restored and the readable backup is preserved.
 pub(super) fn migrate_legacy_and_verify(
     paths: &OrquestraPaths,
     path: &Path,
@@ -37,14 +37,18 @@ pub(super) fn migrate_legacy_and_verify(
             Ok(())
         }
         Err(error) => {
-            // Never leave plaintext behind on a failed migration: keep the
-            // backup, but sealed, so recovery stays possible without
-            // readable secrets on disk.
-            let _ = write_private_new(&backup, sealed.as_bytes());
-            Err(format!(
-                "legacy migration verification failed for {}: {error}",
-                path.display()
-            ))
+            // Keep both recovery paths intact: restore the original file and
+            // leave the plaintext backup unchanged if verification failed.
+            match persist_sealed(path, legacy) {
+                Ok(()) => Err(format!(
+                    "legacy migration verification failed for {}: {error}; original plaintext restored",
+                    path.display()
+                )),
+                Err(restore_error) => Err(format!(
+                    "legacy migration verification failed for {}: {error}; restoring the original also failed: {restore_error}",
+                    path.display()
+                )),
+            }
         }
     }
 }

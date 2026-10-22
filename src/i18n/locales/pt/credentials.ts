@@ -168,7 +168,7 @@ export const credentials = {
   purging: "Expurgando…",
   toastBackupsPurged: (purged: boolean, catalogPurged: boolean) =>
     purged || catalogPurged
-      ? `Backups em texto puro expurgados: ${[purged ? "vault" : null, catalogPurged ? "catalog" : null].filter(Boolean).join(", ")}`
+      ? `Backups em texto puro expurgados: ${[purged ? "cofre" : null, catalogPurged ? "catálogo" : null].filter(Boolean).join(", ")}`
       : "Não havia backups em texto puro para expurgar",
   detailsFor: (label: string) => `Detalhes de ${label}`,
   presetDescriptions: {

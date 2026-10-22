@@ -63,6 +63,38 @@ fn fallback_key_promotes_into_an_empty_keyring() {
 }
 
 #[test]
+fn failed_keyring_creation_uses_the_private_file_fallback() {
+    let _serial = test_keyring_lock();
+    test_keyring_clear();
+    test_keyring_force_usable(true);
+    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-keyring-fallback-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&root).expect("scratch");
+    let paths = OrquestraPaths {
+        root: root.clone(),
+        vault: root.clone(),
+        active: root.clone(),
+    };
+
+    test_keyring_fail_key_writes(true);
+    let result = file_key(&paths);
+    test_keyring_fail_key_writes(false);
+    test_keyring_force_usable(false);
+    let key = result.expect("keyring failure should use the fallback file");
+
+    assert_eq!(read_fallback_key(&root).expect("fallback read"), Some(key));
+    assert!(fallback_exists(&root));
+    test_keyring_clear();
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
 fn read_with_sealed_file_and_no_key_creates_nothing() {
     // A read against a stranded sealed file must fail closed, not mint
     // a fresh key that could never open it (the #323 lockout).

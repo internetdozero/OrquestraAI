@@ -43,10 +43,26 @@ pub(crate) use resolve::is_migrated;
 pub(crate) use resolve::{file_key, mark_migrated, promote_fallback_to_keyring};
 pub(crate) use ring::{keyring_usable, read_keyring_key};
 #[cfg(test)]
-pub(crate) use ring::{test_keyring_clear, test_keyring_lock, test_keyring_raw};
+pub(crate) use ring::{
+    test_keyring_clear, test_keyring_fail_key_writes, test_keyring_lock, test_keyring_raw,
+};
 
 static CACHE: OnceLock<Mutex<HashMap<String, [u8; 32]>>> = OnceLock::new();
 static WARNED: AtomicBool = AtomicBool::new(false);
+#[cfg(test)]
+thread_local! {
+    static TEST_FORCE_KEYRING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+#[cfg(test)]
+pub(crate) fn test_keyring_force_usable(force: bool) {
+    TEST_FORCE_KEYRING.with(|flag| flag.set(force));
+}
+
+#[cfg(test)]
+fn test_keyring_is_forced_usable() -> bool {
+    TEST_FORCE_KEYRING.with(std::cell::Cell::get)
+}
 
 fn cache() -> &'static Mutex<HashMap<String, [u8; 32]>> {
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))

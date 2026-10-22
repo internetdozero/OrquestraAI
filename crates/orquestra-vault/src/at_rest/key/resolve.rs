@@ -64,7 +64,15 @@ pub(crate) fn file_key(paths: &OrquestraPaths) -> Result<[u8; 32], String> {
                     .to_string(),
             );
         }
-        let key = create_keyring_key()?;
+        let key = match create_keyring_key() {
+            Ok(key) => key,
+            Err(error) => {
+                warn_once(format!(
+                    "OS keyring could not create a file key ({error}); using a 0600 key file — theft-of-disk protection is degraded until a keyring is available"
+                ));
+                create_fallback_key(&paths.root)?
+            }
+        };
         cache_insert(&paths.root, key);
         return Ok(key);
     }

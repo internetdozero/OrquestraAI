@@ -43,12 +43,16 @@ else
 fi
 curl -fsSL "$WORKER_URL" -o "$TMP_DIR/served.sh"
 
-command -v sha256sum >/dev/null 2>&1 || {
-    echo "❌ Error: 'sha256sum' is required for the parity check." >&2
+if command -v sha256sum >/dev/null 2>&1; then
+    HASH_CMD="sha256sum"
+elif command -v shasum >/dev/null 2>&1; then
+    HASH_CMD="shasum -a 256"
+else
+    echo "❌ Error: 'sha256sum' or 'shasum' is required for the parity check." >&2
     exit 1
-}
-CANONICAL=$(sha256sum "$TMP_DIR/canonical.sh" | cut -d' ' -f1)
-SERVED=$(sha256sum "$TMP_DIR/served.sh" | cut -d' ' -f1)
+fi
+CANONICAL=$($HASH_CMD "$TMP_DIR/canonical.sh" | cut -d' ' -f1)
+SERVED=$($HASH_CMD "$TMP_DIR/served.sh" | cut -d' ' -f1)
 echo "canonical ($TAG): $CANONICAL"
 echo "served   (edge): $SERVED"
 if [ "$CANONICAL" != "$SERVED" ]; then

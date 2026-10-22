@@ -209,6 +209,26 @@ fn dispatch_follows_the_harness_format() {
     assert!(codex.contains("[mcp_servers.github]"));
 }
 
+#[test]
+fn codex_toml_writes_remote_headers_under_http_headers() {
+    let remote = HarnessServer {
+        url: Some("https://mcp.example.test/mcp".to_string()),
+        headers: [("Authorization".to_string(), "Bearer token".to_string())]
+            .into_iter()
+            .collect(),
+        ..server("remote", "placeholder", &[])
+    };
+    let rendered = render_codex_toml("", &[remote], &BTreeSet::new()).unwrap();
+    let document: toml_edit::DocumentMut = rendered.parse().unwrap();
+    let entry = &document["mcp_servers"]["remote"];
+    assert_eq!(entry["url"].as_str(), Some("https://mcp.example.test/mcp"));
+    assert_eq!(
+        entry["http_headers"]["Authorization"].as_str(),
+        Some("Bearer token")
+    );
+    assert!(entry.get("headers").is_none());
+}
+
 /// A remote server drops `command`/`args` in both JSON shapes, so a harness
 /// never spawns a placeholder process for an HTTP endpoint.
 #[test]

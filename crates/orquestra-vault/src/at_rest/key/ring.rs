@@ -36,9 +36,11 @@ mod keyring_backend {
 #[cfg(test)]
 mod keyring_backend {
     use std::collections::HashMap;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Mutex, OnceLock};
 
     static MOCK: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    static FAIL_KEY_WRITES: AtomicBool = AtomicBool::new(false);
     /// Serializes the keyring-migration tests: the mock is global like the
     /// real keyring, so tests that touch it hold this to the end.
     static SERIAL: OnceLock<Mutex<()>> = OnceLock::new();
@@ -63,6 +65,9 @@ mod keyring_backend {
     }
 
     pub(super) fn set(account: &str, value: &str) -> Result<(), String> {
+        if account == super::ACCOUNT && FAIL_KEY_WRITES.load(Ordering::Relaxed) {
+            return Err("injected keyring write failure".to_string());
+        }
         store()
             .lock()
             .map_err(|_| "test keyring poisoned".to_string())?
@@ -74,6 +79,10 @@ mod keyring_backend {
         if let Ok(mut guard) = store().lock() {
             guard.clear();
         }
+    }
+
+    pub(super) fn fail_key_writes(fail: bool) {
+        FAIL_KEY_WRITES.store(fail, Ordering::Relaxed);
     }
 }
 
@@ -134,6 +143,10 @@ fn keyring_reachable() -> bool {
 }
 
 pub(crate) fn keyring_usable(root: &Path) -> bool {
+    #[cfg(test)]
+    if super::test_keyring_is_forced_usable() {
+        return true;
+    }
     !keyring_disabled(root) && keyring_reachable()
 }
 
@@ -192,4 +205,9 @@ pub(crate) fn test_keyring_clear() {
 #[cfg(test)]
 pub(crate) fn test_keyring_raw() -> Result<Option<String>, String> {
     keyring_backend::get(ACCOUNT)
+}
+
+#[cfg(test)]
+pub(crate) fn test_keyring_fail_key_writes(fail: bool) {
+    keyring_backend::fail_key_writes(fail);
 }
