@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { after, test } from "node:test";
 import { createHash } from "node:crypto";
@@ -95,10 +95,7 @@ test("installer requires signatures and binds them to the selected tag", () => {
   );
   result = runInstaller();
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(
-    execFileSync("cat", [join(homeDir, ".local/bin/orquestra")], { encoding: "utf8" }),
-    "fixture binary\n",
-  );
+  assert.equal(readFileSync(join(homeDir, ".local/bin/orquestra"), "utf8"), "fixture binary\n");
 });
 
 test("installer allows unsigned legacy releases only with explicit opt-in", () => {

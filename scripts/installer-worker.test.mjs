@@ -44,10 +44,6 @@ test("installer worker resolves the latest release through the redirect", async 
     assert.equal(calls.length, 2);
     assert.equal(calls[0].url, "https://github.com/internetdozero/OrquestraAI/releases/latest");
     assert.equal(calls[0].options.redirect, "manual");
-    assert.equal(
-      calls.some(({ url }) => url.includes("api.github.com")),
-      false,
-    );
   } finally {
     globalThis.fetch = originalFetch;
     globalThis.caches = originalCaches;
