@@ -78,7 +78,7 @@
     "--help",
     "-h"
   ],
-  "_scopesComment": "Tauri ACL split: every command must sit in exactly one scope set (src-tauri/permissions/*.toml), granted to the main window by src-tauri/capabilities/*.json. build.rs declares all commands deny-by-default, so a command missing here is denied at runtime. Moving a destructive command into safe-read fails the test below.",
+  "_scopesComment": "Tauri ACL split: every command must sit in exactly one scope set (src-tauri/permissions/*.toml), granted to the main window by src-tauri/capabilities/*.json. build.rs declares all commands deny-by-default, so a command missing here is denied at runtime. Moving a destructive command into safe-read fails the test below. vault-blind-ops is the deliberate exception: withheld from every window (no capability grants it) until a confirmed UI caller exists; the acl test asserts it stays ungranted.",
   "capabilityScopes": {
     "safe-read": [
       "core_status",
@@ -113,11 +113,13 @@
       "vault_save_service",
       "vault_delete_service",
       "vault_set_primary",
-      "vault_http_request",
-      "vault_exec",
       "vault_test_connection",
       "vault_remove_key",
       "reveal_mcp_secret"
+    ],
+    "vault-blind-ops": [
+      "vault_http_request",
+      "vault_exec"
     ],
     "update-ops": [
       "apply_app_update",

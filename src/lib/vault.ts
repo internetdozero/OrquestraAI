@@ -50,20 +50,7 @@ export interface VaultService {
   meta: Record<string, string>;
 }
 
-export interface VaultHttpResult {
-  status: number;
-  headers: Record<string, string>;
-  body: string;
-  usedKeyIndex: number;
-  rotated: boolean;
-}
 
-export interface VaultExecResult {
-  code: number;
-  stdout: string;
-  stderr: string;
-  usedKeyIndex: number;
-}
 
 const MOCK_PRESET_TABLE: Array<[string, string, string, string]> = [
   ["openai", "OpenAI", "GPT models and embeddings.", "https://platform.openai.com/api-keys"],
@@ -221,37 +208,13 @@ export function vaultSetPrimary(id: string, index: number): Promise<VaultService
   return invoke<VaultService>("vault_set_primary", { id, index });
 }
 
-/** Blind HTTP: backend injects the key, agent only sees scrubbed output. */
-export function vaultHttpRequest(input: {
-  service: string;
-  endpoint: string;
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
-  keyTag?: string | null;
-}): Promise<VaultHttpResult> {
-  return invoke<VaultHttpResult>("vault_http_request", {
-    service: input.service,
-    endpoint: input.endpoint,
-    method: input.method ?? "GET",
-    headers: input.headers ?? {},
-    body: input.body ?? null,
-    keyTag: input.keyTag ?? null,
-  });
-}
-
-/**
- * Blind exec: secret lives only in the child env, output is scrubbed.
- * Array only — the backend allowlists argv[0] and runs with no shell, so
- * shell strings are rejected server-side and must not be sent.
- *
- * Destructive and capability-gated (`vault-ops`): every caller must present
- * an explicit user confirmation (what runs, with which service) before
- * invoking, mirroring the PurgeConfirmModal gate on `purge_sessions`.
- */
-export function vaultExec(service: string, command: string[]): Promise<VaultExecResult> {
-  return invoke<VaultExecResult>("vault_exec", { service, command });
-}
+// NOTE: the backend still registers `vault_http_request` and `vault_exec`,
+// but no UI component may invoke blind key use: the two commands live in the
+// `vault-blind-ops` permission set, which no capability grants to any window,
+// so every invoke fails closed with a permission error. Re-exposing them
+// means adding a capability file for `vault-blind-ops` AND a caller-side
+// explicit user confirmation (what runs, with which service) mirroring the
+// PurgeConfirmModal gate on `purge_sessions`.
 
 /** Result of a live `vault_test_connection` ping. */
 export interface VaultTestResult {

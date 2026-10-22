@@ -5,17 +5,26 @@
 //! runtime. The test below pins the rest: the frozen `capabilityScopes` in
 //! `tests/fixtures/ipc-contract.json` must partition the registered commands
 //! exactly, the `permissions/*.toml` sets must match the frozen mapping
-//! (through `allow-<command>`), and the destructive commands must stay out of
-//! `safe-read` — otherwise removing `capabilities/vault-ops.json` would not
-//! actually revoke `vault_exec`.
+//! (through `allow-<command>`), the destructive commands must stay out of
+//! `safe-read`, and the withheld `vault-blind-ops` scope must be granted to
+//! no window — otherwise `vault_exec`/`vault_http_request` would be callable
+//! from the webview with no UI consumer to justify them.
 //!
 //! Test-only: nothing in this module is compiled into the binary.
+
+/// Scopes that must be granted to NO window: blind key use with no confirmed
+/// UI caller. Re-enabling one means adding a capability file AND a gated
+/// frontend wrapper; until then the acl test below fails if any capability
+/// references them.
+pub(crate) const WITHHELD_SCOPES: &[&str] = &["vault-blind-ops"];
 
 #[cfg(test)]
 mod tests {
     use std::{collections::BTreeSet, fs, path::PathBuf};
 
     use serde_json::Value;
+
+    use super::WITHHELD_SCOPES;
 
     fn manifest_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -158,9 +167,12 @@ mod tests {
         }
 
         // Capability files may only reference core permissions and the defined
-        // sets, and the main window must hold all five sets.
+        // sets. Every scope but the withheld ones must reach the main window;
+        // withheld scopes must be granted nowhere (deny-by-default keeps them
+        // denied at runtime even though their commands stay registered).
         let cap_dir = manifest_dir().join("capabilities");
         let mut main_grants: BTreeSet<String> = BTreeSet::new();
+        let mut all_grants: BTreeSet<String> = BTreeSet::new();
         let caps = fs::read_dir(&cap_dir)
             .unwrap_or_else(|error| panic!("cannot read {}: {error}", cap_dir.display()));
         for entry in caps {
@@ -196,16 +208,24 @@ mod tests {
                     "{} references unknown permission set {name:?}",
                     path.display()
                 );
+                all_grants.insert(name.to_string());
                 if on_main {
                     main_grants.insert(name.to_string());
                 }
             }
         }
         for scope in fixture_scopes.keys() {
-            assert!(
-                main_grants.contains(scope),
-                "no capability grants the {scope:?} set to the main window"
-            );
+            if WITHHELD_SCOPES.contains(&scope.as_str()) {
+                assert!(
+                    !all_grants.contains(scope),
+                    "withheld scope {scope:?} must be granted to no window; add a gated caller before re-enabling"
+                );
+            } else {
+                assert!(
+                    main_grants.contains(scope),
+                    "no capability grants the {scope:?} set to the main window"
+                );
+            }
         }
     }
 

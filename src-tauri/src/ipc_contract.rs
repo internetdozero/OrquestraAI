@@ -20,6 +20,7 @@ mod tests {
     use serde_json::Value;
 
     use crate::bridge::{BridgeReport, HarnessStatus, SecondaryAction, SecondaryStatus};
+    use crate::ipc_acl::WITHHELD_SCOPES;
     use crate::ideas::productivity::{DayActivity, ProductivityMetrics, WeeklyVelocity};
     use crate::ideas::types::{BlackboardNote, IdeaItem};
     use crate::mcp::{McpServer, McpTargetStatus};
@@ -227,10 +228,41 @@ mod tests {
             "the client calls commands the core does not register: {unknown:?}"
         );
 
-        let unused: Vec<_> = registered.difference(&invoked).cloned().collect();
+        // Commands in withheld scopes are registered but deliberately have no
+        // client wrapper: no capability grants them to any window, so every
+        // invoke fails closed. Anything else registered-but-uncalled is dead
+        // attack surface and fails here.
+        let scopes = fixture()["capabilityScopes"]
+            .as_object()
+            .expect("fixture has no capabilityScopes object")
+            .clone();
+        let withheld: BTreeSet<String> = WITHHELD_SCOPES
+            .iter()
+            .flat_map(|scope| {
+                scopes[*scope]
+                    .as_array()
+                    .unwrap_or_else(|| panic!("fixture has no {scope} scope"))
+                    .iter()
+                    .map(|command| {
+                        command
+                            .as_str()
+                            .expect("scope entry must be a string")
+                            .to_string()
+                    })
+            })
+            .collect();
+        let unused: BTreeSet<_> = registered.difference(&invoked).cloned().collect();
+        let unjustified: Vec<_> = unused.difference(&withheld).cloned().collect();
         assert!(
-            unused.is_empty(),
-            "the core registers commands no client calls: {unused:?}"
+            unjustified.is_empty(),
+            "the core registers commands no client calls: {unjustified:?}"
+        );
+        // And the reverse: a withheld command must never gain a client caller
+        // without its capability grant (added together, reviewed together).
+        let leaked: Vec<_> = withheld.intersection(&invoked).cloned().collect();
+        assert!(
+            leaked.is_empty(),
+            "withheld commands must have no client wrapper: {leaked:?}"
         );
     }
 

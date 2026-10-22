@@ -1,17 +1,16 @@
-# Secret-adjacent commands: vault writes, blind key use (HTTP proxy and child
-# process exec), live connection pings, and secret reveal. Granted to the main
+# Vault key lifecycle the UI actually drives: writes, primary selection,
+# live connection pings, key removal and secret reveal. Granted to the main
 # window by `capabilities/vault-ops.json`; without that file every one of
-# these invokes fails closed with a permission error. `vault_exec` additionally
-# requires an explicit user confirmation in the UI before it is invoked.
+# these invokes fails closed with a permission error. Blind key use
+# (`vault_exec`, `vault_http_request`) is NOT here: it lives in the withheld
+# `vault-blind-ops` set, granted to no window until a confirmed caller exists.
 [[set]]
 identifier = "vault-ops"
-description = "Vault key lifecycle and blind secret use (HTTP proxy, exec)."
+description = "Vault key lifecycle (no blind key use)."
 permissions = [
   "allow-vault-save-service",
   "allow-vault-delete-service",
   "allow-vault-set-primary",
-  "allow-vault-http-request",
-  "allow-vault-exec",
   "allow-vault-test-connection",
   "allow-vault-remove-key",
   "allow-reveal-mcp-secret",

@@ -1,0 +1,18 @@
+# Blind key use: the two commands that spend vault secrets without the
+# operator seeing them (`vault_http_request` injects the key into outbound
+# headers, `vault_exec` into a child env). WITHHELD BY DEFAULT: no file under
+# `capabilities/` grants this set to any window, so every invoke fails closed
+# with a permission error (deny-by-default via `build.rs` AppManifest).
+#
+# Re-enabling requires ALL of: (1) a new `capabilities/*.json` granting
+# `vault-blind-ops` to the calling window, (2) a frontend wrapper in
+# `src/lib/vault.ts` with an explicit user-confirmation gate mirroring the
+# PurgeConfirmModal on `purge_sessions`, (3) the frozen `capabilityScopes` in
+# `tests/fixtures/ipc-contract.json` moved back with a reviewer sign-off.
+[[set]]
+identifier = "vault-blind-ops"
+description = "Blind vault key use (HTTP proxy, child-process exec). Withheld: grant explicitly."
+permissions = [
+  "allow-vault-http-request",
+  "allow-vault-exec",
+]
