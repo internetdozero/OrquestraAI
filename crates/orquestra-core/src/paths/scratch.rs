@@ -164,54 +164,8 @@ pub fn fresh_scratch_dir(prefix: &str) -> CoreResult<PathBuf> {
 mod tests {
     use super::*;
     use std::collections::HashSet;
-    use std::ffi::{OsStr, OsString};
-    use std::sync::{Mutex, MutexGuard, OnceLock};
 
-    /// Serializes the tests that read or rewrite `XDG_RUNTIME_DIR`.
-    ///
-    /// The environment is process-global, so one test removing the variable
-    /// mid-flight would make [`scratch_root`] return — and
-    /// [`ensure_scratch_root`] create — a path another test set up. The lock
-    /// makes each test's view of the variable stable for its whole scope.
-    fn env_lock() -> MutexGuard<'static, ()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
-
-    /// Holds the env lock and pins `XDG_RUNTIME_DIR` to `value` for the
-    /// guarded scope, restoring the previous value on drop (panic included).
-    struct RuntimeDir {
-        previous: Option<OsString>,
-        _serial: MutexGuard<'static, ()>,
-    }
-
-    impl RuntimeDir {
-        fn set(value: Option<&OsStr>) -> Self {
-            let serial = env_lock();
-            let previous = std::env::var_os("XDG_RUNTIME_DIR");
-            match value {
-                Some(value) => std::env::set_var("XDG_RUNTIME_DIR", value),
-                None => std::env::remove_var("XDG_RUNTIME_DIR"),
-            }
-            Self {
-                previous,
-                _serial: serial,
-            }
-        }
-    }
-
-    impl Drop for RuntimeDir {
-        fn drop(&mut self) {
-            // Runs before the fields drop, so the restore happens while the
-            // env lock is still held.
-            match self.previous.take() {
-                Some(value) => std::env::set_var("XDG_RUNTIME_DIR", value),
-                None => std::env::remove_var("XDG_RUNTIME_DIR"),
-            }
-        }
-    }
+    use crate::testenv::EnvGuard;
 
     /// The regression this helper exists for: concurrent temp files in one
     /// process must never share a name, or two IPC threads truncate and
@@ -255,7 +209,8 @@ mod tests {
             .unwrap_or(0);
         let xdg =
             std::env::temp_dir().join(format!("orquestra-xdg-{}-{nanos}", std::process::id()));
-        let _env = RuntimeDir::set(Some(xdg.as_os_str()));
+        let env = EnvGuard::capture("XDG_RUNTIME_DIR");
+        env.set(Some(xdg.as_os_str()));
         let root = scratch_root();
         assert_eq!(root, xdg.join("orquestra-ai"));
         let _ = std::fs::remove_dir_all(&xdg);
@@ -265,7 +220,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn scratch_root_fallback_is_per_uid() {
-        let _env = RuntimeDir::set(None);
+        let env = EnvGuard::capture("XDG_RUNTIME_DIR");
+        env.set(None);
         let root = scratch_root();
         // SAFETY: `getuid` takes no arguments and has no failure mode.
         let uid = unsafe { libc::getuid() };
@@ -292,7 +248,8 @@ mod tests {
         ));
         std::fs::create_dir_all(&xdg).expect("xdg dir");
         {
-            let _env = RuntimeDir::set(Some(xdg.as_os_str()));
+            let env = EnvGuard::capture("XDG_RUNTIME_DIR");
+            env.set(Some(xdg.as_os_str()));
             let root = ensure_scratch_root().expect("runtime root");
             assert_eq!(root, xdg.join("orquestra-ai"));
             assert!(
@@ -311,7 +268,8 @@ mod tests {
         let _ = std::fs::remove_dir_all(&xdg);
 
         // The per-uid fallback path creates and verifies the same way.
-        let _env = RuntimeDir::set(None);
+        let env = EnvGuard::capture("XDG_RUNTIME_DIR");
+        env.set(None);
         let root = ensure_scratch_root().expect("fallback runtime root");
         assert_eq!(root, scratch_root());
         #[cfg(unix)]

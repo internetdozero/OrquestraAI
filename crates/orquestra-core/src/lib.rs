@@ -14,6 +14,10 @@ pub mod harness;
 pub mod logging;
 pub mod paths;
 pub mod skills;
+// Shared test-only environment guard: the process environment is global, so
+// every env-mutating test in the crate serializes on one lock.
+#[cfg(test)]
+mod testenv;
 
 pub use agents::{read_agents, write_agents, DEFAULT_AGENTS};
 pub use error::{CoreError, CoreResult};

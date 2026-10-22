@@ -101,8 +101,10 @@ pub struct HarnessSpec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
+    use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
+
+    use crate::testenv::EnvGuard;
 
     /// `CODEX_HOME` wins over `~/.codex` while set; removing it restores
     /// the home-relative default, and `is_installed` follows the resolved
@@ -114,15 +116,15 @@ mod tests {
         assert_eq!(spec.env_override, Some("CODEX_HOME"));
 
         let home = std::env::temp_dir().join(format!("orquestra-harness-{}", std::process::id()));
-        let previous = env::var("CODEX_HOME").ok();
+        let codex_home = EnvGuard::capture("CODEX_HOME");
 
-        unsafe { env::set_var("CODEX_HOME", "/tmp/orquestra-codex-mock") };
+        codex_home.set(Some(OsStr::new("/tmp/orquestra-codex-mock")));
         assert_eq!(
             resolve_install_dir(spec, &home),
             PathBuf::from("/tmp/orquestra-codex-mock")
         );
 
-        unsafe { env::remove_var("CODEX_HOME") };
+        codex_home.set(None);
         assert_eq!(resolve_install_dir(spec, &home), home.join(".codex"));
         assert!(!is_installed(spec, &home));
 
@@ -130,10 +132,6 @@ mod tests {
         assert!(is_installed(spec, &home));
         std::fs::remove_dir_all(&home).unwrap();
         assert!(!is_installed(spec, &home));
-
-        if let Some(value) = previous {
-            unsafe { env::set_var("CODEX_HOME", value) }
-        }
     }
 
     #[test]
@@ -142,15 +140,9 @@ mod tests {
         assert_eq!(spec.env_override, Some("CLAUDE_CONFIG_DIR"));
         let home = Path::new("/tmp/orquestra-home-that-cannot-exist");
 
-        let previous = env::var("CLAUDE_CONFIG_DIR").ok();
-        unsafe { env::set_var("CLAUDE_CONFIG_DIR", "   ") };
+        let claude_config = EnvGuard::capture("CLAUDE_CONFIG_DIR");
+        claude_config.set(Some(OsStr::new("   ")));
         assert_eq!(resolve_install_dir(spec, home), home.join(".claude"));
-
-        if let Some(value) = previous {
-            unsafe { env::set_var("CLAUDE_CONFIG_DIR", value) };
-        } else {
-            unsafe { env::remove_var("CLAUDE_CONFIG_DIR") };
-        }
     }
 
     #[test]
