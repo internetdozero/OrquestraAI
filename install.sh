@@ -80,7 +80,7 @@ trap 'exit 143' TERM
 # 2b. Platform Detection (OS + architecture -> release asset)
 # Mirrors the in-app updater mapping in src-tauri/src/updater.rs:
 # Linux ships `orquestra-linux-x86_64` (plus the legacy `orquestra-ai`
-# alias); macOS ships `orquestra-macos-arm64` (Apple Silicon only).
+# alias); macOS ships `orquestra-macos-arm64` and `orquestra-macos-x86_64`.
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 ASSET_CANDIDATES=""
@@ -94,7 +94,8 @@ case "$OS" in
     Darwin)
         case "$ARCH" in
             arm64|aarch64) ASSET_CANDIDATES="orquestra-macos-arm64" ;;
-            *) echo "❌ Error: unsupported architecture '$ARCH' on macOS (only arm64/Apple Silicon has release binaries)." >&2; exit 1 ;;
+            x86_64) ASSET_CANDIDATES="orquestra-macos-x86_64" ;;
+            *) echo "❌ Error: unsupported architecture '$ARCH' on macOS (only arm64 and x86_64 have release binaries)." >&2; exit 1 ;;
         esac
         ;;
     *) echo "❌ Error: unsupported operating system '$OS' (only Linux and macOS are supported)." >&2; exit 1 ;;

@@ -33,6 +33,14 @@ jobs:
             artifact: orquestra-macos-arm64
             bin_name: orquestra-macos-arm64
             is_linux: false
+          # Intel macs: `macos-13` was retired in Dec 2025, so native
+          # x86_64 builds ride `macos-15-intel` (last Intel label, kept
+          # until Aug 2027). Asset naming mirrors the arm64 row.
+          - name: macOS Intel (x86_64)
+            os: macos-15-intel
+            artifact: orquestra-macos-x86_64
+            bin_name: orquestra-macos-x86_64
+            is_linux: false
 
     steps:
       - name: Checkout repository
