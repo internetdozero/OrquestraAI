@@ -15,10 +15,13 @@ pub struct SweepReport {
     pub status: String,
 }
 
+/// `active_sockets` is the live-socket table (`/proc/net/unix`) when the
+/// platform can report one. `None` means liveness is *unavailable* — not
+/// empty — and no socket may be judged dead on that basis.
 pub(super) fn sweep_at(
     orquestra_root: &Path,
     scratch_root: &Path,
-    active_sockets: &str,
+    active_sockets: Option<&str>,
     now: SystemTime,
 ) -> Result<SweepReport, String> {
     let mut report = SweepReport {
@@ -40,12 +43,27 @@ pub(super) fn sweep_at(
 /// No Unix sockets exist off Unix, and liveness comes from
 /// `/proc/net/unix` — fail closed by sweeping nothing.
 #[cfg(not(unix))]
-fn clean_sockets(_root: &Path, _active: &str, _report: &mut SweepReport) -> Result<(), String> {
+fn clean_sockets(
+    _root: &Path,
+    _active: Option<&str>,
+    _report: &mut SweepReport,
+) -> Result<(), String> {
     Ok(())
 }
 
 #[cfg(unix)]
-fn clean_sockets(root: &Path, active: &str, report: &mut SweepReport) -> Result<(), String> {
+fn clean_sockets(
+    root: &Path,
+    active: Option<&str>,
+    report: &mut SweepReport,
+) -> Result<(), String> {
+    // An absent table proves only that this platform cannot tell us which
+    // sockets are alive. Deleting on that gap used to unlink a running
+    // instance's `orquestra.sock` on macOS, where `/proc/net/unix` does not
+    // exist: the caller passed an empty string and every socket looked dead.
+    let Some(active) = active else {
+        return Ok(());
+    };
     if !is_real_directory(root)? {
         return Ok(());
     }

@@ -185,7 +185,7 @@ fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
     let link = scratch.join("old-link");
     symlink(&old_file, &link).unwrap();
 
-    let report = sweep_at(&orquestra, &scratch, &live_table, SystemTime::now()).unwrap();
+    let report = sweep_at(&orquestra, &scratch, Some(&live_table), SystemTime::now()).unwrap();
     assert_eq!(report.removed_count, 2);
     assert!(!dead_path.exists());
     assert!(live_path.exists());
@@ -198,6 +198,48 @@ fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
         .file_type()
         .is_symlink());
     assert_eq!(report.status, "Sweep completed.");
+    drop(listener);
+}
+
+/// macOS regression: `/proc/net/unix` does not exist there, and the caller
+/// used to hand the sweep an empty table. "Empty" and "unavailable" are
+/// different facts — only an empty table may justify deleting a socket — so
+/// the unavailable case must leave the tree untouched, including a socket
+/// that is dead.
+#[cfg(unix)]
+#[test]
+fn sweep_never_removes_sockets_when_liveness_is_unavailable() {
+    let test = TestRoot::new();
+    let orquestra = test.0.join(".orquestra");
+    let scratch = test.0.join("scratch");
+    fs::create_dir_all(&orquestra).unwrap();
+    fs::create_dir_all(&scratch).unwrap();
+
+    let live_path = orquestra.join("orquestra.sock");
+    let listener = UnixListener::bind(&live_path).unwrap();
+    let dead_path = orquestra.join("stale.sock");
+    drop(UnixListener::bind(&dead_path).unwrap());
+
+    let report = sweep_at(&orquestra, &scratch, None, SystemTime::now()).unwrap();
+    assert_eq!(report.removed_count, 0, "unknown liveness deletes nothing");
+    assert!(
+        live_path.exists(),
+        "the running instance's socket must survive"
+    );
+    assert!(
+        dead_path.exists(),
+        "even a dead socket is kept when liveness cannot be proven"
+    );
+
+    // The same tree swept with a real table: only the dead socket goes.
+    let table = format!(
+        "Num RefCount Protocol Flags Type St Inode Path\n00000000: 00000002 00000000 00010000 0001 01 77 {}\n",
+        live_path.display()
+    );
+    let swept = sweep_at(&orquestra, &scratch, Some(&table), SystemTime::now()).unwrap();
+    assert_eq!(swept.removed_count, 1);
+    assert!(live_path.exists());
+    assert!(!dead_path.exists());
     drop(listener);
 }
 
@@ -219,7 +261,7 @@ fn sweep_does_not_follow_symlinked_roots_or_remove_future_dated_files() {
     let report = sweep_at(
         &test.0.join("missing-orquestra"),
         &linked_root,
-        "",
+        Some(""),
         SystemTime::now(),
     )
     .unwrap();
