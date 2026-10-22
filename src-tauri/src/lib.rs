@@ -9,6 +9,7 @@ mod cli;
 mod community;
 mod official_mcps;
 mod desktop;
+mod desktop_backup;
 mod desktop_icons;
 pub mod harness;
 pub mod ideas;

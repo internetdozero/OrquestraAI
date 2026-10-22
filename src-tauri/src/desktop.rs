@@ -8,7 +8,6 @@
 //! rejected so a crafted string can never escape into a local handler.
 
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Root everything here is confined to.
 fn orquestra_root() -> Result<PathBuf, String> {
@@ -100,39 +99,16 @@ pub fn open_in_file_manager(path: String) -> Result<(), String> {
 /// Snapshot `~/.orquestra` (configs, presets, vault, projections) into a
 /// `tar.gz` under `~/.orquestra/backups/`, excluding previous backups.
 /// Returns the archive path so the UI can toast the real destination.
+/// Archive and directory are locked to owner-only (`0600`/`0700`) inside
+/// [`crate::desktop_backup`]: the tarball embeds cleartext vault secrets.
 #[tauri::command]
 pub fn create_orquestra_backup() -> Result<String, String> {
     let root = orquestra_root()?;
     if !root.is_dir() {
         return Err(format!("{} does not exist yet", root.display()));
     }
-    let backups = root.join("backups");
-    std::fs::create_dir_all(&backups)
-        .map_err(|error| format!("failed to create {}: {error}", backups.display()))?;
-
-    let stamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0);
-    let archive = backups.join(format!("orquestra_backup_{stamp}.tar.gz"));
-
-    // Arg vector, no shell: nothing here is ever interpreted.
-    let status = std::process::Command::new("tar")
-        .args([
-            "-czf",
-            archive.to_str().ok_or("Unrepresentable backup path")?,
-            "-C",
-            root.to_str().ok_or("Unrepresentable root path")?,
-            "--exclude=backups",
-            ".",
-        ])
-        .status()
-        .map_err(|error| format!("Tar execution failed: {error}"))?;
-    if !status.success() {
-        return Err("Failed to create archive".to_string());
-    }
-
-    Ok(archive.to_string_lossy().to_string())
+    crate::desktop_backup::create_backup_at(&root)
+        .map(|archive| archive.to_string_lossy().to_string())
 }
 
 /// On Linux desktop environments, automatically install the .desktop launcher and
