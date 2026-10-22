@@ -1,7 +1,10 @@
-//! System health snapshots (Linux-only `/proc` metrics) and narrowly scoped
-//! stale-cache cleanup. Off Linux the health snapshot reports an explicit
-//! error and socket sweeping fails closed: without `/proc/net/unix` liveness
-//! cannot be proven, so no socket is ever deleted.
+//! System health snapshots and narrowly scoped stale-cache cleanup.
+//!
+//! Health is collected natively per OS: `/proc` on Linux, sysctl and
+//! `host_statistics64` on macOS. On any other platform the snapshot reports
+//! an explicit error instead of inventing numbers. Socket sweeping reads
+//! liveness from `/proc/net/unix`, which only Linux has; off Linux it fails
+//! closed, so no socket is ever deleted on a guess.
 
 mod health;
 mod sweep;
@@ -11,8 +14,9 @@ mod tests;
 pub use health::{CpuStats, MemoryStats, SystemHealth, TmpStats, TopProcess};
 pub use sweep::SweepReport;
 
-/// Collect live Linux memory, tmpfs, load and process metrics.
-/// Returns an explicit error off Linux, where `/proc` does not exist.
+/// Collect live memory, swap, scratch-volume, load and process metrics from
+/// the platform's native source. Returns an explicit error on platforms
+/// without a collector.
 #[tauri::command]
 pub fn get_system_health() -> Result<SystemHealth, String> {
     health::snapshot()

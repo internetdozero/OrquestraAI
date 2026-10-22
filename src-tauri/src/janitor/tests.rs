@@ -134,6 +134,22 @@ fn proc_parsers_and_memory_math_handle_linux_formats() {
     assert!(parse_load_one("invalid").is_err());
 }
 
+/// The Darwin twin of the `/proc` smoke test: real syscalls, so it only runs
+/// on a Mac runner. Everything it asserts is shape, not a specific number.
+#[cfg(target_os = "macos")]
+#[test]
+fn snapshot_reads_native_darwin_metrics() {
+    let health = snapshot().expect("Darwin sysctl and Mach VM metrics should be readable");
+    assert!(health.ram.total_mb > 0);
+    assert!(health.ram.free_mb <= health.ram.total_mb);
+    assert!(health.ram.used_percent.is_finite());
+    assert!(health.swap.used_percent.is_finite());
+    assert!(health.tmp.total_mb > 0);
+    assert!(!health.tmp.is_tmpfs, "macOS has no tmpfs");
+    assert!(health.cpu.cores > 0);
+    assert!(health.top_processes.len() <= 5);
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn snapshot_reads_live_proc_and_tmp_metrics() {
