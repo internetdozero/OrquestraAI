@@ -85,14 +85,23 @@ pub fn open_in_file_manager(path: String) -> Result<(), String> {
     };
 
     #[cfg(target_os = "linux")]
-    let opener: (&str, Vec<&str>) = ("xdg-open", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
+    let opener: (&str, Vec<&str>) = (
+        "xdg-open",
+        vec![reveal.to_str().ok_or("Unrepresentable path")?],
+    );
     #[cfg(target_os = "macos")]
     let opener: (&str, Vec<&str>) = ("open", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
     #[cfg(target_os = "windows")]
-    let opener: (&str, Vec<&str>) = ("explorer", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
+    let opener: (&str, Vec<&str>) = (
+        "explorer",
+        vec![reveal.to_str().ok_or("Unrepresentable path")?],
+    );
     #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
     return Err("Revealing folders is not supported on this platform".to_string());
-    std::process::Command::new(opener.0).args(&opener.1).spawn().map(|_| ())
+    std::process::Command::new(opener.0)
+        .args(&opener.1)
+        .spawn()
+        .map(|_| ())
         .map_err(|error| format!("Failed to launch file manager: {error}"))
 }
 
@@ -156,10 +165,11 @@ mod tests {
         assert_eq!(program, "rundll32");
         assert_eq!(args[0], "url.dll,FileProtocolHandler");
         assert_eq!(args[1], "https://example.com/a?x=1&y=2");
-        assert!(args.iter().all(|arg| arg != "/C" && arg != "cmd" && arg != "start"));
+        assert!(args
+            .iter()
+            .all(|arg| arg != "/C" && arg != "cmd" && arg != "start"));
 
-        let (program, args) =
-            browser_launch("linux", "  http://example.com/docs  ").expect("http");
+        let (program, args) = browser_launch("linux", "  http://example.com/docs  ").expect("http");
         assert_eq!(program, "xdg-open");
         assert_eq!(args, vec!["http://example.com/docs".to_string()]);
 
@@ -197,7 +207,8 @@ mod tests {
             "the desktop entry symlink must stay"
         );
         assert_eq!(std::fs::read_to_string(&outside).unwrap(), original);
-        let regular = std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
+        let regular =
+            std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
         assert!(regular.contains("Name=OrquestraAI"));
         let _ = std::fs::remove_dir_all(&root);
     }
@@ -226,12 +237,10 @@ mod tests {
             !outside.join("orquestra.desktop").exists(),
             "install must not create a launcher in the symlink target"
         );
-        assert!(
-            std::fs::symlink_metadata(&link)
-                .unwrap()
-                .file_type()
-                .is_symlink()
-        );
+        assert!(std::fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink());
         let _ = std::fs::remove_dir_all(&root);
     }
 

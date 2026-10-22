@@ -109,7 +109,9 @@ mod tests {
             Some(scope)
         );
         assert_eq!(
-            value.get("permission").and_then(|permission| permission.get("bash")),
+            value
+                .get("permission")
+                .and_then(|permission| permission.get("bash")),
             Some(&serde_json::Value::String("ask".to_string()))
         );
 
@@ -118,7 +120,8 @@ mod tests {
 
     #[test]
     fn merges_into_existing_skills_block() {
-        let content = "{\n  \"skills\": { \"paths\": [\"/other\"] },\n  \"mcp\": { \"rea\": true }\n}\n";
+        let content =
+            "{\n  \"skills\": { \"paths\": [\"/other\"] },\n  \"mcp\": { \"rea\": true }\n}\n";
         let scope = "/home/system/.orquestra/active/opencode";
 
         let updated = merge_skills_path(content, scope).unwrap().unwrap();
@@ -185,10 +188,16 @@ mod tests {
         let report = deploy_at(&test.home, &test.paths).unwrap();
 
         let backup = PathBuf::from(report.backup_dir.clone().unwrap());
-        assert!(backup.file_name().unwrap().to_string_lossy().starts_with("pre-fusion-"));
+        assert!(backup
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("pre-fusion-"));
 
         // Originals are preserved in the backup.
-        assert!(backup.join("antigravity/.gemini__config__skills/alpha/SKILL.md").is_file());
+        assert!(backup
+            .join("antigravity/.gemini__config__skills/alpha/SKILL.md")
+            .is_file());
         assert!(backup.join("codex/.codex__skills/beta/SKILL.md").is_file());
         assert_eq!(
             fs::read_to_string(backup.join("antigravity/.gemini__config__AGENTS.md")).unwrap(),
@@ -230,8 +239,16 @@ mod tests {
         );
 
         // Harness-owned state survives inside the projection.
-        assert!(test.paths.projection_dir("codex").join(".system/imagegen/SKILL.md").is_file());
-        assert!(test.paths.projection_dir("hermes").join(".curator_state").is_file());
+        assert!(test
+            .paths
+            .projection_dir("codex")
+            .join(".system/imagegen/SKILL.md")
+            .is_file());
+        assert!(test
+            .paths
+            .projection_dir("hermes")
+            .join(".curator_state")
+            .is_file());
 
         // Fusion merges rather than resets: each harness keeps the skills it
         // already had visible, now linked from the vault.
@@ -254,7 +271,10 @@ mod tests {
             &test.home.join(".gemini/config/AGENTS.md"),
             &test.paths.agents_path(),
         );
-        assert_linked(&test.home.join(".codex/AGENTS.md"), &test.paths.agents_path());
+        assert_linked(
+            &test.home.join(".codex/AGENTS.md"),
+            &test.paths.agents_path(),
+        );
         assert_linked(
             &test.home.join(".config/manicode/AGENTS.md"),
             &test.paths.agents_path(),
@@ -275,11 +295,24 @@ mod tests {
         // Kilo config keeps its comment and gains the projection path.
         let kilo = fs::read_to_string(test.home.join(".config/kilo/kilo.jsonc")).unwrap();
         assert!(kilo.contains("// keep me"));
-        assert!(kilo.contains(&test.paths.projection_dir("kilo").to_string_lossy().into_owned()));
+        assert!(kilo.contains(
+            &test
+                .paths
+                .projection_dir("kilo")
+                .to_string_lossy()
+                .into_owned()
+        ));
 
         // OpenCode config is created for an installed harness.
-        let opencode = fs::read_to_string(test.home.join(".config/opencode/opencode.jsonc")).unwrap();
-        assert!(opencode.contains(&test.paths.projection_dir("opencode").to_string_lossy().into_owned()));
+        let opencode =
+            fs::read_to_string(test.home.join(".config/opencode/opencode.jsonc")).unwrap();
+        assert!(opencode.contains(
+            &test
+                .paths
+                .projection_dir("opencode")
+                .to_string_lossy()
+                .into_owned()
+        ));
 
         // Harness instructions were folded into the pristine master file.
         let master = fs::read_to_string(test.paths.agents_path()).unwrap();
@@ -348,21 +381,18 @@ mod tests {
         let names: Vec<&str> = found.iter().map(|(name, _)| name.as_str()).collect();
         assert_eq!(names, ["kept"]);
         assert!(
-            found.iter().all(|(_, path)| {
-                !path.starts_with(&outside) && !path.starts_with(&nested_out)
-            }),
+            found
+                .iter()
+                .all(|(_, path)| { !path.starts_with(&outside) && !path.starts_with(&nested_out) }),
             "walk returned a path outside the harness: {found:?}"
         );
-        assert!(
-            fs::read_to_string(outside.join("scripts/steal.sh"))
-                .unwrap()
-                .contains("ssh-private")
-        );
+        assert!(fs::read_to_string(outside.join("scripts/steal.sh"))
+            .unwrap()
+            .contains("ssh-private"));
 
         let _ = fs::remove_dir_all(&root);
     }
 
     mod secondary;
     mod shared_root;
-
 }

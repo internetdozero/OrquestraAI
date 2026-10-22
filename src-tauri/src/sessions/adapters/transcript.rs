@@ -124,9 +124,7 @@ fn turn_role(entry: &Value) -> Option<&'static str> {
         if let Some(role) = source.and_then(Value::as_str) {
             return match role {
                 "user" | "human" | "USER_EXPLICIT" | "USER_INPUT" => Some("user"),
-                "assistant" | "model" | "ai" | "MODEL" | "PLANNER_RESPONSE" => {
-                    Some("assistant")
-                }
+                "assistant" | "model" | "ai" | "MODEL" | "PLANNER_RESPONSE" => Some("assistant"),
                 // System prompts are harness scaffolding: they are not a
                 // turn, and the drawer must never paint them as one.
                 "system" | "developer" => return None,
@@ -142,8 +140,7 @@ fn turn_timestamp(entry: &Value) -> Option<String> {
     if let Some(raw) = json_string(entry, &["timestamp", "published_at", "created_at"]) {
         return Some(normalized_timestamp(&raw));
     }
-    json_timestamp(entry, &["timestamp", "published_at", "created_at"])
-        .map(iso8601_from_secs)
+    json_timestamp(entry, &["timestamp", "published_at", "created_at"]).map(iso8601_from_secs)
 }
 
 /// Assemble one turn: system scaffolding refused, cleaned, empties dropped,
@@ -258,10 +255,7 @@ mod tests {
             clean_turn_content("assistant", "<thought size=\"3\">x</thought>ok"),
             "ok"
         );
-        assert_eq!(
-            clean_turn_content("user", "keep <think>drop this"),
-            "keep"
-        );
+        assert_eq!(clean_turn_content("user", "keep <think>drop this"), "keep");
     }
 
     #[test]
@@ -316,10 +310,7 @@ mod tests {
 
     #[test]
     fn synthetic_reason_rows_are_not_turns() {
-        for (role, reason) in [
-            ("user", "system_reminder"),
-            ("assistant", "task_completed"),
-        ] {
+        for (role, reason) in [("user", "system_reminder"), ("assistant", "task_completed")] {
             let entry = serde_json::json!({
                 "type": role,
                 "content": "synthetic",

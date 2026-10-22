@@ -65,7 +65,9 @@ fn tick() -> Result<(), String> {
     let report = purge::execute_selection(&store, selection)?;
     crate::log_info!(
         "auto-purge removed {} sessions ({} bytes) with {} failures",
-        report.deleted_count, report.reclaimed_bytes, report.failed_count
+        report.deleted_count,
+        report.reclaimed_bytes,
+        report.failed_count
     );
     for error in &report.errors {
         crate::log_error!("auto-purge: {error}");

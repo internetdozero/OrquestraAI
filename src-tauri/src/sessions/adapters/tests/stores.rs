@@ -120,13 +120,17 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
         .expect("delete");
     assert_eq!(freed, folder, "reclaim reports the same pruned total");
     assert!(
-        !home.0.join(format!(".freebuff/worktrees/{thread}")).exists(),
+        !home
+            .0
+            .join(format!(".freebuff/worktrees/{thread}"))
+            .exists(),
         "the same-id worktree is reclaimed"
     );
 
-    let remaining: i64 = Connection::open(home.0.join(
-        ".config/freebuff-desktop/projects/OrquestraAI-abc123/desktop-v2.db",
-    ))
+    let remaining: i64 = Connection::open(
+        home.0
+            .join(".config/freebuff-desktop/projects/OrquestraAI-abc123/desktop-v2.db"),
+    )
     .expect("reopen")
     .query_row(
         "SELECT (SELECT COUNT(*) FROM threads) + (SELECT COUNT(*) FROM messages) + \
@@ -147,7 +151,11 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
     let relisted = adapter(&home.0, "freebuff")
         .list_sessions()
         .expect("relist");
-    assert_eq!(sessions.len(), 2, "thread + fallback; same-id worktree is deduped");
+    assert_eq!(
+        sessions.len(),
+        2,
+        "thread + fallback; same-id worktree is deduped"
+    );
     assert_eq!(
         relisted.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),
         [fallback.id.as_str()]
@@ -319,7 +327,9 @@ fn freebuff_dedupes_prefix_worktrees_against_desktop_threads() {
         "the orphan worktree is untouched"
     );
 
-    let relisted = adapter(&home.0, "freebuff").list_sessions().expect("relist");
+    let relisted = adapter(&home.0, "freebuff")
+        .list_sessions()
+        .expect("relist");
     assert!(
         relisted.iter().any(|s| s.id == "deadbeef"),
         "orphan survives the desktop delete"
@@ -379,10 +389,7 @@ fn a_symlinked_session_file_is_not_sized_or_loaded() {
         super::super::utils::read_jsonl(&link).is_empty(),
         "the size ceiling must not treat a symlink as an empty file and then read it"
     );
-    assert_eq!(
-        super::super::utils::read_jsonl(&real)[0]["content"],
-        "kept"
-    );
+    assert_eq!(super::super::utils::read_jsonl(&real)[0]["content"], "kept");
     assert!(super::super::transcript::read_transcript(&link).is_empty());
     assert_eq!(
         super::super::transcript::read_transcript(&real)[0].content,

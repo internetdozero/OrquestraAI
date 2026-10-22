@@ -14,7 +14,6 @@ use super::types::{CreateIdeaInput, IdeaItem, UpdateIdeaInput, CATEGORIES, PRIOR
 const PRIORITY_RANK: &str = "CASE priority WHEN 'critical' THEN 0 \
      WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END";
 
-
 /// Insert one idea with MCP defaults (`feature` / `medium` / `open`).
 pub fn create_idea(connection: &Connection, input: CreateIdeaInput) -> Result<IdeaItem, String> {
     let project = require_text(&input.project, "project")?;
@@ -40,7 +39,15 @@ pub fn create_idea(connection: &Connection, input: CreateIdeaInput) -> Result<Id
         .execute(
             "INSERT INTO ideas (project, title, description, category, priority, tags, prompt) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            rusqlite::params![project, title, description, category, priority, tags, prompt],
+            rusqlite::params![
+                project,
+                title,
+                description,
+                category,
+                priority,
+                tags,
+                prompt
+            ],
         )
         .map_err(db_error)?;
 
@@ -146,7 +153,9 @@ pub fn update_idea(connection: &Connection, input: UpdateIdeaInput) -> Result<Id
     let assignments = sets
         .iter()
         .map(|(column, _)| format!("{column} = ?"))
-        .chain(std::iter::once("updated_at = CURRENT_TIMESTAMP".to_string()))
+        .chain(std::iter::once(
+            "updated_at = CURRENT_TIMESTAMP".to_string(),
+        ))
         .chain(completion_stamp.into_iter().map(str::to_string))
         .collect::<Vec<_>>()
         .join(", ");

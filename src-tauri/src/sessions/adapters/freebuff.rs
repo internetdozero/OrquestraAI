@@ -338,4 +338,3 @@ fn title(id: &str, meta: Option<&Value>) -> String {
 #[allow(clippy::unwrap_used)]
 #[path = "freebuff_tests.rs"]
 mod tests;
-

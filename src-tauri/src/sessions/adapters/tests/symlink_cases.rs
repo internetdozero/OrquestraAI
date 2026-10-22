@@ -304,7 +304,10 @@ fn freebuff_does_not_follow_a_worktrees_directory_symlink() {
     );
     freebuff.delete_session("wt").unwrap();
     assert_eq!(fs::read_to_string(&secret).unwrap(), "ssh-private");
-    assert!(outside.join("wt").is_dir(), "the outside worktree must stay");
+    assert!(
+        outside.join("wt").is_dir(),
+        "the outside worktree must stay"
+    );
 }
 
 #[cfg(unix)]
@@ -322,9 +325,9 @@ fn freebuff_does_not_follow_a_manicode_projects_symlink() {
     let freebuff = adapter(&home.0, "freebuff");
     let sessions = freebuff.list_sessions().unwrap();
     assert!(
-        sessions.iter().all(|session| {
-            session.id != "proj/demo" && !session.title.contains("ssh-private")
-        }),
+        sessions
+            .iter()
+            .all(|session| { session.id != "proj/demo" && !session.title.contains("ssh-private") }),
         "listing followed the projects symlink: {sessions:?}"
     );
     assert!(freebuff.read_transcript("proj/demo").is_empty());
@@ -348,7 +351,9 @@ fn grok_does_not_follow_a_sessions_directory_symlink() {
     let grok = adapter(&home.0, "grok");
     let turns = grok.read_transcript("sess");
     assert!(
-        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
         "read_transcript followed the sessions symlink: {turns:?}"
     );
     grok.delete_session("sess").unwrap();

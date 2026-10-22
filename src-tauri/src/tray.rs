@@ -35,7 +35,9 @@ pub struct AppConfigState {
 
 impl Default for AppConfigState {
     fn default() -> Self {
-        Self { minimize_to_tray: AtomicBool::new(true) }
+        Self {
+            minimize_to_tray: AtomicBool::new(true),
+        }
     }
 }
 
@@ -49,10 +51,7 @@ pub fn set_minimize_to_tray(state: tauri::State<'_, AppConfigState>, enabled: bo
 /// Close-request routing: hide to the tray when the operator asked for it,
 /// otherwise clean up and exit as before. The tray menu's Show/Hide entry
 /// brings a hidden window back.
-pub fn on_close_requested<R: Runtime>(
-    window: &tauri::Window<R>,
-    api: &tauri::CloseRequestApi,
-) {
+pub fn on_close_requested<R: Runtime>(window: &tauri::Window<R>, api: &tauri::CloseRequestApi) {
     let hide = window
         .app_handle()
         .try_state::<AppConfigState>()
@@ -109,13 +108,7 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
 /// The tray menu, rebuilt from the harness links every time it is created.
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
-    let toggle = MenuItem::with_id(
-        app,
-        "toggle",
-        "Show / Hide OrquestraAI",
-        true,
-        None::<&str>,
-    )?;
+    let toggle = MenuItem::with_id(app, "toggle", "Show / Hide OrquestraAI", true, None::<&str>)?;
     let bridge = bridge_menu(app)?;
     let about = MenuItem::with_id(
         app,

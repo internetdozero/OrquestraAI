@@ -15,12 +15,12 @@ use rusqlite::Connection;
 
 use super::{registry, SessionAdapter};
 
+mod brain_links;
+mod desktop_links;
+mod grok_links;
+mod id_escape;
 mod stores;
 mod symlink_cases;
-mod grok_links;
-mod desktop_links;
-mod brain_links;
-mod id_escape;
 
 struct TestHome(PathBuf);
 
@@ -88,18 +88,21 @@ fn claude_transcript_reads_turns_and_skips_noise() {
     );
 
     let turns = adapter(&home.0, "claude").read_transcript("abc123");
-    assert_eq!(turns.len(), 2, "mode, corrupt, tool-only and summary lines are skipped");
+    assert_eq!(
+        turns.len(),
+        2,
+        "mode, corrupt, tool-only and summary lines are skipped"
+    );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "first prompt");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-09-20T23:46:04Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-09-20T23:46:04Z"));
     assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "here you go");
 
     assert!(
-        adapter(&home.0, "claude").read_transcript("missing").is_empty(),
+        adapter(&home.0, "claude")
+            .read_transcript("missing")
+            .is_empty(),
         "no transcript file is an empty feed, not an error"
     );
 }
@@ -130,9 +133,9 @@ fn antigravity_transcript_covers_both_log_layouts() {
     assert_eq!(cli.len(), 1);
     assert_eq!(cli[0].content, "cli hello");
 
-    assert!(
-        adapter(&home.0, "antigravity").read_transcript("missing").is_empty()
-    );
+    assert!(adapter(&home.0, "antigravity")
+        .read_transcript("missing")
+        .is_empty());
 }
 
 #[test]
@@ -143,7 +146,9 @@ fn harnesses_without_data_report_an_empty_feed() {
     let home = TestHome::new();
     for harness in super::HARNESS_IDS {
         assert!(
-            adapter(&home.0, harness).read_transcript("whatever").is_empty(),
+            adapter(&home.0, harness)
+                .read_transcript("whatever")
+                .is_empty(),
             "{harness} must return an empty feed when its store is missing"
         );
     }
@@ -383,7 +388,8 @@ fn claude_does_not_follow_a_project_directory_symlink() {
     let sessions = claude.list_sessions().unwrap();
     assert!(
         sessions.iter().all(|session| {
-            !session.title.contains("ssh-private") && session.project_path.as_deref() != Some("/secret")
+            !session.title.contains("ssh-private")
+                && session.project_path.as_deref() != Some("/secret")
         }),
         "listing followed the project symlink: {sessions:?}"
     );
@@ -394,4 +400,3 @@ fn claude_does_not_follow_a_project_directory_symlink() {
     );
     assert!(fs::read_to_string(&secret).unwrap().contains("ssh-private"));
 }
-

@@ -137,12 +137,18 @@ fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
                 return Ok(());
             }
             fs::remove_file(projection).map_err(|error| {
-                format!("failed to replace stale link {}: {error}", projection.display())
+                format!(
+                    "failed to replace stale link {}: {error}",
+                    projection.display()
+                )
             })?;
         }
         Ok(metadata) if metadata.is_dir() => {
             fs::remove_dir_all(projection).map_err(|error| {
-                format!("failed to remove physical directory {}: {error}", projection.display())
+                format!(
+                    "failed to remove physical directory {}: {error}",
+                    projection.display()
+                )
             })?;
         }
         Ok(_) => {
@@ -184,13 +190,15 @@ fn remove_projection_entry(directory: &Path, name: &str) -> Result<(), String> {
 
     match fs::symlink_metadata(&projection) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
-            fs::remove_file(&projection).map_err(|error| {
-                format!("failed to unlink {}: {error}", projection.display())
-            })?;
+            fs::remove_file(&projection)
+                .map_err(|error| format!("failed to unlink {}: {error}", projection.display()))?;
         }
         Ok(metadata) if metadata.is_dir() => {
             fs::remove_dir_all(&projection).map_err(|error| {
-                format!("failed to remove directory {}: {error}", projection.display())
+                format!(
+                    "failed to remove directory {}: {error}",
+                    projection.display()
+                )
             })?;
         }
         Ok(_) => {

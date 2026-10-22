@@ -61,24 +61,48 @@ pub async fn vault_http_request(
         return Err(format!("vault service {service} has no keys"));
     }
     if let Some(wanted) = tag.as_deref() {
-        let matches = snapshot.keys.iter().filter(|key| {
-            key.tag.as_deref().map(|raw| raw.trim().to_lowercase()).as_deref() == Some(wanted)
-        }).count();
+        let matches = snapshot
+            .keys
+            .iter()
+            .filter(|key| {
+                key.tag
+                    .as_deref()
+                    .map(|raw| raw.trim().to_lowercase())
+                    .as_deref()
+                    == Some(wanted)
+            })
+            .count();
         if matches == 0 {
-            return Err(format!("vault service {service} has no key tagged \"{wanted}\""));
+            return Err(format!(
+                "vault service {service} has no key tagged \"{wanted}\""
+            ));
         }
     }
     let scoped_len = match tag.as_deref() {
         None => snapshot.keys.len(),
-        Some(wanted) => snapshot.keys.iter().filter(|key| {
-            key.tag.as_deref().map(|raw| raw.trim().to_lowercase()).as_deref() == Some(wanted)
-        }).count().max(1),
+        Some(wanted) => snapshot
+            .keys
+            .iter()
+            .filter(|key| {
+                key.tag
+                    .as_deref()
+                    .map(|raw| raw.trim().to_lowercase())
+                    .as_deref()
+                    == Some(wanted)
+            })
+            .count()
+            .max(1),
     };
     let attempts = scoped_len.max(1);
-    let now_ms = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0);
+    let now_ms = || {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0)
+    };
     let start = snapshot.active.min(snapshot.keys.len().saturating_sub(1));
-    let mut used = first_key_index_in(&snapshot.keys, start, now_ms(), tag.as_deref())
-        .unwrap_or(start);
+    let mut used =
+        first_key_index_in(&snapshot.keys, start, now_ms(), tag.as_deref()).unwrap_or(start);
     let mut first_used = used;
     let mut last_error = String::new();
     for _ in 0..attempts {
@@ -86,22 +110,38 @@ pub async fn vault_http_request(
         // before the seconds-long HTTP call.
         let (current, secret) = {
             let vault = load_vault(&paths)?;
-            let current = vault.services.get(&service).ok_or_else(|| format!("unknown vault service: {service}"))?.clone();
-            let secret = current.keys.get(used).map(|key| key.secret.clone()).ok_or_else(|| format!("vault service {service} has no key at {used}"))?;
+            let current = vault
+                .services
+                .get(&service)
+                .ok_or_else(|| format!("unknown vault service: {service}"))?
+                .clone();
+            let secret = current
+                .keys
+                .get(used)
+                .map(|key| key.secret.clone())
+                .ok_or_else(|| format!("vault service {service} has no key at {used}"))?;
             (current, secret)
         };
         let outgoing = http::effective_headers(&current, &secret, &extra);
         match http::execute_once(&verb, &endpoint, &outgoing, body.as_deref()).await {
             Ok((status, headers, text)) => {
-                let secrets: Vec<String> = current.keys.iter().map(|key| key.secret.clone()).collect();
+                let secrets: Vec<String> =
+                    current.keys.iter().map(|key| key.secret.clone()).collect();
                 let scrubbed = http::scrub_text(&text, &secrets);
                 let rotated = used != first_used;
                 // Reload-before-write: apply health to the LIVE vault,
                 // matching the serving key by secret so a concurrent key
                 // rotation cannot misattribute the outcome.
                 let new_active = update_vault(&paths, |vault| {
-                    let live = vault.services.get_mut(&service).ok_or_else(|| format!("unknown vault service: {service}"))?;
-                    let resolved = live.keys.iter().position(|key| key.secret == secret).or((used < live.keys.len()).then_some(used));
+                    let live = vault
+                        .services
+                        .get_mut(&service)
+                        .ok_or_else(|| format!("unknown vault service: {service}"))?;
+                    let resolved = live
+                        .keys
+                        .iter()
+                        .position(|key| key.secret == secret)
+                        .or((used < live.keys.len()).then_some(used));
                     if let Some(index) = resolved {
                         used = index;
                         record_result_in(live, index, status, tag.as_deref());
@@ -123,13 +163,21 @@ pub async fn vault_http_request(
                         }
                     }
                 }
-                return Ok(VaultHttpResult { status, headers, body: scrubbed, used_key_index: used, rotated });
+                return Ok(VaultHttpResult {
+                    status,
+                    headers,
+                    body: scrubbed,
+                    used_key_index: used,
+                    rotated,
+                });
             }
             Err(error) => {
                 last_error = error;
                 if let Ok(vault) = load_vault(&paths) {
                     if let Some(live) = vault.services.get(&service) {
-                        if let Some(next) = next_key_index_in(&live.keys, used, u64::MAX - 1, tag.as_deref()) {
+                        if let Some(next) =
+                            next_key_index_in(&live.keys, used, u64::MAX - 1, tag.as_deref())
+                        {
                             if next != used {
                                 used = next;
                                 continue;
@@ -141,7 +189,11 @@ pub async fn vault_http_request(
             }
         }
     }
-    Err(if last_error.is_empty() { "vault http request failed".to_string() } else { last_error })
+    Err(if last_error.is_empty() {
+        "vault http request failed".to_string()
+    } else {
+        last_error
+    })
 }
 
 /// Live ping result: the key is exercised against its canonical endpoint and
@@ -170,9 +222,14 @@ pub async fn vault_test_connection(
             .services
             .get(&service)
             .ok_or_else(|| format!("unknown vault service: {service}"))?;
-        presets::verify_endpoint(&current.preset).ok_or_else(|| {
-            format!("no canonical verify endpoint for the {} preset", current.preset)
-        })?.to_string()
+        presets::verify_endpoint(&current.preset)
+            .ok_or_else(|| {
+                format!(
+                    "no canonical verify endpoint for the {} preset",
+                    current.preset
+                )
+            })?
+            .to_string()
     };
     let paths = crate::paths::OrquestraPaths::resolve()?;
     // Snapshot released before the network call; health is applied to the
@@ -190,7 +247,11 @@ pub async fn vault_test_connection(
             .unwrap_or(snapshot.active)
             .min(snapshot.keys.len().saturating_sub(1));
         let live = snapshot.clone();
-        let secret = live.keys.get(used).map(|key| key.secret.clone()).unwrap_or_default();
+        let secret = live
+            .keys
+            .get(used)
+            .map(|key| key.secret.clone())
+            .unwrap_or_default();
         (live, used, secret)
     };
     let outgoing = http::effective_headers(&live, &secret, &HashMap::new());
@@ -205,13 +266,24 @@ pub async fn vault_test_connection(
                     .services
                     .get_mut(&service)
                     .ok_or_else(|| format!("unknown vault service: {service}"))?;
-                let resolved = stored.keys.iter().position(|key| key.secret == secret).or((used < stored.keys.len()).then_some(used));
+                let resolved = stored
+                    .keys
+                    .iter()
+                    .position(|key| key.secret == secret)
+                    .or((used < stored.keys.len()).then_some(used));
                 if let Some(index) = resolved {
                     record_result_in(stored, index, status, None);
                 }
                 Ok(service_health(stored))
             })?;
-            let scrubbed = http::scrub_text(&text, &live.keys.iter().map(|key| key.secret.clone()).collect::<Vec<_>>());
+            let scrubbed = http::scrub_text(
+                &text,
+                &live
+                    .keys
+                    .iter()
+                    .map(|key| key.secret.clone())
+                    .collect::<Vec<_>>(),
+            );
             let hint: String = scrubbed.chars().take(160).collect();
             Ok(VaultTestResult {
                 success: ok,

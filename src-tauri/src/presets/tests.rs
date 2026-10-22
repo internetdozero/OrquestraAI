@@ -4,8 +4,8 @@
 //! that decides what an apply will project.
 
 use super::apply::{plan_mcps, plan_skills};
-use super::scopes::{normalize_scope_map, plan_scope_map, union_unique};
 use super::builtins;
+use super::scopes::{normalize_scope_map, plan_scope_map, union_unique};
 use super::store::*;
 use super::*;
 use std::fs;
@@ -55,7 +55,16 @@ mod tests {
         assert!(validate_id("stealth").is_ok());
         assert!(validate_id("game-dev-2").is_ok());
 
-        for id in ["", ".", "..", ".hidden", "a/b", "a\\b", "two words", "nul\0"] {
+        for id in [
+            "",
+            ".",
+            "..",
+            ".hidden",
+            "a/b",
+            "a\\b",
+            "two words",
+            "nul\0",
+        ] {
             assert!(validate_id(id).is_err(), "{id:?} should be rejected");
         }
     }
@@ -117,16 +126,18 @@ mod tests {
         assert!(warnings.is_empty());
 
         // A vault missing one skill keeps the others and reports the gap.
-        let (skills, warnings) = plan_skills(
-            &selective,
-            &["rtk".to_string(), "github".to_string()],
-        );
+        let (skills, warnings) =
+            plan_skills(&selective, &["rtk".to_string(), "github".to_string()]);
         assert_eq!(skills.len(), 2);
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("modular-start"));
 
         let (_, warnings) = plan_mcps(&selective, &["github".to_string()]);
-        assert_eq!(warnings.len(), 3, "rea, idea-vault and orquestra-core are missing");
+        assert_eq!(
+            warnings.len(),
+            3,
+            "rea, idea-vault and orquestra-core are missing"
+        );
     }
 
     #[test]
@@ -160,7 +171,10 @@ mod tests {
     #[test]
     fn scope_maps_normalize_to_known_harnesses_only() {
         let raw: std::collections::HashMap<String, Vec<String>> = [
-            ("antigravity".to_string(), vec!["rtk".to_string(), "rtk".to_string()]),
+            (
+                "antigravity".to_string(),
+                vec!["rtk".to_string(), "rtk".to_string()],
+            ),
             ("claude".to_string(), vec!["surgical-patch".to_string()]),
             ("ghost-harness".to_string(), vec!["rtk".to_string()]),
             ("codex".to_string(), Vec::new()),
@@ -171,7 +185,10 @@ mod tests {
 
         let cleaned = normalize_scope_map(&raw);
         assert_eq!(cleaned.get("antigravity"), Some(&vec!["rtk".to_string()]));
-        assert_eq!(cleaned.get("claude"), Some(&vec!["surgical-patch".to_string()]));
+        assert_eq!(
+            cleaned.get("claude"),
+            Some(&vec!["surgical-patch".to_string()])
+        );
         assert!(!cleaned.contains_key("ghost-harness"));
         assert!(!cleaned.contains_key("codex"), "empty lists are dropped");
         assert!(!cleaned.contains_key("grok"), "path-shaped ids are dropped");
@@ -180,7 +197,10 @@ mod tests {
     #[test]
     fn scope_maps_plan_against_installed_ids() {
         let map: std::collections::HashMap<String, Vec<String>> = [
-            ("antigravity".to_string(), vec!["rtk".to_string(), "missing".to_string()]),
+            (
+                "antigravity".to_string(),
+                vec!["rtk".to_string(), "missing".to_string()],
+            ),
             ("claude".to_string(), vec!["gone".to_string()]),
         ]
         .into_iter()
@@ -197,14 +217,16 @@ mod tests {
 
     #[test]
     fn report_union_counts_global_and_harness_sets_once() {
-        let global: std::collections::BTreeSet<String> =
-            ["rtk".to_string()].into_iter().collect();
-        let per_harness: std::collections::HashMap<String, std::collections::BTreeSet<String>> = [(
-            "antigravity".to_string(),
-            ["rtk".to_string(), "github".to_string()].into_iter().collect(),
-        )]
-        .into_iter()
-        .collect();
+        let global: std::collections::BTreeSet<String> = ["rtk".to_string()].into_iter().collect();
+        let per_harness: std::collections::HashMap<String, std::collections::BTreeSet<String>> =
+            [(
+                "antigravity".to_string(),
+                ["rtk".to_string(), "github".to_string()]
+                    .into_iter()
+                    .collect(),
+            )]
+            .into_iter()
+            .collect();
 
         let all = union_unique(&global, &per_harness);
         assert_eq!(all.len(), 2, "rtk is counted once across scopes");
@@ -248,11 +270,13 @@ mod tests {
 
         let listed = merged(&reloaded);
         assert_eq!(listed.len(), builtins::all().len() + 1);
-        assert!(listed
-            .iter()
-            .find(|preset| preset.id == "game-dev")
-            .unwrap()
-            .active);
+        assert!(
+            listed
+                .iter()
+                .find(|preset| preset.id == "game-dev")
+                .unwrap()
+                .active
+        );
         assert!(listed
             .iter()
             .find(|preset| preset.id == "full-power")

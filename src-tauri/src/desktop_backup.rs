@@ -86,8 +86,10 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let root = std::path::PathBuf::from("/var/tmp/testing")
-            .join(format!("orquestra-backup-{name}-{}-{unique}", std::process::id()));
+        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+            "orquestra-backup-{name}-{}-{unique}",
+            std::process::id()
+        ));
         std::fs::create_dir_all(&root).unwrap();
         root
     }

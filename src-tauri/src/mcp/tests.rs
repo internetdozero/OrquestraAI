@@ -135,9 +135,15 @@ mod tests {
         assert!(catalog.managed_ids.is_empty());
 
         let github = &catalog.mcps["github"];
-        assert!(github.global_enabled, "audited `enabled: true` maps to global");
+        assert!(
+            github.global_enabled,
+            "audited `enabled: true` maps to global"
+        );
         assert_eq!(github.command, "npx");
-        assert_eq!(github.args, vec!["-y", "@modelcontextprotocol/server-github"]);
+        assert_eq!(
+            github.args,
+            vec!["-y", "@modelcontextprotocol/server-github"]
+        );
         assert!(github.enabled_harnesses.is_empty());
         assert_eq!(github.env["GITHUB_PERSONAL_ACCESS_TOKEN"], "ghp_test");
 
@@ -270,8 +276,7 @@ enabled = true
         );
         headroom.env.clear();
 
-        let rendered =
-            render_codex_toml(existing, &[headroom], &BTreeSet::new()).unwrap();
+        let rendered = render_codex_toml(existing, &[headroom], &BTreeSet::new()).unwrap();
 
         // Untouched content, in place.
         assert!(rendered.contains("# hand-written comment"));
@@ -283,7 +288,10 @@ enabled = true
         // Our keys land under the table Codex actually reads.
         assert!(rendered.contains("[mcp_servers.headroom]"));
         assert!(rendered.contains("--proxy-url"));
-        assert!(!rendered.contains("[mcp."), "never the unsupported [mcp] table");
+        assert!(
+            !rendered.contains("[mcp."),
+            "never the unsupported [mcp] table"
+        );
 
         // A hand-added env var on a managed server survives an empty catalog
         // env, and the result still parses as TOML.
@@ -306,5 +314,4 @@ enabled = true
 
     mod deploy_cases;
     mod deploy_links;
-
 }

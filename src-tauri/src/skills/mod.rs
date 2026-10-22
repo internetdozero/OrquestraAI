@@ -192,7 +192,10 @@ fn run_folder_picker() -> Result<Option<String>, String> {
         return Ok(Some(path));
     }
 
-    Err("no folder picker available (tried zenity, kdialog); type or paste the path instead".to_string())
+    Err(
+        "no folder picker available (tried zenity, kdialog); type or paste the path instead"
+            .to_string(),
+    )
 }
 
 /// Clear only the Global baseline link for one skill, preserving harness

@@ -104,7 +104,10 @@ pub fn reveal_mcp_secret(id: &str, key: &str) -> Result<String, String> {
             .clone()
             .ok_or_else(|| format!("unknown MCP secret: {id}.{key}"));
     }
-    if let Some(index) = key.strip_prefix("arg:").and_then(|value| value.parse::<usize>().ok()) {
+    if let Some(index) = key
+        .strip_prefix("arg:")
+        .and_then(|value| value.parse::<usize>().ok())
+    {
         return server
             .args
             .get(index)
@@ -243,7 +246,10 @@ pub fn apply_harness_selections_at(
             continue;
         }
         for id in ids {
-            wanted.entry(id.as_str()).or_default().insert(harness.as_str());
+            wanted
+                .entry(id.as_str())
+                .or_default()
+                .insert(harness.as_str());
         }
     }
 
@@ -364,10 +370,9 @@ pub(super) fn validate_server(server: &McpServer) -> Result<(), String> {
         || server.id == "."
         || server.id == ".."
         || server.id.starts_with('.')
-        || server
-            .id
-            .chars()
-            .any(|character| character.is_whitespace() || matches!(character, '/' | '\\' | '"' | '\'' | '\0'));
+        || server.id.chars().any(|character| {
+            character.is_whitespace() || matches!(character, '/' | '\\' | '"' | '\'' | '\0')
+        });
 
     if invalid {
         return Err(format!("invalid MCP id: {:?}", server.id));

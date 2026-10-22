@@ -39,7 +39,15 @@ pub fn scrub_output(text: &str, secrets: &[String]) -> String {
 /// Extend only in code review — there is intentionally no runtime knob, so a
 /// compromised webview cannot widen this list through IPC.
 const ALLOWED_BINARIES: &[&str] = &[
-    "aws", "az", "doctl", "echo", "gcloud", "gh", "kubectl", "printf", "stripe",
+    "aws",
+    "az",
+    "doctl",
+    "echo",
+    "gcloud",
+    "gh",
+    "kubectl",
+    "printf",
+    "stripe",
     "terraform",
 ];
 
@@ -74,7 +82,9 @@ fn validate_argv(argv: &[String]) -> Result<(), String> {
     // The check runs before PATH resolution, so `./evil`, `/bin/evil` and
     // `C:\evil` never reach the OS loader even if such a file existed.
     if program.contains(['/', '\\', '\0']) {
-        return Err(format!("vault exec program {program:?} must be a bare name"));
+        return Err(format!(
+            "vault exec program {program:?} must be a bare name"
+        ));
     }
     if !ALLOWED_BINARIES.contains(&program.as_str()) {
         return Err(format!(
@@ -108,11 +118,7 @@ pub(super) fn run_command(
         for item in items {
             match item.as_str() {
                 Some(part) => argv.push(part.to_string()),
-                None => {
-                    return Err(
-                        "vault exec command array must hold strings only".to_string(),
-                    )
-                }
+                None => return Err("vault exec command array must hold strings only".to_string()),
             }
         }
         return run_argv(service, secret, &argv);
@@ -164,8 +170,9 @@ fn wait_scrubbed(
                 let stderr_bytes = stderr_handle.join().unwrap_or_default();
                 let stdout = String::from_utf8_lossy(&stdout_bytes).into_owned();
                 let stderr = String::from_utf8_lossy(&stderr_bytes).into_owned();
-                let secrets: Vec<String> =
-                    std::iter::once(secret.to_string()).chain(env.values().cloned()).collect();
+                let secrets: Vec<String> = std::iter::once(secret.to_string())
+                    .chain(env.values().cloned())
+                    .collect();
                 return Ok((
                     code,
                     scrub_output(&stdout, &secrets),

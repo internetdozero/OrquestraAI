@@ -23,7 +23,9 @@ fn antigravity_does_not_read_through_a_brain_session_symlink() {
 
     let turns = adapter(&home.0, "antigravity").read_transcript("conv");
     assert!(
-        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
         "read_transcript followed the brain session symlink: {turns:?}"
     );
     assert!(secret.is_file(), "the outside transcript must stay");

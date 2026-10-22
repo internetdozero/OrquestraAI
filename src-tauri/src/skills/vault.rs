@@ -82,8 +82,7 @@ pub(super) fn read_skill_content(paths: &OrquestraPaths, id: &str) -> Result<Str
             file.display()
         ));
     }
-    fs::read_to_string(&file)
-        .map_err(|error| format!("failed to read {}: {error}", file.display()))
+    fs::read_to_string(&file).map_err(|error| format!("failed to read {}: {error}", file.display()))
 }
 
 /// Replace a skill's `SKILL.md` atomically (tmp file + rename on the same
@@ -134,8 +133,7 @@ pub(super) fn delete_skill(paths: &OrquestraPaths, id: &str) -> Result<(), Strin
 pub(super) fn skill_directory(paths: &OrquestraPaths, id: &str) -> Result<PathBuf, String> {
     validate_id(id)?;
     let directory = paths.vault.join(id);
-    let metadata = fs::symlink_metadata(&directory)
-        .map_err(|_| format!("unknown skill: {id}"))?;
+    let metadata = fs::symlink_metadata(&directory).map_err(|_| format!("unknown skill: {id}"))?;
     if !metadata.file_type().is_dir() {
         return Err(format!(
             "refusing to use {id}: vault entry is not a real directory"

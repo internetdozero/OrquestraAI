@@ -10,8 +10,8 @@ use std::fs;
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 use std::sync::{
-    Mutex, MutexGuard, OnceLock,
     atomic::{AtomicU64, Ordering},
+    Mutex, MutexGuard, OnceLock,
 };
 
 use crate::paths::OrquestraPaths;
@@ -77,10 +77,12 @@ pub(super) fn write_private(path: &Path, content: &str) -> Result<(), String> {
             .map_err(|error| format!("failed to write {}: {error}", tmp.display()))?;
         file.write_all(content.as_bytes())
             .map_err(|error| format!("failed to write {}: {error}", tmp.display()))?;
-        file.sync_all().map_err(|error| format!("failed to sync {}: {error}", tmp.display()))?;
+        file.sync_all()
+            .map_err(|error| format!("failed to sync {}: {error}", tmp.display()))?;
     }
     let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600));
-    fs::rename(&tmp, path).map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
+    fs::rename(&tmp, path)
+        .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
     let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
     Ok(())
 }

@@ -179,20 +179,8 @@ pub(in crate::skills) fn categorize(id: &str, name: &str, description: &str) -> 
         (
             "Backend",
             &[
-                "backend",
-                "api-and",
-                "api-",
-                "-api",
-                "graphql",
-                "grpc",
-                "aspnet",
-                "django",
-                "flask",
-                "express",
-                "node-",
-                "python-",
-                "jupyter",
-                "sdk",
+                "backend", "api-and", "api-", "-api", "graphql", "grpc", "aspnet", "django",
+                "flask", "express", "node-", "python-", "jupyter", "sdk",
             ],
         ),
         (
@@ -219,8 +207,17 @@ pub(in crate::skills) fn categorize(id: &str, name: &str, description: &str) -> 
         (
             "Testing",
             &[
-                "test", "qa-", "-qa", "playwright", "cypress", "jest", "vitest", "debug",
-                "review", "lint", "audit",
+                "test",
+                "qa-",
+                "-qa",
+                "playwright",
+                "cypress",
+                "jest",
+                "vitest",
+                "debug",
+                "review",
+                "lint",
+                "audit",
             ],
         ),
         (

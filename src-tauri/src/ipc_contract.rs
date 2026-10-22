@@ -20,9 +20,9 @@ mod tests {
     use serde_json::Value;
 
     use crate::bridge::{BridgeReport, HarnessStatus, SecondaryAction, SecondaryStatus};
-    use crate::ipc_acl::WITHHELD_SCOPES;
     use crate::ideas::productivity::{DayActivity, ProductivityMetrics, WeeklyVelocity};
     use crate::ideas::types::{BlackboardNote, IdeaItem};
+    use crate::ipc_acl::WITHHELD_SCOPES;
     use crate::mcp::{McpServer, McpTargetStatus};
     use crate::presets::{Preset, PresetReport};
     use crate::skills::{HarnessSummary, SkillItem};
@@ -307,9 +307,7 @@ mod tests {
 
         let rest = &literal[dashes..];
         rest.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
-            && rest
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+            && rest.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
     }
 
     /// Flag literals the binary matches on: `Some("--mcp-set" | "-h")`.

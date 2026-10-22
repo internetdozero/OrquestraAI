@@ -8,7 +8,6 @@ use rusqlite::{params_from_iter, Connection};
 use super::store::{db_error, get_note, note_from_row, require_text};
 use super::types::{BlackboardNote, PostNoteInput};
 
-
 /// Post a note; the topic is lowercased and the target defaults to `all`.
 pub fn post_note(connection: &Connection, input: PostNoteInput) -> Result<BlackboardNote, String> {
     let project = require_text(&input.project, "project")?;
@@ -69,7 +68,10 @@ pub fn list_notes(
 /// Mark one note read; a missing id is an error.
 pub fn mark_note_read(connection: &Connection, id: i64) -> Result<(), String> {
     let changed = connection
-        .execute("UPDATE blackboard_notes SET is_read = 1 WHERE id = ?1", [id])
+        .execute(
+            "UPDATE blackboard_notes SET is_read = 1 WHERE id = ?1",
+            [id],
+        )
         .map_err(db_error)?;
     if changed == 0 {
         return Err(format!("note #{id} not found"));

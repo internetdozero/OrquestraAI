@@ -19,12 +19,10 @@ fn unlinks_and_replaces_real_directories() {
     // Test ensure_link / set_global replaces real directory with symlink
     fs::create_dir_all(paths.global_dir().join("beta")).unwrap();
     assert!(set_global(&paths, "beta", true).is_ok());
-    assert!(
-        fs::symlink_metadata(paths.global_dir().join("beta"))
-            .unwrap()
-            .file_type()
-            .is_symlink()
-    );
+    assert!(fs::symlink_metadata(paths.global_dir().join("beta"))
+        .unwrap()
+        .file_type()
+        .is_symlink());
 
     assert!(set_global(&paths, "../alpha", true).is_err());
     assert!(set_skill_state("alpha", "../codex", true).is_err());
@@ -49,9 +47,15 @@ fn monorepo_url_fragments_extract_and_sanitize() {
     assert!(none.is_none());
     assert_eq!(plain, "https://github.com/o/standalone.git");
 
-    assert_eq!(sanitize_subpath("mcps/orquestra-janitor").as_deref(), Some("mcps/orquestra-janitor"));
+    assert_eq!(
+        sanitize_subpath("mcps/orquestra-janitor").as_deref(),
+        Some("mcps/orquestra-janitor")
+    );
     for hostile in ["", "../escape", "a/../b", "a//b", ".", "a/./b"] {
-        assert!(sanitize_subpath(hostile).is_none(), "{hostile:?} must be refused");
+        assert!(
+            sanitize_subpath(hostile).is_none(),
+            "{hostile:?} must be refused"
+        );
     }
 }
 
@@ -60,10 +64,8 @@ fn monorepo_skill_discovery_finds_nested_layouts() {
     use super::subpath::locate_skill_dir;
     use std::path::PathBuf;
 
-    let root = PathBuf::from("/var/tmp/testing").join(format!(
-        "orquestra-tests-mono-{}",
-        std::process::id()
-    ));
+    let root = PathBuf::from("/var/tmp/testing")
+        .join(format!("orquestra-tests-mono-{}", std::process::id()));
     if root.exists() {
         fs::remove_dir_all(&root).unwrap();
     }
@@ -95,7 +97,10 @@ fn unified_naming_stamps_legacy_and_canonical_ids() {
     ] {
         assert!(is_official_skill(id), "{id} should be official");
     }
-    assert_eq!(canonical_skill_id("modular-start"), "orquestra-modular-start");
+    assert_eq!(
+        canonical_skill_id("modular-start"),
+        "orquestra-modular-start"
+    );
     assert_eq!(canonical_skill_id("orquestra"), "orquestra");
     assert!(!is_official_skill("docker-helper"));
 }
@@ -128,8 +133,14 @@ fn vault_cache_serves_stable_results_across_scopes() {
     let second = list_from(&paths, "codex").expect("list the vault again");
     assert_eq!(first.len(), 2);
     assert_eq!(
-        first.iter().map(|skill| skill.id.clone()).collect::<Vec<_>>(),
-        second.iter().map(|skill| skill.id.clone()).collect::<Vec<_>>(),
+        first
+            .iter()
+            .map(|skill| skill.id.clone())
+            .collect::<Vec<_>>(),
+        second
+            .iter()
+            .map(|skill| skill.id.clone())
+            .collect::<Vec<_>>(),
         "the cached parse must match a fresh one"
     );
     fs::remove_dir_all(&paths.root).unwrap();
@@ -138,7 +149,10 @@ fn vault_cache_serves_stable_results_across_scopes() {
 #[test]
 fn vault_cache_reflects_skill_edits() {
     let paths = setup_two_skills();
-    assert_eq!(skill_in(&list_from(&paths, "global").unwrap(), "alpha").name, "Alpha");
+    assert_eq!(
+        skill_in(&list_from(&paths, "global").unwrap(), "alpha").name,
+        "Alpha"
+    );
     // Different length on purpose: the fingerprint keys on mtime+size,
     // so the edit is caught even on a coarse clock.
     fs::write(
@@ -189,7 +203,9 @@ fn a_symlinked_skill_file_is_not_listed_or_read() {
 
     let listed = list_from(&paths, "global").expect("list");
     assert!(listed.iter().all(|skill| skill.id != "linked"));
-    assert!(listed.iter().all(|skill| !skill.description.contains("ssh-private")));
+    assert!(listed
+        .iter()
+        .all(|skill| !skill.description.contains("ssh-private")));
     assert!(listed.iter().any(|skill| skill.id == "real"));
     assert!(read_skill_content(&paths, "linked").is_err());
     assert!(outside.is_file(), "the target stays put");
@@ -236,7 +252,10 @@ fn read_agents_does_not_follow_a_symlink() {
     std::os::unix::fs::symlink(&outside, paths.agents_path()).expect("agents symlink");
 
     let read = read_agents(&paths);
-    assert!(read.is_err(), "linked AGENTS.md must not be loaded: {read:?}");
+    assert!(
+        read.is_err(),
+        "linked AGENTS.md must not be loaded: {read:?}"
+    );
     assert!(
         !read.unwrap_or_default().contains("ssh-private"),
         "the target contents must not be returned"

@@ -303,10 +303,7 @@ mod tests {
         let spec = find("codex").expect("codex is registered");
         assert_eq!(spec.env_override, Some("CODEX_HOME"));
 
-        let home = std::env::temp_dir().join(format!(
-            "orquestra-harness-{}",
-            std::process::id()
-        ));
+        let home = std::env::temp_dir().join(format!("orquestra-harness-{}", std::process::id()));
         let previous = env::var("CODEX_HOME").ok();
 
         unsafe { env::set_var("CODEX_HOME", "/tmp/orquestra-codex-mock") };

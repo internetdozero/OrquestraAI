@@ -79,10 +79,7 @@ fn antigravity_unwraps_user_requests_and_planner_responses() {
     assert_eq!(turns.len(), 2, "tool calls are not conversation: {turns:?}");
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "move the cache");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-08-18T12:11:33Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-08-18T12:11:33Z"));
     assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "moved  it");
 }
@@ -101,15 +98,14 @@ fn grok_reads_chat_history_in_any_project_folder() {
     assert_eq!(turns.len(), 2, "corrupt lines are skipped: {turns:?}");
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "what changed?");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-10-11T08:55:04Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-10-11T08:55:04Z"));
     assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "three files");
 
     assert!(
-        adapter(&home.0, "grok").read_transcript("../escape").is_empty(),
+        adapter(&home.0, "grok")
+            .read_transcript("../escape")
+            .is_empty(),
         "session ids never escape the store"
     );
 }
@@ -131,13 +127,14 @@ fn codex_reads_response_items_and_ignores_scaffolding() {
     );
 
     let turns = adapter(&home.0, "codex").read_transcript(id);
-    assert_eq!(turns.len(), 2, "developer prompts are scaffolding: {turns:?}");
+    assert_eq!(
+        turns.len(),
+        2,
+        "developer prompts are scaffolding: {turns:?}"
+    );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "ship it");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-10-17T05:22:32Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-10-17T05:22:32Z"));
     assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "shipped");
 }
@@ -155,17 +152,24 @@ fn copilot_splits_rows_into_user_and_assistant_turns() {
     );
 
     let turns = adapter(&home.0, "copilot").read_transcript("s1");
-    assert_eq!(turns.len(), 3, "turn_index orders, empties are skipped: {turns:?}");
-    assert_eq!((turns[0].role.as_str(), turns[0].content.as_str()), ("user", "first q"));
-    assert_eq!((turns[1].role.as_str(), turns[1].content.as_str()), ("user", "second q"));
+    assert_eq!(
+        turns.len(),
+        3,
+        "turn_index orders, empties are skipped: {turns:?}"
+    );
+    assert_eq!(
+        (turns[0].role.as_str(), turns[0].content.as_str()),
+        ("user", "first q")
+    );
+    assert_eq!(
+        (turns[1].role.as_str(), turns[1].content.as_str()),
+        ("user", "second q")
+    );
     assert_eq!(
         (turns[2].role.as_str(), turns[2].content.as_str()),
         ("assistant", "second a")
     );
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-09-18T03:16:00Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-09-18T03:16:00Z"));
 }
 
 #[test]
@@ -189,10 +193,7 @@ fn hermes_reads_active_messages_with_epoch_floats() {
     );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "triage this");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-08-18T12:11:33Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-08-18T12:11:33Z"));
     assert_eq!(turns[1].role, "assistant");
 }
 
@@ -292,18 +293,13 @@ fn grok_sanitizes_environment_rules_and_extracts_user_query() {
     );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "fix the drawer");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-10-11T08:55:04Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-10-11T08:55:04Z"));
     assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "Fixed the **drawer**.");
     assert!(
-        turns
-            .iter()
-            .all(|turn| !turn.content.contains("<rules>")
-                && !turn.content.contains("<user_info>")
-                && !turn.content.contains("system-reminder")),
+        turns.iter().all(|turn| !turn.content.contains("<rules>")
+            && !turn.content.contains("<user_info>")
+            && !turn.content.contains("system-reminder")),
         "no environment scaffolding anywhere: {turns:?}"
     );
 }
@@ -319,11 +315,17 @@ fn system_prompt_rows_never_reach_the_feed() {
     );
 
     let turns = adapter(&home.0, "grok").read_transcript("sess-1");
-    assert_eq!(turns.len(), 2, "the system prompt is scaffolding: {turns:?}");
+    assert_eq!(
+        turns.len(),
+        2,
+        "the system prompt is scaffolding: {turns:?}"
+    );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[1].role, "assistant");
     assert!(
-        turns.iter().all(|turn| !turn.content.contains("dangerous_actions")),
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("dangerous_actions")),
         "no raw system instructions anywhere: {turns:?}"
     );
 }
@@ -347,17 +349,15 @@ fn desktop_threads_read_parts_json_in_seq_order() {
 
     let turns = adapter(&home.0, "freebuff")
         .read_transcript(&format!("desktop:OrquestraAI-abc123:{thread}"));
-    assert_eq!(turns.len(), 2, "seq orders the feed, not the clock: {turns:?}");
+    assert_eq!(
+        turns.len(),
+        2,
+        "seq orders the feed, not the clock: {turns:?}"
+    );
     assert_eq!(turns[0].role, "user");
     assert_eq!(turns[0].content, "first");
-    assert_eq!(
-        turns[0].timestamp.as_deref(),
-        Some("2026-10-18T11:56:40Z")
-    );
+    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-10-18T11:56:40Z"));
     assert_eq!(turns[1].role, "assistant");
     assert_eq!(turns[1].content, "second");
-    assert_eq!(
-        turns[1].timestamp.as_deref(),
-        Some("2026-10-18T11:55:44Z")
-    );
+    assert_eq!(turns[1].timestamp.as_deref(), Some("2026-10-18T11:55:44Z"));
 }

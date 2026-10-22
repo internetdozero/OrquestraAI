@@ -7,8 +7,8 @@ use std::path::Path;
 
 use rusqlite::Connection;
 
-use super::{ideas_repo, notes_repo, productivity, store};
 use super::types::{CreateIdeaInput, PostNoteInput, UpdateIdeaInput};
+use super::{ideas_repo, notes_repo, productivity, store};
 
 fn memory() -> Connection {
     store::connect_at(Path::new(":memory:")).expect("in-memory vault should open")
@@ -143,8 +143,7 @@ fn prompt_roundtrips_through_create_update_and_list() {
         Some("### Mission: Prompted task\n\nDo the thing.")
     );
 
-    let listed = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"))
-        .expect("list");
+    let listed = ideas_repo::list_ideas(&connection, Some("vault"), Some("all")).expect("list");
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].prompt, created.prompt);
 
@@ -178,8 +177,7 @@ fn completed_at_stamps_completions_and_clears_on_reopen() {
     let idea = create(&connection, "vault", "Ship it", None);
     assert_eq!(idea.completed_at, None, "open ideas carry no stamp");
 
-    let done =
-        ideas_repo::update_idea_status(&connection, idea.id, "completed").expect("complete");
+    let done = ideas_repo::update_idea_status(&connection, idea.id, "completed").expect("complete");
     assert!(
         done.completed_at.is_some(),
         "completing must stamp completed_at"
@@ -192,8 +190,7 @@ fn completed_at_stamps_completions_and_clears_on_reopen() {
         "archiving keeps the delivery stamp"
     );
 
-    let reopened =
-        ideas_repo::update_idea_status(&connection, idea.id, "open").expect("reopen");
+    let reopened = ideas_repo::update_idea_status(&connection, idea.id, "open").expect("reopen");
     assert_eq!(
         reopened.completed_at, None,
         "reopening must clear the stamp"
@@ -238,8 +235,8 @@ fn productivity_counts_completions_streak_and_cycle() {
     ideas_repo::update_idea_status(&connection, first.id, "completed").expect("complete");
     ideas_repo::update_idea_status(&connection, second.id, "completed").expect("complete");
 
-    let metrics = productivity::metrics(&connection, Some("vault"), Some(2))
-        .expect("metrics should compute");
+    let metrics =
+        productivity::metrics(&connection, Some("vault"), Some(2)).expect("metrics should compute");
     assert_eq!(metrics.daily_activity.len(), 14);
     let today = metrics.daily_activity.last().expect("window ends today");
     assert_eq!(today.ideas_completed, 2, "both completions land today");
@@ -256,7 +253,10 @@ fn productivity_counts_completions_streak_and_cycle() {
     let scoped = productivity::metrics(&connection, Some("no-such-project"), Some(1))
         .expect("unknown project must not fail");
     assert_eq!(scoped.daily_activity.len(), 7);
-    assert!(scoped.daily_activity.iter().all(|day| day.ideas_completed == 0));
+    assert!(scoped
+        .daily_activity
+        .iter()
+        .all(|day| day.ideas_completed == 0));
     assert_eq!(scoped.current_streak, 0);
 }
 
@@ -296,11 +296,9 @@ fn blackboard_posts_lists_unread_and_marks_read() {
     assert_eq!(unread.len(), 1);
 
     notes_repo::mark_note_read(&connection, note.id).expect("mark read");
-    assert!(
-        notes_repo::list_notes(&connection, Some("vault"), true)
-            .expect("reread")
-            .is_empty()
-    );
+    assert!(notes_repo::list_notes(&connection, Some("vault"), true)
+        .expect("reread")
+        .is_empty());
     let all = notes_repo::list_notes(&connection, None, false).expect("all notes");
     assert_eq!(all.len(), 1);
     assert!(all[0].is_read);

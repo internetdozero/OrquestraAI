@@ -54,8 +54,7 @@ pub(crate) fn read_agents(paths: &OrquestraPaths) -> Result<String, String> {
         }
     }
 
-    fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))
+    fs::read_to_string(&path).map_err(|error| format!("failed to read {}: {error}", path.display()))
 }
 
 pub(crate) fn write_agents(paths: &OrquestraPaths, content: &str) -> Result<(), String> {

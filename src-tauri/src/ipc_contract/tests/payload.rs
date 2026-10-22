@@ -11,7 +11,11 @@ fn payload_shapes_match_the_frozen_contract() {
             .as_array()
             .unwrap_or_else(|| panic!("fixture has no payloadShapes.{name}"))
             .iter()
-            .map(|item| item.as_str().expect("shape keys must be strings").to_string())
+            .map(|item| {
+                item.as_str()
+                    .expect("shape keys must be strings")
+                    .to_string()
+            })
             .collect()
     };
 
@@ -32,7 +36,10 @@ fn payload_shapes_match_the_frozen_contract() {
             name: "github".to_string(),
             description: "Repositories and issues.".to_string(),
             command: "npx".to_string(),
-            args: vec!["-y".to_string(), "@modelcontextprotocol/server-github".to_string()],
+            args: vec![
+                "-y".to_string(),
+                "@modelcontextprotocol/server-github".to_string(),
+            ],
             env: [("GITHUB_TOKEN".to_string(), "ghp_test".to_string())]
                 .into_iter()
                 .collect(),
@@ -93,7 +100,11 @@ fn payload_shapes_match_the_frozen_contract() {
         keys_of(&harness_status().secondary_paths[0]),
         frozen("SecondaryStatus"),
     );
-    assert_keys("HarnessStatus", keys_of(&harness_status()), frozen("HarnessStatus"));
+    assert_keys(
+        "HarnessStatus",
+        keys_of(&harness_status()),
+        frozen("HarnessStatus"),
+    );
     assert_keys(
         "IdeaItem",
         keys_of(&IdeaItem {
@@ -173,4 +184,3 @@ fn payload_shapes_match_the_frozen_contract() {
         frozen("BridgeReport"),
     );
 }
-

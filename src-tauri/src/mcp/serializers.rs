@@ -26,14 +26,7 @@ pub(super) fn sorted_env(server: &McpServer) -> Vec<(&str, &str)> {
 }
 
 pub(super) fn json_args(server: &McpServer) -> JsonValue {
-    JsonValue::Array(
-        server
-            .args
-            .iter()
-            .cloned()
-            .map(JsonValue::String)
-            .collect(),
-    )
+    JsonValue::Array(server.args.iter().cloned().map(JsonValue::String).collect())
 }
 
 /// Env values win over the file's own, but keys OrquestraAI does not define are
@@ -213,7 +206,14 @@ pub(super) fn render_jsonc_block(
             let mut fields: Vec<(&str, JsonValue)> = vec![
                 (
                     "type",
-                    JsonValue::String(if server.url.is_some() { "remote" } else { "local" }.to_string()),
+                    JsonValue::String(
+                        if server.url.is_some() {
+                            "remote"
+                        } else {
+                            "local"
+                        }
+                        .to_string(),
+                    ),
                 ),
                 ("enabled", JsonValue::Bool(true)),
                 ("environment", JsonValue::Null),
@@ -258,8 +258,8 @@ pub(super) fn render_codex_toml(
     }
 
     for server in active {
-        let servers = codex_servers(&mut document)
-            .ok_or_else(|| format!("{CODEX_TABLE} is not a table"))?;
+        let servers =
+            codex_servers(&mut document).ok_or_else(|| format!("{CODEX_TABLE} is not a table"))?;
 
         if servers
             .get(&server.id)
@@ -299,7 +299,10 @@ pub(super) fn render_codex_toml(
                 .entry("headers")
                 .or_insert(toml_edit::Item::Table(toml_edit::Table::new()));
             let Some(headers) = headers.as_table_mut() else {
-                return Err(format!("[{CODEX_TABLE}.{}.headers] is not a table", server.id));
+                return Err(format!(
+                    "[{CODEX_TABLE}.{}.headers] is not a table",
+                    server.id
+                ));
             };
             for (key, value) in &server.headers {
                 headers.insert(key, toml_edit::value(value.as_str()));
@@ -335,7 +338,9 @@ pub(super) fn render_codex_toml(
     Ok(document.to_string())
 }
 
-pub(super) fn codex_servers(document: &mut toml_edit::DocumentMut) -> Option<&mut toml_edit::Table> {
+pub(super) fn codex_servers(
+    document: &mut toml_edit::DocumentMut,
+) -> Option<&mut toml_edit::Table> {
     let root = document.as_table_mut();
 
     if !root.contains_key(CODEX_TABLE) {

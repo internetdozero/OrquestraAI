@@ -42,8 +42,7 @@ fn main() {
         }
         Some("--mcp-set") => {
             // --mcp-set <id> <global|harness> <on|off>
-            let (Some(id), Some(scope), Some(state)) =
-                (args.get(2), args.get(3), args.get(4))
+            let (Some(id), Some(scope), Some(state)) = (args.get(2), args.get(3), args.get(4))
             else {
                 crate::log_error!("usage: orquestra --mcp-set <id> <global|harness> <on|off>");
                 std::process::exit(2);

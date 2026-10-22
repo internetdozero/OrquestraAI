@@ -30,7 +30,9 @@ fn freebuff_does_not_follow_a_project_directory_symlink() {
     let id = format!("desktop:slug:{thread}");
     let turns = freebuff.read_transcript(&id);
     assert!(
-        turns.iter().all(|turn| !turn.content.contains("ssh-private")),
+        turns
+            .iter()
+            .all(|turn| !turn.content.contains("ssh-private")),
         "read_transcript followed the project symlink: {turns:?}"
     );
     freebuff.delete_session(&id).unwrap();

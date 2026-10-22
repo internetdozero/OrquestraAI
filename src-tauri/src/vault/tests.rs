@@ -2,7 +2,10 @@
 
 use super::http::{effective_headers, scrub_body, strip_response_headers};
 use super::presets::{build_exec_env, build_headers, get_preset};
-use super::store::{first_key_index_in, health_for_status, mask_key, next_key_index, next_key_index_in, normalize_tag, KeyHealth, VaultKey, VaultService};
+use super::store::{
+    first_key_index_in, health_for_status, mask_key, next_key_index, next_key_index_in,
+    normalize_tag, KeyHealth, VaultKey, VaultService,
+};
 use std::collections::HashMap;
 
 fn test_service(preset: &str, secrets: &[&str]) -> VaultService {
@@ -21,7 +24,8 @@ fn test_service(preset: &str, secrets: &[&str]) -> VaultService {
                 health: KeyHealth::Healthy,
                 cooldown_until_ms: 0,
                 failures: 0,
-            }).collect(),
+            })
+            .collect(),
         active: 0,
         custom_header: None,
         custom_prefix: None,
@@ -34,33 +38,70 @@ fn test_service(preset: &str, secrets: &[&str]) -> VaultService {
 #[test]
 fn preset_headers_match_canonical_specs() {
     let github = build_headers("github", "ghp_secret123", None, None, None);
-    assert!(github.iter().any(|(name, value)| name == "authorization" && value == "Bearer ghp_secret123"));
-    assert!(github.iter().any(|(name, value)| name.eq_ignore_ascii_case("user-agent") && value == "OrquestraAI"));
+    assert!(github
+        .iter()
+        .any(|(name, value)| name == "authorization" && value == "Bearer ghp_secret123"));
+    assert!(github
+        .iter()
+        .any(|(name, value)| name.eq_ignore_ascii_case("user-agent") && value == "OrquestraAI"));
 
     let anthropic = build_headers("anthropic", "sk-ant-abc", None, None, None);
-    assert!(anthropic.iter().any(|(name, value)| name == "x-api-key" && value == "sk-ant-abc"));
-    assert!(anthropic.iter().any(|(name, value)| name == "anthropic-version" && value == "2023-06-01"));
+    assert!(anthropic
+        .iter()
+        .any(|(name, value)| name == "x-api-key" && value == "sk-ant-abc"));
+    assert!(anthropic
+        .iter()
+        .any(|(name, value)| name == "anthropic-version" && value == "2023-06-01"));
 
     let gemini = build_headers("gemini", "AIza-key", None, None, None);
-    assert!(gemini.iter().any(|(name, value)| name == "x-goog-api-key" && value == "AIza-key"));
+    assert!(gemini
+        .iter()
+        .any(|(name, value)| name == "x-goog-api-key" && value == "AIza-key"));
 
     let cloudflare = build_headers("cloudflare", "cf_token", None, None, None);
-    assert!(cloudflare.iter().any(|(name, value)| name == "authorization" && value == "Bearer cf_token"));
+    assert!(cloudflare
+        .iter()
+        .any(|(name, value)| name == "authorization" && value == "Bearer cf_token"));
 
     let custom = build_headers("custom", "raw", Some("X-Custom-Auth"), Some("Token "), None);
-    assert!(custom.iter().any(|(name, value)| name == "X-Custom-Auth" && value == "Token raw"));
+    assert!(custom
+        .iter()
+        .any(|(name, value)| name == "X-Custom-Auth" && value == "Token raw"));
 
     assert_eq!(get_preset("nope").id, "custom");
     let env = build_exec_env("github", "ghp_secret123", None);
-    assert!(env.iter().any(|(name, value)| name == "GITHUB_TOKEN" && value == "ghp_secret123"));
+    assert!(env
+        .iter()
+        .any(|(name, value)| name == "GITHUB_TOKEN" && value == "ghp_secret123"));
 }
 
 #[test]
 fn key_rotation_skips_cooldown_and_invalid_keys() {
     let mut keys = vec![
-        VaultKey { id: "key-0".to_string(), secret: "a".to_string(), tag: None, health: KeyHealth::Healthy, cooldown_until_ms: 0, failures: 0 },
-        VaultKey { id: "key-1".to_string(), secret: "b".to_string(), tag: None, health: KeyHealth::RateLimited, cooldown_until_ms: 9_999_999_999, failures: 1 },
-        VaultKey { id: "key-2".to_string(), secret: "c".to_string(), tag: None, health: KeyHealth::Healthy, cooldown_until_ms: 0, failures: 0 },
+        VaultKey {
+            id: "key-0".to_string(),
+            secret: "a".to_string(),
+            tag: None,
+            health: KeyHealth::Healthy,
+            cooldown_until_ms: 0,
+            failures: 0,
+        },
+        VaultKey {
+            id: "key-1".to_string(),
+            secret: "b".to_string(),
+            tag: None,
+            health: KeyHealth::RateLimited,
+            cooldown_until_ms: 9_999_999_999,
+            failures: 1,
+        },
+        VaultKey {
+            id: "key-2".to_string(),
+            secret: "c".to_string(),
+            tag: None,
+            health: KeyHealth::Healthy,
+            cooldown_until_ms: 0,
+            failures: 0,
+        },
     ];
     assert_eq!(next_key_index(&keys, 0, 1000), Some(2));
     keys[2].health = KeyHealth::InvalidKey;
@@ -90,9 +131,15 @@ fn secret_redaction_strips_headers_body_and_exec_output() {
 
     let service = test_service("openai", &["sk-secret-9999"]);
     let secret = "sk-secret-9999".to_string();
-    let outgoing = effective_headers(&service, &secret, &HashMap::from([("Authorization".to_string(), "Bearer attacker".to_string())]));
+    let outgoing = effective_headers(
+        &service,
+        &secret,
+        &HashMap::from([("Authorization".to_string(), "Bearer attacker".to_string())]),
+    );
     assert!(!outgoing.iter().any(|(_, value)| value == "Bearer attacker"));
-    assert!(outgoing.iter().any(|(_, value)| value == "Bearer sk-secret-9999"));
+    assert!(outgoing
+        .iter()
+        .any(|(_, value)| value == "Bearer sk-secret-9999"));
 
     let masked = mask_key("sk-ant-abcdefgh9f82");
     assert!(!masked.contains("abcdefgh"));
@@ -149,13 +196,18 @@ fn exec_rejects_shell_strings_and_non_allowlisted_programs() {
         vec!["echo", "hi\0"],
     ] {
         let payload = serde_json::Value::Array(
-            argv.into_iter().map(|part| serde_json::Value::String(part.to_string())).collect(),
+            argv.into_iter()
+                .map(|part| serde_json::Value::String(part.to_string()))
+                .collect(),
         );
         assert!(super::exec::run_command(&service, secret, &payload).is_err());
     }
 
     // Oversized input fails validation without spawning anything.
-    let huge_argv = vec!["echo".to_string()].into_iter().chain(vec!["x".to_string(); 200]).collect::<Vec<_>>();
+    let huge_argv = vec!["echo".to_string()]
+        .into_iter()
+        .chain(vec!["x".to_string(); 200])
+        .collect::<Vec<_>>();
     assert!(super::exec::run_argv(&service, secret, &huge_argv).is_err());
     let huge_arg = vec!["echo".to_string(), "x".repeat(1_000_001)];
     assert!(super::exec::run_argv(&service, secret, &huge_arg).is_err());
@@ -169,8 +221,8 @@ fn exec_rejects_shell_strings_and_non_allowlisted_programs() {
 
     // A secret echoed by the child must never come back verbatim.
     let literal = serde_json::json!(["echo", "$OPENAI_API_KEY"]);
-    let (_, stdout, _) = super::exec::run_command(&service, secret, &literal)
-        .expect("env echo should run");
+    let (_, stdout, _) =
+        super::exec::run_command(&service, secret, &literal).expect("env echo should run");
     assert!(stdout.contains("$OPENAI_API_KEY"));
     assert!(!stdout.contains(secret));
 
@@ -185,7 +237,18 @@ fn verify_endpoints_cover_every_non_custom_preset() {
     for preset in super::presets::list_presets() {
         // No universal ping: unknown shape, SigV4 signing, or per-project /
         // POST-only APIs. Those keys stay CLI/env-usable with manual health.
-        if matches!(preset.id.as_str(), "custom" | "aws" | "supabase" | "tavily" | "jules" | "pix" | "pixabay" | "exa" | "bluesky") {
+        if matches!(
+            preset.id.as_str(),
+            "custom"
+                | "aws"
+                | "supabase"
+                | "tavily"
+                | "jules"
+                | "pix"
+                | "pixabay"
+                | "exa"
+                | "bluesky"
+        ) {
             assert_eq!(verify_endpoint(&preset.id), None);
         } else {
             let endpoint = verify_endpoint(&preset.id)
@@ -226,14 +289,21 @@ fn preset_links_mirrors_and_meta_fields() {
     // Supabase sends the key twice: apikey + mirrored Bearer authorization.
     let sub = build_headers("supabase", "sb-secret", None, None, None);
     assert!(sub.iter().any(|(n, v)| n == "apikey" && v == "sb-secret"));
-    assert!(sub.iter().any(|(n, v)| n == "authorization" && v == "Bearer sb-secret"));
+    assert!(sub
+        .iter()
+        .any(|(n, v)| n == "authorization" && v == "Bearer sb-secret"));
     // GitLab uses its private-token header with no prefix.
     let gl = build_headers("gitlab", "glpat-x", None, None, None);
-    assert!(gl.iter().any(|(n, v)| n == "private-token" && v == "glpat-x"));
+    assert!(gl
+        .iter()
+        .any(|(n, v)| n == "private-token" && v == "glpat-x"));
     // AWS declares companion env fields for the modal.
     let aws = get_preset("aws");
     assert!(aws.meta_fields.iter().any(|f| f.key == "AWS_ACCESS_KEY_ID"));
-    assert!(aws.meta_fields.iter().any(|f| f.key == "AWS_DEFAULT_REGION"));
+    assert!(aws
+        .meta_fields
+        .iter()
+        .any(|f| f.key == "AWS_DEFAULT_REGION"));
     assert_eq!(super::presets::verify_endpoint("aws"), None);
 }
 
@@ -267,23 +337,30 @@ fn per_key_tags_scope_failover() {
     // Untagged scope keeps the legacy whole-pool behavior.
     assert_eq!(next_key_index(&keys, 0, 0), Some(1));
     // Serialized old vaults without tags still load.
-    let legacy: Vec<VaultKey> = serde_json::from_str(r#"[{"id":"key-0","secret":"abc"}]"#).expect("legacy key");
+    let legacy: Vec<VaultKey> =
+        serde_json::from_str(r#"[{"id":"key-0","secret":"abc"}]"#).expect("legacy key");
     assert_eq!(legacy[0].tag, None);
 }
 
 #[test]
 fn new_preset_auth_schemas_match_canonical_specs() {
     let deepgram = build_headers("deepgram", "dg-key", None, None, None);
-    assert!(deepgram.iter().any(|(n, v)| n == "authorization" && v == "Token dg-key"));
+    assert!(deepgram
+        .iter()
+        .any(|(n, v)| n == "authorization" && v == "Token dg-key"));
     assert_eq!(get_preset("deepgram").env_var, "DEEPGRAM_API_KEY");
     let unsplash = build_headers("unsplash", "pub-key", None, None, None);
-    assert!(unsplash.iter().any(|(n, v)| n == "authorization" && v == "Client-ID pub-key"));
+    assert!(unsplash
+        .iter()
+        .any(|(n, v)| n == "authorization" && v == "Client-ID pub-key"));
     assert_eq!(get_preset("unsplash").env_var, "UNSPLASH_ACCESS_KEY");
     let exa = build_headers("exa", "ex-key", None, None, None);
     assert!(exa.iter().any(|(n, v)| n == "x-api-key" && v == "ex-key"));
     assert_eq!(get_preset("exa").env_var, "EXA_API_KEY");
     let stripe = build_headers("stripe", "sk_live", None, None, None);
-    assert!(stripe.iter().any(|(n, v)| n == "authorization" && v == "Bearer sk_live"));
+    assert!(stripe
+        .iter()
+        .any(|(n, v)| n == "authorization" && v == "Bearer sk_live"));
     assert_eq!(get_preset("stripe").env_var, "STRIPE_SECRET_KEY");
     assert_eq!(get_preset("jules").env_var, "JULES_API_KEY");
     assert_eq!(get_preset("pix").env_var, "PIX_KEY");
@@ -302,11 +379,20 @@ fn saved_tag_resolution_distinguishes_clear_from_keep() {
         Some("workers".to_string())
     );
     let cleared: Option<Option<String>> = Some(None);
-    assert_eq!(resolve_saved_tag(cleared.as_ref(), Some("old".to_string())), None);
+    assert_eq!(
+        resolve_saved_tag(cleared.as_ref(), Some("old".to_string())),
+        None
+    );
     let blank = Some(Some("  ".to_string()));
-    assert_eq!(resolve_saved_tag(blank.as_ref(), Some("old".to_string())), None);
+    assert_eq!(
+        resolve_saved_tag(blank.as_ref(), Some("old".to_string())),
+        None
+    );
     // No entry (no array / short array) keeps the previous tag.
-    assert_eq!(resolve_saved_tag(None, Some("old".to_string())), Some("old".to_string()));
+    assert_eq!(
+        resolve_saved_tag(None, Some("old".to_string())),
+        Some("old".to_string())
+    );
     assert_eq!(resolve_saved_tag(None, None), None);
 }
 
@@ -328,7 +414,10 @@ fn vault_exec_drains_large_output_without_deadlock() {
         super::exec::run_command(&service, secret, &flood).expect("large output should complete");
     assert_eq!(code, 0);
     assert!(stdout.len() > 64 * 1024, "stdout should exceed pipe buffer");
-    assert!(start.elapsed() < std::time::Duration::from_secs(60), "must not hit the 60s timeout");
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(60),
+        "must not hit the 60s timeout"
+    );
 }
 
 #[test]
@@ -337,9 +426,12 @@ fn vault_exec_captures_stderr_without_shell() {
     // deterministically, with no network and no shell redirection.
     let service = test_service("openai", &["sk-secret-9999"]);
     let secret = "sk-secret-9999";
-    let (code, _, stderr) =
-        super::exec::run_command(&service, secret, &serde_json::json!(["printf", "%d", "not-a-number"]))
-            .expect("printf should run");
+    let (code, _, stderr) = super::exec::run_command(
+        &service,
+        secret,
+        &serde_json::json!(["printf", "%d", "not-a-number"]),
+    )
+    .expect("printf should run");
     assert_ne!(code, 0);
     assert!(!stderr.is_empty(), "stderr must be captured");
     assert!(!stderr.contains(secret));
@@ -362,24 +454,44 @@ fn concurrent_vault_updates_lose_nothing() {
     use super::atomic::update_vault;
     use super::store::load_vault;
     use crate::paths::OrquestraPaths;
-    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
-    let root = std::env::temp_dir().join(format!("orquestra-vault-race-{}-{nanos}", std::process::id()));
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let root = std::env::temp_dir().join(format!(
+        "orquestra-vault-race-{}-{nanos}",
+        std::process::id()
+    ));
     std::fs::create_dir_all(&root).expect("scratch dir");
-    let paths = OrquestraPaths { root: root.clone(), vault: root.clone(), active: root.clone() };
+    let paths = OrquestraPaths {
+        root: root.clone(),
+        vault: root.clone(),
+        active: root.clone(),
+    };
     let mut handles = Vec::new();
     for _ in 0..8 {
         let paths = paths.clone();
         handles.push(std::thread::spawn(move || {
             for _ in 0..25 {
                 update_vault(&paths, |vault| {
-                    let service = vault.services.entry("ticker".to_string()).or_insert_with(|| test_service("custom", &["k"]));
+                    let service = vault
+                        .services
+                        .entry("ticker".to_string())
+                        .or_insert_with(|| test_service("custom", &["k"]));
                     if service.id != "ticker" {
                         service.id = "ticker".to_string();
                     }
-                    let count: u64 = service.meta.get("count").and_then(|v| v.parse().ok()).unwrap_or(0);
-                    service.meta.insert("count".to_string(), (count + 1).to_string());
+                    let count: u64 = service
+                        .meta
+                        .get("count")
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(0);
+                    service
+                        .meta
+                        .insert("count".to_string(), (count + 1).to_string());
                     Ok(())
-                }).expect("bump");
+                })
+                .expect("bump");
             }
         }));
     }
@@ -387,13 +499,23 @@ fn concurrent_vault_updates_lose_nothing() {
         handle.join().expect("worker");
     }
     let vault = load_vault(&paths).expect("reload");
-    let count: u64 = vault.services["ticker"].meta["count"].parse().expect("count");
+    let count: u64 = vault.services["ticker"].meta["count"]
+        .parse()
+        .expect("count");
     assert_eq!(count, 200, "every concurrent bump must survive");
     let leftovers: Vec<_> = std::fs::read_dir(&root)
         .expect("scan")
         .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.file_name().to_string_lossy().starts_with("vault.json.tmp"))
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("vault.json.tmp")
+        })
         .collect();
-    assert!(leftovers.is_empty(), "unique tmp names must leave nothing behind: {leftovers:?}");
+    assert!(
+        leftovers.is_empty(),
+        "unique tmp names must leave nothing behind: {leftovers:?}"
+    );
     std::fs::remove_dir_all(&root).expect("cleanup");
 }

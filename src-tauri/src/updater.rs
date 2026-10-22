@@ -77,8 +77,8 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
         &release_asset_url(&version, crate::update_sig::SUMS_SIGNATURE_ASSET),
         &sig_path,
     )?;
-    let sums_bytes =
-        fs::read(&sums_path).map_err(|error| format!("failed to read {}: {error}", sums_path.display()))?;
+    let sums_bytes = fs::read(&sums_path)
+        .map_err(|error| format!("failed to read {}: {error}", sums_path.display()))?;
     let sig_text = fs::read_to_string(&sig_path)
         .map_err(|error| format!("failed to read {}: {error}", sig_path.display()))?;
     crate::update_sig::verify_release_file(&sums_bytes, &sig_text)?;
@@ -142,12 +142,8 @@ pub fn sync_official_extensions() -> Result<ExtensionSyncResult, String> {
         } else {
             continue;
         };
-        if crate::skills::refresh_skill_dir(
-            &vault_dir,
-            url,
-            skill.fallback_repo_url.as_deref(),
-        )
-        .is_ok()
+        if crate::skills::refresh_skill_dir(&vault_dir, url, skill.fallback_repo_url.as_deref())
+            .is_ok()
         {
             updated_skills.push(skill.id.clone());
         }
@@ -194,7 +190,10 @@ fn active_binary() -> Result<PathBuf, String> {
     if fallback.is_file() {
         return Ok(fallback);
     }
-    Err("cannot locate the running binary (current_exe and ~/.local/bin/orquestra both missing)".to_string())
+    Err(
+        "cannot locate the running binary (current_exe and ~/.local/bin/orquestra both missing)"
+            .to_string(),
+    )
 }
 
 /// Asset URL for one validated version tag (`v` is added back; validation strips it).
@@ -238,7 +237,11 @@ fn expected_hash(sums: &Path, asset: &str) -> Result<String, String> {
     for line in raw.lines() {
         let mut parts = line.split_whitespace();
         if let (Some(hash), Some(name)) = (parts.next(), parts.next()) {
-            let file = name.trim_start_matches('*').rsplit('/').next().unwrap_or(name);
+            let file = name
+                .trim_start_matches('*')
+                .rsplit('/')
+                .next()
+                .unwrap_or(name);
             if file == asset {
                 matches.push(hash.to_lowercase());
             }
@@ -330,16 +333,21 @@ mod tests {
     #[test]
     fn versions_reject_paths_and_blanks() {
         assert_eq!(validate_version("v0.1.0").expect("tag"), "0.1.0");
-        assert_eq!(validate_version("0.1.0-alpha.2").expect("pre"), "0.1.0-alpha.2");
+        assert_eq!(
+            validate_version("0.1.0-alpha.2").expect("pre"),
+            "0.1.0-alpha.2"
+        );
         for hostile in ["", "   ", "../escape", "a/b", "a\\b", "v with space"] {
-            assert!(validate_version(hostile).is_err(), "{hostile:?} must be refused");
+            assert!(
+                validate_version(hostile).is_err(),
+                "{hostile:?} must be refused"
+            );
         }
     }
 
     #[test]
     fn checksum_parsing_is_exact_and_unambiguous() {
-        let dir = crate::paths::fresh_scratch_dir("orquestra-updater-test")
-            .expect("scratch");
+        let dir = crate::paths::fresh_scratch_dir("orquestra-updater-test").expect("scratch");
         let sums = dir.join("SHA256SUMS.txt");
         fs::write(&sums, "abc123  orquestra-linux-x86_64\n Antenna\n").expect("write");
         assert_eq!(

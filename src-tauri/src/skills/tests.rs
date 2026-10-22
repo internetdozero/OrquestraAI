@@ -4,11 +4,11 @@
 //! Unit tests for the vault, the projections and the instruction file.
 
 use super::projection::{batch_from, clear_global_baseline, set_global, set_scope};
-use super::vault::{delete_skill, read_skill_content, save_skill_content};
 use super::vault::{
-    categorize, estimate_tokens, list_from, normalize_description, split_frontmatter,
-    validate_id, Frontmatter,
+    categorize, estimate_tokens, list_from, normalize_description, split_frontmatter, validate_id,
+    Frontmatter,
 };
+use super::vault::{delete_skill, read_skill_content, save_skill_content};
 use super::*;
 use std::fs;
 
@@ -24,10 +24,8 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let root = std::env::temp_dir().join(format!(
-            "orquestra-{label}-{}-{unique}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("orquestra-{label}-{}-{unique}", std::process::id()));
 
         OrquestraPaths {
             vault: root.join("skills-library"),
@@ -303,5 +301,4 @@ mod tests {
     }
 
     mod projection_cases;
-
 }

@@ -52,4 +52,3 @@ pub fn deploy_mcp_json() -> Result<String, String> {
     }))
     .map_err(|error| format!("failed to serialize MCP deploy report: {error}"))
 }
-

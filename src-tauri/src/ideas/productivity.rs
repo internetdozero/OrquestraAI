@@ -132,16 +132,17 @@ pub fn metrics(
         ),
     };
     {
-        let mut statement = connection.prepare(list_sql).map_err(super::store::db_error)?;
+        let mut statement = connection
+            .prepare(list_sql)
+            .map_err(super::store::db_error)?;
         let params: Vec<&str> = match project_param {
             Some(name) => vec![start.as_str(), name],
             None => vec![start.as_str()],
         };
         let rows = statement
-            .query_map(
-                rusqlite::params_from_iter(params.iter()),
-                |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
-            )
+            .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })
             .map_err(super::store::db_error)?;
         for row in rows {
             let (day, count) = row.map_err(super::store::db_error)?;
@@ -164,7 +165,9 @@ pub fn metrics(
         ),
     };
     let avg_cycle_hours: Option<f64> = {
-        let mut statement = connection.prepare(cycle_sql).map_err(super::store::db_error)?;
+        let mut statement = connection
+            .prepare(cycle_sql)
+            .map_err(super::store::db_error)?;
         if let Some(name) = cycle_param {
             statement
                 .query_row([start.as_str(), name], |row| row.get(0))

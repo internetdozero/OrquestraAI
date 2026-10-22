@@ -276,7 +276,10 @@ mod tests {
     #[test]
     fn offset_letters_are_not_digits() {
         assert_eq!(timestamp_secs("2026-10-19T00:00:00+0a3:00"), None);
-        assert_eq!(normalized_timestamp("2026-10-19T00:00:00+0a3:00"), "2026-10-19T00:00:00+0a3:00");
+        assert_eq!(
+            normalized_timestamp("2026-10-19T00:00:00+0a3:00"),
+            "2026-10-19T00:00:00+0a3:00"
+        );
     }
 
     #[test]

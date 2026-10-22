@@ -20,7 +20,9 @@ pub fn save_mcp(server: McpServer) -> Result<(), String> {
     let mut server = server;
     // Recompute: the flag is derived from the id, never client state.
     server.official = is_official_mcp(&server.id);
-    server.enabled_harnesses.retain(|harness| harness::is_mcp_target(harness));
+    server
+        .enabled_harnesses
+        .retain(|harness| harness::is_mcp_target(harness));
     server.enabled_harnesses.sort();
     server.enabled_harnesses.dedup();
 
@@ -68,4 +70,3 @@ pub fn delete_mcp(id: &str) -> Result<(), String> {
     save_catalog(&paths, &catalog)?;
     deploy_current(&paths)
 }
-

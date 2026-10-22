@@ -36,11 +36,7 @@ fn valid_id(session_id: &str) -> bool {
 /// database actually has wins. Roles come from the message row; text comes
 /// from the part payload parsed as JSON, so tool parts never surface as
 /// conversation. Anything unrecognized is an empty feed, never an error.
-pub fn read_transcript(
-    root: &Path,
-    db_rel: &str,
-    session_id: &str,
-) -> Vec<TranscriptTurn> {
+pub fn read_transcript(root: &Path, db_rel: &str, session_id: &str) -> Vec<TranscriptTurn> {
     if !valid_id(session_id) {
         return Vec::new();
     }
@@ -157,7 +153,10 @@ fn message_transcript(
     let session = pick(&columns, &["session_id", "sessionID"])?;
     let role = pick(&columns, &["role"])?;
     let content = pick(&columns, &["content", "text", "body", "data"])?;
-    let time = pick(&columns, &["time_created", "timeCreated", "timestamp", "ts"]);
+    let time = pick(
+        &columns,
+        &["time_created", "timeCreated", "timestamp", "ts"],
+    );
 
     let select_time = time.clone().unwrap_or_else(|| "NULL".to_string());
     let order = time.unwrap_or_else(|| "rowid".to_string());

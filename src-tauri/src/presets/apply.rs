@@ -48,9 +48,7 @@ pub fn apply_preset(id: String) -> Result<PresetReport, String> {
         // removed from that harness. Planned (known-only) maps only.
         let filtered: HashMap<String, Vec<String>> = harness_mcps
             .iter()
-            .map(|(harness, set)| {
-                (harness.clone(), set.iter().cloned().collect::<Vec<_>>())
-            })
+            .map(|(harness, set)| (harness.clone(), set.iter().cloned().collect::<Vec<_>>()))
             .collect();
         crate::mcp::apply_harness_selections(&filtered)?;
     }
@@ -177,9 +175,7 @@ pub(super) fn reconcile_skills(
                 if !skill.harness_enabled || wanted.contains(&skill.id) {
                     continue;
                 }
-                if let Err(error) =
-                    crate::skills::set_skill_state(&skill.id, harness, false)
-                {
+                if let Err(error) = crate::skills::set_skill_state(&skill.id, harness, false) {
                     // Inherited skills were already cleared by the Global
                     // disable above; anything else is a real failure.
                     if !error.contains("inherited from Global") {

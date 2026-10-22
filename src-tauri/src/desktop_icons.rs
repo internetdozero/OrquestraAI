@@ -38,7 +38,11 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
     if !is_symlink(&apps_dir) {
         let _ = std::fs::create_dir_all(&apps_dir);
     }
-    for name in ["orquestra.desktop", "orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
+    for name in [
+        "orquestra.desktop",
+        "orquestra-ai.desktop",
+        "ai.orquestra.desktop.desktop",
+    ] {
         let dest = apps_dir.join(name);
         if is_symlink(&apps_dir) || is_symlink(&dest) {
             continue;

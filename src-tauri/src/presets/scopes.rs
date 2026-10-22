@@ -9,7 +9,9 @@
 use std::collections::{BTreeSet, HashMap};
 
 /// Drop unknown harness scopes, sort/dedupe every list, drop empties.
-pub(super) fn normalize_scope_map(map: &HashMap<String, Vec<String>>) -> HashMap<String, Vec<String>> {
+pub(super) fn normalize_scope_map(
+    map: &HashMap<String, Vec<String>>,
+) -> HashMap<String, Vec<String>> {
     let mut cleaned = HashMap::new();
     for (harness, ids) in map {
         if crate::harness::find(harness).is_none() {

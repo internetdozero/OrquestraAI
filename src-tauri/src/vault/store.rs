@@ -131,7 +131,14 @@ pub fn mask_key(secret: &str) -> String {
     }
     let prefix_len = 6.min(secret.len());
     let prefix: String = secret.chars().take(prefix_len).collect();
-    let suffix: String = secret.chars().rev().take(4).collect::<String>().chars().rev().collect();
+    let suffix: String = secret
+        .chars()
+        .rev()
+        .take(4)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
     format!("{prefix}...{suffix}")
 }
 
@@ -139,10 +146,18 @@ pub(super) fn service_health(service: &VaultService) -> String {
     if service.keys.is_empty() {
         return "Empty".to_string();
     }
-    let active_health = service.keys.get(service.active).map(|key| key.health).unwrap_or(KeyHealth::Healthy);
+    let active_health = service
+        .keys
+        .get(service.active)
+        .map(|key| key.health)
+        .unwrap_or(KeyHealth::Healthy);
     match active_health {
         KeyHealth::Healthy => {
-            if service.keys.iter().any(|key| key.health != KeyHealth::Healthy) {
+            if service
+                .keys
+                .iter()
+                .any(|key| key.health != KeyHealth::Healthy)
+            {
                 "Degraded".to_string()
             } else {
                 "Healthy".to_string()
@@ -162,22 +177,40 @@ pub(super) fn to_public(service: &VaultService) -> VaultServicePublic {
         description: service.description.clone(),
         active_key_index: service.active,
         total_keys: service.keys.len(),
-        masked_keys: service.keys.iter().map(|key| mask_key(&key.secret)).collect(),
+        masked_keys: service
+            .keys
+            .iter()
+            .map(|key| mask_key(&key.secret))
+            .collect(),
         health: service_health(service),
         key_health: service.keys.iter().map(|key| key.health).collect(),
-        key_tags: service.keys.iter().map(|key| normalized_tag(key.tag.clone())).collect(),
+        key_tags: service
+            .keys
+            .iter()
+            .map(|key| normalized_tag(key.tag.clone()))
+            .collect(),
         custom_header: service.custom_header.clone(),
         custom_prefix: service.custom_prefix.clone(),
         custom_env: service.custom_env.clone(),
-        cooldown_until_ms: service.keys.iter().map(|key| key.cooldown_until_ms).collect(),
+        cooldown_until_ms: service
+            .keys
+            .iter()
+            .map(|key| key.cooldown_until_ms)
+            .collect(),
         meta: service.meta.clone(),
     }
 }
 
 pub(super) fn load_vault(paths: &OrquestraPaths) -> Result<VaultFile, String> {
     let path = vault_path(paths);
-    if fs::symlink_metadata(&path).ok().is_some_and(|meta| meta.file_type().is_symlink()) {
-        return Err(format!("refusing to read {}: not a regular file", path.display()));
+    if fs::symlink_metadata(&path)
+        .ok()
+        .is_some_and(|meta| meta.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to read {}: not a regular file",
+            path.display()
+        ));
     }
     match fs::read_to_string(&path) {
         Ok(content) if content.trim().is_empty() => Ok(VaultFile::default()),
@@ -190,8 +223,14 @@ pub(super) fn load_vault(paths: &OrquestraPaths) -> Result<VaultFile, String> {
 
 pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<(), String> {
     let path = vault_path(paths);
-    if fs::symlink_metadata(&path).ok().is_some_and(|meta| meta.file_type().is_symlink()) {
-        return Err(format!("refusing to replace {}: not a regular file", path.display()));
+    if fs::symlink_metadata(&path)
+        .ok()
+        .is_some_and(|meta| meta.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to replace {}: not a regular file",
+            path.display()
+        ));
     }
     let mut content = serde_json::to_string_pretty(vault)
         .map_err(|error| format!("failed to serialize the credential vault: {error}"))?;
@@ -204,7 +243,9 @@ pub(super) fn validate_id(id: &str) -> Result<(), String> {
         || id == "."
         || id == ".."
         || id.starts_with('.')
-        || id.chars().any(|c| c.is_whitespace() || matches!(c, '/' | '\\' | '"' | '\'' | '\0'))
+        || id
+            .chars()
+            .any(|c| c.is_whitespace() || matches!(c, '/' | '\\' | '"' | '\'' | '\0'))
     {
         return Err(format!("invalid vault service id: {id:?}"));
     }
@@ -225,7 +266,10 @@ pub fn normalize_tag(raw: &str) -> Option<String> {
 ///   `None`/blank inside the array clears the tag.
 /// - `None` (no array, or a short array): keep the previous tag, so old
 ///   callers round-tripping masks never wipe tags by accident.
-pub fn resolve_saved_tag(explicit: Option<&Option<String>>, prev_tag: Option<String>) -> Option<String> {
+pub fn resolve_saved_tag(
+    explicit: Option<&Option<String>>,
+    prev_tag: Option<String>,
+) -> Option<String> {
     match explicit {
         Some(inner) => inner.as_deref().and_then(normalize_tag),
         None => prev_tag,
@@ -251,7 +295,12 @@ pub fn next_key_index(keys: &[VaultKey], failed: usize, now: u64) -> Option<usiz
 
 /// Tag-scoped failover: only keys whose normalized tag matches `tag`.
 /// `None` keeps the legacy behavior (whole pool).
-pub fn next_key_index_in(keys: &[VaultKey], failed: usize, now: u64, tag: Option<&str>) -> Option<usize> {
+pub fn next_key_index_in(
+    keys: &[VaultKey],
+    failed: usize,
+    now: u64,
+    tag: Option<&str>,
+) -> Option<usize> {
     let wanted = tag.and_then(normalize_tag);
     if keys.len() <= 1 {
         if keys.len() == 1 && matches_tag(&keys[0], wanted.as_deref()) {
@@ -284,17 +333,23 @@ pub fn next_key_index_in(keys: &[VaultKey], failed: usize, now: u64, tag: Option
 fn matches_tag(key: &VaultKey, wanted: Option<&str>) -> bool {
     match wanted {
         None => true,
-        Some(tag) => key
-            .tag
-            .as_deref()
-            .map(|raw| raw.trim().to_lowercase())
-            .as_deref()
-            == Some(tag),
+        Some(tag) => {
+            key.tag
+                .as_deref()
+                .map(|raw| raw.trim().to_lowercase())
+                .as_deref()
+                == Some(tag)
+        }
     }
 }
 
 /// First healthy key index inside an optional tag scope.
-pub fn first_key_index_in(keys: &[VaultKey], start: usize, now: u64, tag: Option<&str>) -> Option<usize> {
+pub fn first_key_index_in(
+    keys: &[VaultKey],
+    start: usize,
+    now: u64,
+    tag: Option<&str>,
+) -> Option<usize> {
     let wanted = tag.and_then(normalize_tag);
     if keys.is_empty() {
         return None;
@@ -315,7 +370,8 @@ pub fn first_key_index_in(keys: &[VaultKey], start: usize, now: u64, tag: Option
     }
     // No healthy candidate: fall back to the first tag match so the caller
     // can surface the upstream status instead of a local "no key" error.
-    keys.iter().position(|key| matches_tag(key, wanted.as_deref()))
+    keys.iter()
+        .position(|key| matches_tag(key, wanted.as_deref()))
 }
 
 /// Classify an HTTP status into key health. `None` means no key fault.
@@ -338,7 +394,12 @@ pub(super) fn record_result(service: &mut VaultService, used: usize, status: u16
 }
 
 /// Tag-scoped variant: failover stays inside the requested tag.
-pub(super) fn record_result_in(service: &mut VaultService, used: usize, status: u16, tag: Option<&str>) {
+pub(super) fn record_result_in(
+    service: &mut VaultService,
+    used: usize,
+    status: u16,
+    tag: Option<&str>,
+) {
     let Some(fault) = health_for_status(status) else {
         if let Some(key) = service.keys.get_mut(used) {
             key.health = KeyHealth::Healthy;

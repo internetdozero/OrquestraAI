@@ -3,58 +3,56 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::type_complexity)]
 
-pub(crate) mod log;
 pub mod bridge;
 mod cli;
 mod community;
-mod official_mcps;
 mod desktop;
 mod desktop_backup;
 mod desktop_icons;
 pub mod harness;
 pub mod ideas;
-pub mod janitor;
 #[cfg(test)]
 mod ipc_acl;
 #[cfg(test)]
 mod ipc_contract;
+pub mod janitor;
+pub(crate) mod log;
 pub mod mcp;
 mod official;
+mod official_mcps;
 pub mod paths;
 pub mod presets;
 pub mod sessions;
 pub mod single_instance;
 mod skills;
 mod tray;
-pub mod vault;
 mod update_sig;
 mod updater;
+pub mod vault;
 
+use crate::paths::OrquestraPaths;
 use bridge::{BridgeReport, HarnessStatus};
+use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
 use ideas::{
-    create_idea, delete_idea, get_productivity_metrics, list_blackboard_notes,
-    list_idea_projects, list_ideas, mark_note_read, post_blackboard_note, update_idea,
-    update_idea_status,
+    create_idea, delete_idea, get_productivity_metrics, list_blackboard_notes, list_idea_projects,
+    list_ideas, mark_note_read, post_blackboard_note, update_idea, update_idea_status,
 };
 use janitor::{get_system_health, sweep_system_caches};
 use mcp::{McpServer, McpTargetStatus};
 use official::OfficialStore;
-use crate::paths::OrquestraPaths;
 use serde::Serialize;
 use sessions::{
     estimate_purge, get_retention_policy, get_session_transcript, get_unified_sessions,
     purge_sessions, save_retention_policy, toggle_pin_session,
 };
 use skills::{HarnessSummary, SkillItem};
-use vault::{
-    list_vault_presets, vault_delete_service, vault_exec, vault_http_request,
-    vault_list_services, vault_remove_key, vault_save_service, vault_set_primary,
-    vault_test_connection,
-};
 use tauri::Manager;
-use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
 use tray::set_minimize_to_tray;
 use updater::{apply_app_update, restart_app, sync_official_extensions};
+use vault::{
+    list_vault_presets, vault_delete_service, vault_exec, vault_http_request, vault_list_services,
+    vault_remove_key, vault_save_service, vault_set_primary, vault_test_connection,
+};
 
 /// Runtime identity of the native core, surfaced in the UI footer so the
 /// frontend can prove the IPC bridge is alive.
@@ -191,11 +189,7 @@ fn mcp_targets() -> Result<Vec<McpTargetStatus>, String> {
 
 /// Project or un-project one MCP server globally or for a single harness.
 #[tauri::command]
-fn set_mcp_state(
-    id: String,
-    harness_id: Option<String>,
-    enabled: bool,
-) -> Result<(), String> {
+fn set_mcp_state(id: String, harness_id: Option<String>, enabled: bool) -> Result<(), String> {
     mcp::set_mcp_state(&id, harness_id.as_deref(), enabled)
 }
 
@@ -237,10 +231,7 @@ fn apply_preset(id: String) -> Result<presets::PresetReport, String> {
 
 /// Save the current live skill and MCP combination as a named custom preset.
 #[tauri::command]
-fn save_preset(
-    name: String,
-    description: Option<String>,
-) -> Result<presets::Preset, String> {
+fn save_preset(name: String, description: Option<String>) -> Result<presets::Preset, String> {
     presets::save_preset(name, description)
 }
 

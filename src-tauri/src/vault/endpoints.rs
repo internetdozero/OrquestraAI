@@ -188,12 +188,30 @@ mod tests {
     #[test]
     fn verify_endpoints_survive_their_own_gate() {
         for preset in [
-            "github", "gitlab", "cloudflare", "openrouter", "openai", "groq", "mistral",
-            "deepseek", "perplexity", "together", "cohere", "elevenlabs", "anthropic",
-            "gemini", "vercel", "neon", "stripe", "resend", "deepgram", "unsplash", "pexels",
+            "github",
+            "gitlab",
+            "cloudflare",
+            "openrouter",
+            "openai",
+            "groq",
+            "mistral",
+            "deepseek",
+            "perplexity",
+            "together",
+            "cohere",
+            "elevenlabs",
+            "anthropic",
+            "gemini",
+            "vercel",
+            "neon",
+            "stripe",
+            "resend",
+            "deepgram",
+            "unsplash",
+            "pexels",
         ] {
-            let endpoint =
-                verify_endpoint(preset).unwrap_or_else(|| panic!("{preset} should have a verify endpoint"));
+            let endpoint = verify_endpoint(preset)
+                .unwrap_or_else(|| panic!("{preset} should have a verify endpoint"));
             assert!(
                 validate_endpoint(preset, endpoint).is_ok(),
                 "{preset} verify endpoint rejected: {endpoint}"

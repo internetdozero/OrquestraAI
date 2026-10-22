@@ -3,7 +3,7 @@ use std::process::Command;
 
 fn main() {
     let profile = std::env::var("PROFILE").unwrap_or_default();
-    
+
     // Check whether this build was invoked via Tauri CLI or with custom-protocol
     let has_custom_protocol = std::env::var("CARGO_FEATURE_CUSTOM_PROTOCOL").is_ok();
     let is_tauri_cli = std::env::vars().any(|(k, _)| k.starts_with("TAURI_"));
@@ -58,8 +58,8 @@ fn main() {
     // silently staying callable. Keep this list in sync with the
     // `generate_handler!` list in `src/lib.rs` — the `capability_scopes_*`
     // tests enforce the match.
-    tauri_build::try_build(
-        tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(&[
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
+        tauri_build::AppManifest::new().commands(&[
             "core_status",
             "log_ui_error",
             "get_system_health",
@@ -126,7 +126,7 @@ fn main() {
             "vault_exec",
             "vault_test_connection",
             "vault_remove_key",
-        ])),
-    )
+        ]),
+    ))
     .expect("tauri build failed");
 }

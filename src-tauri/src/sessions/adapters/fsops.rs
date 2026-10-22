@@ -322,7 +322,11 @@ mod tests {
         let root = scratch("rewrite");
         let store = root.join("store");
         let index = store.join("history.jsonl");
-        fs::write(&index, "{\"sessionId\":\"drop-me\"}\n{\"sessionId\":\"keep\"}\n").unwrap();
+        fs::write(
+            &index,
+            "{\"sessionId\":\"drop-me\"}\n{\"sessionId\":\"keep\"}\n",
+        )
+        .unwrap();
 
         let changed = rewrite_jsonl(&store, &index, &|record| {
             record.get("sessionId").and_then(|id| id.as_str()) != Some("drop-me")
@@ -356,7 +360,10 @@ mod tests {
 
         assert!(!changed);
         assert!(
-            fs::symlink_metadata(&link).unwrap().file_type().is_symlink(),
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
             "the store entry must stay a symlink"
         );
         assert_eq!(fs::read_to_string(&secret).unwrap(), original);

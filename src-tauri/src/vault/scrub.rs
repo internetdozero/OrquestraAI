@@ -133,7 +133,9 @@ mod tests {
     fn variants_cover_the_bypass_alphabet() {
         let variants = secret_variants(SECRET);
         assert!(variants.contains(&SECRET.to_string()));
-        assert!(variants.iter().any(|v| v.contains('=') || v.len() > SECRET.len()));
+        assert!(variants
+            .iter()
+            .any(|v| v.contains('=') || v.len() > SECRET.len()));
         assert!(variants.contains(&SECRET.chars().rev().collect::<String>()));
         // Short secrets redact raw-only: no derived forms to false-positive on.
         assert_eq!(secret_variants("abc"), Vec::<String>::new());
@@ -201,7 +203,10 @@ mod tests {
         let (code, stdout, _) =
             exec::run_command(&service, SECRET, &payload).expect("printf must run");
         assert_eq!(code, 0);
-        assert!(!stdout.contains(&b64), "base64 exfiltration survived: {stdout}");
+        assert!(
+            !stdout.contains(&b64),
+            "base64 exfiltration survived: {stdout}"
+        );
         assert!(stdout.contains("[REDACTED]"));
     }
 }

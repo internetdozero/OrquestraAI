@@ -49,11 +49,7 @@ impl SessionAdapter for Kilo {
     }
 
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
-        sqlite_store::read_transcript(
-            &self.root,
-            &format!("{STORE_REL}/{DATABASE}"),
-            session_id,
-        )
+        sqlite_store::read_transcript(&self.root, &format!("{STORE_REL}/{DATABASE}"), session_id)
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {

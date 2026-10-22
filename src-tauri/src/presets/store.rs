@@ -94,7 +94,9 @@ pub fn save_preset(name: String, description: Option<String>) -> Result<Preset, 
 /// Remove one custom profile. Built-ins are compiled in and cannot be deleted.
 pub fn delete_preset(id: &str) -> Result<(), String> {
     if builtins::all().iter().any(|preset| preset.id == id) {
-        return Err(format!("“{id}” ships with OrquestraAI and cannot be deleted"));
+        return Err(format!(
+            "“{id}” ships with OrquestraAI and cannot be deleted"
+        ));
     }
 
     let root = root()?;
@@ -364,4 +366,3 @@ fn capture_live_state() -> Result<
         harness_mcps,
     ))
 }
-

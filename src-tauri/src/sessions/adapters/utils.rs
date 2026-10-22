@@ -20,7 +20,6 @@ use serde_json::Value;
 
 use crate::sessions::types::TITLE_LIMIT;
 
-
 /// Refuse to load a JSONL index bigger than this; such a file is a runaway
 /// artifact, and parsing it would cost more than the listing is worth.
 pub(crate) const MAX_JSONL_BYTES: u64 = 32 * 1024 * 1024;
@@ -278,7 +277,6 @@ pub fn json_timestamp(value: &Value, keys: &[&str]) -> Option<i64> {
 
     None
 }
-
 
 /// Human text of a message body: a plain string, a list of `{"text": ...}`
 /// blocks, or an object with a `content` field holding either.

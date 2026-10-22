@@ -242,22 +242,43 @@ mod tests {
     #[test]
     fn skill_rule_matches_the_designated_set() {
         for id in [
-            "orquestra", "orquestra-modular-start", "orquestra-agent-orchestrator",
-            "orquestra-smart-build-router", "modular-start", "agent-orchestrator",
-            "lean-screen", "ux-best-practices",
+            "orquestra",
+            "orquestra-modular-start",
+            "orquestra-agent-orchestrator",
+            "orquestra-smart-build-router",
+            "modular-start",
+            "agent-orchestrator",
+            "lean-screen",
+            "ux-best-practices",
         ] {
             assert!(is_official_skill(id), "{id} should be official");
         }
-        for id in ["caveman", "github", "modular", "modular-path", "orquestra-anything", ""] {
+        for id in [
+            "caveman",
+            "github",
+            "modular",
+            "modular-path",
+            "orquestra-anything",
+            "",
+        ] {
             assert!(!is_official_skill(id), "{id} should not be official");
         }
     }
 
     #[test]
     fn aliases_resolve_forward_and_stamp_official() {
-        assert_eq!(canonical_skill_id("modular-start"), "orquestra-modular-start");
-        assert_eq!(canonical_skill_id("agent-orchestrator"), "orquestra-agent-orchestrator");
-        assert_eq!(canonical_skill_id("autonomous-audit"), "orquestra-autonomous-audit");
+        assert_eq!(
+            canonical_skill_id("modular-start"),
+            "orquestra-modular-start"
+        );
+        assert_eq!(
+            canonical_skill_id("agent-orchestrator"),
+            "orquestra-agent-orchestrator"
+        );
+        assert_eq!(
+            canonical_skill_id("autonomous-audit"),
+            "orquestra-autonomous-audit"
+        );
         assert_eq!(canonical_skill_id("orquestra"), "orquestra");
         assert_eq!(canonical_skill_id("caveman"), "caveman");
         assert_eq!(canonical_mcp_id("idea-vault"), "orquestra-idea-vault");
@@ -269,9 +290,16 @@ mod tests {
     #[test]
     fn mcp_rule_matches_the_designated_set() {
         for id in [
-            "orquestra-idea-vault", "orquestra-session-relay", "orquestra-janitor",
-            "orquestra-core", "orquestra-cloudflare", "idea-vault",
-            "session-relay", "janitor", "cloudflare", "my-orquestra-bridge",
+            "orquestra-idea-vault",
+            "orquestra-session-relay",
+            "orquestra-janitor",
+            "orquestra-core",
+            "orquestra-cloudflare",
+            "idea-vault",
+            "session-relay",
+            "janitor",
+            "cloudflare",
+            "my-orquestra-bridge",
         ] {
             assert!(is_official_mcp(id), "{id} should be official");
         }
@@ -294,10 +322,18 @@ mod tests {
             );
             if let Some((_, anchor)) = url.split_once('#') {
                 assert!(!anchor.is_empty() && !anchor.contains(".."));
-                assert!(anchor.starts_with("skills/"), "skill anchor must live under skills/: {}", skill.id);
+                assert!(
+                    anchor.starts_with("skills/"),
+                    "skill anchor must live under skills/: {}",
+                    skill.id
+                );
             }
             if let Some(fallback) = skill.fallback_repo_url.as_deref() {
-                assert!(fallback.starts_with("https://github.com/") && !fallback.contains('#'), "bad fallback for {}", skill.id);
+                assert!(
+                    fallback.starts_with("https://github.com/") && !fallback.contains('#'),
+                    "bad fallback for {}",
+                    skill.id
+                );
             }
         }
         for mcp in &store.mcps {
@@ -315,8 +351,18 @@ mod tests {
         for skill in &store.skills {
             // Tier flags must agree with the id rule; community picks stay
             // non-official while official picks satisfy it.
-            assert_eq!(skill.official, is_official_skill(&skill.id), "registry skill {} flag drifted", skill.id);
-            assert_eq!(skill.tier == "official", skill.official, "registry skill {} tier drifted", skill.id);
+            assert_eq!(
+                skill.official,
+                is_official_skill(&skill.id),
+                "registry skill {} flag drifted",
+                skill.id
+            );
+            assert_eq!(
+                skill.tier == "official",
+                skill.official,
+                "registry skill {} tier drifted",
+                skill.id
+            );
             // Reserved slots carry no repo; published ones stay https.
             if skill.repo_url.is_none() {
                 assert_eq!(skill.tier, "community", "only community may be unpublished");
@@ -337,14 +383,31 @@ mod tests {
         // catalog keys), so uniqueness is checked per list.
         let store = official_store();
         for (kind, entries) in [
-            ("skill", store.skills.iter().map(|s| (&s.id, &s.repo_url)).collect::<Vec<_>>()),
-            ("mcp", store.mcps.iter().map(|m| (&m.id, &m.repo_url)).collect::<Vec<_>>()),
+            (
+                "skill",
+                store
+                    .skills
+                    .iter()
+                    .map(|s| (&s.id, &s.repo_url))
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                "mcp",
+                store
+                    .mcps
+                    .iter()
+                    .map(|m| (&m.id, &m.repo_url))
+                    .collect::<Vec<_>>(),
+            ),
         ] {
             let mut seen = BTreeSet::new();
             for (id, repo_url) in entries {
                 assert!(seen.insert(id.clone()), "duplicate {kind} id {id}");
                 if let Some(url) = repo_url {
-                    assert!(url.starts_with("https://github.com/"), "unverified remote for {kind} {id}: {url}");
+                    assert!(
+                        url.starts_with("https://github.com/"),
+                        "unverified remote for {kind} {id}: {url}"
+                    );
                 }
             }
         }

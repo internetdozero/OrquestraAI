@@ -83,9 +83,8 @@ fn staging_dir() -> Result<PathBuf, String> {
 fn import_dir(source: &Path) -> Result<SkillItem, String> {
     // Before any vault write. `is_dir` follows, and copying a link would
     // read the target with `read_dir`.
-    let metadata = fs::symlink_metadata(source).map_err(|error| {
-        format!("not a folder: {} ({error})", source.display())
-    })?;
+    let metadata = fs::symlink_metadata(source)
+        .map_err(|error| format!("not a folder: {} ({error})", source.display()))?;
     if !metadata.file_type().is_dir() {
         return Err(format!(
             "refusing to import {}: not a real directory",
@@ -155,8 +154,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn import_refuses_a_symlinked_directory() {
-        let root = crate::paths::fresh_scratch_dir("orquestra-import-link")
-            .expect("scratch");
+        let root = crate::paths::fresh_scratch_dir("orquestra-import-link").expect("scratch");
         let outside = root.join("outside");
         fs::create_dir_all(&outside).expect("outside");
         fs::write(outside.join("SKILL.md"), "secret-outside\n").expect("skill");

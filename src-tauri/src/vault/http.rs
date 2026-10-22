@@ -134,10 +134,7 @@ pub(super) async fn execute_once(
     let status = response.status().as_u16();
     let mut raw: HashMap<String, String> = HashMap::new();
     for (name, value) in response.headers().iter() {
-        raw.insert(
-            name.to_string(),
-            value.to_str().unwrap_or("").to_string(),
-        );
+        raw.insert(name.to_string(), value.to_str().unwrap_or("").to_string());
     }
     let text = response
         .text()

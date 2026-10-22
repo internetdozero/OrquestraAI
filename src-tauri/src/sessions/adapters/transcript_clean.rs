@@ -40,7 +40,10 @@ fn strip_tag(text: &str, tag: &str) -> String {
 fn unwrap_tag(text: &str, open: &str, close: &str) -> Option<String> {
     let start = text.find(open)?;
     let inner = &text[start + open.len()..];
-    let end = inner.find(close).map(|index| &inner[..index]).unwrap_or(inner);
+    let end = inner
+        .find(close)
+        .map(|index| &inner[..index])
+        .unwrap_or(inner);
     Some(end.trim().to_string())
 }
 

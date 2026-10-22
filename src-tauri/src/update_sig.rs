@@ -73,7 +73,9 @@ mod tests {
 
     #[test]
     fn malformed_signatures_reject() {
-        assert!(verify_with_key(TEST_PUBLIC_KEY, SUMS_LEGIT.as_bytes(), "not a signature").is_err());
+        assert!(
+            verify_with_key(TEST_PUBLIC_KEY, SUMS_LEGIT.as_bytes(), "not a signature").is_err()
+        );
         let truncated = SIG_LEGIT.lines().take(2).collect::<Vec<_>>().join("\n");
         assert!(verify_with_key(TEST_PUBLIC_KEY, SUMS_LEGIT.as_bytes(), &truncated).is_err());
         assert!(verify_with_key(TEST_PUBLIC_KEY, SUMS_LEGIT.as_bytes(), "").is_err());

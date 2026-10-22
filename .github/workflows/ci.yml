@@ -56,6 +56,12 @@ jobs:
         with:
           workspaces: src-tauri
 
+      # Rust formatting gate: rustfmt violations fail the pipeline before
+      # tests run. Keep the tree `cargo fmt --all` clean; the gate is the
+      # enforcer, not the fixer.
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+
       # Run the full Rust workspace test suite.
       - name: Run cargo tests
         run: cargo test --workspace
