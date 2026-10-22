@@ -38,8 +38,7 @@ export function ActivityHeatmap({ days }: { days: DayActivity[] }) {
         role="img"
         aria-label="Daily activity heatmap"
         aria-describedby={active ? tooltipId : undefined}
-        className="grid min-w-max auto-cols-[11px] grid-flow-col gap-[3px]"
-        style={{ gridTemplateRows: "repeat(7, 11px)" }}
+        className="grid min-w-max auto-cols-[11px] grid-flow-col grid-rows-[repeat(7,11px)] gap-[3px]"
         onMouseLeave={() => setActive(null)}
       >
         {Array.from({ length: leading }, (_, index) => (

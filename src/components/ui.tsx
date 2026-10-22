@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, type HTMLAttributes, type ReactNode } from "react";
 import { AlertTriangle, type LucideIcon } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import { cn } from "../lib/utils";
@@ -69,6 +69,24 @@ export function StatePanel({
       {children}
     </div>
   );
+}
+
+/**
+ * CSP-safe dynamic height. `style-src` carries no `unsafe-inline`, so
+ * runtime pixel values go through CSSOM (script served from 'self',
+ * allowed) instead of the style attribute (blocked).
+ */
+export function SpacerDiv({
+  height,
+  ...props
+}: { height: number } & HTMLAttributes<HTMLDivElement>) {
+  const ref = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (element) element.style.height = `${height}px`;
+    },
+    [height],
+  );
+  return <div ref={ref} {...props} />;
 }
 
 /** Dismissible inline error banner. */

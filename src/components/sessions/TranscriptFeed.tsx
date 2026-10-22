@@ -6,6 +6,7 @@ import { useWindowedList } from "../../hooks/useWindowedList";
 import { getSessionTranscript, type TranscriptTurn } from "../../lib/sessions";
 import { cn } from "../../lib/utils";
 import { MarkdownTurn } from "./MarkdownTurn";
+import { SpacerDiv } from "../ui";
 
 export interface TranscriptMetadata {
   harness: string;
@@ -255,7 +256,7 @@ export function TranscriptFeed({
       </div>
 
       <div ref={rootRef}>
-        {topSpacer > 0 && <div style={{ height: topSpacer }} aria-hidden="true" />}
+        {topSpacer > 0 && <SpacerDiv height={topSpacer} aria-hidden="true" />}
         {visible.slice(start, end).map((turn, offset) => {
           const index = start + offset;
           return (
@@ -268,7 +269,7 @@ export function TranscriptFeed({
             </div>
           );
         })}
-        {bottomSpacer > 0 && <div style={{ height: bottomSpacer }} aria-hidden="true" />}
+        {bottomSpacer > 0 && <SpacerDiv height={bottomSpacer} aria-hidden="true" />}
       </div>
     </div>
   );

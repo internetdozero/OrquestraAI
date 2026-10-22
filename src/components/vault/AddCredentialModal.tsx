@@ -213,13 +213,7 @@ export function AddCredentialModal({ open, presets, onClose, onSave }: AddCreden
             className="w-full rounded-lg border border-white/10 bg-zinc-900 py-2 pr-2 pl-8 text-[12.5px] text-zinc-100 placeholder:text-zinc-600"
           />
         </div>
-        <div
-          className="mt-2 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto px-0.5 py-0.5 sm:grid-cols-2"
-          style={{
-            maskImage: "linear-gradient(to bottom, black 88%, transparent)",
-            WebkitMaskImage: "linear-gradient(to bottom, black 88%, transparent)",
-          }}
-        >
+        <div className="mt-2 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto px-0.5 py-0.5 [-webkit-mask-image:linear-gradient(to_bottom,black_88%,transparent)] [mask-image:linear-gradient(to_bottom,black_88%,transparent)] sm:grid-cols-2">
           {filtered.map((entry) => (
             <PresetCard
               key={entry.id}

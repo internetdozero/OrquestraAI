@@ -243,3 +243,18 @@
 .accent-glow {
   box-shadow: 0 0 18px -6px var(--accent-glow);
 }
+
+/* CSP-safe swatches: style-src carries no 'unsafe-inline', so the finite
+   accent palette maps to static attribute rules instead of inline colors. */
+[data-swatch="emerald"] {
+  background-color: #10b981;
+}
+[data-swatch="cyan"] {
+  background-color: #06b6d4;
+}
+[data-swatch="violet"] {
+  background-color: #8b5cf6;
+}
+[data-swatch="amber"] {
+  background-color: #f59e0b;
+}

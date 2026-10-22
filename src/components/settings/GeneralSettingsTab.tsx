@@ -4,11 +4,13 @@ import { useI18n } from "../../hooks/useI18n";
 import type { AccentColor } from "../../hooks/useAppSettings";
 import { cn } from "../../lib/utils";
 
-const ACCENTS: { id: AccentColor; swatch: string }[] = [
-  { id: "emerald", swatch: "#10b981" },
-  { id: "cyan", swatch: "#06b6d4" },
-  { id: "violet", swatch: "#8b5cf6" },
-  { id: "amber", swatch: "#f59e0b" },
+// Swatch colors live as [data-swatch] rules in index.css: style-src carries
+// no 'unsafe-inline', so the finite palette maps to static CSS.
+const ACCENTS: { id: AccentColor }[] = [
+  { id: "emerald" },
+  { id: "cyan" },
+  { id: "violet" },
+  { id: "amber" },
 ];
 
 function Toggle({
@@ -145,7 +147,7 @@ export function GeneralSettingsTab({
                   : "border-white/10 bg-white/[0.02] text-zinc-400 hover:text-zinc-200",
               )}
             >
-              <span className="size-3.5 rounded-full" style={{ backgroundColor: accent.swatch }} />
+              <span data-swatch={accent.id} className="size-3.5 rounded-full" />
               {g.accents[accent.id]}
             </button>
           ))}

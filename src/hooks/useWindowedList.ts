@@ -10,12 +10,15 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
  * rows mount. The parent renders:
  *
  *   <div ref={rootRef}>
- *     {topSpacer > 0 && <div style={{ height: topSpacer }} aria-hidden="true" />}
+ *     {topSpacer > 0 && <SpacerDiv height={topSpacer} aria-hidden="true" />}
  *     {items.slice(start, end).map((item, i) => (
  *       <div key={...} data-index={start + i} className="pb-2">…</div>
  *     ))}
- *     {bottomSpacer > 0 && <div style={{ height: bottomSpacer }} aria-hidden="true" />}
+ *     {bottomSpacer > 0 && <SpacerDiv height={bottomSpacer} aria-hidden="true" />}
  *   </div>
+ *
+ * (`SpacerDiv` from components/ui sets the height through CSSOM: style-src
+ * carries no 'unsafe-inline', so the style attribute is blocked.)
  *
  * Item wrappers must carry `data-index` (position in the full list) and
  * include their own gap (e.g. `pb-2`, which `offsetHeight` covers) instead

@@ -166,8 +166,7 @@ export function IdeasBoard({
                 </span>
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none mt-4 text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap text-zinc-400 uppercase select-none"
-                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                  className="pointer-events-none mt-4 rotate-180 text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap text-zinc-400 uppercase select-none [writing-mode:vertical-rl]"
                 >
                   {s[column.titleKey]}
                 </span>

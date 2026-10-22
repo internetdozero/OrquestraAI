@@ -124,6 +124,24 @@ export function CustomDropdown<T extends string>({
     place();
   }, [open, place]);
 
+  // CSP-safe positioning: style-src carries no 'unsafe-inline', so the
+  // measured box goes through CSSOM. A layout effect still places the menu
+  // before the first paint, as the style prop did before.
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    if (!box) {
+      menu.style.visibility = "hidden";
+      return;
+    }
+    menu.style.top = `${box.top}px`;
+    menu.style.left = `${box.left}px`;
+    menu.style.minWidth = `${box.minWidth}px`;
+    menu.style.maxHeight = `${box.maxHeight}px`;
+    menu.style.visibility = "visible";
+    menu.style.transformOrigin = box.placement === "top" ? "bottom center" : "top center";
+  }, [box, open]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -204,14 +222,6 @@ export function CustomDropdown<T extends string>({
             id={listId}
             role="listbox"
             aria-label={ariaLabel}
-            style={{
-              top: box?.top ?? 0,
-              left: box?.left ?? 0,
-              minWidth: box?.minWidth ?? MENU_MIN_WIDTH,
-              maxHeight: box?.maxHeight,
-              visibility: box ? "visible" : "hidden",
-              transformOrigin: box?.placement === "top" ? "bottom center" : "top center",
-            }}
             className="dropdown-pop fixed z-40 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.08] bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md"
           >
             {options.map((option) => {

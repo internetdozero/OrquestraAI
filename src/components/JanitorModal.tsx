@@ -52,7 +52,11 @@ function Gauge({
             "h-full rounded-full transition-[width]",
             elevated ? "bg-amber-400" : "bg-gradient-to-r from-emerald-500 to-cyan-400",
           )}
-          style={{ width: `${value}%` }}
+          // CSP-safe: style-src has no 'unsafe-inline', so the measured
+          // width goes through CSSOM instead of the style attribute.
+          ref={(element) => {
+            if (element) element.style.width = `${value}%`;
+          }}
         />
       </div>
       <p className="mt-2 font-mono text-[10px] text-zinc-500">

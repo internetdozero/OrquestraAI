@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { useVirtualRows } from "../hooks/useVirtualRows";
+import { SpacerDiv } from "./ui";
 
 interface VirtualCardGridProps<T> {
   items: readonly T[];
@@ -75,11 +76,7 @@ export function VirtualCardGrid<T>({
     // `overflowAnchor: "none"` opts out of native scroll anchoring: when the
     // top/bottom spacers resize, Blink/WebKit must not shift the scroll
     // position to compensate — the spacer math already accounts for it.
-    <div
-      ref={gridRef}
-      className={`${className} [overflow-anchor:none]`}
-      style={{ overflowAnchor: "none" }}
-    >
+    <div ref={gridRef} className={`${className} [overflow-anchor:none]`}>
       {rows.topSpace > 0 && <Spacer slot="top" height={rows.topSpace} />}
 
       {visible.map((item) => (
@@ -94,6 +91,11 @@ export function VirtualCardGrid<T>({
 /** Full-width gap standing in for the rows outside the window. */
 function Spacer({ slot, height }: { slot: "top" | "bottom"; height: number }) {
   return (
-    <div aria-hidden="true" data-virtual-slot={slot} style={{ height, gridColumn: "1 / -1" }} />
+    <SpacerDiv
+      height={height}
+      aria-hidden="true"
+      data-virtual-slot={slot}
+      className="[grid-column:1/-1]"
+    />
   );
 }
