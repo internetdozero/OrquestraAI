@@ -1,21 +1,13 @@
-//! Adapter serializers: one server definition, one dialect per harness.
-//!
-//! JSON targets are edited in place so foreign keys and hand-written
-//! entries survive; Codex goes through `toml_edit`, which keeps its
-//! comments, key order and unrelated tables byte-identical.
+//! JSON and JSONC envelopes: `mcpServers` (Claude, Antigravity, Copilot) and
+//! the `mcp` block with a merged command array (OpenCode, Kilo Code).
 
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::collections::BTreeSet;
 
-use super::McpServer;
-
-/// Codex reads `[mcp_servers.<id>]`. The audit notes said `[mcp.<id>]`, but the
-/// live `~/.codex/config.toml` and `codex mcp list` both agree on
-/// `mcp_servers`; an `[mcp]` table is unknown to Codex and would be ignored.
-const CODEX_TABLE: &str = "mcp_servers";
+use crate::server::HarnessServer;
 
 /// Keys sorted so the same catalog always renders byte-identically.
-pub(super) fn sorted_env(server: &McpServer) -> Vec<(&str, &str)> {
+pub(super) fn sorted_env(server: &HarnessServer) -> Vec<(&str, &str)> {
     let mut entries: Vec<(&str, &str)> = server
         .env
         .iter()
@@ -25,13 +17,13 @@ pub(super) fn sorted_env(server: &McpServer) -> Vec<(&str, &str)> {
     entries
 }
 
-pub(super) fn json_args(server: &McpServer) -> JsonValue {
+fn json_args(server: &HarnessServer) -> JsonValue {
     JsonValue::Array(server.args.iter().cloned().map(JsonValue::String).collect())
 }
 
 /// Env values win over the file's own, but keys OrquestraAI does not define are
 /// left alone so hand-added variables never disappear.
-pub(super) fn merged_env(existing: Option<&JsonValue>, server: &McpServer) -> JsonValue {
+fn merged_env(existing: Option<&JsonValue>, server: &HarnessServer) -> JsonValue {
     let mut object = match existing {
         Some(JsonValue::Object(map)) => map.clone(),
         _ => JsonMap::new(),
@@ -47,11 +39,11 @@ pub(super) fn merged_env(existing: Option<&JsonValue>, server: &McpServer) -> Js
 /// Overwrite only the keys OrquestraAI owns on one entry. A `null` field means
 /// "this key must not be here", which is how the merged-array shapes drop a
 /// stale `args` key.
-pub(super) fn merge_entry(
+fn merge_entry(
     existing: Option<&JsonValue>,
     env_key: &str,
     fields: &[(&str, JsonValue)],
-    server: &McpServer,
+    server: &HarnessServer,
 ) -> JsonValue {
     let mut object = match existing {
         Some(JsonValue::Object(map)) => map.clone(),
@@ -85,7 +77,7 @@ pub(super) fn merge_entry(
     JsonValue::Object(object)
 }
 
-pub(super) fn parse_json_document(existing: &str) -> Result<JsonValue, String> {
+fn parse_json_document(existing: &str) -> Result<JsonValue, String> {
     if existing.trim().is_empty() {
         return Ok(JsonValue::Object(JsonMap::new()));
     }
@@ -93,6 +85,8 @@ pub(super) fn parse_json_document(existing: &str) -> Result<JsonValue, String> {
     json5::from_str(existing).map_err(|error| format!("config is not valid JSONC: {error}"))
 }
 
+/// Canonical form of a JSON document: two-space indent and one trailing
+/// newline, so a target already in this form is left byte-identical.
 pub(super) fn render_pretty(value: &JsonValue) -> Result<String, String> {
     let mut rendered = serde_json::to_string_pretty(value)
         .map_err(|error| format!("failed to serialize config: {error}"))?;
@@ -103,9 +97,9 @@ pub(super) fn render_pretty(value: &JsonValue) -> Result<String, String> {
 /// Antigravity, Copilot and the root of `~/.claude.json` all take
 /// `{"mcpServers": { … }}`; for Claude the surrounding file is Claude's own
 /// state, which is preserved because only that one key is touched.
-pub(super) fn render_mcp_servers(
+pub fn render_mcp_servers(
     existing: &str,
-    active: &[McpServer],
+    active: &[HarnessServer],
     stale: &BTreeSet<String>,
     entry_type: Option<&str>,
 ) -> Result<String, String> {
@@ -142,7 +136,7 @@ pub(super) fn render_mcp_servers(
         for server in active {
             let mut fields: Vec<(&str, JsonValue)> = Vec::new();
             if let Some(kind) = entry_type {
-                let kind = if server.url.is_some() { "http" } else { kind };
+                let kind = if server.is_remote() { "http" } else { kind };
                 fields.push(("type", JsonValue::String(kind.to_string())));
             }
             if let Some(url) = &server.url {
@@ -166,9 +160,9 @@ pub(super) fn render_mcp_servers(
 
 /// OpenCode and Kilo Code want `{"mcp": …}` with a merged command array, an
 /// `environment` key, `type: "local"` and `enabled: true`.
-pub(super) fn render_jsonc_block(
+pub fn render_jsonc_block(
     existing: &str,
-    active: &[McpServer],
+    active: &[HarnessServer],
     stale: &BTreeSet<String>,
 ) -> Result<String, String> {
     let mut root = parse_json_document(existing)?;
@@ -207,7 +201,7 @@ pub(super) fn render_jsonc_block(
                 (
                     "type",
                     JsonValue::String(
-                        if server.url.is_some() {
+                        if server.is_remote() {
                             "remote"
                         } else {
                             "local"
@@ -234,127 +228,3 @@ pub(super) fn render_jsonc_block(
 
     render_pretty(&root)
 }
-
-/// Codex reads `[mcp_servers.<id>]` plus `[mcp_servers.<id>.env]`. The edit is
-/// format-preserving, so comments, ordering and every unrelated table in
-/// `config.toml` survive.
-pub(super) fn render_codex_toml(
-    existing: &str,
-    active: &[McpServer],
-    stale: &BTreeSet<String>,
-) -> Result<String, String> {
-    let mut document: toml_edit::DocumentMut = if existing.trim().is_empty() {
-        toml_edit::DocumentMut::new()
-    } else {
-        existing
-            .parse()
-            .map_err(|error| format!("config is not valid TOML: {error}"))?
-    };
-
-    for id in stale {
-        if let Some(servers) = codex_servers(&mut document) {
-            servers.remove(id);
-        }
-    }
-
-    for server in active {
-        let servers =
-            codex_servers(&mut document).ok_or_else(|| format!("{CODEX_TABLE} is not a table"))?;
-
-        if servers
-            .get(&server.id)
-            .is_some_and(|item| item.as_table().is_none())
-        {
-            return Err(format!("[{CODEX_TABLE}.{}] is not a table", server.id));
-        }
-
-        if !servers.contains_key(&server.id) {
-            servers.insert(&server.id, toml_edit::Item::Table(toml_edit::Table::new()));
-        }
-
-        let entry = servers
-            .get_mut(&server.id)
-            .and_then(|item| item.as_table_mut())
-            .ok_or_else(|| format!("[{CODEX_TABLE}.{}] is not a table", server.id))?;
-
-        // Only the keys OrquestraAI owns are set, so `startup_timeout_sec` and
-        // other hand-tuned fields stay on the entry.
-        if let Some(url) = &server.url {
-            entry.insert("url", toml_edit::value(url.as_str()));
-            entry.remove("command");
-            entry.remove("args");
-        } else {
-            entry.remove("url");
-            entry.insert("command", toml_edit::value(server.command.as_str()));
-
-            let mut args = toml_edit::Array::new();
-            for arg in &server.args {
-                args.push(arg.as_str());
-            }
-            entry.insert("args", toml_edit::value(args));
-        }
-
-        if !server.headers.is_empty() {
-            let headers = entry
-                .entry("headers")
-                .or_insert(toml_edit::Item::Table(toml_edit::Table::new()));
-            let Some(headers) = headers.as_table_mut() else {
-                return Err(format!(
-                    "[{CODEX_TABLE}.{}.headers] is not a table",
-                    server.id
-                ));
-            };
-            for (key, value) in &server.headers {
-                headers.insert(key, toml_edit::value(value.as_str()));
-            }
-        }
-
-        if !server.env.is_empty() {
-            if entry
-                .get("env")
-                .map_or(true, |item| item.as_table().is_none())
-            {
-                entry.insert("env", toml_edit::Item::Table(toml_edit::Table::new()));
-            }
-
-            if let Some(env) = entry.get_mut("env").and_then(|item| item.as_table_mut()) {
-                for (key, value) in sorted_env(server) {
-                    env.insert(key, toml_edit::value(value));
-                }
-            }
-        }
-    }
-
-    // Do not leave an empty table behind when nothing is managed any more.
-    let empty = document
-        .as_table()
-        .get(CODEX_TABLE)
-        .and_then(|item| item.as_table())
-        .is_some_and(toml_edit::Table::is_empty);
-    if empty {
-        document.as_table_mut().remove(CODEX_TABLE);
-    }
-
-    Ok(document.to_string())
-}
-
-pub(super) fn codex_servers(
-    document: &mut toml_edit::DocumentMut,
-) -> Option<&mut toml_edit::Table> {
-    let root = document.as_table_mut();
-
-    if !root.contains_key(CODEX_TABLE) {
-        let mut table = toml_edit::Table::new();
-        // Keep the file's style: `mcp_servers` is only ever an implicit parent
-        // of the per-server tables, never a printed header of its own.
-        table.set_implicit(true);
-        root.insert(CODEX_TABLE, toml_edit::Item::Table(table));
-    }
-
-    root.get_mut(CODEX_TABLE)
-        .and_then(|item| item.as_table_mut())
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------

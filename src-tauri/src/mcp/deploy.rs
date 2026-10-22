@@ -11,10 +11,9 @@ use std::path::{Path, PathBuf};
 
 use super::catalog::{load_catalog, save_catalog, seed_catalog_path};
 use super::secrets::parse_dotenv;
-use super::serializers::{render_codex_toml, render_jsonc_block, render_mcp_servers};
 use super::{McpServer, McpTargetStatus};
 use crate::bridge;
-use crate::harness::{self, McpFormat};
+use crate::harness::{self, HarnessServer};
 use crate::paths::OrquestraPaths;
 
 const BACKUP_PREFIX: &str = "pre-mcp";
@@ -134,13 +133,9 @@ pub(super) fn deploy_at(
             continue;
         }
 
-        let rendered = match mcp.format {
-            McpFormat::JsonMcpServers => {
-                render_mcp_servers(&existing, &active, &stale, mcp.entry_type)
-            }
-            McpFormat::JsoncMcpBlock => render_jsonc_block(&existing, &active, &stale),
-            McpFormat::CodexToml => render_codex_toml(&existing, &active, &stale),
-        };
+        let servers: Vec<HarnessServer> = active.iter().map(McpServer::to_harness_server).collect();
+        let rendered =
+            harness::render_mcp_config(mcp.format, &existing, &servers, &stale, mcp.entry_type);
 
         let rendered = match rendered {
             Ok(rendered) => rendered,

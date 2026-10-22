@@ -1,9 +1,10 @@
 //! Global and per-harness MCP server management.
 //!
 //! One master catalog lives in `~/.orquestra/mcps.json`; every harness wants
-//! a different envelope around the same server definition, so
-//! [`serializers`] is the adapter layer, [`deploy`] owns the atomic writes
-//! and backups, and [`catalog`] owns the storage behind both. Every write
+//! a different envelope around the same server definition, so the adapter
+//! layer lives in `orquestra_harness` (see `McpServer::to_harness_server`),
+//! [`deploy`] owns the atomic writes and backups, and [`catalog`] owns the
+//! storage behind both. Every write
 //! starts from the file already on disk, so keys OrquestraAI does not own
 //! (project state, hooks, plugin tables, hand-added servers) survive
 //! untouched.
@@ -14,7 +15,6 @@ use std::collections::HashMap;
 mod catalog;
 mod deploy;
 mod secrets;
-mod serializers;
 #[cfg(test)]
 mod tests;
 
@@ -90,6 +90,19 @@ impl McpServer {
 }
 
 impl McpServer {
+    /// Project the catalog entry into the dialect-neutral shape the harness
+    /// serializers consume, dropping state that only the app cares about.
+    pub(super) fn to_harness_server(&self) -> orquestra_harness::HarnessServer {
+        orquestra_harness::HarnessServer {
+            id: self.id.clone(),
+            command: self.command.clone(),
+            args: self.args.clone(),
+            env: self.env.clone(),
+            url: self.url.clone(),
+            headers: self.headers.clone(),
+        }
+    }
+
     /// Enabled for a specific harness, directly or through the global baseline.
     pub(super) fn covers(&self, harness: &str) -> bool {
         self.global_enabled || self.enabled_harnesses.iter().any(|id| id == harness)

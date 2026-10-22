@@ -1,0 +1,14 @@
+[package]
+name = "orquestra-harness"
+version = "0.1.0"
+description = "Harness config adapters for OrquestraAI: one MCP server, one dialect per harness"
+authors = ["Operator"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[dependencies]
+# The harness registry (install paths, MCP envelope per harness) lives here.
+orquestra-core = { path = "../orquestra-core" }
+serde_json.workspace = true
+json5.workspace = true
+toml_edit.workspace = true
