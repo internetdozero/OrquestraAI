@@ -15,8 +15,8 @@ mod lookup;
 mod registry;
 
 pub use lookup::{
-    find, harness_ids, is_installed, is_mcp_target, mcp_targets, primary_owner, provisions_parent,
-    resolve_install_dir,
+    find, harness_ids, is_installed, is_installed_with, is_mcp_target, mcp_targets, primary_owner,
+    provisions_parent, resolve_install_dir, resolve_install_dir_with,
 };
 pub use registry::HARNESSES;
 
@@ -101,37 +101,44 @@ pub struct HarnessSpec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
 
-    use crate::testenv::EnvGuard;
+    /// `CODEX_HOME` set to the mock path, everything else absent.
+    fn codex_home_override(key: &str) -> Option<String> {
+        (key == "CODEX_HOME").then(|| "/tmp/orquestra-codex-mock".to_string())
+    }
 
-    /// `CODEX_HOME` wins over `~/.codex` while set; removing it restores
-    /// the home-relative default, and `is_installed` follows the resolved
-    /// path. One test covers every `CODEX_HOME` mutation so parallel
-    /// runners cannot interleave a set/remove on the same variable.
+    /// An empty environment: every override falls back to the home default.
+    fn no_overrides(_key: &str) -> Option<String> {
+        None
+    }
+
+    /// `CODEX_HOME` wins over `~/.codex` while set; an absent variable
+    /// restores the home-relative default, and `is_installed` follows the
+    /// resolved path. The environment is injected, so the test never touches
+    /// the process-global variable that other threads read.
     #[test]
     fn env_override_wins_and_falls_back() {
         let spec = find("codex").expect("codex is registered");
         assert_eq!(spec.env_override, Some("CODEX_HOME"));
 
         let home = std::env::temp_dir().join(format!("orquestra-harness-{}", std::process::id()));
-        let codex_home = EnvGuard::capture("CODEX_HOME");
 
-        codex_home.set(Some(OsStr::new("/tmp/orquestra-codex-mock")));
         assert_eq!(
-            resolve_install_dir(spec, &home),
+            resolve_install_dir_with(spec, &home, &codex_home_override),
             PathBuf::from("/tmp/orquestra-codex-mock")
         );
 
-        codex_home.set(None);
-        assert_eq!(resolve_install_dir(spec, &home), home.join(".codex"));
-        assert!(!is_installed(spec, &home));
+        assert_eq!(
+            resolve_install_dir_with(spec, &home, &no_overrides),
+            home.join(".codex")
+        );
+        assert!(!is_installed_with(spec, &home, &no_overrides));
 
         std::fs::create_dir_all(home.join(".codex")).unwrap();
-        assert!(is_installed(spec, &home));
+        assert!(is_installed_with(spec, &home, &no_overrides));
         std::fs::remove_dir_all(&home).unwrap();
-        assert!(!is_installed(spec, &home));
+        assert!(!is_installed_with(spec, &home, &no_overrides));
     }
 
     #[test]
@@ -140,9 +147,12 @@ mod tests {
         assert_eq!(spec.env_override, Some("CLAUDE_CONFIG_DIR"));
         let home = Path::new("/tmp/orquestra-home-that-cannot-exist");
 
-        let claude_config = EnvGuard::capture("CLAUDE_CONFIG_DIR");
-        claude_config.set(Some(OsStr::new("   ")));
-        assert_eq!(resolve_install_dir(spec, home), home.join(".claude"));
+        // Whitespace-only is the "set but empty" case: it must not win.
+        let whitespace = |key: &str| (key == "CLAUDE_CONFIG_DIR").then(|| "   ".to_string());
+        assert_eq!(
+            resolve_install_dir_with(spec, home, &whitespace),
+            home.join(".claude")
+        );
     }
 
     #[test]

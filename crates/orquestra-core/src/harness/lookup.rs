@@ -17,8 +17,23 @@ pub fn find(id: &str) -> Option<&'static HarnessSpec> {
 /// Where a harness is installed. A set, non-empty `env_override` wins;
 /// otherwise the standard home-relative default applies.
 pub fn resolve_install_dir(spec: &HarnessSpec, home: &Path) -> PathBuf {
+    resolve_install_dir_with(spec, home, &|key| std::env::var(key).ok())
+}
+
+/// [`resolve_install_dir`] against an injected environment reader.
+///
+/// The process environment is shared state: reading it directly makes the
+/// resolution untestable without mutating it, and mutating it from a test
+/// races every other thread. Callers that already know the environment (the
+/// tests, and any future caller resolving several harnesses at once) pass it
+/// in instead.
+pub fn resolve_install_dir_with(
+    spec: &HarnessSpec,
+    home: &Path,
+    lookup: &dyn Fn(&str) -> Option<String>,
+) -> PathBuf {
     if let Some(key) = spec.env_override {
-        if let Ok(value) = std::env::var(key) {
+        if let Some(value) = lookup(key) {
             if !value.trim().is_empty() {
                 return PathBuf::from(value);
             }
@@ -52,7 +67,16 @@ pub fn primary_owner(rel: &str) -> Option<&'static HarnessSpec> {
 
 /// True when the harness's install directory exists.
 pub fn is_installed(spec: &HarnessSpec, home: &Path) -> bool {
-    resolve_install_dir(spec, home).exists()
+    is_installed_with(spec, home, &|key| std::env::var(key).ok())
+}
+
+/// [`is_installed`] against an injected environment reader.
+pub fn is_installed_with(
+    spec: &HarnessSpec,
+    home: &Path,
+    lookup: &dyn Fn(&str) -> Option<String>,
+) -> bool {
+    resolve_install_dir_with(spec, home, lookup).exists()
 }
 
 /// True when the harness has an MCP adapter, so a scope can be targeted.
