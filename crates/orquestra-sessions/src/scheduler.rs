@@ -8,10 +8,10 @@
 
 use std::time::Duration;
 
-use super::adapters::time::{now_secs, timestamp_secs};
-use super::policy;
-use super::purge::{self, Store};
-use super::types::RetentionPolicy;
+use crate::adapters::time::{now_secs, timestamp_secs};
+use crate::policy;
+use crate::purge::{self, Store};
+use crate::types::RetentionPolicy;
 
 /// How often the daemon wakes to re-read the policy.
 ///
@@ -30,7 +30,7 @@ pub fn spawn() {
     let builder = std::thread::Builder::new().name("orquestra-auto-purge".to_string());
 
     if let Err(error) = builder.spawn(run) {
-        crate::log_error!("auto-purge daemon did not start: {error}");
+        orquestra_core::log_error!("auto-purge daemon did not start: {error}");
     }
 }
 
@@ -39,7 +39,7 @@ fn run() {
         std::thread::sleep(TICK);
 
         if let Err(error) = tick() {
-            crate::log_warn!("auto-purge skipped: {error}");
+            orquestra_core::log_warn!("auto-purge skipped: {error}");
         }
     }
 }
@@ -63,14 +63,14 @@ fn tick() -> Result<(), String> {
     }
 
     let report = purge::execute_selection(&store, selection)?;
-    crate::log_info!(
+    orquestra_core::log_info!(
         "auto-purge removed {} sessions ({} bytes) with {} failures",
         report.deleted_count,
         report.reclaimed_bytes,
         report.failed_count
     );
     for error in &report.errors {
-        crate::log_error!("auto-purge: {error}");
+        orquestra_core::log_error!("auto-purge: {error}");
     }
 
     Ok(())

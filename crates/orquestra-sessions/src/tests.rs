@@ -2,21 +2,16 @@
 #![allow(clippy::expect_used)]
 
 //! Tests for the pure layers of the session catalog: timestamp and title
-//! handling, the atomic policy sidecar, and the frozen payload shapes.
+//! handling and the atomic policy sidecar. The wire payload shapes are
+//! guarded by the app's IPC contract test, where the fixture lives.
 
-use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Serialize;
-use serde_json::Value;
-
-use super::adapters::utils;
-use super::policy::{self, PolicyFile};
-use super::types::{
-    PinnedSession, PurgeReport, RetentionPolicy, SessionFilter, TranscriptTurn, UnifiedSession,
-};
+use crate::adapters::utils;
+use crate::policy::{self, PolicyFile};
+use crate::types::{PinnedSession, RetentionPolicy};
 
 struct TestRoot(PathBuf);
 
@@ -44,25 +39,6 @@ impl Drop for TestRoot {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
-}
-
-fn keys_of<T: Serialize>(value: &T) -> BTreeSet<String> {
-    match serde_json::to_value(value).expect("value should serialize") {
-        Value::Object(map) => map.keys().cloned().collect(),
-        other => panic!("expected an object payload, got {other}"),
-    }
-}
-
-fn frozen(shape: &str) -> BTreeSet<String> {
-    let raw = include_str!("../../tests/fixtures/ipc-contract.json");
-    let fixture: Value = serde_json::from_str(raw).expect("the IPC fixture should be valid JSON");
-
-    fixture["payloadShapes"][shape]
-        .as_array()
-        .unwrap_or_else(|| panic!("fixture has no payloadShapes.{shape}"))
-        .iter()
-        .map(|key| key.as_str().unwrap_or_default().to_string())
-        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -130,13 +106,13 @@ fn titles_are_collapsed_and_character_trimmed() {
 
     let long = "a".repeat(400);
     let trimmed = utils::trim_title(&long);
-    assert_eq!(trimmed.chars().count(), super::types::TITLE_LIMIT);
+    assert_eq!(trimmed.chars().count(), crate::types::TITLE_LIMIT);
     assert!(trimmed.ends_with('…'));
 
     // Trimming counts characters, so a multi-byte title is never cut mid-glyph.
     let emoji = "🦀".repeat(400);
     let trimmed = utils::trim_title(&emoji);
-    assert_eq!(trimmed.chars().count(), super::types::TITLE_LIMIT);
+    assert_eq!(trimmed.chars().count(), crate::types::TITLE_LIMIT);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,10 +246,10 @@ fn policy_values_are_clamped_and_overrides_win_over_the_default() {
 #[test]
 #[ignore = "reads the harness stores of whoever runs it"]
 fn real_harness_smoke() {
-    let home = super::adapters::home().expect("HOME should be set");
+    let home = crate::adapters::home().expect("HOME should be set");
     let mut sessions = Vec::new();
 
-    for adapter in super::adapters::registry(&home) {
+    for adapter in crate::adapters::registry(&home) {
         let started = std::time::Instant::now();
         let found = adapter
             .list_sessions()
@@ -306,8 +282,8 @@ fn real_harness_smoke() {
 #[test]
 #[ignore = "reads the harness stores of whoever runs it"]
 fn real_purge_estimate() {
-    use super::purge;
-    use super::types::{PurgeFilter, RetentionPolicy};
+    use crate::purge;
+    use crate::types::{PurgeFilter, RetentionPolicy};
 
     let store = purge::Store::system().expect("real store");
     let policy = RetentionPolicy::default();
@@ -344,44 +320,5 @@ fn real_purge_estimate() {
     assert!(
         estimate.sessions_count <= 1168,
         "the estimate cannot exceed the catalog"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Wire contract
-// ---------------------------------------------------------------------------
-
-#[test]
-fn session_payloads_match_the_frozen_ipc_contract() {
-    assert_eq!(
-        keys_of(&UnifiedSession::new(
-            "codex",
-            "01f1",
-            "Kernel audio".to_string()
-        )),
-        frozen("UnifiedSession")
-    );
-    assert_eq!(keys_of(&SessionFilter::default()), frozen("SessionFilter"));
-    assert_eq!(
-        keys_of(&RetentionPolicy::default()),
-        frozen("RetentionPolicy")
-    );
-    assert_eq!(
-        keys_of(&PinnedSession {
-            harness: "codex".to_string(),
-            session_id: "01f1".to_string(),
-            pinned_at: "2026-10-18T06:00:00Z".to_string(),
-            label: None,
-        }),
-        frozen("PinnedSession")
-    );
-    assert_eq!(keys_of(&PurgeReport::default()), frozen("PurgeReport"));
-    assert_eq!(
-        keys_of(&TranscriptTurn {
-            role: "user".to_string(),
-            content: "hello".to_string(),
-            timestamp: None,
-        }),
-        frozen("TranscriptTurn")
     );
 }

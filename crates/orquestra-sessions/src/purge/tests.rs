@@ -17,9 +17,9 @@ use rusqlite::Connection;
 
 use super::{estimate, execute, select_by_ttl, Store};
 
-use crate::sessions::policy;
-use crate::sessions::scheduler;
-use crate::sessions::types::{PurgeFilter, RetentionPolicy};
+use crate::policy;
+use crate::scheduler;
+use crate::types::{PurgeFilter, RetentionPolicy};
 
 struct Fixture {
     home: PathBuf,
@@ -127,10 +127,10 @@ fn opencode_fixture(ids: &[&str]) -> Fixture {
 fn adapter<'a>(
     adapters: &'a std::collections::BTreeMap<
         &'static str,
-        Box<dyn crate::sessions::adapters::SessionAdapter>,
+        Box<dyn crate::adapters::SessionAdapter>,
     >,
     harness: &str,
-) -> &'a dyn crate::sessions::adapters::SessionAdapter {
+) -> &'a dyn crate::adapters::SessionAdapter {
     adapters
         .get(harness)
         .unwrap_or_else(|| panic!("no adapter for {harness}"))
@@ -309,9 +309,7 @@ fn auto_purge_is_due_only_when_enabled_and_the_interval_has_passed() {
 
     let recent = RetentionPolicy {
         auto_purge_enabled: true,
-        last_run: Some(crate::sessions::adapters::time::iso8601_from_secs(
-            1_000_000,
-        )),
+        last_run: Some(crate::adapters::time::iso8601_from_secs(1_000_000)),
         ..RetentionPolicy::default()
     };
     assert!(!scheduler::due(&recent, 1_000_000 + 3600));

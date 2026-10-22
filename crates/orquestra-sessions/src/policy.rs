@@ -11,8 +11,8 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use super::types::{PinnedSession, RetentionPolicy};
-use crate::paths::{create_dir, OrquestraPaths};
+use crate::types::{PinnedSession, RetentionPolicy};
+use orquestra_core::paths::{create_dir, OrquestraPaths};
 
 /// Sidecar file inside `~/.orquestra`.
 const POLICY_FILE: &str = "sessions_policy.json";
@@ -53,7 +53,7 @@ pub fn toggle_pin(harness: &str, session_id: &str, label: Option<String>) -> Res
 }
 
 /// Every pinned session, used to decorate a listing.
-pub(crate) fn pins() -> Result<Vec<PinnedSession>, String> {
+pub fn pins() -> Result<Vec<PinnedSession>, String> {
     Ok(load_from(&root()?)?.pinned_sessions)
 }
 
@@ -107,7 +107,7 @@ pub(crate) fn save_to(root: &Path, file: &PolicyFile) -> Result<(), String> {
     }
     let temporary = root.join(format!(
         ".{POLICY_FILE}.tmp-{}",
-        crate::paths::unique_tmp_suffix()
+        orquestra_core::paths::unique_tmp_suffix()
     ));
 
     let mut content = serde_json::to_string_pretty(file)
@@ -201,7 +201,7 @@ fn root() -> Result<PathBuf, String> {
 }
 
 pub(crate) fn now_iso8601() -> String {
-    super::adapters::utils::iso8601_from_secs(super::adapters::utils::now_secs())
+    crate::adapters::utils::iso8601_from_secs(crate::adapters::utils::now_secs())
 }
 
 #[cfg(test)]

@@ -7,8 +7,8 @@
 use std::fs;
 
 use super::{adapter, estimate, execute, opencode_fixture, Fixture};
-use crate::sessions::adapters::{adapters_by_id, fsops};
-use crate::sessions::types::PurgeFilter;
+use crate::adapters::{adapters_by_id, fsops};
+use crate::types::PurgeFilter;
 
 // ---------------------------------------------------------------------------
 // Lock and active-session guards

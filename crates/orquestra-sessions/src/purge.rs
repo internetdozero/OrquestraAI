@@ -9,11 +9,11 @@
 use std::collections::{BTreeSet, HashSet};
 use std::path::PathBuf;
 
-use super::adapters;
-use super::adapters::time::{now_secs, timestamp_secs};
-use super::policy;
-use super::types::{PinnedSession, PurgeEstimate, PurgeFilter, PurgeReport, UnifiedSession};
-use crate::paths::OrquestraPaths;
+use crate::adapters;
+use crate::adapters::time::{now_secs, timestamp_secs};
+use crate::policy;
+use crate::types::{PinnedSession, PurgeEstimate, PurgeFilter, PurgeReport, UnifiedSession};
+use orquestra_core::paths::OrquestraPaths;
 
 #[cfg(test)]
 mod tests;
@@ -189,7 +189,7 @@ fn select(store: &Store, filter: &PurgeFilter) -> Result<Selection, String> {
 fn select_with(store: &Store, rules: &Rules<'_>) -> Result<Selection, String> {
     let (sessions, warnings) = adapters::collect(&store.home);
     for warning in warnings {
-        crate::log_warn!("sessions: skipped {warning}");
+        orquestra_core::log_warn!("sessions: skipped {warning}");
     }
 
     let pins: HashSet<(String, String)> = policy::load_from(&store.root)?

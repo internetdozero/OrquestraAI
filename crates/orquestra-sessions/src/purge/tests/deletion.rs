@@ -7,7 +7,7 @@
 use std::fs;
 
 use super::{execute, Fixture};
-use crate::sessions::types::PurgeFilter;
+use crate::types::PurgeFilter;
 
 // ---------------------------------------------------------------------------
 // SQLite cascade and VACUUM

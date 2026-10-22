@@ -13,8 +13,15 @@
 //!
 //! Listing never writes to a harness store: a harness that is broken, locked
 //! or absent is reported and skipped, so one bad database cannot empty the
-//! tab. Mutating operations (pins, retention, purge) and the commands that
-//! expose them stay in the desktop shell, which calls into this crate.
+//! tab. Mutating operations live here too — [`policy`] owns the pin and
+//! retention sidecar in `~/.orquestra`, [`purge`] deletes sessions with the
+//! pinned/active guards, and [`scheduler`] runs the opt-in auto-purge daemon.
+//! The desktop shell keeps only the `#[tauri::command]` wrappers.
 
 pub mod adapters;
+pub mod policy;
+pub mod purge;
+pub mod scheduler;
+#[cfg(test)]
+mod tests;
 pub mod types;
