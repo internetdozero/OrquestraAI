@@ -27,6 +27,23 @@ StartupWMClass=orquestra
 Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;
 "#;
 
+/// Launcher text for an alias entry: identical to the canonical entry but
+/// hidden from menus. Without this, GNOME/KDE/XFCE list two or three
+/// duplicate OrquestraAI icons (one per alias filename).
+fn alias_entry() -> String {
+    format!("{DESKTOP_ENTRY}NoDisplay=true\n")
+}
+
+/// Expected launcher bytes per filename: only `orquestra.desktop` is the
+/// visible canonical entry; the technical aliases stay hidden.
+fn entry_for(name: &str) -> Option<String> {
+    match name {
+        "orquestra.desktop" => Some(DESKTOP_ENTRY.to_string()),
+        "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop" => Some(alias_entry()),
+        _ => None,
+    }
+}
+
 /// Write the launcher and icons under `data_dir` (`~/.local/share`).
 /// Reports whether any bytes changed so the caller can skip the desktop
 /// refresh subprocesses when a launch changed nothing.
@@ -47,11 +64,16 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
         if is_symlink(&apps_dir) || is_symlink(&dest) {
             continue;
         }
+        // A pre-dedup alias still carries the canonical text: rewrite it
+        // hidden so one install pass converges every launcher.
+        let Some(expected) = entry_for(name) else {
+            continue;
+        };
         let needs_write = match std::fs::read_to_string(&dest) {
-            Ok(existing) => existing != DESKTOP_ENTRY,
+            Ok(existing) => existing != expected,
             Err(_) => true,
         };
-        if needs_write && std::fs::write(&dest, DESKTOP_ENTRY).is_ok() {
+        if needs_write && std::fs::write(&dest, &expected).is_ok() {
             changed = true;
         }
     }
