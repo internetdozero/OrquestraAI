@@ -100,6 +100,33 @@ async (worktree sizing walks `node_modules`). OrquestraAI-owned layers on top:
   agent holds open;
 - **scheduler**: the background daemon enforcing `autoPurge`.
 
+### Adapter native formats
+
+Every adapter translates one harness's on-disk layout into `UnifiedSession`
+listing rows and `TranscriptTurn` feeds. All paths are relative to `$HOME`;
+ids are path-segment-checked so `../` escapes and symlinks pointing outside
+the store resolve to an empty feed, never to outside bytes.
+
+| Harness     | Store                                                                                               | Listing source                                                                                                                                                                                            | Transcript source                                                                                 |
+| ----------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| claude      | `~/.claude`                                                                                         | `history.jsonl` (`sessionId`, `display`, `project`, `timestamp`\|`created_at` as epoch or ISO) ∪ `projects/<slug>/<id>.jsonl` headers (first user prompt + recorded `cwd`) + legacy `sessions/<id>.jsonl` | Per-line JSONL transcript; Manicode-style single-array files read element-wise                    |
+| codex       | `~/.codex`                                                                                          | `session_index.jsonl` (`id`, `thread_name`\|`title`, `updated_at`) ∪ `sessions/YYYY/MM/DD/rollout-*.jsonl` + turn counts/activity from read-only `thread_history_1.sqlite`                                | Rollouts streamed line by line, keeping only `type: response_item` with `user`\|`assistant` roles |
+| copilot     | `~/.copilot`                                                                                        | `session-store.db` (SQLite) + `open-sessions-state.json` registry                                                                                                                                         | Turns built from DB rows (role/content/timestamp)                                                 |
+| grok        | `~/.grok`                                                                                           | `sessions/<encoded-cwd>/<id>/` dirs + `active_sessions.json` for open sessions; `session_search.sqlite` for search                                                                                        | `chat_history.jsonl` per session dir                                                              |
+| antigravity | `~/.gemini`                                                                                         | `antigravity/brain/<id>/` dirs + `conversations/<id>.db`; costs in `conversation_summaries.db`                                                                                                            | `brain/<id>/…/logs/transcript.jsonl` (newer nests under `.system_generated/`)                     |
+| hermes      | `~/.hermes`                                                                                         | `sessions/<id>.jsonl` + `terminal-sessions/<id>.jsonl`; `state.db`                                                                                                                                        | Same JSONL files, lines → turns                                                                   |
+| opencode    | `~/.local/share/opencode/opencode.db`                                                               | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB: join/message/part table layouts tried in order                                           |
+| kilo        | `~/.local/share/kilo/kilo.db`                                                                       | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB, same fallback order                                                                      |
+| freebuff    | Manicode chat logs + `~/.config/freebuff-desktop/local-projects/<slug>/threads/<thread>/state.json` | Log files / thread state                                                                                                                                                                                  | JSON-array chat logs via the shared reader; desktop threads via `freebuff_desktop`                |
+
+Shared mapping (`sessions/adapters/transcript*.rs`, used by every reader):
+`parse_value` detects the canonical role, extracts text blocks and ISO
+timestamps; `build_turn` constructs the turn; `clean_turn_content` +
+`transcript_sanitize` strip tool-run noise so the drawer shows chat bubbles.
+Caps are uniform — first 1,000 turns, 12,000 chars per turn (trimmed, never
+dropped) — corrupt lines are skipped, and purge deletes only inside the store
+(`fsops::remove_path`) with SQLite `vacuum` afterwards.
+
 ## Vault trust model
 
 - `vault.json` is `0600`, written atomically; backups embed cleartext secrets
