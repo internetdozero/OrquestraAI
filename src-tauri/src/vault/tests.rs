@@ -231,6 +231,34 @@ fn exec_rejects_shell_strings_and_non_allowlisted_programs() {
     assert!(super::exec::run_command(&service, secret, &serde_json::json!(7)).is_err());
 }
 
+/// Task #322: end-to-end through `run_command` — policy denials fail before
+/// any spawn, and the smoke-test helpers still run with scrubbed output.
+#[test]
+fn exec_policy_denials_fail_before_spawn_and_echo_still_runs() {
+    let service = test_service("openai", &["sk-secret-9999"]);
+    let secret = "sk-secret-9999";
+    for payload in [
+        serde_json::json!(["gh", "api", "repos/x"]),
+        serde_json::json!(["gh", "alias", "set", "--shell"]),
+        serde_json::json!(["aws", "--region", "us-east-1", "configure", "set", "a", "b"]),
+        serde_json::json!(["aws", "sts", "get-session-token"]),
+        serde_json::json!(["aws", "s3", "ls", "--endpoint-url=https://evil.test"]),
+        serde_json::json!(["az", "rest", "--method", "get"]),
+        serde_json::json!(["az", "account", "get-access-token"]),
+        serde_json::json!(["terraform", "apply"]),
+        serde_json::json!(["terraform", "-chdir=/tmp/x", "version"]),
+        serde_json::json!(["gcloud", "auth", "print-access-token"]),
+    ] {
+        let error = super::exec::run_command(&service, secret, &payload).expect_err("must refuse");
+        assert!(error.contains("vault exec"), "names the layer: {error}");
+    }
+    let (code, stdout, _) =
+        super::exec::run_command(&service, secret, &serde_json::json!(["echo", "policy-ok"]))
+            .expect("echo still runs");
+    assert_eq!(code, 0);
+    assert!(stdout.contains("policy-ok"));
+}
+
 #[test]
 fn verify_endpoints_cover_every_non_custom_preset() {
     use super::presets::verify_endpoint;
