@@ -150,18 +150,13 @@ pub async fn vault_http_request(
                         Ok(used)
                     }
                 })?;
-                let _ = new_active;
                 // Fail over transparently: retry once with the rotated key.
-                if health_for_status(status).is_some() {
-                    if let Ok(vault) = load_vault(&paths) {
-                        if let Some(live) = vault.services.get(&service) {
-                            if live.active != used {
-                                used = live.active;
-                                first_used = first_used.min(used);
-                                continue;
-                            }
-                        }
-                    }
+                // `new_active` is the just-persisted value, so no second
+                // disk read is needed to observe our own write.
+                if health_for_status(status).is_some() && new_active != used {
+                    used = new_active;
+                    first_used = first_used.min(used);
+                    continue;
                 }
                 return Ok(VaultHttpResult {
                     status,
@@ -173,16 +168,24 @@ pub async fn vault_http_request(
             }
             Err(error) => {
                 last_error = error;
-                if let Ok(vault) = load_vault(&paths) {
-                    if let Some(live) = vault.services.get(&service) {
-                        if let Some(next) =
-                            next_key_index_in(&live.keys, used, u64::MAX - 1, tag.as_deref())
-                        {
-                            if next != used {
-                                used = next;
-                                continue;
+                match load_vault(&paths) {
+                    Ok(vault) => {
+                        if let Some(live) = vault.services.get(&service) {
+                            if let Some(next) =
+                                next_key_index_in(&live.keys, used, u64::MAX - 1, tag.as_deref())
+                            {
+                                if next != used {
+                                    used = next;
+                                    continue;
+                                }
                             }
                         }
+                    }
+                    // The HTTP error is already recorded below; a vault read
+                    // failure here must not vanish too — log it and serve
+                    // the recorded error instead of failing over blind.
+                    Err(read_error) => {
+                        crate::log_warn!("vault failover skipped for {service}: {read_error}");
                     }
                 }
                 break;

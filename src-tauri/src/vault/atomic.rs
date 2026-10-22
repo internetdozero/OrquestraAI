@@ -92,9 +92,13 @@ pub(super) fn write_private(path: &Path, content: &str) -> Result<(), String> {
         file.sync_all()
             .map_err(|error| format!("failed to sync {}: {error}", tmp.display()))?;
     }
-    let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600));
+    // A vault that cannot be locked down to 0o600 must fail closed: a
+    // silent chmod miss would leave secrets readable by other users.
+    fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))
+        .map_err(|error| format!("failed to secure {}: {error}", tmp.display()))?;
     fs::rename(&tmp, path)
         .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
-    let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+        .map_err(|error| format!("failed to secure {}: {error}", path.display()))?;
     Ok(())
 }

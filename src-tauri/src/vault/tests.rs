@@ -656,3 +656,43 @@ fn noop_vault_update_skips_disk_write() {
     assert!(reloaded.services.contains_key("svc"));
     std::fs::remove_dir_all(&root).expect("cleanup");
 }
+
+/// Disk-full/read-only simulation: a persistence failure must reach the
+/// caller as an `Err`, never vanish into a discarded `Result`. The scratch
+/// dir is locked read-only, the write is attempted, and permissions are
+/// restored so the cleanup remove cannot fail either.
+#[cfg(unix)]
+#[test]
+fn unwritable_vault_dir_fails_loudly() {
+    use super::atomic::update_vault;
+    use crate::paths::OrquestraPaths;
+    use std::os::unix::fs::PermissionsExt;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let root = std::env::temp_dir().join(format!(
+        "orquestra-vault-readonly-{}-{nanos}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&root).expect("scratch dir");
+    let paths = OrquestraPaths {
+        root: root.clone(),
+        vault: root.clone(),
+        active: root.clone(),
+    };
+    std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o555)).expect("lock dir");
+    let error = update_vault(&paths, |vault| {
+        vault
+            .services
+            .insert("svc".to_string(), test_service("openai", &["sk-loud"]));
+        Ok(())
+    })
+    .expect_err("an unwritable vault must not report success");
+    assert!(
+        !error.is_empty(),
+        "the I/O failure must be described, not swallowed"
+    );
+    std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).expect("unlock dir");
+    std::fs::remove_dir_all(&root).expect("cleanup");
+}
