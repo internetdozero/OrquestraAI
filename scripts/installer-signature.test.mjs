@@ -63,7 +63,19 @@ chmodSync(join(binDir, "curl"), 0o755);
 writeFileSync(join(binDir, "minisign"), "#!/bin/sh\nexit 0\n");
 chmodSync(join(binDir, "minisign"), 0o755);
 
-function runInstaller(args = []) {
+writeFileSync(
+  join(binDir, "ldd"),
+  `#!/bin/sh
+if [ "$LDD_MODE" = "missing" ]; then
+  printf '%s\\n' 'libwebkit2gtk-4.1.so.0 => not found' 'libgtk-3.so.0 => not found'
+else
+  printf '%s\\n' 'libc.so.6 => /lib/libc.so.6 (0x00000000)'
+fi
+`,
+);
+chmodSync(join(binDir, "ldd"), 0o755);
+
+function runInstaller(args = [], extraEnv = {}) {
   return spawnSync("sh", [installerPath, ...args], {
     encoding: "utf8",
     env: {
@@ -72,6 +84,7 @@ function runInstaller(args = []) {
       HOME: homeDir,
       PATH: `${binDir}:${process.env.PATH}`,
       TMPDIR: tempDir,
+      ...extraEnv,
     },
   });
 }
@@ -103,6 +116,33 @@ test("installer allows unsigned legacy releases only with explicit opt-in", () =
   const result = runInstaller(["--allow-unsigned-legacy"]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stderr, /explicitly allowing an unsigned legacy release/);
+});
+
+test("runtime dependencies can be checked after installation without downloading again", () => {
+  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  writeFileSync(installedBinary, "existing installation\n");
+  chmodSync(installedBinary, 0o755);
+
+  const result = runInstaller(["--check-deps"], { LDD_MODE: "missing" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /libwebkit2gtk-4\.1\.so\.0/);
+  assert.match(result.stderr, /libgtk-3\.so\.0/);
+  assert.equal(readFileSync(installedBinary, "utf8"), "existing installation\n");
+});
+
+test("installer refuses to replace the current binary when runtime libraries are missing", () => {
+  writeFileSync(
+    signaturePath,
+    "untrusted comment: test\nAAAA\ntrusted comment: timestamp=123\tfile=SHA256SUMS.txt\tversion=1.2.3\nAAAA\n",
+  );
+  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  writeFileSync(installedBinary, "existing installation\n");
+  chmodSync(installedBinary, 0o755);
+
+  const result = runInstaller([], { LDD_MODE: "missing" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Installation stopped before replacing/);
+  assert.equal(readFileSync(installedBinary, "utf8"), "existing installation\n");
 });
 
 after(() => {

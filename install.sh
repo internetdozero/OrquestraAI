@@ -24,18 +24,63 @@ ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
 
 # 0. CLI Flags
 ALLOW_UNSIGNED_LEGACY=0
+CHECK_DEPS_ONLY=0
 for arg in "$@"; do
     case "$arg" in
         --require-sig) ALLOW_UNSIGNED_LEGACY=0 ;;
         --allow-unsigned-legacy) ALLOW_UNSIGNED_LEGACY=1 ;;
+        --check-deps) CHECK_DEPS_ONLY=1 ;;
         -h|--help)
-            echo "Usage: install.sh [--require-sig | --allow-unsigned-legacy]"
+            echo "Usage: install.sh [--require-sig | --allow-unsigned-legacy | --check-deps]"
             echo "  --require-sig             Require a verifiable release signature (default)"
             echo "  --allow-unsigned-legacy   Allow checksum-only verification for old unsigned releases"
+            echo "  --check-deps              Check runtime libraries of the installed Linux binary without reinstalling"
             exit 0 ;;
-        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig, --allow-unsigned-legacy)." >&2; exit 1 ;;
+        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig, --allow-unsigned-legacy, --check-deps)." >&2; exit 1 ;;
     esac
 done
+
+check_linux_runtime_deps() {
+    binary_path=$1
+    if ! command -v ldd >/dev/null 2>&1; then
+        echo "❌ Runtime dependency check unavailable: 'ldd' is not installed." >&2
+        return 2
+    fi
+    if ldd_output=$(ldd "$binary_path" 2>&1); then
+        :
+    else
+        echo "❌ Could not inspect runtime dependencies for ${binary_path}:" >&2
+        printf '%s\n' "$ldd_output" >&2
+        return 2
+    fi
+    missing_libraries=$(printf '%s\n' "$ldd_output" | awk '/=> not found/ { print $1 }')
+    if [ -n "$missing_libraries" ]; then
+        echo "❌ Missing runtime libraries for ${binary_path}:" >&2
+        printf '%s\n' "$missing_libraries" | sed 's/^/  /' >&2
+        echo "Install the packages that provide these libraries, then rerun this check." >&2
+        if command -v pacman >/dev/null 2>&1; then
+            echo "On Arch, use 'pacman -F <library-name>' to find each package." >&2
+        fi
+        return 1
+    fi
+    echo "✓ All linked runtime libraries are available."
+}
+
+if [ "$CHECK_DEPS_ONLY" = "1" ]; then
+    if [ "$(uname -s)" != "Linux" ]; then
+        echo "❌ Runtime dependency diagnostics currently support Linux only." >&2
+        exit 2
+    fi
+    if [ ! -x "$TARGET_BIN" ]; then
+        echo "❌ Installed OrquestraAI binary not found at ${TARGET_BIN}." >&2
+        exit 1
+    fi
+    if check_linux_runtime_deps "$TARGET_BIN"; then
+        exit 0
+    else
+        exit "$?"
+    fi
+fi
 
 # 1. Dependency Checks
 command -v curl >/dev/null 2>&1 || {
@@ -246,6 +291,16 @@ echo "🔍 Verifying binary authenticity with SHA-256..."
 }
 echo "✓ SHA-256 integrity check passed: binary authentic."
 
+# Check dynamic Linux libraries before replacing an existing installation.
+# The binary's detached release signature has already been verified above.
+if [ "$OS" = "Linux" ]; then
+    echo "🔍 Checking Linux runtime libraries..."
+    if ! check_linux_runtime_deps "${TMP_DIR}/${ASSET}"; then
+        echo "❌ Installation stopped before replacing the installed binary." >&2
+        exit 1
+    fi
+fi
+
 # 5. Truly Atomic Installation (Same-Filesystem Staging & Rename)
 chmod 755 "${TMP_DIR}/${ASSET}"
 STAGING_BIN=$(mktemp "${BIN_DIR}/.orquestra.tmp.XXXXXXXXXX")
@@ -319,4 +374,8 @@ fi
 echo "========================================================"
 echo "🎉 OrquestraAI installed successfully to ${TARGET_BIN}"
 echo "Run 'orquestra' in your terminal to launch the control plane."
+if [ "$OS" = "Linux" ]; then
+    echo "If it later fails to launch, diagnose missing libraries without reinstalling:"
+    echo "  curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps"
+fi
 echo "========================================================"

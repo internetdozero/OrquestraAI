@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Installer checks Linux runtime libraries before replacing an installation and provides `--check-deps` to diagnose a broken launch later without reinstalling.
 - macOS health reporting for system memory, process memory, and process activity, compiled on a dedicated macOS CI runner.
 - Secure removal of plaintext migration backups from Credentials, with verification, explicit confirmation, and a key-rotation advisory.
 - Tag-pinned installer delivery through the Cloudflare Worker, with ETag caching and a deploy-time parity check.

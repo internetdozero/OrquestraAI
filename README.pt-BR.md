@@ -25,6 +25,12 @@
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
 ```
 
+Se uma versão Linux instalada não abrir, confira as bibliotecas necessárias sem reinstalar:
+
+```bash
+curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps
+```
+
 ---
 
 ## 🌟 O que é o OrquestraAI?

@@ -25,6 +25,12 @@
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
 ```
 
+If an installed Linux build does not launch, check its shared-library dependencies without reinstalling:
+
+```bash
+curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps
+```
+
 ---
 
 ## 🌟 What is OrquestraAI?
