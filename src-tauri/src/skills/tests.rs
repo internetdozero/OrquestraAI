@@ -391,34 +391,4 @@ mod tests {
         fs::remove_dir_all(&paths.root).unwrap();
         fs::remove_dir_all(&dangling.root).unwrap();
     }
-
-    #[test]
-    fn security_cache_tracks_tree_changes() {
-        use super::security::{cached_scan, scan_skill_security};
-        let root = temp_paths("seccache");
-        fs::create_dir_all(&root.root).unwrap();
-        let dir = root.root.join("skill");
-        fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join(SKILL_FILE), "# Demo\n").unwrap();
-
-        assert_eq!(cached_scan(&dir), (false, Vec::<String>::new()));
-        // Parity with the uncached walk on a nested tree.
-        fs::create_dir_all(dir.join("scripts")).unwrap();
-        fs::write(dir.join("scripts/deploy"), "#!/bin/sh\n").unwrap();
-        fs::write(dir.join("notes.md"), "# notes\n").unwrap();
-        assert_eq!(cached_scan(&dir), scan_skill_security(&dir));
-        assert!(cached_scan(&dir).0);
-
-        // An in-place helper edit keeps the verdict (fingerprint refreshes).
-        fs::write(dir.join("scripts/deploy"), "#!/bin/sh\necho v2\n").unwrap();
-        let (has_scripts, files) = cached_scan(&dir);
-        assert!(has_scripts);
-        assert_eq!(files, vec!["scripts/deploy".to_string()]);
-
-        // Removing every helper reads clean again.
-        fs::remove_file(dir.join("scripts/deploy")).unwrap();
-        assert_eq!(cached_scan(&dir), (false, Vec::<String>::new()));
-
-        fs::remove_dir_all(&root.root).unwrap();
-    }
 }

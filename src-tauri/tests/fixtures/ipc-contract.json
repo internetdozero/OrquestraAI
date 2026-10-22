@@ -117,20 +117,9 @@
       "vault_remove_key",
       "reveal_mcp_secret"
     ],
-    "vault-blind-ops": [
-      "vault_http_request",
-      "vault_exec"
-    ],
-    "update-ops": [
-      "apply_app_update",
-      "sync_official_extensions",
-      "restart_app"
-    ],
-    "session-ops": [
-      "purge_sessions",
-      "save_retention_policy",
-      "toggle_pin_session"
-    ],
+    "vault-blind-ops": ["vault_http_request", "vault_exec"],
+    "update-ops": ["apply_app_update", "sync_official_extensions", "restart_app"],
+    "session-ops": ["purge_sessions", "save_retention_policy", "toggle_pin_session"],
     "admin-ops": [
       "sweep_system_caches",
       "set_skill_state",

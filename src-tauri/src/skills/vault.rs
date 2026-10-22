@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
 use super::projection::projected_ids;
-use super::security::{cached_scan, prune_security_cache};
+use super::security::scan_skill_security;
 use super::vault_cache::{cached_content, prune_content_cache};
 use super::{SkillItem, GLOBAL_SCOPE};
 use crate::paths::OrquestraPaths;
@@ -56,9 +56,7 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
             global_enabled || scope_set.contains(&id)
         };
 
-        // Security verdicts are cached on the skill tree fingerprint; any
-        // new, removed or edited helper misses and rescans.
-        let (has_scripts, script_files) = cached_scan(&directory);
+        let (has_scripts, script_files) = scan_skill_security(&directory);
 
         skills.push(SkillItem {
             id,
@@ -76,7 +74,6 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
     }
 
     prune_content_cache(&seen);
-    prune_security_cache(&seen);
     skills.sort_by_key(|skill| skill.name.to_lowercase());
     Ok(skills)
 }

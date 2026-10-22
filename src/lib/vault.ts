@@ -50,8 +50,6 @@ export interface VaultService {
   meta: Record<string, string>;
 }
 
-
-
 const MOCK_PRESET_TABLE: Array<[string, string, string, string]> = [
   ["openai", "OpenAI", "GPT models and embeddings.", "https://platform.openai.com/api-keys"],
   [

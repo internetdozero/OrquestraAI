@@ -5,10 +5,9 @@
 //! so pre-encryption `vault.json` / `mcps.json` files keep loading — the
 //! callers migrate them (backup + rewrite) on first read.
 
-use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Nonce};
 use base64::prelude::*;
-use rand::TryRngCore;
 
 const MARKER: &str = "orquestraSealed";
 const VERSION: u8 = 1;
@@ -26,19 +25,16 @@ pub(super) fn is_sealed(value: &serde_json::Value) -> bool {
 
 /// Encrypt `plaintext` under `key`, returning the envelope as JSON text.
 pub(super) fn seal(key: &[u8; 32], plaintext: &[u8]) -> Result<String, String> {
-    let mut nonce_bytes = [0u8; NONCE_LEN];
-    rand::rngs::OsRng
-        .try_fill_bytes(&mut nonce_bytes)
-        .map_err(|error| format!("no OS randomness available: {error}"))?;
     let cipher = Aes256Gcm::new_from_slice(key)
         .map_err(|error| format!("rejected the file key: {error}"))?;
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
     let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&nonce_bytes), plaintext)
+        .encrypt(&nonce, plaintext)
         .map_err(|error| format!("failed to seal secrets: {error}"))?;
     let envelope = serde_json::json!({
         MARKER: VERSION,
         "alg": ALG,
-        "nonce": BASE64_STANDARD.encode(nonce_bytes),
+        "nonce": BASE64_STANDARD.encode(nonce.as_slice()),
         "data": BASE64_STANDARD.encode(ciphertext),
     });
     serde_json::to_string_pretty(&envelope)
@@ -91,35 +87,39 @@ mod tests {
     use super::*;
 
     fn test_key() -> [u8; 32] {
-        [7u8; 32]
+        Aes256Gcm::generate_key(&mut OsRng).into()
     }
 
     #[test]
     fn round_trip_restores_the_exact_bytes() {
+        let key = test_key();
         let plaintext = br#"{"services":{"github":{"keys":[{"secret":"sk-live"}]}}}"#;
-        let sealed = seal(&test_key(), plaintext).expect("seal");
+        let sealed = seal(&key, plaintext).expect("seal");
         assert!(!sealed.contains("sk-live"));
         let value: serde_json::Value = serde_json::from_str(&sealed).expect("envelope is JSON");
         assert!(is_sealed(&value));
-        assert_eq!(open(&test_key(), &value).expect("open"), plaintext);
+        assert_eq!(open(&key, &value).expect("open"), plaintext);
     }
 
     #[test]
     fn tampered_ciphertext_fails_closed() {
-        let sealed = seal(&test_key(), b"top-secret").expect("seal");
+        let key = test_key();
+        let sealed = seal(&key, b"top-secret").expect("seal");
         let mut value: serde_json::Value = serde_json::from_str(&sealed).expect("JSON");
         let data = value.get("data").unwrap().as_str().unwrap().to_string();
         let mut raw = BASE64_STANDARD.decode(&data).unwrap();
         raw[0] ^= 0x01;
         value["data"] = serde_json::Value::String(BASE64_STANDARD.encode(raw));
-        assert!(open(&test_key(), &value).is_err());
+        assert!(open(&key, &value).is_err());
     }
 
     #[test]
     fn wrong_key_fails_closed() {
-        let sealed = seal(&test_key(), b"top-secret").expect("seal");
+        let key1 = test_key();
+        let key2 = test_key();
+        let sealed = seal(&key1, b"top-secret").expect("seal");
         let value: serde_json::Value = serde_json::from_str(&sealed).expect("JSON");
-        assert!(open(&[9u8; 32], &value).is_err());
+        assert!(open(&key2, &value).is_err());
     }
 
     #[test]

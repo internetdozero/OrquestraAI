@@ -18,7 +18,6 @@ use std::sync::{
 };
 
 use base64::prelude::*;
-use rand::TryRngCore;
 
 use crate::paths::OrquestraPaths;
 
@@ -141,11 +140,9 @@ fn fallback_key(root: &Path) -> Result<[u8; 32], String> {
 }
 
 fn fresh_key() -> Result<[u8; 32], String> {
-    let mut key = [0u8; 32];
-    rand::rngs::OsRng
-        .try_fill_bytes(&mut key)
-        .map_err(|error| format!("no OS randomness available: {error}"))?;
-    Ok(key)
+    use aes_gcm::aead::{KeyInit, OsRng};
+    let key = aes_gcm::Aes256Gcm::generate_key(&mut OsRng);
+    Ok(key.into())
 }
 
 fn warn_once(message: String) {
