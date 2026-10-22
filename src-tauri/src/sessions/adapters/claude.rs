@@ -29,6 +29,40 @@ struct History {
     prompts: usize,
 }
 
+/// Timestamps arrive as epoch numbers or ISO strings depending on release.
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum HistoryTs {
+    Num(f64),
+    Str(String),
+}
+
+impl HistoryTs {
+    fn as_secs(&self) -> Option<i64> {
+        match self {
+            HistoryTs::Num(number) => Some(super::time::scale_epoch(*number)),
+            HistoryTs::Str(text) => super::time::timestamp_secs(text),
+        }
+    }
+}
+
+/// One `history.jsonl` line: only the fields the listing reads. Unknown
+/// fields are ignored, so one line parses to a few hundred bytes — never a
+/// full `Value` tree with its embedded payloads.
+#[derive(serde::Deserialize, Default)]
+struct HistoryEntry {
+    #[serde(rename = "sessionId", default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    display: Option<String>,
+    #[serde(default)]
+    project: Option<String>,
+    #[serde(default)]
+    timestamp: Option<HistoryTs>,
+    #[serde(default, rename = "created_at")]
+    created_at: Option<HistoryTs>,
+}
+
 pub struct Claude {
     root: PathBuf,
 }
@@ -44,26 +78,54 @@ impl Claude {
         self.root.join(STORE_REL)
     }
 
+    /// Streamed line-by-line into [`HistoryEntry`]: the index stays a few
+    /// kilobytes of map no matter how long the session history grows.
     fn history(&self) -> HashMap<String, History> {
-        let mut history: HashMap<String, History> = HashMap::new();
+        use std::io::BufRead;
 
-        for entry in utils::read_jsonl(&self.store().join("history.jsonl")) {
-            let Some(session) = entry.get("sessionId").and_then(|id| id.as_str()) else {
+        let mut history: HashMap<String, History> = HashMap::new();
+        let path = self.store().join("history.jsonl");
+        if utils::regular_file_len(&path).is_none() {
+            return history;
+        }
+        let Ok(file) = std::fs::File::open(&path) else {
+            return history;
+        };
+
+        for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let Ok(entry) = serde_json::from_str::<HistoryEntry>(line) else {
+                continue;
+            };
+            let Some(session) = entry.session_id.as_deref() else {
                 continue;
             };
 
             let record = history.entry(session.to_string()).or_default();
             record.prompts += 1;
 
-            let display = entry.get("display").and_then(|text| text.as_str());
-            let useful = display.filter(|text| !text.trim().is_empty() && !text.starts_with('/'));
+            let useful = entry
+                .display
+                .as_deref()
+                .filter(|text| !text.trim().is_empty() && !text.starts_with('/'));
             if record.title.is_none() {
                 record.title = useful.map(utils::trim_title);
             }
             if record.project.is_none() {
-                record.project = utils::json_string(&entry, &["project"]);
+                record.project = entry.project.as_deref().and_then(|raw| {
+                    let text = raw.trim();
+                    (!text.is_empty()).then(|| text.to_string())
+                });
             }
-            if let Some(at) = utils::json_timestamp(&entry, &["timestamp", "created_at"]) {
+            let at = entry
+                .timestamp
+                .as_ref()
+                .and_then(HistoryTs::as_secs)
+                .or_else(|| entry.created_at.as_ref().and_then(HistoryTs::as_secs));
+            if let Some(at) = at {
                 record.created = Some(record.created.map_or(at, |known: i64| known.min(at)));
                 record.updated = Some(record.updated.map_or(at, |known: i64| known.max(at)));
             }

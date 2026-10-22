@@ -24,9 +24,6 @@ use super::utils::{
 pub(crate) const MAX_TRANSCRIPT_TURNS: usize = 1000;
 /// Longest single turn kept: long dumps are trimmed, never dropped whole.
 const MAX_TURN_CHARS: usize = 12_000;
-/// Refuse files above the shared JSONL guard: a runaway artifact must not
-/// stall the UI thread.
-const MAX_TRANSCRIPT_BYTES: u64 = super::utils::MAX_JSONL_BYTES;
 
 /// Plain text of one transcript line's message, restricted to text blocks.
 ///
@@ -180,38 +177,55 @@ pub(crate) fn parse_value(entry: &Value) -> Option<TranscriptTurn> {
     build_turn(role, &raw, turn_timestamp(entry))
 }
 
-/// Every conversation turn in a JSONL transcript file.
+/// Every conversation turn in a JSONL transcript file, streamed.
 ///
-/// Corrupt lines are skipped (`filter_map`, never `unwrap`): a harness that
-/// is mid-write when the drawer opens must not break the read. A file that
-/// parses as a single JSON array instead (Manicode chat logs) is read
-/// element-wise, so both layouts work without the caller caring.
+/// Lines are parsed one at a time and dropped after the turn is built, so
+/// the peak is one line plus the kept turns — never the file. Corrupt lines
+/// are skipped (never `unwrap`): a harness that is mid-write when the
+/// drawer opens must not break the read. Stops at [`MAX_TRANSCRIPT_TURNS`];
+/// a 50MB rollout yields its first thousand turns without loading the rest.
+/// A file that parses as a single JSON array instead (Manicode chat logs)
+/// is read element-wise, so both layouts work without the caller caring.
 pub fn read_transcript(path: &Path) -> Vec<TranscriptTurn> {
-    let Some(bytes) = regular_file_len(path) else {
-        return Vec::new();
-    };
-    if bytes > MAX_TRANSCRIPT_BYTES {
+    use std::io::BufRead;
+
+    if regular_file_len(path).is_none() {
         return Vec::new();
     }
-
-    let Ok(raw) = std::fs::read_to_string(path) else {
+    let Ok(file) = std::fs::File::open(path) else {
         return Vec::new();
     };
 
-    let mut turns: Vec<TranscriptTurn> = raw
-        .lines()
-        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-        .filter_map(|entry| parse_value(&entry))
-        .take(MAX_TRANSCRIPT_TURNS)
-        .collect();
+    let mut turns = Vec::new();
+    for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let Ok(entry) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        if let Some(turn) = parse_value(&entry) {
+            turns.push(turn);
+            if turns.len() >= MAX_TRANSCRIPT_TURNS {
+                break;
+            }
+        }
+    }
 
     if turns.is_empty() {
-        if let Ok(Value::Array(items)) = serde_json::from_str::<Value>(&raw) {
-            turns = items
-                .iter()
-                .filter_map(parse_value)
-                .take(MAX_TRANSCRIPT_TURNS)
-                .collect();
+        // Array layout (Manicode): parsed from the reader, so no
+        // intermediate string duplicates the file in memory.
+        if let Ok(file) = std::fs::File::open(path) {
+            if let Ok(Value::Array(items)) =
+                serde_json::from_reader::<_, Value>(std::io::BufReader::new(file))
+            {
+                turns = items
+                    .iter()
+                    .filter_map(parse_value)
+                    .take(MAX_TRANSCRIPT_TURNS)
+                    .collect();
+            }
         }
     }
 

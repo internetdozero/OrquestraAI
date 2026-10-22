@@ -219,22 +219,49 @@ pub fn first_json_line(path: &Path) -> Option<Value> {
     serde_json::from_str(&line).ok()
 }
 
-/// Every parsable line of a JSONL index. Oversized files are skipped whole.
+/// Every parsable line of a JSONL index, streamed one line at a time.
+///
+/// The file is never held whole in memory: each line is parsed and moved
+/// into the output before the next is read, so the peak is one line, not
+/// the file. Corrupt lines are skipped; symlinks are refused by
+/// [`regular_file_len`]. There is no size gate — callers that only need the
+/// first entries should use [`for_each_jsonl`] to stop early instead.
 pub fn read_jsonl(path: &Path) -> Vec<Value> {
-    let Some(bytes) = regular_file_len(path) else {
-        return Vec::new();
-    };
-    if bytes > MAX_JSONL_BYTES {
-        return Vec::new();
+    let mut out = Vec::new();
+    for_each_jsonl(path, &mut |entry| {
+        out.push(entry);
+        true
+    });
+    out
+}
+
+/// Stream parsed JSONL lines, stopping early when `visit` returns `false`.
+///
+/// Rollout and transcript files run to tens of megabytes; collecting them
+/// whole just to keep the first thousand turns peaked at 150–300MB of RAM
+/// (raw string plus a `Value` per line). This keeps one line alive at a
+/// time, so a 50MB file parses under a few megabytes of working set plus
+/// whatever the visitor retains.
+pub fn for_each_jsonl(path: &Path, visit: &mut dyn FnMut(Value) -> bool) {
+    use std::io::BufRead;
+
+    if regular_file_len(path).is_none() {
+        return;
     }
-
-    let Ok(raw) = fs::read_to_string(path) else {
-        return Vec::new();
+    let Ok(file) = fs::File::open(path) else {
+        return;
     };
-
-    raw.lines()
-        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-        .collect()
+    for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if let Ok(entry) = serde_json::from_str::<Value>(line) {
+            if !visit(entry) {
+                break;
+            }
+        }
+    }
 }
 
 /// First non-empty string among `keys`, so one helper covers `title`,

@@ -68,17 +68,62 @@ impl Codex {
             .collect()
     }
 
-    /// Thread names and index timestamps, keyed by thread id.
+    /// Thread names and index timestamps, keyed by thread id. Streamed into
+    /// a small struct: the index never materializes as `Value` trees.
     fn named_threads(&self) -> HashMap<String, (Option<String>, Option<i64>)> {
-        utils::read_jsonl(&self.store().join("session_index.jsonl"))
-            .into_iter()
-            .filter_map(|entry| {
-                let id = entry.get("id").and_then(|id| id.as_str())?.to_string();
-                let name = utils::json_string(&entry, &["thread_name", "title"]);
-                let updated = utils::json_timestamp(&entry, &["updated_at"]);
-                Some((id, (name, updated)))
-            })
-            .collect()
+        use std::io::BufRead;
+
+        #[derive(serde::Deserialize, Default)]
+        struct IndexEntry {
+            #[serde(default)]
+            id: Option<String>,
+            #[serde(default, rename = "thread_name")]
+            thread_name: Option<String>,
+            #[serde(default)]
+            title: Option<String>,
+            #[serde(default, rename = "updated_at")]
+            updated_at: Option<IndexTs>,
+        }
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum IndexTs {
+            Num(f64),
+            Str(String),
+        }
+
+        let mut named = HashMap::new();
+        let path = self.store().join("session_index.jsonl");
+        if utils::regular_file_len(&path).is_none() {
+            return named;
+        }
+        let Ok(file) = std::fs::File::open(&path) else {
+            return named;
+        };
+        for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let Ok(entry) = serde_json::from_str::<IndexEntry>(line) else {
+                continue;
+            };
+            let Some(id) = entry.id.as_deref() else {
+                continue;
+            };
+            let name = entry
+                .thread_name
+                .as_deref()
+                .or(entry.title.as_deref())
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .map(str::to_string);
+            let updated = entry.updated_at.as_ref().and_then(|at| match at {
+                IndexTs::Num(number) => Some(super::time::scale_epoch(*number)),
+                IndexTs::Str(text) => super::time::timestamp_secs(text),
+            });
+            named.insert(id.to_string(), (name, updated));
+        }
+        named
     }
 
     /// Turn counts and activity window from the read-only history database.
@@ -209,20 +254,23 @@ impl SessionAdapter for Codex {
             return Vec::new();
         }
 
+        // Streamed rollout-by-rollout with early stop: one line alive at a
+        // time, and parsing halts at the turn cap instead of draining a
+        // tens-of-megabytes file that the drawer will never display.
         let mut turns = Vec::new();
         for rollout in self.rollouts_for(session_id) {
-            for entry in utils::read_jsonl(&rollout) {
+            utils::for_each_jsonl(&rollout, &mut |entry| {
                 if entry.get("type").and_then(Value::as_str) != Some("response_item") {
-                    continue;
+                    return true;
                 }
                 let Some(payload) = entry.get("payload") else {
-                    continue;
+                    return true;
                 };
                 if !matches!(
                     payload.get("role").and_then(Value::as_str),
                     Some("user") | Some("assistant")
                 ) {
-                    continue;
+                    return true;
                 }
                 let normalized = json!({
                     "role": payload.get("role"),
@@ -231,11 +279,9 @@ impl SessionAdapter for Codex {
                 });
                 if let Some(turn) = transcript::parse_value(&normalized) {
                     turns.push(turn);
-                    if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
-                        break;
-                    }
                 }
-            }
+                turns.len() < transcript::MAX_TRANSCRIPT_TURNS
+            });
             if turns.len() >= transcript::MAX_TRANSCRIPT_TURNS {
                 break;
             }
