@@ -15,8 +15,7 @@
 ---
 
 > [!WARNING]
-> **ALPHA RELEASE — ACTIVE DEVELOPMENT**
-> OrquestraAI is currently in active **Alpha**. Architecture, APIs, and interfaces are evolving rapidly. While the harness bridge, skills vault, session telemetry, and MCP management are thoroughly tested and production-ready in local workflows, breaking schema migrations or structural updates may occur between alpha revisions.
+> **Alpha software — expect breaking changes.** OrquestraAI is in active Alpha: schemas, IPC commands, and config formats can change between alpha revisions, so pin automated setups to a tagged release. The core modules (harness bridge, skills vault, session telemetry, MCP management) are covered by automated unit, contract, and integration tests and are suitable for daily local workflows.
 
 ---
 

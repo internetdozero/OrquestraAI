@@ -15,8 +15,7 @@
 ---
 
 > [!WARNING]
-> **VERSÃO ALPHA — EM DESENVOLVIMENTO ATIVO**
-> O OrquestraAI está atualmente em fase **Alpha**. Arquitetura, APIs internas e telas estão evoluindo com frequência. Embora a ponte de harnesses, a biblioteca de skills, a telemetria de sessões e a gestão de MCPs já estejam amplamente testadas e prontas para uso local, migrações de esquema ou alterações estruturais podem acontecer entre versões alpha.
+> **Software em Alpha — espere mudanças incompatíveis.** O OrquestraAI está em Alpha ativo: esquemas, comandos IPC e formatos de configuração podem mudar entre revisões alpha, então fixe automações em uma release marcada com tag. Os módulos centrais (ponte de harnesses, cofre de skills, telemetria de sessões, gestão de MCPs) têm cobertura de testes automatizados (unidade, contrato e integração) e são adequados para fluxos locais diários.
 
 ---
 

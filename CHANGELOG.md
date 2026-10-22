@@ -9,55 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### ⚠️ Aviso de Segurança — Rotação de Chaves Legadas & Expurgo de Backups
+### Security
 
-- **Backups `.migrate-bak` em texto puro:** a migração para a criptografia em repouso (AES-256-GCM) preservou cópias legíveis dos segredos em `vault.json.migrate-bak` e `mcps.json.migrate-bak` como rede de segurança. Esses arquivos ficam no disco com modo `0600`, mas qualquer segredo salvo antes da `v0.1.0-alpha.5` pode ter transitado em texto puro.
-- **Ação recomendada:** (1) confirme que seus serviços carregam normalmente; (2) use o botão **"Purge plaintext backups"** na tela de Credenciais (comando `vault_purge_migration_backups`, com confirmação explícita) para sobrescrever os backups com zeros e excluí-los; (3) **rotacione as chaves de API dos provedores** salvas antes da `alpha.5` nos respectivos painéis (GitHub, OpenAI, Anthropic, Cloudflare etc.). A exclusão é _best-effort_ em SSDs e filesystems copy-on-write — a rotação elimina o risco residual.
-- O expurgo nunca destrói a única cópia legível: cada backup só é apagado se o arquivo lacrado correspondente ainda abrir sob a chave atual.
+- Plaintext migration backups (`.migrate-bak`): the at-rest encryption migration kept readable copies of the secrets in `vault.json.migrate-bak` and `mcps.json.migrate-bak` as a safety net. These files stay on disk with mode `0600`, but any secret stored before `v0.1.0-alpha.5` may have existed as plaintext.
+- Recommended action: (1) confirm every service loads normally; (2) use the **"Purge plaintext backups"** button on the Credentials screen (command `vault_purge_migration_backups`, behind an explicit confirmation) to overwrite the backups with zeroes and delete them; (3) **rotate the provider API keys** stored before `alpha.5` in their dashboards (GitHub, OpenAI, Anthropic, Cloudflare, and others). Deletion is best-effort on SSDs and copy-on-write filesystems — rotation removes the residual risk.
+- Purging never destroys the only readable copy: each backup is deleted only if its sealed file still opens under the current key.
 
 ## [0.1.0-alpha.5] - 2026-10-22
 
-> **Resumo da Versão:** Consolidação dos avanços entre `alpha.3` e `alpha.5`. Esta versão eleva o OrquestraAI para uma plataforma segura de execução: introduz o **Blind Vault** com criptografia em repouso AES-256-GCM, motor de streaming de transcripts linha a linha (eliminando picos de memória em históricos massivos), concorrência atômica com autoridade `flock`, updater assinado com Ed25519 nativo e portões de segurança 100% limpos no CodeQL. _(A release `alpha.4` foi imediatamente substituída por esta versão para resolução de alertas estáticos)._
+> **Note:** release `alpha.4` was immediately superseded by this version to resolve static-analysis alerts.
 
-### 🔐 Blind Vault & Segurança de Credenciais
+### Added
 
-- **Criptografia em Repouso (AES-256-GCM):** Chaves e segredos em `vault.json` e `mcps.json` agora são lacrados via AES-256-GCM com chave derivada do Keyring do SO (Secret Service, Keychain, Credential Manager) ou fallback seguro `0600`.
-- **Proxy Cego de Execução (`vault_http_request` / `vault_exec`):** Chamadas HTTP e ferramentas MCP injetam segredos no nível nativo em Rust, impedindo que credenciais transitem pela memória JavaScript ou pelo contexto dos LLMs.
-- **Proteção Anti-Exfiltração & Allowlist:** Requisições blindadas validam domínios HTTPS permitidos por preset e aplicam scrubbing em múltiplas codificações (Base64, URL, Hex) contra vazamentos em logs e respostas.
-- **Isolamento de Capacidades IPC:** Escopos granulares no Tauri v2 restringem comandos sensíveis da janela principal.
+- **Blind Vault credential store:** API keys and secrets in `vault.json` and `mcps.json` are sealed with AES-256-GCM. Blind HTTP and exec proxy (`vault_http_request` / `vault_exec`) injects secrets in native Rust so credentials never cross JavaScript memory or LLM context.
+- **Line-by-line session streaming:** `.jsonl` files and rollouts (Claude, Codex, Grok) are read on demand (`for_each_jsonl`) instead of loading whole files into RAM.
+- **Virtualized transcript feed** with debounced search for large conversations.
+- **Bundle splitting:** lazy-loading of secondary modals and dialogs, reducing startup time.
+- **Batched projection resolution** (`projected_ids`), replacing hundreds of per-path canonicalization calls with a single disk pass.
+- **Reliable single instance** via an OS-level lock (`.orquestra.lock`) with socket teardown and signal cleanup on restart.
+- **Concurrent atomic writes** with unique per-thread, per-process temporary suffixes (`unique_tmp_suffix`), preventing interleaved bytes on overlapping IPC writes.
+- **Vault health status dots** with a theme-independent color ramp.
+- **Idea Vault upgrades:** monospace `#id` chips, a `NEW` indicator for recent tasks, Enter-key confirmation, and SWR cache persistence.
+- **Animation guardrail:** automated pre-commit check (`scripts/check-card-motion.mjs`) rejecting unnecessary `transition: all` in the UI.
+- **Official `orquestra-web-search` MCP** integration and registration.
+- **`~/.agents/skills` as the canonical skill root**, without collisions with other harnesses.
+- **Active security audit:** recursive inspection of executable scripts at install time, with UI badges before installation.
+- **Legacy alias suppression:** automatic hiding of legacy folders when the canonical `orquestra-*` package is active.
+- **Frontend Error Boundaries** with recovery and structured backend logging.
 
-### ⚡ Performance & Streaming
+### Changed
 
-- **Streaming de Sessões Linha a Linha:** Leitura de arquivos `.jsonl` e rollouts (Claude, Codex, Grok) convertida para streaming sob demanda (`for_each_jsonl`), eliminando carregamento de arquivos inteiros na RAM.
-- **Virtualização de Transcripts:** Feed com renderização virtualizada e busca com debounce, mantendo fluidez mesmo em conversas gigantescas.
-- **Divisão de Pacotes (_Bundle Splitting_):** Lazy-loading de modais e diálogos secundários, acelerando a inicialização da aplicação.
-- **Otimização de Projeções:** Resolução em lote (`projected_ids`) substituindo centenas de chamadas de canonicalização por uma única passada em disco.
+- **Strict Content Security Policy:** removed `unsafe-inline` from styles.
 
-### 🛡️ Concorrência & Robustez do Sistema
+### Fixed
 
-- **Instância Única Confiável (`flock`):** Trava nativa em nível de SO (`.orquestra.lock`) com encerramento de sockets e limpeza de sinais em reinicializações.
-- **Gravações Atômicas Concorrentes:** Sufixos temporários únicos por thread e processo (`unique_tmp_suffix`), prevenindo entrelaçamento de bytes em gravações concorrentes de IPC.
-- **Updater Nativo Assinado via Ed25519:** Download e verificação de integridade via crates nativas do Rust (sem dependência de `curl`/`wget`), com assinatura criptográfica `SHA256SUMS.txt.minisig`.
-- **CSP Estrita:** Remoção de `unsafe-inline` em estilos e adequação a padrões de Content Security Policy seguros.
+- **CodeQL:** zero open alerts, via dynamic key and nonce generation (`Aes256Gcm`, `OsRng`).
+- **Prettier and Cargo fmt synchronization** of the IPC contract and TypeScript typings.
 
-### 🎨 Experiência do Usuário (UI/UX)
+### Security
 
-- **Status Dots no Vault:** Indicadores visuais circulares de integridade com rampa de cor independente do tema de destaque.
-- **Melhorias no Idea Vault:** Chips `#id` em fonte mono, indicador visual `NEW` para tarefas recentes, confirmação ágil com tecla Enter e persistência via cache SWR.
-- **Guardrail de Animações:** Verificação automatizada pré-commit (`scripts/check-card-motion.mjs`) que barra `transition: all` desnecessário na UI.
-
-### 🧩 Ecossistema de Skills & MCPs
-
-- **MCP Oficial de Busca:** Integração e registro do servidor oficial `orquestra-web-search`.
-- **Compatibilidade Freebuff:** Adoção de `~/.agents/skills` como raiz canônica sem colisão com outros harnesses da frota.
-- **Auditoria de Segurança Ativa:** Inspeção recursiva de scripts maliciosos em tempo real, sem falsos positivos ou bypasses de cache.
-- **Deduplicação de Aliases:** Supressão automática de pastas legadas quando o pacote canônico `orquestra-*` está ativo.
-
-### 🐛 Correções & Qualidade
-
-- **CodeQL (Zero Alertas Abertos):** Geração dinâmica de chaves e nonces via `Aes256Gcm` e `OsRng`, encerrando todos os alertas de valores criptográficos estáticos.
-- **Prettier & Cargo Fmt:** Sincronização e formatação estrita do contrato IPC e tipagens TypeScript.
-- **Tratamento de Erros no Frontend:** Error Boundaries com recuperação graciosa e log estruturado no backend.
+- **AES-256-GCM encryption at rest** with the file key in the OS keyring (Secret Service, Keychain, Credential Manager) or a `0600` fallback key file.
+- **Ed25519-signed native updater:** download and integrity verification in Rust crates (no `curl`/`wget` dependency), with detached `SHA256SUMS.txt.minisig` signatures.
+- **Tauri v2 IPC capability isolation:** granular scopes restrict sensitive commands from the main window.
+- **Anti-exfiltration on blind paths:** per-preset HTTPS allowlists and secret scrubbing across Base64, URL, and Hex encodings in logs and responses.
 
 ## [0.1.0-alpha.3] - 2026-10-19
 
