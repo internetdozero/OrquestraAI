@@ -1,14 +1,17 @@
 //! Minimal structured logging without extra dependencies.
 //!
 //! Emits `<timestamp> [<module_path>] LEVEL  <message>` to stderr so every
-//! production log line carries a UTC timestamp and its call-site module.
+//! production log line in the workspace carries a UTC timestamp and its
+//! call-site module. The macros live here, in the crate every other crate
+//! depends on, so the shell, the vault and future crates share one format
+//! instead of each carrying a copy.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// UTC wall-clock derived from [`SystemTime`] (no chrono dependency).
 ///
 /// Format is a simplified `epoch+Nd HH:MM:SSZ` rendering of UNIX time.
-pub(crate) fn now() -> String {
+pub fn now() -> String {
     let secs = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(elapsed) => elapsed.as_secs(),
         Err(_) => 0,
@@ -30,7 +33,7 @@ macro_rules! log_error {
     ($($arg:tt)*) => {{
         eprintln!(
             "{} [{}] ERROR  {}",
-            $crate::log::now(),
+            $crate::logging::now(),
             module_path!(),
             format!($($arg)*)
         )
@@ -43,7 +46,7 @@ macro_rules! log_warn {
     ($($arg:tt)*) => {{
         eprintln!(
             "{} [{}] WARN  {}",
-            $crate::log::now(),
+            $crate::logging::now(),
             module_path!(),
             format!($($arg)*)
         )
@@ -56,7 +59,7 @@ macro_rules! log_info {
     ($($arg:tt)*) => {{
         eprintln!(
             "{} [{}] INFO  {}",
-            $crate::log::now(),
+            $crate::logging::now(),
             module_path!(),
             format!($($arg)*)
         )

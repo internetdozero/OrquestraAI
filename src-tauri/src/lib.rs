@@ -19,7 +19,6 @@ mod ipc_acl;
 #[cfg(test)]
 mod ipc_contract;
 pub mod janitor;
-pub(crate) mod log;
 pub mod mcp;
 mod official;
 mod official_mcps;
@@ -32,6 +31,11 @@ mod tray;
 pub mod update_sig;
 mod updater;
 pub mod vault;
+
+// Logging lives in `orquestra-core` so every crate emits the same line format;
+// re-exported here so each `crate::log_warn!` / `log_error!` / `log_info!`
+// call site keeps working unchanged.
+pub use orquestra_core::{log_error, log_info, log_warn};
 
 use crate::paths::OrquestraPaths;
 use bridge::{BridgeReport, HarnessStatus};

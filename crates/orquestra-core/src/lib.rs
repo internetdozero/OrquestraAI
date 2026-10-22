@@ -11,6 +11,7 @@
 pub mod agents;
 pub mod error;
 pub mod harness;
+pub mod logging;
 pub mod paths;
 pub mod skills;
 

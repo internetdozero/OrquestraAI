@@ -12,7 +12,9 @@
 //! The desktop shell keeps only the `#[tauri::command]` wrappers and calls
 //! into the operations re-exported from [`vault`].
 
-mod logging;
+// The log macros live in `orquestra-core` (same `<timestamp> [<module>] LEVEL`
+// format); re-exported so the crate's warning sites keep using `crate::log_warn!`.
+pub use orquestra_core::log_warn;
 
 pub mod at_rest;
 pub mod vault;
