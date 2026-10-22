@@ -9,19 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- macOS health reporting for system memory, process memory, and process activity, compiled on a dedicated macOS CI runner.
+- Secure removal of plaintext migration backups from Credentials, with verification, explicit confirmation, and a key-rotation advisory.
+- Tag-pinned installer delivery through the Cloudflare Worker, with ETag caching and a deploy-time parity check.
+- Windows and macOS compile checks, plus an automated Rust file-length guard in CI.
+
 ### Changed
 
-- Idea Vault clears an idea's `NEW` badge after it is opened or acted on.
+- Idea Vault clears an idea's `NEW` badge after it is opened or acted on, and persists that state across refreshes.
+- The installer and updater support Linux, macOS Apple Silicon, and macOS Intel assets; macOS installs skip Linux desktop integration.
+- Rust code is organized into dedicated core, harness, vault, bridge, and sessions workspace crates.
+- Session readers and purge tests are split into focused modules; macOS process inspection uses native APIs instead of spawning `ps`.
 
 ### Fixed
 
-- Vault recovery preserves the original file and migration backup if verification fails, and keeps fallback-key reads available when keyring promotion fails.
-- Session imports recognize text blocks without exposing tool results; Codex remote headers serialize correctly.
-- Azure CLI policy continues to block access-token generation when global options precede the operation.
+- Vault recovery falls back to verified migration backups without destroying the original files, and keeps fallback-key reads available if keyring promotion fails.
+- Windows home-directory lookup falls back to `USERPROFILE`; environment-mutating tests are serialized to avoid cross-test races.
+- Janitor health checks fail closed when socket liveness cannot be established.
+- Session imports recognize text blocks without exposing tool results, and Codex remote headers serialize correctly.
+- Azure CLI policy blocks access-token generation even when global options precede the operation.
 
 ### Security
 
-- Installer requires a valid signature bound to the selected release by default; `--allow-unsigned-legacy` opts into checksum-only installs for older releases.
+- Installer verifies a release-bound signature before trusting checksums; `--allow-unsigned-legacy` opts into checksum-only installs for older releases.
+- Vault hardening adds parser-parity SSRF checks, tighter endpoint allowlists, strict per-binary command policies, and safer key failover and health reporting.
+- Updater signatures are bound to the selected version and reject downgrade attempts.
 - Upgrades from before `alpha.5` may leave plaintext `.migrate-bak` files. Verify credentials, purge remaining backups in Credentials, and rotate keys stored before encryption.
 
 ## [0.1.0-alpha.5] - 2026-10-22
