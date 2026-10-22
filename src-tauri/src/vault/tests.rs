@@ -105,13 +105,41 @@ fn key_rotation_skips_cooldown_and_invalid_keys() {
     ];
     assert_eq!(next_key_index(&keys, 0, 1000), Some(2));
     keys[2].health = KeyHealth::InvalidKey;
+    // A fresh 401 cooldown keeps the key out of rotation …
+    keys[2].cooldown_until_ms = 9_999_999_999;
     assert_eq!(next_key_index(&keys, 0, 1000), None);
+    // … but once the cooldown lapses the key becomes eligible again, so a
+    // transient 401 never disables a key forever.
+    keys[2].cooldown_until_ms = 0;
+    assert_eq!(next_key_index(&keys, 0, 1000), Some(2));
 
-    assert_eq!(health_for_status(429), Some(KeyHealth::RateLimited));
-    assert_eq!(health_for_status(402), Some(KeyHealth::QuotaExceeded));
-    assert_eq!(health_for_status(403), Some(KeyHealth::QuotaExceeded));
-    assert_eq!(health_for_status(401), Some(KeyHealth::InvalidKey));
-    assert_eq!(health_for_status(200), None);
+    use super::store::StatusOutcome;
+    assert_eq!(
+        health_for_status(429, ""),
+        StatusOutcome::Fault(KeyHealth::RateLimited)
+    );
+    assert_eq!(
+        health_for_status(402, ""),
+        StatusOutcome::Fault(KeyHealth::QuotaExceeded)
+    );
+    assert_eq!(
+        health_for_status(403, "quota exceeded for this billing account"),
+        StatusOutcome::Fault(KeyHealth::QuotaExceeded)
+    );
+    assert_eq!(
+        health_for_status(403, "insufficient credits"),
+        StatusOutcome::Fault(KeyHealth::QuotaExceeded)
+    );
+    assert_eq!(
+        health_for_status(403, "you do not have permission for this route"),
+        StatusOutcome::Neutral
+    );
+    assert_eq!(health_for_status(403, ""), StatusOutcome::Neutral);
+    assert_eq!(
+        health_for_status(401, ""),
+        StatusOutcome::Fault(KeyHealth::InvalidKey)
+    );
+    assert_eq!(health_for_status(200, ""), StatusOutcome::Healthy);
 }
 
 #[test]
@@ -289,22 +317,80 @@ fn verify_endpoints_cover_every_non_custom_preset() {
 
 #[test]
 fn test_connection_outcome_updates_key_health() {
-    use super::store::{health_for_status, record_result};
+    use super::store::{health_for_status, record_result, StatusOutcome};
     // 429 cools the key down and fails over to the reserve.
     let mut service = test_service("github", &["ghp_primary", "ghp_backup"]);
     record_result(&mut service, 0, 429);
     assert_eq!(service.keys[0].health, KeyHealth::RateLimited);
     assert!(service.keys[0].cooldown_until_ms > 0);
     assert_eq!(service.active, 1);
-    assert_eq!(health_for_status(429), Some(KeyHealth::RateLimited));
+    assert_eq!(
+        health_for_status(429, ""),
+        StatusOutcome::Fault(KeyHealth::RateLimited)
+    );
     // A later 200 heals the key that served it.
     record_result(&mut service, 1, 200);
     assert_eq!(service.keys[1].health, KeyHealth::Healthy);
-    // 401 marks the key invalid without a cooldown timestamp.
+    // 401 marks only the serving key invalid — with a cooldown, so a
+    // transient 401 never disables the key forever.
     let mut single = test_service("openai", &["sk-bad"]);
     record_result(&mut single, 0, 401);
     assert_eq!(single.keys[0].health, KeyHealth::InvalidKey);
-    assert_eq!(single.keys[0].cooldown_until_ms, 0);
+    assert!(single.keys[0].cooldown_until_ms > 0);
+}
+
+/// Task #324: 403 quota exhaustion cools and fails over, while a 403
+/// permission denial changes nothing and is returned as is.
+#[test]
+fn forbidden_permission_vs_quota_classification() {
+    use super::store::record_result_in;
+    // Quota-flavored 403: fault + cooldown + failover.
+    let mut service = test_service("openai", &["sk-a", "sk-b"]);
+    record_result_in(
+        &mut service,
+        0,
+        403,
+        "error: billing quota exceeded for this project",
+        None,
+    );
+    assert_eq!(service.keys[0].health, KeyHealth::QuotaExceeded);
+    assert!(service.keys[0].cooldown_until_ms > 0);
+    assert_eq!(service.active, 1);
+    // Permission-flavored 403: neutral — no health change, no cooldown,
+    // no failover; the 403 itself is the caller's answer.
+    let mut service = test_service("openai", &["sk-a", "sk-b"]);
+    record_result_in(&mut service, 0, 403, "forbidden: missing route scope", None);
+    assert_eq!(service.keys[0].health, KeyHealth::Healthy);
+    assert_eq!(service.keys[0].cooldown_until_ms, 0);
+    assert_eq!(service.active, 0);
+    // Case-insensitive markers.
+    let mut service = test_service("openai", &["sk-a", "sk-b"]);
+    record_result_in(&mut service, 0, 403, "INSUFFICIENT credits", None);
+    assert_eq!(service.keys[0].health, KeyHealth::QuotaExceeded);
+    // 402 stays quota, marker or not.
+    let mut service = test_service("openai", &["sk-a", "sk-b"]);
+    record_result_in(&mut service, 0, 402, "payment required", None);
+    assert_eq!(service.keys[0].health, KeyHealth::QuotaExceeded);
+    assert_eq!(service.active, 1);
+}
+
+/// Task #324: a transient 401 cools the key for 10 minutes, leaves the
+/// reserves alone, and a later success heals it.
+#[test]
+fn invalid_key_cooldown_and_recovery() {
+    use super::store::record_result_in;
+    let mut service = test_service("openai", &["sk-a", "sk-b"]);
+    record_result_in(&mut service, 0, 401, "", None);
+    assert_eq!(service.keys[0].health, KeyHealth::InvalidKey);
+    assert!(service.keys[0].cooldown_until_ms > 0);
+    // The reserve is untouched and serving.
+    assert_eq!(service.keys[1].health, KeyHealth::Healthy);
+    assert_eq!(service.keys[1].cooldown_until_ms, 0);
+    assert_eq!(service.active, 1);
+    // A later success on the cooled key heals it outright.
+    record_result_in(&mut service, 0, 200, "", None);
+    assert_eq!(service.keys[0].health, KeyHealth::Healthy);
+    assert_eq!(service.keys[0].cooldown_until_ms, 0);
 }
 
 #[test]
@@ -698,6 +784,77 @@ fn redirect_fence_stops_downgrade_port_pivot_cross_host_and_loops() {
     );
 }
 
+/// Task #324: a refused connection means nothing was sent (`safe_to_retry`),
+/// while a connection that dies mid-body may have reached the server.
+#[test]
+fn transport_errors_carry_a_retry_verdict() {
+    use std::io::{Read as _, Write as _};
+    // Closed port: connection refused before a byte leaves the process.
+    let dead = std::net::TcpListener::bind("127.0.0.1:0").expect("listener");
+    let dead_port = dead.local_addr().expect("port").port();
+    drop(dead);
+    let refused = url::Url::parse(&format!("http://127.0.0.1:{dead_port}/v1/models")).expect("URL");
+    let error = block_on(super::http::execute_once("POST", &refused, &[], None))
+        .expect_err("refused POST must fail");
+    assert!(error.safe_to_retry, "connect failure is safe to retry");
+    assert!(error.message.contains("vault http request failed"));
+    // Mid-body death: the server took the request, then vanished.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("listener");
+    let port = listener.local_addr().expect("port").port();
+    std::thread::spawn(move || {
+        let Ok((mut stream, _)) = listener.accept() else {
+            return;
+        };
+        let mut buf = [0u8; 4096];
+        let _ = stream.read(&mut buf);
+        let _ = stream.write_all(
+            b"HTTP/1.1 200 OK\r\nContent-Length: 1000000\r\nConnection: close\r\n\r\npartial",
+        );
+    });
+    let cut = url::Url::parse(&format!("http://127.0.0.1:{port}/v1/models")).expect("URL");
+    let error = block_on(super::http::execute_once("POST", &cut, &[], None))
+        .expect_err("cut POST must fail");
+    assert!(
+        !error.safe_to_retry,
+        "a post-send failure must not be retried blindly"
+    );
+}
+
+/// Task #324: only safe transports, idempotent methods, or explicit
+/// idempotency keys cycle keys — never a bare `POST`/`PATCH`.
+#[test]
+fn transport_failover_needs_safety_or_idempotency() {
+    use super::proxy::should_retry_transport;
+    let bare: HashMap<String, String> = HashMap::new();
+    // Unsafe transport + non-idempotent + no key: no retry, no rotation.
+    assert!(!should_retry_transport("POST", &bare, false));
+    assert!(!should_retry_transport("PATCH", &bare, false));
+    assert!(!should_retry_transport("post", &bare, false));
+    // A connect failure cycles even `POST`: nothing was sent.
+    assert!(should_retry_transport("POST", &bare, true));
+    assert!(should_retry_transport("PATCH", &bare, true));
+    // Idempotent methods retry regardless of the failure kind.
+    for verb in ["GET", "HEAD", "PUT", "DELETE", "OPTIONS", "get"] {
+        assert!(
+            should_retry_transport(verb, &bare, false),
+            "{verb} must retry on transport failure"
+        );
+    }
+    // An idempotency key opts `POST`/`PATCH` back into safe retry —
+    // case-insensitively, both spellings.
+    for name in ["Idempotency-Key", "X-IDEMPOTENCY-KEY", "x-idempotency-key"] {
+        let keyed = HashMap::from([(name.to_string(), "k".to_string())]);
+        assert!(
+            should_retry_transport("POST", &keyed, false),
+            "{name} must allow retry"
+        );
+        assert!(should_retry_transport("PATCH", &keyed, false));
+    }
+    // Unrelated headers do not opt in.
+    let other = HashMap::from([("X-Request-Id".to_string(), "r".to_string())]);
+    assert!(!should_retry_transport("POST", &other, false));
+}
+
 /// A small body flows through the shared client untouched.
 #[test]
 fn http_small_body_returns_through_shared_client() {
@@ -726,7 +883,7 @@ fn http_huge_body_is_refused_before_reading() {
     let parsed = url::Url::parse(&url).expect("loopback URL");
     let error = block_on(super::http::execute_once("GET", &parsed, &[], None))
         .expect_err("11MB body must be refused");
-    assert!(error.contains("cap"), "unexpected error: {error}");
+    assert!(error.message.contains("cap"), "unexpected error: {error:?}");
 }
 
 /// A no-op `update_vault` must not touch the disk: health pings re-record

@@ -163,6 +163,28 @@ pub fn scrub_text(text: &str, secrets: &[String]) -> String {
     scrub_body(text, &refs)
 }
 
+/// Transport failure with a retry verdict. A connect failure means nothing
+/// was sent, so cycling to the next key is safe. A timeout, body error or
+/// any failure after the request went out may have reached the server —
+/// retrying a non-idempotent call there could double-apply a transaction —
+/// so the caller only fails over for idempotent methods (or callers that
+/// sent an idempotency key) and status-based rejections.
+#[derive(Debug, Clone)]
+pub(super) struct TransportError {
+    pub message: String,
+    pub safe_to_retry: bool,
+}
+
+impl From<String> for TransportError {
+    /// Body/read failures happen after the request went out.
+    fn from(message: String) -> Self {
+        Self {
+            message,
+            safe_to_retry: false,
+        }
+    }
+}
+
 /// Execute one HTTP call with `reqwest`, returning status + filtered output.
 /// Failover/rotation is owned by the caller (`mod.rs`), which retries with
 /// the next key on 401/402/403/429.
@@ -174,7 +196,7 @@ pub(super) async fn execute_once(
     url: &url::Url,
     headers: &[(String, String)],
     body: Option<&str>,
-) -> Result<(u16, HashMap<String, String>, String), String> {
+) -> Result<(u16, HashMap<String, String>, String), TransportError> {
     let client = shared_client()?;
     let verb = method.to_ascii_uppercase();
     let mut request = match verb.as_str() {
@@ -184,7 +206,14 @@ pub(super) async fn execute_once(
         "PATCH" => client.patch(url.clone()),
         "DELETE" => client.delete(url.clone()),
         "HEAD" => client.head(url.clone()),
-        _ => return Err(format!("unsupported vault http method: {method}")),
+        _ => {
+            return Err(TransportError {
+                // Deterministic rejection, never sent: retrying another key
+                // would fail identically, so report immediately.
+                safe_to_retry: false,
+                message: format!("unsupported vault http method: {method}"),
+            });
+        }
     };
     for (name, value) in headers {
         request = request.header(name.as_str(), value.as_str());
@@ -192,10 +221,13 @@ pub(super) async fn execute_once(
     if let Some(payload) = body {
         request = request.body(payload.to_string());
     }
-    let response = request
-        .send()
-        .await
-        .map_err(|error| format!("vault http request failed: {error}"))?;
+    let response = request.send().await.map_err(|error| TransportError {
+        // `is_connect` (refused, DNS, no route) means nothing left this
+        // process. Timeouts, body errors and everything later may have
+        // reached the server — unsafe to replay without idempotency.
+        safe_to_retry: error.is_connect(),
+        message: format!("vault http request failed: {error}"),
+    })?;
     let status = response.status().as_u16();
     let mut raw: HashMap<String, String> = HashMap::new();
     for (name, value) in response.headers().iter() {

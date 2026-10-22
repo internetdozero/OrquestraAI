@@ -12,8 +12,37 @@ use super::http;
 use super::presets;
 use super::store::{
     first_key_index_in, health_for_status, load_vault, next_key_index_in, normalize_tag,
-    record_result_in, service_health,
+    record_result_in, service_health, StatusOutcome,
 };
+
+/// Methods that are safe to replay after a transport failure: repeating them
+/// cannot double-apply a transaction. `POST` and `PATCH` are excluded —
+/// without an idempotency key they return the error with no key rotation.
+fn is_idempotent_method(verb: &str) -> bool {
+    matches!(
+        verb.to_ascii_uppercase().as_str(),
+        "GET" | "HEAD" | "PUT" | "DELETE" | "OPTIONS"
+    )
+}
+
+/// The caller opted into safe retry by sending an idempotency key.
+fn has_idempotency_key(extra: &HashMap<String, String>) -> bool {
+    extra.keys().any(|name| {
+        name.eq_ignore_ascii_case("idempotency-key")
+            || name.eq_ignore_ascii_case("x-idempotency-key")
+    })
+}
+
+/// Transport-failure failover verdict: cycle to the next key only when the
+/// request provably never reached the server, the method is idempotent, or
+/// the caller sent an idempotency key. Pure so unit tests can pin it.
+pub(super) fn should_retry_transport(
+    verb: &str,
+    extra: &HashMap<String, String>,
+    safe_to_retry: bool,
+) -> bool {
+    safe_to_retry || is_idempotent_method(verb) || has_idempotency_key(extra)
+}
 
 /// Blind HTTP response: status, filtered headers, scrubbed body. The secret
 /// never appears in the payload.
@@ -137,7 +166,9 @@ pub async fn vault_http_request(
                 let rotated = used != first_used;
                 // Reload-before-write: apply health to the LIVE vault,
                 // matching the serving key by secret so a concurrent key
-                // rotation cannot misattribute the outcome.
+                // rotation cannot misattribute the outcome. Classification
+                // runs on the scrubbed body, so no secret reaches the
+                // 403 quota/permission logic or the persisted state.
                 let new_active = update_vault(&paths, |vault| {
                     let live = vault
                         .services
@@ -150,7 +181,7 @@ pub async fn vault_http_request(
                         .or((used < live.keys.len()).then_some(used));
                     if let Some(index) = resolved {
                         used = index;
-                        record_result_in(live, index, status, tag.as_deref());
+                        record_result_in(live, index, status, &scrubbed, tag.as_deref());
                         Ok(live.active)
                     } else {
                         Ok(used)
@@ -158,8 +189,14 @@ pub async fn vault_http_request(
                 })?;
                 // Fail over transparently: retry once with the rotated key.
                 // `new_active` is the just-persisted value, so no second
-                // disk read is needed to observe our own write.
-                if health_for_status(status).is_some() && new_active != used {
+                // disk read is needed to observe our own write. Status-based
+                // failover stays active for every method: the server rejected
+                // the request before acting on it, so no replay hazard.
+                if matches!(
+                    health_for_status(status, &scrubbed),
+                    StatusOutcome::Fault(_)
+                ) && new_active != used
+                {
                     used = new_active;
                     first_used = first_used.min(used);
                     continue;
@@ -173,7 +210,16 @@ pub async fn vault_http_request(
                 });
             }
             Err(error) => {
-                last_error = error;
+                // Transport failure: cycle to the next key only when the
+                // request provably never reached the server (connect
+                // failure), the method is idempotent, or the caller sent an
+                // idempotency key. Anything else returns the error with no
+                // key rotation and no health change — replaying a `POST` or
+                // `PATCH` after a read timeout could double-charge.
+                if !should_retry_transport(&verb, &extra, error.safe_to_retry) {
+                    return Err(error.message);
+                }
+                last_error = error.message;
                 match load_vault(&paths) {
                     Ok(vault) => {
                         if let Some(live) = vault.services.get(&service) {
@@ -272,6 +318,14 @@ pub async fn vault_test_connection(
     match outcome {
         Ok((status, _, text)) => {
             let ok = (200..300).contains(&status);
+            let scrubbed = http::scrub_text(
+                &text,
+                &live
+                    .keys
+                    .iter()
+                    .map(|key| key.secret.clone())
+                    .collect::<Vec<_>>(),
+            );
             let health = update_vault(&paths, |vault| {
                 let stored = vault
                     .services
@@ -283,18 +337,10 @@ pub async fn vault_test_connection(
                     .position(|key| key.secret == secret)
                     .or((used < stored.keys.len()).then_some(used));
                 if let Some(index) = resolved {
-                    record_result_in(stored, index, status, None);
+                    record_result_in(stored, index, status, &scrubbed, None);
                 }
                 Ok(service_health(stored))
             })?;
-            let scrubbed = http::scrub_text(
-                &text,
-                &live
-                    .keys
-                    .iter()
-                    .map(|key| key.secret.clone())
-                    .collect::<Vec<_>>(),
-            );
             let hint: String = scrubbed.chars().take(160).collect();
             Ok(VaultTestResult {
                 success: ok,
@@ -310,7 +356,7 @@ pub async fn vault_test_connection(
         Err(error) => Ok(VaultTestResult {
             success: false,
             latency_ms,
-            message: error,
+            message: error.message,
             health: service_health(&live),
         }),
     }

@@ -17,6 +17,10 @@ use crate::paths::OrquestraPaths;
 
 const VAULT_FILE: &str = "vault.json";
 const COOLDOWN_SECS: u64 = 300;
+/// A transient 401 cools the key down instead of disabling it forever: the
+/// key stays out of rotation for 10 minutes, then becomes eligible again so
+/// a later success can heal it (or another 401 can re-cool it).
+const INVALID_COOLDOWN_SECS: u64 = 600;
 
 /// Per-key circuit-breaker state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -337,7 +341,10 @@ pub fn next_key_index_in(
         if !matches_tag(key, wanted.as_deref()) {
             continue;
         }
-        if key.health == KeyHealth::InvalidKey {
+        // An `InvalidKey` still in its cooldown stays out of rotation; once
+        // the cooldown lapses it becomes eligible again so a later success
+        // can heal it (transient 401s never disable a key forever).
+        if key.health == KeyHealth::InvalidKey && key.cooldown_until_ms > now {
             continue;
         }
         if key.cooldown_until_ms > now {
@@ -378,7 +385,7 @@ pub fn first_key_index_in(
         if !matches_tag(key, wanted.as_deref()) {
             continue;
         }
-        if key.health == KeyHealth::InvalidKey {
+        if key.health == KeyHealth::InvalidKey && key.cooldown_until_ms > now {
             continue;
         }
         if key.cooldown_until_ms > now {
@@ -392,13 +399,37 @@ pub fn first_key_index_in(
         .position(|key| matches_tag(key, wanted.as_deref()))
 }
 
-/// Classify an HTTP status into key health. `None` means no key fault.
-pub fn health_for_status(status: u16) -> Option<KeyHealth> {
+/// What one HTTP status means for the serving key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StatusOutcome {
+    /// Success (or any non-fault status): heal the key.
+    Healthy,
+    /// A key fault: cool the key down and fail over.
+    Fault(KeyHealth),
+    /// Decidedly not a key fault (a 403 permission denial): no health
+    /// change, no cooldown, no failover — the status is returned as is.
+    Neutral,
+}
+
+/// Body markers that identify a 403 as quota/billing exhaustion rather than
+/// a permission denial. Matched case-insensitively against the scrubbed body.
+fn is_quota_body(body: &str) -> bool {
+    let lowered = body.to_ascii_lowercase();
+    ["quota", "billing", "insufficient", "exceeded", "limit"]
+        .iter()
+        .any(|marker| lowered.contains(marker))
+}
+
+/// Classify an HTTP status into key health. `body` (already scrubbed)
+/// separates 403 quota exhaustion from 403 permission denials.
+pub fn health_for_status(status: u16, body: &str) -> StatusOutcome {
     match status {
-        429 => Some(KeyHealth::RateLimited),
-        402 | 403 => Some(KeyHealth::QuotaExceeded),
-        401 => Some(KeyHealth::InvalidKey),
-        _ => None,
+        429 => StatusOutcome::Fault(KeyHealth::RateLimited),
+        402 => StatusOutcome::Fault(KeyHealth::QuotaExceeded),
+        401 => StatusOutcome::Fault(KeyHealth::InvalidKey),
+        403 if is_quota_body(body) => StatusOutcome::Fault(KeyHealth::QuotaExceeded),
+        403 => StatusOutcome::Neutral,
+        _ => StatusOutcome::Healthy,
     }
 }
 
@@ -408,34 +439,47 @@ pub fn health_for_status(status: u16) -> Option<KeyHealth> {
 /// the rotation semantics stay covered without duplicating the test.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn record_result(service: &mut VaultService, used: usize, status: u16) {
-    record_result_in(service, used, status, None)
+    record_result_in(service, used, status, "", None)
 }
 
-/// Tag-scoped variant: failover stays inside the requested tag.
+/// Tag-scoped variant: failover stays inside the requested tag. `body` is
+/// the scrubbed response body, used only to separate 403 quota exhaustion
+/// from 403 permission denials.
 pub(super) fn record_result_in(
     service: &mut VaultService,
     used: usize,
     status: u16,
+    body: &str,
     tag: Option<&str>,
 ) {
-    let Some(fault) = health_for_status(status) else {
-        if let Some(key) = service.keys.get_mut(used) {
-            key.health = KeyHealth::Healthy;
-            key.failures = 0;
-            key.cooldown_until_ms = 0;
+    match health_for_status(status, body) {
+        StatusOutcome::Healthy => {
+            if let Some(key) = service.keys.get_mut(used) {
+                key.health = KeyHealth::Healthy;
+                key.failures = 0;
+                key.cooldown_until_ms = 0;
+            }
+            return;
         }
-        return;
-    };
-    let now = now_ms();
-    if let Some(key) = service.keys.get_mut(used) {
-        key.health = fault;
-        key.failures = key.failures.saturating_add(1);
-        if fault != KeyHealth::InvalidKey {
-            key.cooldown_until_ms = now.saturating_add(COOLDOWN_SECS.saturating_mul(1000));
+        StatusOutcome::Neutral => return,
+        StatusOutcome::Fault(fault) => {
+            let now = now_ms();
+            // Only the serving key is ever touched: healthy reserves are
+            // never disturbed by one key's outcome.
+            if let Some(key) = service.keys.get_mut(used) {
+                key.health = fault;
+                key.failures = key.failures.saturating_add(1);
+                let window = if fault == KeyHealth::InvalidKey {
+                    INVALID_COOLDOWN_SECS
+                } else {
+                    COOLDOWN_SECS
+                };
+                key.cooldown_until_ms = now.saturating_add(window.saturating_mul(1000));
+            }
+            if let Some(next) = next_key_index_in(&service.keys, used, now, tag) {
+                service.active = next;
+            }
+            service.updated_at_ms = now;
         }
     }
-    if let Some(next) = next_key_index_in(&service.keys, used, now, tag) {
-        service.active = next;
-    }
-    service.updated_at_ms = now;
 }
