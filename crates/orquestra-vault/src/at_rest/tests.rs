@@ -216,6 +216,7 @@ fn v1_envelopes_upgrade_to_v2_on_load() {
 /// re-sealed file verifies.
 #[test]
 fn fallback_key_migrates_to_keyring_on_unseal() {
+    use aes_gcm::aead::KeyInit;
     use base64::prelude::*;
     let _serial = key::test_keyring_lock();
     key::test_keyring_clear();
@@ -244,7 +245,7 @@ fn fallback_key_migrates_to_keyring_on_unseal() {
     );
     let target = paths.root.join("vault.json");
     let legacy = r#"{"services":{"svc":{"id":"svc","label":"S","keys":[]}}}"#;
-    let fallback: [u8; 32] = [0x77; 32];
+    let fallback: [u8; 32] = aes_gcm::Aes256Gcm::generate_key(&mut aes_gcm::aead::OsRng).into();
     // Plant the SSH-era state: fallback file + file sealed under it.
     write_private_new(
         &paths.root.join(".file-key"),
