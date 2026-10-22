@@ -4,64 +4,26 @@
 //! Project folder names are encoded paths (`-home-system`), which are lossy
 //! when a directory contains a dash. The transcript itself records `cwd`, so
 //! that is preferred and the slug is only a last resort.
+//!
+//! [`history`] turns the prompt index into titles and activity, and
+//! [`layout`] owns where a transcript lives and what its header says.
 
-use std::collections::{BTreeSet, HashMap};
-use std::io::BufRead;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::types::{TranscriptTurn, UnifiedSession};
 
 use super::{fsops, transcript, utils, SessionAdapter};
+use layout::{real_dir, scan_transcript, single_segment, tidy_project, title, transcripts};
+
+mod history;
+mod layout;
 
 const HARNESS: &str = "claude";
 const STORE_REL: &str = ".claude";
 /// Enough lines to reach the first user prompt: transcripts open with a mode,
 /// permission mode and atis latch before any message.
 const TRANSCRIPT_SCAN_LINES: usize = 40;
-
-/// Prompts recorded for one session in `history.jsonl`.
-#[derive(Default)]
-struct History {
-    title: Option<String>,
-    project: Option<String>,
-    created: Option<i64>,
-    updated: Option<i64>,
-    prompts: usize,
-}
-
-/// Timestamps arrive as epoch numbers or ISO strings depending on release.
-#[derive(serde::Deserialize)]
-#[serde(untagged)]
-enum HistoryTs {
-    Num(f64),
-    Str(String),
-}
-
-impl HistoryTs {
-    fn as_secs(&self) -> Option<i64> {
-        match self {
-            HistoryTs::Num(number) => Some(super::time::scale_epoch(*number)),
-            HistoryTs::Str(text) => super::time::timestamp_secs(text),
-        }
-    }
-}
-
-/// One `history.jsonl` line: only the fields the listing reads. Unknown
-/// fields are ignored, so one line parses to a few hundred bytes — never a
-/// full `Value` tree with its embedded payloads.
-#[derive(serde::Deserialize, Default)]
-struct HistoryEntry {
-    #[serde(rename = "sessionId", default)]
-    session_id: Option<String>,
-    #[serde(default)]
-    display: Option<String>,
-    #[serde(default)]
-    project: Option<String>,
-    #[serde(default)]
-    timestamp: Option<HistoryTs>,
-    #[serde(default, rename = "created_at")]
-    created_at: Option<HistoryTs>,
-}
 
 pub struct Claude {
     root: PathBuf,
@@ -76,62 +38,6 @@ impl Claude {
 
     fn store(&self) -> PathBuf {
         self.root.join(STORE_REL)
-    }
-
-    /// Streamed line-by-line into [`HistoryEntry`]: the index stays a few
-    /// kilobytes of map no matter how long the session history grows.
-    fn history(&self) -> HashMap<String, History> {
-        use std::io::BufRead;
-
-        let mut history: HashMap<String, History> = HashMap::new();
-        let path = self.store().join("history.jsonl");
-        if utils::regular_file_len(&path).is_none() {
-            return history;
-        }
-        let Ok(file) = std::fs::File::open(&path) else {
-            return history;
-        };
-
-        for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            let Ok(entry) = serde_json::from_str::<HistoryEntry>(line) else {
-                continue;
-            };
-            let Some(session) = entry.session_id.as_deref() else {
-                continue;
-            };
-
-            let record = history.entry(session.to_string()).or_default();
-            record.prompts += 1;
-
-            let useful = entry
-                .display
-                .as_deref()
-                .filter(|text| !text.trim().is_empty() && !text.starts_with('/'));
-            if record.title.is_none() {
-                record.title = useful.map(utils::trim_title);
-            }
-            if record.project.is_none() {
-                record.project = entry.project.as_deref().and_then(|raw| {
-                    let text = raw.trim();
-                    (!text.is_empty()).then(|| text.to_string())
-                });
-            }
-            let at = entry
-                .timestamp
-                .as_ref()
-                .and_then(HistoryTs::as_secs)
-                .or_else(|| entry.created_at.as_ref().and_then(HistoryTs::as_secs));
-            if let Some(at) = at {
-                record.created = Some(record.created.map_or(at, |known: i64| known.min(at)));
-                record.updated = Some(record.updated.map_or(at, |known: i64| known.max(at)));
-            }
-        }
-
-        history
     }
 }
 
@@ -251,12 +157,7 @@ impl SessionAdapter for Claude {
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
         // The id is joined onto `{id}.jsonl`. `../secret` still names a
         // regular file after the kernel resolves it.
-        if session_id.is_empty()
-            || session_id.contains('/')
-            || session_id.contains('\\')
-            || session_id == "."
-            || session_id == ".."
-        {
+        if !single_segment(session_id) {
             return Vec::new();
         }
         let store = self.store();
@@ -285,161 +186,5 @@ impl SessionAdapter for Claude {
         }
 
         Vec::new()
-    }
-}
-
-/// `session_id -> (transcript, bytes)` from `projects/<slug>/` and the legacy
-/// `sessions/` folder.
-fn transcripts(store: &Path) -> HashMap<String, (PathBuf, u64)> {
-    let mut found = HashMap::new();
-
-    let projects_dir = store.join("projects");
-    if !real_dir(&projects_dir) {
-        // Missing `projects/` still skips the legacy walk, as before. A
-        // symlink is present and must not be opened, but sessions/ still is.
-        if std::fs::symlink_metadata(&projects_dir).is_err() {
-            return found;
-        }
-    } else if let Ok(projects) = std::fs::read_dir(&projects_dir) {
-        for project in projects.flatten() {
-            if !real_dir(&project.path()) {
-                continue;
-            }
-            let Ok(entries) = std::fs::read_dir(project.path()) else {
-                continue;
-            };
-
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path
-                    .extension()
-                    .is_some_and(|extension| extension == "jsonl")
-                {
-                    insert(&mut found, path);
-                }
-            }
-        }
-    }
-
-    // Same hole as a project symlink: `read_dir` follows `sessions/` and the
-    // last component is still a regular file, so the scan would open it.
-    let sessions = store.join("sessions");
-    if real_dir(&sessions) {
-        if let Ok(entries) = std::fs::read_dir(&sessions) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path
-                    .extension()
-                    .is_some_and(|extension| extension == "jsonl")
-                {
-                    insert(&mut found, path);
-                }
-            }
-        }
-    }
-
-    found
-}
-
-/// Remove a project folder that a deletion emptied, including the case where
-/// only an empty `memory/` folder is left behind.
-fn tidy_project(store: &Path, project: &Path) -> bool {
-    let Ok(entries) = std::fs::read_dir(project) else {
-        return false;
-    };
-
-    let leftover: Vec<PathBuf> = entries.flatten().map(|entry| entry.path()).collect();
-    let only_empty_memory = leftover.iter().all(|path| {
-        path.file_name().is_some_and(|name| name == "memory")
-            && std::fs::read_dir(path)
-                .map(|mut entries| entries.next().is_none())
-                .unwrap_or(false)
-    });
-
-    if !only_empty_memory {
-        return false;
-    }
-
-    for path in &leftover {
-        let _ = std::fs::remove_dir(path);
-    }
-
-    fsops::remove_if_empty(store, project)
-}
-
-fn insert(found: &mut HashMap<String, (PathBuf, u64)>, path: PathBuf) {
-    let Some(stem) = path
-        .file_stem()
-        .map(|stem| stem.to_string_lossy().into_owned())
-    else {
-        return;
-    };
-    let size = utils::file_size(&path);
-    found.insert(stem, (path, size));
-}
-
-/// First user prompt and recorded `cwd`, read from the transcript header only.
-fn single_segment(id: &str) -> bool {
-    !id.is_empty() && !id.contains('/') && !id.contains('\\') && id != "." && id != ".."
-}
-
-fn real_dir(path: &Path) -> bool {
-    std::fs::symlink_metadata(path)
-        .map(|metadata| metadata.file_type().is_dir())
-        .unwrap_or(false)
-}
-
-fn scan_transcript(path: &Path) -> (Option<String>, Option<String>) {
-    // A transcript path reached through a symlink must not be opened: `File::open`
-    // follows and would take the title and cwd from outside the store.
-    if utils::regular_file_len(path).is_none() {
-        return (None, None);
-    }
-    let Ok(file) = std::fs::File::open(path) else {
-        return (None, None);
-    };
-
-    let mut title = None;
-    let mut project = None;
-
-    for line in std::io::BufReader::new(file)
-        .lines()
-        .take(TRANSCRIPT_SCAN_LINES)
-        .map_while(Result::ok)
-    {
-        let Ok(entry) = serde_json::from_str::<serde_json::Value>(&line) else {
-            continue;
-        };
-
-        if project.is_none() {
-            project = utils::json_string(&entry, &["cwd"]);
-        }
-
-        let is_user = entry.get("type").and_then(|kind| kind.as_str()) == Some("user");
-        if title.is_none() && is_user {
-            title = entry
-                .get("message")
-                .and_then(utils::message_text)
-                .map(|text| utils::trim_title(&text));
-        }
-
-        if title.is_some() && project.is_some() {
-            break;
-        }
-    }
-
-    (title, project)
-}
-
-fn title(id: &str, recorded: Option<String>, scanned: Option<String>) -> String {
-    let text = recorded
-        .filter(|text| !text.is_empty())
-        .or(scanned)
-        .unwrap_or_default();
-
-    if text.is_empty() {
-        format!("Session {}", id.chars().take(8).collect::<String>())
-    } else {
-        text
     }
 }

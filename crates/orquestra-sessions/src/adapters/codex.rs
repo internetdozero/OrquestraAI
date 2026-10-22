@@ -6,8 +6,11 @@
 //! The three sources disagree about which threads exist — a rollout can
 //! outlive its history rows and the index can name a thread with no turns left
 //! — so the union is listed and each field falls back in that order.
+//!
+//! [`indexes`] reads the two indexes, [`files`] owns the rollout tree and the
+//! row deletes, and this module assembles the listing.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
@@ -15,6 +18,12 @@ use serde_json::{json, Value};
 use crate::types::{TranscriptTurn, UnifiedSession};
 
 use super::{fsops, transcript, utils, SessionAdapter};
+use files::{
+    delete_rows_in, maintenance_lock_held, project_path, prune_empty_parents, rollout_files, title,
+};
+
+mod files;
+mod indexes;
 
 const HARNESS: &str = "codex";
 const STORE_REL: &str = ".codex";
@@ -33,9 +42,6 @@ const THREAD_TABLES: [(&str, &str); 4] = [
 ];
 /// Rollout files end in `-<uuid>.jsonl`.
 const THREAD_ID_LEN: usize = 36;
-
-/// `(created, updated, turns)` from the history database.
-type TurnStats = (Option<i64>, Option<i64>, usize);
 
 pub struct Codex {
     root: PathBuf,
@@ -66,107 +72,6 @@ impl Codex {
             })
             .map(|(path, _)| path)
             .collect()
-    }
-
-    /// Thread names and index timestamps, keyed by thread id. Streamed into
-    /// a small struct: the index never materializes as `Value` trees.
-    fn named_threads(&self) -> HashMap<String, (Option<String>, Option<i64>)> {
-        use std::io::BufRead;
-
-        #[derive(serde::Deserialize, Default)]
-        struct IndexEntry {
-            #[serde(default)]
-            id: Option<String>,
-            #[serde(default, rename = "thread_name")]
-            thread_name: Option<String>,
-            #[serde(default)]
-            title: Option<String>,
-            #[serde(default, rename = "updated_at")]
-            updated_at: Option<IndexTs>,
-        }
-        #[derive(serde::Deserialize)]
-        #[serde(untagged)]
-        enum IndexTs {
-            Num(f64),
-            Str(String),
-        }
-
-        let mut named = HashMap::new();
-        let path = self.store().join("session_index.jsonl");
-        if utils::regular_file_len(&path).is_none() {
-            return named;
-        }
-        let Ok(file) = std::fs::File::open(&path) else {
-            return named;
-        };
-        for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            let Ok(entry) = serde_json::from_str::<IndexEntry>(line) else {
-                continue;
-            };
-            let Some(id) = entry.id.as_deref() else {
-                continue;
-            };
-            let name = entry
-                .thread_name
-                .as_deref()
-                .or(entry.title.as_deref())
-                .map(str::trim)
-                .filter(|text| !text.is_empty())
-                .map(str::to_string);
-            let updated = entry.updated_at.as_ref().and_then(|at| match at {
-                IndexTs::Num(number) => Some(super::time::scale_epoch(*number)),
-                IndexTs::Str(text) => super::time::timestamp_secs(text),
-            });
-            named.insert(id.to_string(), (name, updated));
-        }
-        named
-    }
-
-    /// Turn counts and activity window from the read-only history database.
-    /// A missing database is normal; a corrupt one fails this harness only.
-    fn turn_stats(&self) -> Result<HashMap<String, TurnStats>, String> {
-        let database = self.store().join(DATABASE);
-        if !database.is_file() {
-            return Ok(HashMap::new());
-        }
-
-        let connection = utils::open_readonly(&database)?;
-        if !utils::table_exists(&connection, "thread_turns")? {
-            return Ok(HashMap::new());
-        }
-
-        let mut statement = connection
-            .prepare(
-                "SELECT thread_id,
-                        MIN(COALESCE(started_at, completed_at)),
-                        MAX(COALESCE(completed_at, started_at)),
-                        COUNT(*)
-                 FROM thread_turns
-                 GROUP BY thread_id",
-            )
-            .map_err(|error| format!("{}: {error}", database.display()))?;
-
-        let rows = statement
-            .query_map([], |row| {
-                Ok((
-                    utils::text_cell(row, 0),
-                    utils::i64_cell(row, 1),
-                    utils::i64_cell(row, 2),
-                    utils::i64_cell(row, 3),
-                ))
-            })
-            .map_err(|error| format!("{}: {error}", database.display()))?;
-
-        Ok(rows
-            .flatten()
-            .filter_map(|(id, created, updated, turns)| {
-                Some((id?, (created, updated, turns.unwrap_or(0).max(0) as usize)))
-            })
-            .collect())
     }
 }
 
@@ -304,105 +209,6 @@ impl SessionAdapter for Codex {
         }
 
         Ok(())
-    }
-}
-
-/// `thread_id -> (path, bytes)` for every rollout file.
-fn rollout_files(sessions_root: &Path) -> HashMap<String, (PathBuf, u64)> {
-    let mut found = HashMap::new();
-    let mut stack = vec![sessions_root.to_path_buf()];
-
-    while let Some(current) = stack.pop() {
-        // `read_dir` follows a symlink. `sessions/` replaced by a link would
-        // list and then delete rollouts outside the store.
-        let real_dir = std::fs::symlink_metadata(&current)
-            .map(|metadata| metadata.file_type().is_dir())
-            .unwrap_or(false);
-        if !real_dir {
-            continue;
-        }
-        let Ok(entries) = std::fs::read_dir(&current) else {
-            continue;
-        };
-
-        for entry in entries.flatten() {
-            let Ok(kind) = entry.file_type() else {
-                continue;
-            };
-
-            if kind.is_dir() {
-                stack.push(entry.path());
-                continue;
-            }
-
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let Some(target) = name
-                .strip_prefix("rollout-")
-                .and_then(|rest| rest.strip_suffix(".jsonl"))
-            else {
-                continue;
-            };
-            let id = target
-                .get(target.len().saturating_sub(THREAD_ID_LEN)..)
-                .unwrap_or(target)
-                .to_string();
-            let size = utils::file_size(&entry.path());
-
-            found.insert(id, (entry.path(), size));
-        }
-    }
-
-    found
-}
-
-/// Delete rows from one table, tolerating a database this release does not
-/// have. A missing file is not a failure: a harness may keep only rollouts.
-fn delete_rows_in(
-    database: &Path,
-    table: &str,
-    column: &str,
-    session_id: &str,
-) -> Result<(), String> {
-    if !database.is_file() {
-        return Ok(());
-    }
-
-    let connection = fsops::open_writable(database)?;
-    fsops::delete_rows(&connection, table, column, session_id)?;
-    Ok(())
-}
-
-/// Remove the day/month folders a rollout leaves behind once empty.
-fn prune_empty_parents(store: &Path, file: &Path) {
-    let mut current = file.parent().map(Path::to_path_buf);
-
-    while let Some(directory) = current {
-        if !fsops::remove_if_empty(store, &directory) {
-            break;
-        }
-        current = directory.parent().map(Path::to_path_buf);
-    }
-}
-
-/// The rollout header records the working directory the thread ran in.
-fn project_path(rollout: &Path) -> Option<String> {
-    let header = utils::first_json_line(rollout)?;
-    let payload = header.get("payload").unwrap_or(&header);
-    utils::json_string(payload, &["cwd", "working_directory", "workdir"])
-}
-
-/// A real lock file means Codex is inside a maintenance pass. A symlink is
-/// not that file: `exists` would follow it and refuse every delete.
-fn maintenance_lock_held(store: &Path) -> bool {
-    std::fs::symlink_metadata(store.join(MAINTENANCE_LOCK))
-        .map(|metadata| metadata.file_type().is_file())
-        .unwrap_or(false)
-}
-
-fn title(id: &str, name: Option<String>) -> String {
-    match name.map(|name| utils::trim_title(&name)) {
-        Some(name) if !name.is_empty() => name,
-        _ => format!("Thread {}", id.chars().take(8).collect::<String>()),
     }
 }
 
