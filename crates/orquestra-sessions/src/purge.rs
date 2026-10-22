@@ -159,6 +159,8 @@ pub fn execute_selection(store: &Store, selection: Selection) -> Result<PurgeRep
 // ---------------------------------------------------------------------------
 
 /// The decision rules a selection applies, in the order they matter.
+type AgeLimit = Box<dyn Fn(&str) -> i64>;
+
 #[derive(Default)]
 struct Rules<'a> {
     harness: Option<&'a str>,
@@ -170,9 +172,9 @@ struct Rules<'a> {
 }
 
 fn select(store: &Store, filter: &PurgeFilter) -> Result<Selection, String> {
-    let age_limit: Option<Box<dyn Fn(&str) -> i64>> = filter.older_than_days.map(|days| {
+    let age_limit: Option<AgeLimit> = filter.older_than_days.map(|days| {
         let now = now_secs();
-        Box::new(move |_harness: &str| now - (days as i64) * 86_400) as Box<dyn Fn(&str) -> i64>
+        Box::new(move |_harness: &str| now - (days as i64) * 86_400) as AgeLimit
     });
 
     select_with(

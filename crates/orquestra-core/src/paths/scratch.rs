@@ -20,11 +20,11 @@ pub fn scratch_root() -> PathBuf {
     {
         // SAFETY: `getuid` takes no arguments and has no failure mode.
         let uid = unsafe { libc::getuid() };
-        return std::env::temp_dir().join(format!("orquestra-ai-{uid}"));
+        std::env::temp_dir().join(format!("orquestra-ai-{uid}"))
     }
     #[cfg(not(unix))]
     {
-        return std::env::temp_dir().join("orquestra-ai");
+        std::env::temp_dir().join("orquestra-ai")
     }
 }
 

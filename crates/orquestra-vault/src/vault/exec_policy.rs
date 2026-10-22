@@ -41,6 +41,7 @@ pub(super) struct BinaryPolicy {
     pub check: Check,
     /// Set for binaries that keep their pre-#322 open behavior; the reason
     /// documents what review is still owed.
+    #[allow(dead_code)]
     pub legacy_open: Option<&'static str>,
 }
 

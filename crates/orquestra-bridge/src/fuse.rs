@@ -98,6 +98,9 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
     })
 }
 
+// Keep the caller's per-run accumulators explicit; bundling them would obscure
+// which outcomes this harness contributes to the final bridge report.
+#[allow(clippy::too_many_arguments)]
 fn fuse_harness(
     home: &Path,
     paths: &OrquestraPaths,
@@ -147,6 +150,8 @@ fn fuse_harness(
     Ok(())
 }
 
+// These are the complete inputs needed to preserve and project one skills path.
+#[allow(clippy::too_many_arguments)]
 fn link_skills(
     source: &Path,
     projection: &Path,

@@ -452,6 +452,7 @@ pub(super) fn record_result_in(
     body: &str,
     tag: Option<&str>,
 ) {
+    // Healthy and neutral outcomes need no work after their match arms.
     match health_for_status(status, body) {
         StatusOutcome::Healthy => {
             if let Some(key) = service.keys.get_mut(used) {
@@ -459,9 +460,8 @@ pub(super) fn record_result_in(
                 key.failures = 0;
                 key.cooldown_until_ms = 0;
             }
-            return;
         }
-        StatusOutcome::Neutral => return,
+        StatusOutcome::Neutral => (),
         StatusOutcome::Fault(fault) => {
             let now = now_ms();
             // Only the serving key is ever touched: healthy reserves are

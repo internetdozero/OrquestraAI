@@ -71,16 +71,10 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
 
   windows-check:
-    # Windows port baseline (task #231, item 2a). The workspace does not build
-    # for Windows yet — `orquestra-bridge` calls `std::os::unix::fs::symlink`
-    # unconditionally and the single-instance guard is Unix-only — so this job
-    # is deliberately non-blocking: it reports the port's compile state on
-    # every push instead of failing the pipeline. Remove `continue-on-error`
-    # once the workspace is green here, and it becomes the gate that keeps it
-    # that way before any Windows runtime work is claimed as done.
+    # The app and bridge still contain Unix-only code. Check the workspace
+    # libraries that already support Windows while the platform port continues.
     name: Windows check
     runs-on: windows-latest
-    continue-on-error: true
     permissions:
       contents: read
     steps:
@@ -108,22 +102,17 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Cargo check (workspace)
-        run: cargo check --workspace
+      - name: Cargo check (portable crates)
+        run: cargo check -p orquestra-core -p orquestra-vault -p orquestra-harness -p orquestra-sessions
 
   macos-check:
     # The Darwin half of the janitor health collector only exists behind
     # `#[cfg(target_os = "macos")]`, so nothing on the Linux runner ever parses
     # it: `src-tauri/src/janitor/health/macos/native.rs` (sysctl,
     # `host_statistics64`, libproc) could break without a single job noticing.
-    # This job compiles it. It stays non-blocking like the Windows baseline
-    # because no macOS runner has ever built this workspace — the first runs
-    # establish the state rather than assume it. Remove `continue-on-error`
-    # once it is green, and it becomes the gate that keeps the collector
-    # compiling.
+    # This job compiles it so Darwin-only code is checked on every pull request.
     name: macOS check
     runs-on: macos-latest
-    continue-on-error: true
     permissions:
       contents: read
     steps:
