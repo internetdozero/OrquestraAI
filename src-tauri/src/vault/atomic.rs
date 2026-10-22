@@ -33,15 +33,27 @@ fn vault_lock() -> Result<MutexGuard<'static, ()>, String> {
         .map_err(|_| "vault lock poisoned".to_string())
 }
 
-/// Atomic read-modify-write: lock, reload fresh, apply, save.
+/// Atomic read-modify-write: lock, reload fresh, apply, save — but skip the
+/// disk write (rewrite + fsync) when `apply` changed nothing. Health pings
+/// from `vault_http_request` re-record the same Healthy state on every
+/// call; without this every request paid a full file rewrite + fsync for a
+/// byte-identical vault. Comparison is on the serialized form of the same
+/// in-memory instance, so equal bytes always mean equal content (a rehash
+/// from an insert can only cause a harmless extra save, never a skip).
 pub(super) fn update_vault<R>(
     paths: &OrquestraPaths,
     apply: impl FnOnce(&mut VaultFile) -> Result<R, String>,
 ) -> Result<R, String> {
     let _guard = vault_lock()?;
     let mut vault = load_vault(paths)?;
+    let before = serde_json::to_string(&vault)
+        .map_err(|error| format!("failed to serialize the credential vault: {error}"))?;
     let result = apply(&mut vault)?;
-    save_vault(paths, &vault)?;
+    let after = serde_json::to_string(&vault)
+        .map_err(|error| format!("failed to serialize the credential vault: {error}"))?;
+    if before != after {
+        save_vault(paths, &vault)?;
+    }
     Ok(result)
 }
 

@@ -519,3 +519,140 @@ fn concurrent_vault_updates_lose_nothing() {
     );
     std::fs::remove_dir_all(&root).expect("cleanup");
 }
+
+/// The shared client must be one instance: same pool, same TLS sessions.
+#[test]
+fn http_client_is_shared_across_calls() {
+    let first = super::http::shared_client().expect("client builds") as *const _;
+    let second = super::http::shared_client().expect("client builds") as *const _;
+    assert_eq!(first, second, "every request must reuse the pool");
+}
+
+/// Serve one canned HTTP response on loopback and return its URL. The
+/// handler reads the request first, then writes the bytes and closes —
+/// the standard order, so the client never observes a close-before-request.
+fn loopback_serve(response: Vec<u8>) -> String {
+    use std::io::{Read as _, Write as _};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+    let port = listener.local_addr().expect("port").port();
+    std::thread::spawn(move || {
+        let Ok((mut stream, _)) = listener.accept() else {
+            return;
+        };
+        let mut buf = [0u8; 4096];
+        let _ = stream.read(&mut buf);
+        let _ = stream.write_all(&response);
+    });
+    format!("http://127.0.0.1:{port}/v1/models")
+}
+
+/// Drive the async helper on Tauri's runtime: the crate has no runtime of
+/// its own in production either (Tauri owns it), so tests reuse that same
+/// reactor instead of adding a tokio dev-dependency for a stub executor.
+fn block_on<F>(future: F) -> F::Output
+where
+    F: std::future::Future,
+{
+    tauri::async_runtime::block_on(future)
+}
+
+/// A small body flows through the shared client untouched.
+#[test]
+fn http_small_body_returns_through_shared_client() {
+    let body = r#"{"models":[]}"#;
+    let url = loopback_serve(
+        format!(
+            "HTTP/1.0 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+        .into_bytes(),
+    );
+    let (status, _, text) =
+        block_on(super::http::execute_once("GET", &url, &[], None)).expect("small body must pass");
+    assert_eq!(status, 200);
+    assert_eq!(text, body);
+}
+
+/// An 11MB `Content-Length` is refused from the headers alone: no 11MB
+/// allocation, no wait for a body that never needs to arrive.
+#[test]
+fn http_huge_body_is_refused_before_reading() {
+    let url = loopback_serve(
+        b"HTTP/1.0 200 OK\r\nContent-Length: 11534336\r\nConnection: close\r\n\r\nx".to_vec(),
+    );
+    let error = block_on(super::http::execute_once("GET", &url, &[], None))
+        .expect_err("11MB body must be refused");
+    assert!(error.contains("cap"), "unexpected error: {error}");
+}
+
+/// A no-op `update_vault` must not touch the disk: health pings re-record
+/// the same state on every request, and the rewrite + fsync used to run
+/// every time. mtime is the observable; the sleep clears even 1s-granular
+/// filesystems so a missed skip cannot hide.
+#[test]
+fn noop_vault_update_skips_disk_write() {
+    use super::atomic::update_vault;
+    use super::store::{load_vault, vault_path, VaultFile};
+    use crate::paths::OrquestraPaths;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let root = std::env::temp_dir().join(format!(
+        "orquestra-vault-skip-{}-{nanos}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&root).expect("scratch dir");
+    let paths = OrquestraPaths {
+        root: root.clone(),
+        vault: root.clone(),
+        active: root.clone(),
+    };
+    update_vault(&paths, |vault| {
+        vault
+            .services
+            .insert("svc".to_string(), test_service("openai", &["sk-noop"]));
+        Ok(())
+    })
+    .expect("seed");
+    let file = vault_path(&paths);
+    let before = std::fs::metadata(&file)
+        .expect("vault file")
+        .modified()
+        .expect("mtime");
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+
+    update_vault(&paths, |_: &mut VaultFile| Ok(())).expect("no-op");
+    let after_noop = std::fs::metadata(&file)
+        .expect("vault file")
+        .modified()
+        .expect("mtime");
+    assert_eq!(
+        before, after_noop,
+        "a no-op update must not rewrite the vault file"
+    );
+
+    // The test can tell: a real mutation must still advance the mtime.
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    update_vault(&paths, |vault| {
+        vault
+            .services
+            .get_mut("svc")
+            .expect("seeded")
+            .meta
+            .insert("touched".to_string(), "1".to_string());
+        Ok(())
+    })
+    .expect("mutate");
+    let after_write = std::fs::metadata(&file)
+        .expect("vault file")
+        .modified()
+        .expect("mtime");
+    assert!(
+        after_write > after_noop,
+        "a real mutation must still hit the disk"
+    );
+    let reloaded = load_vault(&paths).expect("reload");
+    assert!(reloaded.services.contains_key("svc"));
+    std::fs::remove_dir_all(&root).expect("cleanup");
+}

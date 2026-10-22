@@ -1,9 +1,85 @@
 //! Blind HTTP execution: inject the active key in memory, strip secrets back.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::OnceLock;
+
+use futures_util::StreamExt;
 
 use super::presets::build_headers;
 use super::store::VaultService;
+
+/// Cap on any single response body: without it a hostile endpoint can grow
+/// the IPC payload (and this process's memory) without bound.
+const MAX_BODY_BYTES: usize = 10 * 1024 * 1024;
+
+/// One process-wide client, so every `vault_http_request` reuses the same
+/// TCP/TLS connection pool and session resumption instead of paying a fresh
+/// handshake per call. Built once; the redirect fence below is baked in.
+static SHARED_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+pub(super) fn shared_client() -> Result<&'static reqwest::Client, String> {
+    if let Some(client) = SHARED_CLIENT.get() {
+        return Ok(client);
+    }
+    // Same-host redirects only: a compromised API must not bounce the call
+    // — and its auth headers — to an attacker host. reqwest already strips
+    // `Authorization` on cross-host hops; refusing them outright removes
+    // the SSRF-via-redirect class entirely.
+    let same_host_only = reqwest::redirect::Policy::custom(|attempt| {
+        let current = attempt.url().host_str().unwrap_or("").to_ascii_lowercase();
+        let first = attempt
+            .previous()
+            .first()
+            .and_then(|url| url.host_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if !current.is_empty() && current == first {
+            attempt.follow()
+        } else {
+            attempt.stop()
+        }
+    });
+    // Built once; a losing racer's client is dropped and the winner kept.
+    let built = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .redirect(same_host_only)
+        .build()
+        .map_err(|error| format!("vault http client failed: {error}"))?;
+    let _ = SHARED_CLIENT.set(built);
+    SHARED_CLIENT
+        .get()
+        .ok_or_else(|| "vault http client failed to init".to_string())
+}
+
+/// Read the body in chunks, stopping past the cap. The `content-length`
+/// pre-check kills the declared-huge case before a byte is read; the
+/// running total covers liars and chunked encodings with no length.
+async fn read_capped_body(response: reqwest::Response) -> Result<String, String> {
+    if response
+        .content_length()
+        .is_some_and(|len| len > MAX_BODY_BYTES as u64)
+    {
+        return Err(format!(
+            "vault http body exceeds the {} byte cap",
+            MAX_BODY_BYTES
+        ));
+    }
+    let mut buffered: usize = 0;
+    let mut out = Vec::new();
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|error| format!("vault http body failed: {error}"))?;
+        buffered = buffered.saturating_add(chunk.len());
+        if buffered > MAX_BODY_BYTES {
+            return Err(format!(
+                "vault http body exceeds the {} byte cap",
+                MAX_BODY_BYTES
+            ));
+        }
+        out.extend_from_slice(&chunk);
+    }
+    Ok(String::from_utf8_lossy(&out).into_owned())
+}
 
 /// Headers never returned to the agent (auth material + tracking).
 fn sensitive_response_headers() -> HashSet<String> {
@@ -88,29 +164,7 @@ pub(super) async fn execute_once(
     headers: &[(String, String)],
     body: Option<&str>,
 ) -> Result<(u16, HashMap<String, String>, String), String> {
-    // Same-host redirects only: a compromised API must not bounce the call
-    // — and its auth headers — to an attacker host. reqwest already strips
-    // `Authorization` on cross-host hops; refusing them outright removes the
-    // SSRF-via-redirect class entirely.
-    let same_host_only = reqwest::redirect::Policy::custom(|attempt| {
-        let current = attempt.url().host_str().unwrap_or("").to_ascii_lowercase();
-        let first = attempt
-            .previous()
-            .first()
-            .and_then(|url| url.host_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-        if !current.is_empty() && current == first {
-            attempt.follow()
-        } else {
-            attempt.stop()
-        }
-    });
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .redirect(same_host_only)
-        .build()
-        .map_err(|error| format!("vault http client failed: {error}"))?;
+    let client = shared_client()?;
     let verb = method.to_ascii_uppercase();
     let mut request = match verb.as_str() {
         "GET" => client.get(url),
@@ -136,9 +190,6 @@ pub(super) async fn execute_once(
     for (name, value) in response.headers().iter() {
         raw.insert(name.to_string(), value.to_str().unwrap_or("").to_string());
     }
-    let text = response
-        .text()
-        .await
-        .map_err(|error| format!("vault http body failed: {error}"))?;
+    let text = read_capped_body(response).await?;
     Ok((status, strip_response_headers(&raw), text))
 }

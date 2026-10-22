@@ -45,7 +45,10 @@ toml_edit = "0.22"
 # and sessions are opened read-only so a running agent keeps its locks.
 rusqlite = { version = "0.31", features = ["bundled"] }
 # Blind vault HTTP proxy: in-memory key injection via `vault_http_request`.
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+# For bounded response streaming (`bytes_stream` + `StreamExt`); already in
+# the lock file as a reqwest transitive dep, so this adds no new crates.
+futures-util = { version = "0.3", default-features = false }
 minisign-verify = "0.3.0"
 
 # Release profiles live in the workspace root `Cargo.toml`; Cargo ignores (and

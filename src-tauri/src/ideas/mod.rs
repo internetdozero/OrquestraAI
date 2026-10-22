@@ -26,7 +26,13 @@ pub fn list_ideas(
     offset: Option<i64>,
 ) -> Result<Vec<IdeaItem>, String> {
     let connection = store::connect()?;
-    ideas_repo::list_ideas(&connection, project.as_deref(), status.as_deref(), limit, offset)
+    ideas_repo::list_ideas(
+        &connection,
+        project.as_deref(),
+        status.as_deref(),
+        limit,
+        offset,
+    )
 }
 
 /// Distinct project names for the filter dropdown.

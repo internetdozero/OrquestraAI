@@ -299,9 +299,11 @@ fn blackboard_posts_lists_unread_and_marks_read() {
     assert_eq!(unread.len(), 1);
 
     notes_repo::mark_note_read(&connection, note.id).expect("mark read");
-    assert!(notes_repo::list_notes(&connection, Some("vault"), true, None, None)
-        .expect("reread")
-        .is_empty());
+    assert!(
+        notes_repo::list_notes(&connection, Some("vault"), true, None, None)
+            .expect("reread")
+            .is_empty()
+    );
     let all = notes_repo::list_notes(&connection, None, false, None, None).expect("all notes");
     assert_eq!(all.len(), 1);
     assert!(all[0].is_read);
@@ -339,20 +341,17 @@ fn ideas_list_paginates_with_limit_and_offset() {
         create(&connection, "vault", &format!("Idea {index:02}"), None);
     }
 
-    let page =
-        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(3), None)
-            .expect("first page");
+    let page = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(3), None)
+        .expect("first page");
     assert_eq!(page.len(), 3);
 
-    let rest =
-        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(20), Some(8))
-            .expect("tail page");
+    let rest = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), Some(20), Some(8))
+        .expect("tail page");
     assert_eq!(rest.len(), 2);
 
     // Pages partition the full list without overlap.
-    let full =
-        ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), None, None)
-            .expect("full list");
+    let full = ideas_repo::list_ideas(&connection, Some("vault"), Some("all"), None, None)
+        .expect("full list");
     assert_eq!(full.len(), 10);
     assert_eq!(page[0].id, full[0].id);
     assert_eq!(rest[0].id, full[8].id);
@@ -385,8 +384,8 @@ fn notes_list_paginates_with_limit_and_offset() {
         .expect("note should post");
     }
 
-    let page = notes_repo::list_notes(&connection, None, false, Some(2), Some(1))
-        .expect("middle page");
+    let page =
+        notes_repo::list_notes(&connection, None, false, Some(2), Some(1)).expect("middle page");
     assert_eq!(page.len(), 2);
     assert_eq!(page[0].note, "note 1");
 
