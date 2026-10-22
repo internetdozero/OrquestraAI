@@ -1,6 +1,7 @@
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
+#[cfg(target_os = "linux")]
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
@@ -50,6 +51,14 @@ pub struct SystemHealth {
     pub alert: bool,
 }
 
+/// Non-Linux fallback: `/proc` does not exist here, so health snapshots
+/// degrade to an explicit error instead of fabricated numbers.
+#[cfg(not(target_os = "linux"))]
+pub(super) fn snapshot() -> Result<SystemHealth, String> {
+    Err("system health snapshots are only supported on Linux".to_string())
+}
+
+#[cfg(target_os = "linux")]
 pub(super) fn snapshot() -> Result<SystemHealth, String> {
     let meminfo = fs::read_to_string("/proc/meminfo")
         .map_err(|error| format!("could not read /proc/meminfo: {error}"))?;
@@ -167,6 +176,7 @@ pub(super) fn parse_load_one(source: &str) -> Result<f64, String> {
         .map_err(|error| format!("invalid one-minute load average: {error}"))
 }
 
+#[cfg(target_os = "linux")]
 fn tmp_stats(path: &Path, is_tmpfs: bool) -> Result<TmpStats, String> {
     use std::os::unix::ffi::OsStrExt;
     let path_c = std::ffi::CString::new(path.as_os_str().as_bytes())
@@ -213,6 +223,7 @@ fn tmp_stats(path: &Path, is_tmpfs: bool) -> Result<TmpStats, String> {
     })
 }
 
+#[cfg(target_os = "linux")]
 fn top_user_processes(limit: usize) -> Vec<TopProcess> {
     let Ok(current) = fs::metadata("/proc/self") else {
         return Vec::new();

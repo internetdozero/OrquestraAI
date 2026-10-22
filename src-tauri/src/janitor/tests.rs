@@ -4,14 +4,21 @@
 use super::{health::*, sweep::*};
 use serde_json::Value;
 use std::collections::BTreeSet;
+#[cfg(unix)]
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::symlink;
+#[cfg(unix)]
 use std::os::unix::net::UnixListener;
+#[cfg(unix)]
 use std::path::PathBuf;
+#[cfg(unix)]
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+#[cfg(unix)]
 struct TestRoot(PathBuf);
 
+#[cfg(unix)]
 impl TestRoot {
     fn new() -> Self {
         let unique = SystemTime::now()
@@ -25,6 +32,7 @@ impl TestRoot {
     }
 }
 
+#[cfg(unix)]
 impl Drop for TestRoot {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
@@ -126,6 +134,7 @@ fn proc_parsers_and_memory_math_handle_linux_formats() {
     assert!(parse_load_one("invalid").is_err());
 }
 
+#[cfg(target_os = "linux")]
 #[test]
 fn snapshot_reads_live_proc_and_tmp_metrics() {
     let health = snapshot().expect("Linux proc and /tmp metrics should be readable");
@@ -137,6 +146,7 @@ fn snapshot_reads_live_proc_and_tmp_metrics() {
     assert!(health.top_processes.len() <= 5);
 }
 
+#[cfg(unix)]
 #[test]
 fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
     let test = TestRoot::new();
@@ -191,6 +201,7 @@ fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
     drop(listener);
 }
 
+#[cfg(unix)]
 #[test]
 fn sweep_does_not_follow_symlinked_roots_or_remove_future_dated_files() {
     let test = TestRoot::new();

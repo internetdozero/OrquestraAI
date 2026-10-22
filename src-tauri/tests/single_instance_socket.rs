@@ -1,8 +1,11 @@
+#![cfg(unix)]
+
 //! Integration coverage for the single-instance socket lifecycle: primary
 //! detection, stale-socket recovery, and handoff to a live listener. The
 //! real `start_listener` needs a Tauri `AppHandle`, so the live-listener leg
 //! binds a plain `UnixListener` at the same socket path — `connect` is all
-//! `try_activate_existing` exercises.
+//! `try_activate_existing` exercises. Unix-only: the guard is a no-op
+//! elsewhere.
 
 mod common;
 

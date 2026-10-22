@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
@@ -36,6 +37,14 @@ pub(super) fn sweep_at(
     Ok(report)
 }
 
+/// No Unix sockets exist off Unix, and liveness comes from
+/// `/proc/net/unix` — fail closed by sweeping nothing.
+#[cfg(not(unix))]
+fn clean_sockets(_root: &Path, _active: &str, _report: &mut SweepReport) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(unix)]
 fn clean_sockets(root: &Path, active: &str, report: &mut SweepReport) -> Result<(), String> {
     if !is_real_directory(root)? {
         return Ok(());
@@ -117,6 +126,7 @@ fn is_real_directory(path: &Path) -> Result<bool, String> {
     }
 }
 
+#[cfg(unix)]
 fn socket_is_active(proc_net_unix: &str, path: &Path) -> bool {
     let wanted = path.to_string_lossy();
     proc_net_unix.lines().skip(1).any(|line| {
@@ -132,8 +142,16 @@ fn socket_is_active(proc_net_unix: &str, path: &Path) -> bool {
     })
 }
 
+#[cfg(unix)]
 fn same_file(left: &fs::Metadata, right: &fs::Metadata) -> bool {
     left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+/// Fallback identity where dev/ino do not exist: length plus mtime.
+/// Weaker than (dev, ino), but this only guards a best-effort sweep.
+#[cfg(not(unix))]
+fn same_file(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    left.len() == right.len() && left.modified().ok() == right.modified().ok()
 }
 
 fn is_expired(metadata: &fs::Metadata, now: SystemTime) -> bool {

@@ -7,7 +7,6 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::{self, Write};
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use super::catalog::{load_catalog, save_catalog, SEED_CATALOG};
@@ -284,10 +283,16 @@ fn backup_config(
         .map_err(|error| format!("failed to back up {}: {error}", destination.display()))?;
 
     // The backup holds tokens too: match the original file's privacy.
-    let mode = fs::metadata(source)
-        .map(|meta| meta.permissions().mode() & 0o777)
-        .unwrap_or(0o600);
-    let _ = fs::set_permissions(&destination, fs::Permissions::from_mode(mode));
+    // POSIX modes only exist on Unix; elsewhere the backup inherits the
+    // destination directory's ACLs.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = fs::metadata(source)
+            .map(|meta| meta.permissions().mode() & 0o777)
+            .unwrap_or(0o600);
+        let _ = fs::set_permissions(&destination, fs::Permissions::from_mode(mode));
+    }
 
     Ok(())
 }
@@ -302,9 +307,17 @@ pub(super) fn write_config(path: &Path, content: &str, secret: bool) -> Result<b
     fs::create_dir_all(parent)
         .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
 
-    let mut mode = fs::metadata(path)
-        .map(|meta| meta.permissions().mode() & 0o777)
-        .unwrap_or(0o600);
+    // POSIX modes only exist on Unix; elsewhere the file inherits the
+    // parent directory's ACLs and the tightening report stays quiet.
+    #[cfg(unix)]
+    let mut mode = {
+        use std::os::unix::fs::PermissionsExt;
+        fs::metadata(path)
+            .map(|meta| meta.permissions().mode() & 0o777)
+            .unwrap_or(0o600)
+    };
+    #[cfg(not(unix))]
+    let mut mode = 0o600;
     let mut tightened = false;
     if secret && mode & 0o077 != 0 {
         mode = 0o600;
@@ -319,11 +332,14 @@ pub(super) fn write_config(path: &Path, content: &str, secret: bool) -> Result<b
         crate::paths::unique_tmp_suffix()
     ));
 
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(mode)
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(mode);
+    }
+    let mut file = options
         .open(&temporary)
         .map_err(|error| format!("failed to write {}: {error}", temporary.display()))?;
 
@@ -337,12 +353,16 @@ pub(super) fn write_config(path: &Path, content: &str, secret: bool) -> Result<b
         return Err(format!("failed to write {}: {error}", temporary.display()));
     }
 
-    fs::set_permissions(&temporary, fs::Permissions::from_mode(mode)).map_err(|error| {
-        format!(
-            "failed to set permissions on {}: {error}",
-            temporary.display()
-        )
-    })?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&temporary, fs::Permissions::from_mode(mode)).map_err(|error| {
+            format!(
+                "failed to set permissions on {}: {error}",
+                temporary.display()
+            )
+        })?;
+    }
 
     fs::rename(&temporary, path).map_err(|error| {
         let _ = fs::remove_file(&temporary);

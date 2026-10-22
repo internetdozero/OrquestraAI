@@ -7,7 +7,6 @@
 //! here so concurrent writers are never clobbered.
 
 use std::fs;
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -83,7 +82,14 @@ pub(super) fn write_private(path: &Path, content: &str) -> Result<(), String> {
     {
         use std::io::Write;
         let mut options = fs::OpenOptions::new();
-        options.write(true).create(true).truncate(true).mode(0o600);
+        options.write(true).create(true).truncate(true);
+        // POSIX modes only exist on Unix; elsewhere the vault file
+        // inherits the profile directory's ACLs.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
         let mut file = options
             .open(&tmp)
             .map_err(|error| format!("failed to write {}: {error}", tmp.display()))?;
@@ -94,11 +100,20 @@ pub(super) fn write_private(path: &Path, content: &str) -> Result<(), String> {
     }
     // A vault that cannot be locked down to 0o600 must fail closed: a
     // silent chmod miss would leave secrets readable by other users.
-    fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))
-        .map_err(|error| format!("failed to secure {}: {error}", tmp.display()))?;
+    // (Unix-only: elsewhere there are no mode bits to lock down.)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))
+            .map_err(|error| format!("failed to secure {}: {error}", tmp.display()))?;
+    }
     fs::rename(&tmp, path)
         .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-        .map_err(|error| format!("failed to secure {}: {error}", path.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+            .map_err(|error| format!("failed to secure {}: {error}", path.display()))?;
+    }
     Ok(())
 }

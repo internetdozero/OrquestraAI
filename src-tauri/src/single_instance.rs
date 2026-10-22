@@ -19,15 +19,27 @@
 //! `sigwait` thread unlinks the socket when it wins the delivery race. When
 //! it loses (or on `kill -9`, which cannot be caught at all), layers 1–2
 //! reclaim the orphan on the next launch.
+//!
+//! Non-Unix platforms (Windows): no Unix sockets or `flock` exist here, so
+//! `try_activate_existing` always reports primary and `start_listener` is a
+//! no-op. Single-instance enforcement is Unix-only by design.
 
 use std::fs;
+#[cfg(unix)]
 use std::io::{Read, Write};
+#[cfg(unix)]
 use std::os::unix::io::AsRawFd;
+#[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Mutex;
+#[cfg(unix)]
 use std::thread;
-use tauri::{AppHandle, Manager, Runtime};
+#[cfg(unix)]
+use tauri::Manager;
+use tauri::{AppHandle, Runtime};
 
 use crate::paths::OrquestraPaths;
 
@@ -48,6 +60,7 @@ fn locked_guard() -> std::sync::MutexGuard<'static, Option<(PathBuf, fs::File)>>
 
 /// Drop a lock held for a different home. In production the home never
 /// changes; in tests every case gets a scratch `HOME`.
+#[cfg(unix)]
 fn release_foreign_lock(lock: &Path) {
     let mut guard = locked_guard();
     if guard.as_ref().is_some_and(|(path, _)| path != lock) {
@@ -67,29 +80,36 @@ fn lock_path() -> Result<PathBuf, String> {
 
 /// PID recorded by the lock holder, if any. Diagnostic only: PIDs recycle,
 /// so this never decides liveness — the `flock` does.
+#[cfg(unix)]
 fn lock_holder_pid() -> Option<i32> {
     let path = lock_path().ok()?;
     let text = fs::read_to_string(&path).ok()?;
     text.trim().parse::<i32>().ok().filter(|pid| *pid > 0)
 }
 
-/// Try to take the primary lock. `Ok(Some(file))` means no live primary
-/// exists and the caller now holds the lock; `Ok(None)` means a live peer
-/// holds it.
-fn try_claim_lock(lock: &std::path::Path) -> Result<Option<fs::File>, String> {
+#[cfg(unix)]
+fn open_lock(lock: &Path) -> Result<fs::File, String> {
     if let Some(parent) = lock.parent() {
         if !parent.as_os_str().is_empty() {
             fs::create_dir_all(parent)
                 .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
         }
     }
-    let file = fs::OpenOptions::new()
+    fs::OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
         .truncate(false)
         .open(lock)
-        .map_err(|error| format!("failed to open {}: {error}", lock.display()))?;
+        .map_err(|error| format!("failed to open {}: {error}", lock.display()))
+}
+
+/// Try to take the primary lock. `Ok(Some(file))` means no live primary
+/// exists and the caller now holds the lock; `Ok(None)` means a live peer
+/// holds it.
+#[cfg(unix)]
+fn try_claim_lock(lock: &Path) -> Result<Option<fs::File>, String> {
+    let file = open_lock(lock)?;
     // SAFETY: `flock` on our own open fd with no pointer arguments.
     let held = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } == 0;
     if held {
@@ -101,12 +121,14 @@ fn try_claim_lock(lock: &std::path::Path) -> Result<Option<fs::File>, String> {
 
 /// Record our PID in the lockfile. Best-effort: the lock itself is the
 /// authority, the PID is only a hint for operators reading the dir.
-fn record_pid(lock: &std::path::Path) {
+#[cfg(unix)]
+fn record_pid(lock: &Path) {
     let _ = fs::write(lock, std::process::id().to_string());
 }
 
 /// Unlink a dead socket path. Real directories are never removed here —
 /// only socket files, dead socket paths and stale regular files.
+#[cfg(unix)]
 fn prune_dead_path(path: &Path) {
     if fs::symlink_metadata(path)
         .map(|metadata| !metadata.file_type().is_dir())
@@ -123,6 +145,7 @@ fn prune_dead_path(path: &Path) {
 /// A socket that accepts the connection is live and never touched. A socket
 /// that refuses it is only removed after the lock proves no live primary
 /// exists — a slow or half-started peer is reported, never unlinked.
+#[cfg(unix)]
 pub fn try_activate_existing() -> Result<bool, String> {
     let path = socket_path()?;
     let lock = lock_path()?;
@@ -168,7 +191,16 @@ pub fn try_activate_existing() -> Result<bool, String> {
     }
 }
 
+/// Non-Unix fallback: no socket handshake exists here, so every launch is
+/// the primary instance. The caller-visible contract is preserved:
+/// `Ok(false)` means "proceed as primary".
+#[cfg(not(unix))]
+pub fn try_activate_existing() -> Result<bool, String> {
+    Ok(false)
+}
+
 /// Start listening on the Unix socket so subsequent launches can focus this window.
+#[cfg(unix)]
 pub fn start_listener<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     let path = socket_path()?;
     let lock = lock_path()?;
@@ -222,10 +254,18 @@ pub fn start_listener<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     Ok(())
 }
 
+/// Non-Unix fallback: nothing to listen on, so starting the listener is a
+/// no-op that still reports success to the caller.
+#[cfg(not(unix))]
+pub fn start_listener<R: Runtime>(_app: AppHandle<R>) -> Result<(), String> {
+    Ok(())
+}
+
 /// Best-effort proactive cleanup on SIGINT/SIGTERM: a dedicated `sigwait`
 /// thread unlinks the socket when it wins the delivery race. Correctness
 /// never depends on it — a lost race or `kill -9` leaves an orphan that the
 /// lock reclaims on the next launch. Idempotent.
+#[cfg(unix)]
 fn install_signal_cleanup() {
     use std::sync::atomic::{AtomicBool, Ordering};
     static INSTALLED: AtomicBool = AtomicBool::new(false);

@@ -9,6 +9,7 @@ use super::serializers::*;
 use super::*;
 use std::collections::BTreeSet;
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -122,6 +123,7 @@ mod tests {
         server
     }
 
+    #[cfg(unix)]
     fn mode_of(path: &Path) -> u32 {
         fs::metadata(path).unwrap().permissions().mode() & 0o777
     }
