@@ -55,9 +55,6 @@ export function StatusFooter({
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
             <span className="relative flex size-1.5">
-              {online && (
-                <span className="absolute inline-flex size-full animate-pulse rounded-full bg-emerald-400 opacity-75" />
-              )}
               <span
                 className={cn(
                   "relative inline-flex size-1.5 rounded-full",

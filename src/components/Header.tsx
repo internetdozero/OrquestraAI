@@ -92,7 +92,6 @@ export function Header({
             <div className="flex shrink-0 items-center gap-2">
               <div className="accent-bg-soft accent-border hidden items-center gap-2 rounded-lg border px-3 py-2 md:flex">
                 <span className="relative flex size-2">
-                  <span className="accent-dot absolute inline-flex size-full animate-ping rounded-full opacity-60" />
                   <span className="accent-dot relative inline-flex size-2 rounded-full" />
                 </span>
                 <span className="accent-text text-xs font-medium">{t.common.activeSkills}</span>
