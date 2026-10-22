@@ -21,19 +21,27 @@ pub(super) fn shared_client() -> Result<&'static reqwest::Client, String> {
     if let Some(client) = SHARED_CLIENT.get() {
         return Ok(client);
     }
-    // Same-host redirects only: a compromised API must not bounce the call
-    // — and its auth headers — to an attacker host. reqwest already strips
-    // `Authorization` on cross-host hops; refusing them outright removes
-    // the SSRF-via-redirect class entirely.
-    let same_host_only = reqwest::redirect::Policy::custom(|attempt| {
-        let current = attempt.url().host_str().unwrap_or("").to_ascii_lowercase();
-        let first = attempt
-            .previous()
-            .first()
-            .and_then(|url| url.host_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-        if !current.is_empty() && current == first {
+    // Redirects stay on the first request's exact origin — same scheme,
+    // same port, same host — and stop after 5 hops. The initial gate only
+    // admits https/443, so chaining the fence to the first URL keeps the
+    // whole call on that origin: downgrades, port pivots and cross-host
+    // bounces stop (the 302 is returned, never followed with headers).
+    // reqwest's default policy is same-host but scheme- and port-blind
+    // with a 10-hop limit; the custom fence closes those gaps.
+    let fenced = reqwest::redirect::Policy::custom(|attempt| {
+        if attempt.previous().len() >= 5 {
+            return attempt.stop();
+        }
+        let Some(first) = attempt.previous().first() else {
+            return attempt.stop();
+        };
+        let current = attempt.url();
+        let host = current.host_str().unwrap_or("").to_ascii_lowercase();
+        let same_origin = !host.is_empty()
+            && current.scheme() == first.scheme()
+            && current.port_or_known_default() == first.port_or_known_default()
+            && host == first.host_str().unwrap_or("").to_ascii_lowercase();
+        if same_origin {
             attempt.follow()
         } else {
             attempt.stop()
@@ -42,7 +50,7 @@ pub(super) fn shared_client() -> Result<&'static reqwest::Client, String> {
     // Built once; a losing racer's client is dropped and the winner kept.
     let built = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
-        .redirect(same_host_only)
+        .redirect(fenced)
         .build()
         .map_err(|error| format!("vault http client failed: {error}"))?;
     let _ = SHARED_CLIENT.set(built);
@@ -158,21 +166,24 @@ pub fn scrub_text(text: &str, secrets: &[String]) -> String {
 /// Execute one HTTP call with `reqwest`, returning status + filtered output.
 /// Failover/rotation is owned by the caller (`mod.rs`), which retries with
 /// the next key on 401/402/403/429.
+/// Execute one validated call. `url` is the `Url` the endpoint gate
+/// returned — never the raw caller string — so the sender and the
+/// validator agree on scheme, host and port by construction.
 pub(super) async fn execute_once(
     method: &str,
-    url: &str,
+    url: &url::Url,
     headers: &[(String, String)],
     body: Option<&str>,
 ) -> Result<(u16, HashMap<String, String>, String), String> {
     let client = shared_client()?;
     let verb = method.to_ascii_uppercase();
     let mut request = match verb.as_str() {
-        "GET" => client.get(url),
-        "POST" => client.post(url),
-        "PUT" => client.put(url),
-        "PATCH" => client.patch(url),
-        "DELETE" => client.delete(url),
-        "HEAD" => client.head(url),
+        "GET" => client.get(url.clone()),
+        "POST" => client.post(url.clone()),
+        "PUT" => client.put(url.clone()),
+        "PATCH" => client.patch(url.clone()),
+        "DELETE" => client.delete(url.clone()),
+        "HEAD" => client.head(url.clone()),
         _ => return Err(format!("unsupported vault http method: {method}")),
     };
     for (name, value) in headers {

@@ -55,8 +55,14 @@ pub async fn vault_http_request(
     // SSRF gate: the key rides in the headers, so the endpoint must be an
     // https URL on this preset's allowlisted hosts — attacker hosts,
     // plain http, IP literals and unknown presets die here, before any
-    // secret is loaded into memory for the call.
-    super::endpoints::validate_endpoint(&snapshot.preset, &endpoint)?;
+    // secret is loaded into memory for the call. Supabase is locked to
+    // the service's own project host via `service.meta`. The parsed `Url`
+    // is what gets sent, so the gate and reqwest cannot disagree.
+    let parsed = super::endpoints::validate_endpoint_for_service(
+        &snapshot.preset,
+        &endpoint,
+        Some(&snapshot),
+    )?;
     if snapshot.keys.is_empty() {
         return Err(format!("vault service {service} has no keys"));
     }
@@ -123,7 +129,7 @@ pub async fn vault_http_request(
             (current, secret)
         };
         let outgoing = http::effective_headers(&current, &secret, &extra);
-        match http::execute_once(&verb, &endpoint, &outgoing, body.as_deref()).await {
+        match http::execute_once(&verb, &parsed, &outgoing, body.as_deref()).await {
             Ok((status, headers, text)) => {
                 let secrets: Vec<String> =
                     current.keys.iter().map(|key| key.secret.clone()).collect();
@@ -218,6 +224,9 @@ pub async fn vault_test_connection(
     service: String,
     key_index: Option<usize>,
 ) -> Result<VaultTestResult, String> {
+    // The canonical ping goes through the same gate and sends the same
+    // parsed `Url`, so a compromised preset table cannot redirect a test
+    // ping (and its key) off-allowlist.
     let endpoint = {
         let paths = crate::paths::OrquestraPaths::resolve()?;
         let vault = load_vault(&paths)?;
@@ -225,14 +234,13 @@ pub async fn vault_test_connection(
             .services
             .get(&service)
             .ok_or_else(|| format!("unknown vault service: {service}"))?;
-        presets::verify_endpoint(&current.preset)
-            .ok_or_else(|| {
-                format!(
-                    "no canonical verify endpoint for the {} preset",
-                    current.preset
-                )
-            })?
-            .to_string()
+        let raw = presets::verify_endpoint(&current.preset).ok_or_else(|| {
+            format!(
+                "no canonical verify endpoint for the {} preset",
+                current.preset
+            )
+        })?;
+        super::endpoints::validate_endpoint_for_service(&current.preset, raw, Some(current))?
     };
     let paths = crate::paths::OrquestraPaths::resolve()?;
     // Snapshot released before the network call; health is applied to the

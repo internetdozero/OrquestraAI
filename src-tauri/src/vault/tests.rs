@@ -556,6 +556,120 @@ where
     tauri::async_runtime::block_on(future)
 }
 
+/// Build a redirect chain server: each hop 302s to `next`, the last serves
+/// `final_body`. Returns the entry URL plus the per-hop request headers, so
+/// redirect tests can assert the fence AND that auth headers never leak
+/// off-origin. `max_hops` bounds how many times the socket accepts.
+fn redirect_chain(
+    hops: Vec<String>,
+    final_body: &str,
+) -> (String, std::sync::Arc<std::sync::Mutex<Vec<String>>>) {
+    use std::io::{Read as _, Write as _};
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("listener");
+    let port = listener.local_addr().expect("port").port();
+    let total = hops.len() + 1;
+    let seen_server = seen.clone();
+    let body = final_body.to_string();
+    std::thread::spawn(move || {
+        for (index, next) in hops
+            .iter()
+            .chain(std::iter::once(&"__FINAL__".to_string()))
+            .enumerate()
+        {
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            let mut buf = vec![0u8; 8192];
+            let read = stream.read(&mut buf).unwrap_or(0);
+            let head = String::from_utf8_lossy(&buf[..read]).into_owned();
+            seen_server.lock().expect("seen").push(head);
+            let is_last = index == total - 1;
+            let response = if is_last {
+                format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+            } else {
+                let target = next.replace("{PORT}", &port.to_string());
+                format!(
+                    "HTTP/1.1 302 Found\r\nLocation: {target}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                )
+            };
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+    (format!("http://127.0.0.1:{port}/start"), seen)
+}
+
+/// Task #321: the redirect fence — same-origin hops flow, downgrade
+/// (https→http), port pivots, cross-host bounces and loops all stop, and
+/// stop means the client returns the 302 instead of following it.
+#[test]
+fn redirect_fence_stops_downgrade_port_pivot_cross_host_and_loops() {
+    use super::http::execute_once;
+    // Same-origin http chain on loopback: followed to the final body.
+    let (entry, seen) = redirect_chain(vec!["http://127.0.0.1:{PORT}/mid".to_string()], "final");
+    let parsed = url::Url::parse(&entry).expect("entry URL");
+    let (status, _, text) =
+        block_on(execute_once("GET", &parsed, &[], None)).expect("same-origin chain follows");
+    assert_eq!((status, text.as_str()), (200, "final"));
+    assert_eq!(seen.lock().expect("seen").len(), 2, "both hops hit");
+
+    // Port pivot on the same host stops: a http listener on another port
+    // is a different origin, and the 302 surfaces instead of being chased.
+    let (entry, _) = redirect_chain(
+        vec!["http://127.0.0.1:1/elsewhere".to_string()],
+        "must-not-follow",
+    );
+    let parsed = url::Url::parse(&entry).expect("entry URL");
+    let (status, _, _) =
+        block_on(execute_once("GET", &parsed, &[], None)).expect("port pivot stops");
+    assert_eq!(status, 302, "cross-port bounce is returned, not followed");
+
+    // Cross-host bounce stops: second host never sees a request and the
+    // client surfaces the 302 instead of the final body.
+    let second = std::net::TcpListener::bind("127.0.0.1:0").expect("second");
+    let second_port = second.local_addr().expect("port").port();
+    let second_seen = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let flag = second_seen.clone();
+    std::thread::spawn(move || {
+        if let Ok((mut stream, _)) = second.accept() {
+            use std::io::Read as _;
+            let mut buf = [0u8; 1024];
+            let _ = stream.read(&mut buf);
+            flag.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    });
+    let (entry, _) = redirect_chain(
+        vec![format!("http://127.0.0.1:{second_port}/elsewhere")],
+        "must-not-leak",
+    );
+    let parsed = url::Url::parse(&entry).expect("entry URL");
+    let (status, _, text) =
+        block_on(execute_once("GET", &parsed, &[], None)).expect("cross-host stops");
+    assert_eq!(status, 302, "the bounce is returned, not followed");
+    assert!(text.is_empty(), "no body leaks from the unfollowed hop");
+    assert!(
+        !second_seen.load(std::sync::atomic::Ordering::Relaxed),
+        "auth headers must never reach the second host"
+    );
+
+    // Loop: six self-hops against a 5-hop cap — the client stops mid-chain
+    // instead of spinning.
+    let self_hops: Vec<String> = (0..6)
+        .map(|_| "http://127.0.0.1:{PORT}/start".to_string())
+        .collect();
+    let (entry, seen) = redirect_chain(self_hops, "unreachable");
+    let parsed = url::Url::parse(&entry).expect("entry URL");
+    let (status, _, _) = block_on(execute_once("GET", &parsed, &[], None)).expect("loop stops");
+    assert_eq!(status, 302, "the 6th hop is returned, not followed");
+    assert!(
+        seen.lock().expect("seen").len() <= 6,
+        "the hop cap bounds the chain"
+    );
+}
+
 /// A small body flows through the shared client untouched.
 #[test]
 fn http_small_body_returns_through_shared_client() {
@@ -567,8 +681,9 @@ fn http_small_body_returns_through_shared_client() {
         )
         .into_bytes(),
     );
-    let (status, _, text) =
-        block_on(super::http::execute_once("GET", &url, &[], None)).expect("small body must pass");
+    let parsed = url::Url::parse(&url).expect("loopback URL");
+    let (status, _, text) = block_on(super::http::execute_once("GET", &parsed, &[], None))
+        .expect("small body must pass");
     assert_eq!(status, 200);
     assert_eq!(text, body);
 }
@@ -580,7 +695,8 @@ fn http_huge_body_is_refused_before_reading() {
     let url = loopback_serve(
         b"HTTP/1.0 200 OK\r\nContent-Length: 11534336\r\nConnection: close\r\n\r\nx".to_vec(),
     );
-    let error = block_on(super::http::execute_once("GET", &url, &[], None))
+    let parsed = url::Url::parse(&url).expect("loopback URL");
+    let error = block_on(super::http::execute_once("GET", &parsed, &[], None))
         .expect_err("11MB body must be refused");
     assert!(error.contains("cap"), "unexpected error: {error}");
 }
@@ -779,4 +895,178 @@ fn legacy_plaintext_vault_migrates_on_first_load() {
     );
     assert!(raw.contains("orquestraSealed"));
     std::fs::remove_dir_all(&paths.root).expect("cleanup");
+}
+
+fn supabase_service(meta: &[(&str, &str)]) -> VaultService {
+    let mut service = test_service("supabase", &["sb-secret"]);
+    service.meta = meta
+        .iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect();
+    service
+}
+
+/// Task #321: WHATWG backslash parsing — `evil.example\.supabase.co` must
+/// not validate, whichever host a naive splitter would read.
+#[test]
+fn backslash_host_confusion_is_rejected() {
+    use super::endpoints::validate_endpoint_for_service;
+    assert!(
+        validate_endpoint_for_service("openai", "https://evil.example\\.supabase.co/collect", None)
+            .is_err(),
+        "backslash host must fail closed"
+    );
+}
+
+/// Task #321: tabs, newlines and other control bytes inside the authority
+/// are delimiters to the parser — never part of a hostname.
+#[test]
+fn control_bytes_in_the_authority_are_rejected() {
+    use super::endpoints::validate_endpoint;
+    for hostile in [
+        "https://api.openai.com\t.evil.com/x",
+        "https://api.openai.com\n.evil.com/x",
+        "https://api.openai.com\r.evil.com/x",
+        "https://api.openai.com\u{0}.evil.com/x",
+        "https://api.openai.com%5cevil.com/x",
+        "https://api.openai.com%2Fevil.com/x",
+    ] {
+        assert!(
+            validate_endpoint("openai", hostile).is_err(),
+            "{hostile:?} must be refused"
+        );
+    }
+}
+
+/// Task #321: userinfo, non-443 ports and plain http die even on good hosts.
+#[test]
+fn userinfo_ports_and_http_are_rejected() {
+    use super::endpoints::validate_endpoint;
+    for hostile in [
+        "https://user:pass@api.openai.com/v1/models",
+        "https://user@api.openai.com/v1/models",
+        "https://api.openai.com:8443/v1/models",
+        "https://api.openai.com:80/v1/models",
+        "http://api.openai.com/v1/models",
+    ] {
+        assert!(
+            validate_endpoint("openai", hostile).is_err(),
+            "{hostile:?} must be refused"
+        );
+    }
+    // Explicit 443 is the same origin: accepted and normalized.
+    let url =
+        validate_endpoint("openai", "https://api.openai.com:443/v1/models").expect("explicit 443");
+    assert_eq!(url.host_str(), Some("api.openai.com"));
+}
+
+/// Task #321: IP literals in every notation — `Host::Domain` holds none.
+#[test]
+fn every_ip_notation_is_rejected() {
+    use super::endpoints::validate_endpoint;
+    for hostile in [
+        "https://2130706433/",
+        "https://0x7f000001/",
+        "https://017700000001/",
+        "https://0x7f.0x0.0x0.0x1/",
+        "https://[0:0:0:0:0:ffff:127.0.0.1]/",
+        "https://[::ffff:127.0.0.1]/",
+    ] {
+        assert!(
+            validate_endpoint("openai", hostile).is_err(),
+            "{hostile:?} must be refused"
+        );
+    }
+}
+
+/// Task #321: Supabase is locked to the service's own project host — a
+/// sibling `*.supabase.co` project never validates, and neither does a
+/// missing or malformed meta entry.
+#[test]
+fn supabase_is_locked_to_the_services_own_project() {
+    use super::endpoints::validate_endpoint_for_service;
+    let ref_service = supabase_service(&[("project_ref", "abcdefghijklmnopqrst")]);
+    let own = validate_endpoint_for_service(
+        "supabase",
+        "https://abcdefghijklmnopqrst.supabase.co/rest/v1/t",
+        Some(&ref_service),
+    )
+    .expect("own project validates");
+    assert_eq!(own.host_str(), Some("abcdefghijklmnopqrst.supabase.co"));
+    // Another tenant's project: rejected.
+    assert!(
+        validate_endpoint_for_service(
+            "supabase",
+            "https://zzzzzzzzzzzzzzzzzzzz.supabase.co/rest/v1/t",
+            Some(&ref_service)
+        )
+        .is_err(),
+        "another tenant must be refused"
+    );
+    // The stored project-URL form (`SUPABASE_URL` style) works too.
+    let url_service = supabase_service(&[("endpoint", "https://myproj.supabase.co")]);
+    assert!(
+        validate_endpoint_for_service(
+            "supabase",
+            "https://myproj.supabase.co/rest/v1/t?select=1#frag",
+            Some(&url_service)
+        )
+        .is_ok(),
+        "stored project URL validates"
+    );
+    // But it must still be the SAME project.
+    assert!(
+        validate_endpoint_for_service(
+            "supabase",
+            "https://other.supabase.co/rest/v1/t",
+            Some(&url_service)
+        )
+        .is_err(),
+        "sibling project via stored URL must be refused"
+    );
+    // Malformed metas fail closed with guidance, not a wildcard.
+    for bad_meta in [
+        supabase_service(&[]),
+        supabase_service(&[("project_ref", "TOO-SHORT")]),
+        supabase_service(&[("endpoint", "https://supabase.co")]),
+        supabase_service(&[("endpoint", "https://a.b.supabase.co")]),
+        supabase_service(&[("endpoint", "http://myproj.supabase.co")]),
+    ] {
+        let error = validate_endpoint_for_service(
+            "supabase",
+            "https://myproj.supabase.co/rest/v1/t",
+            Some(&bad_meta),
+        )
+        .expect_err("bad meta must fail closed");
+        assert!(
+            error.contains("project_ref") || error.contains("endpoint"),
+            "guidance message expected, got: {error}"
+        );
+    }
+}
+
+/// Task #321: the sent URL carries exactly the validated host — the gate
+/// and `reqwest` cannot disagree over a corpus of tricky inputs.
+#[test]
+fn validated_url_host_matches_the_sent_url_host() {
+    use super::endpoints::validate_endpoint;
+    for raw in [
+        "https://api.openai.com/v1/models",
+        "https://API.OPENAI.COM:443/v1/models",
+        "https://api.openai.com/v1/models?x=1#frag",
+        "https://api.github.com/user?tab=x#y",
+        "https://console.neon.tech/api/v2/projects",
+    ] {
+        let url = validate_endpoint("openai", raw)
+            .or_else(|_| validate_endpoint("github", raw))
+            .or_else(|_| validate_endpoint("neon", raw))
+            .unwrap_or_else(|_| panic!("{raw:?} must validate"));
+        let reparsed = url::Url::parse(raw).expect("same crate parses");
+        assert_eq!(
+            url.host_str(),
+            reparsed.host_str(),
+            "gate host and sender host agree for {raw:?}"
+        );
+        assert_eq!(url.as_str(), reparsed.as_str(), "no silent rewrite");
+    }
 }

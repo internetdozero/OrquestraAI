@@ -2713,6 +2713,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "toml_edit 0.22.27",
+ "url",
 ]
 
 [[package]]

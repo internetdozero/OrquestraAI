@@ -46,6 +46,10 @@ toml_edit = "0.22"
 rusqlite = { version = "0.31", features = ["bundled"] }
 # Blind vault HTTP proxy: in-memory key injection via `vault_http_request`.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+# Same major as the `url` already in Cargo.lock (reqwest's own dep), so the
+# endpoint gate in `vault/endpoints.rs` parses with the identical WHATWG
+# rules the sender applies — parser disagreement is the SSRF bypass class.
+url = "2"
 # For bounded response streaming (`bytes_stream` + `StreamExt`); already in
 # the lock file as a reqwest transitive dep, so this adds no new crates.
 futures-util = { version = "0.3", default-features = false }
