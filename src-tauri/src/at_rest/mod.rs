@@ -15,7 +15,7 @@
 mod envelope;
 mod key;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::paths::OrquestraPaths;
 
@@ -45,6 +45,38 @@ pub(crate) fn open_text(paths: &OrquestraPaths, stored: &str) -> Result<(String,
         .map(|text| (text, false))
 }
 
+/// Where the plaintext backup for `path` lives (`<file>.migrate-bak`).
+pub(crate) fn migrate_backup_path(path: &Path) -> PathBuf {
+    path.with_extension(format!(
+        "{}.migrate-bak",
+        path.extension()
+            .map(|extension| extension.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "json".to_string())
+    ))
+}
+
+/// Self-healing read for key rotation / corruption: when the sealed file no
+/// longer opens under the current file key, fall back to the
+/// `<file>.migrate-bak` plaintext backup left by the encryption migration.
+/// Returns the backup plaintext when it holds valid JSON (a sealed backup
+/// is opened under the current key first); the caller validates it against
+/// its own schema, re-seals it, and rewrites the file atomically.
+pub(crate) fn recover_plaintext_from_backup(
+    paths: &OrquestraPaths,
+    path: &Path,
+) -> Option<String> {
+    let stored = std::fs::read_to_string(migrate_backup_path(path)).ok()?;
+    if stored.trim().is_empty() {
+        return None;
+    }
+    let candidate = match serde_json::from_str::<serde_json::Value>(&stored) {
+        Ok(value) if envelope::is_sealed(&value) => open_text(paths, &stored).ok()?.0,
+        _ => stored,
+    };
+    serde_json::from_str::<serde_json::Value>(&candidate).ok()?;
+    Some(candidate)
+}
+
 /// Back up legacy `path` to `<path>.migrate-bak` and return the sealed
 /// replacement. The caller persists the sealed text with its own atomic
 /// writer; if that write fails the original is untouched and still loads.
@@ -54,12 +86,7 @@ pub(crate) fn migrate_legacy_file(
     paths: &OrquestraPaths,
 ) -> Result<String, String> {
     let sealed = seal_text(paths, legacy)?;
-    let backup = path.with_extension(format!(
-        "{}.migrate-bak",
-        path.extension()
-            .map(|extension| extension.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "json".to_string())
-    ));
+    let backup = migrate_backup_path(path);
     std::fs::write(&backup, legacy)
         .map_err(|error| format!("failed to back up {}: {error}", backup.display()))?;
     #[cfg(unix)]
@@ -103,6 +130,37 @@ mod tests {
         let (reopened, was_legacy) = open_text(&paths, &sealed).expect("open sealed");
         assert!(!was_legacy);
         assert_eq!(reopened, legacy);
+        let _ = std::fs::remove_dir_all(&paths.root);
+    }
+
+    /// Task #314: a sealed file the current key no longer opens (rotation,
+    /// restored backup, flipped byte) recovers from `.migrate-bak`.
+    #[test]
+    fn corrupt_sealed_file_recovers_from_migrate_bak() {
+        use base64::prelude::*;
+        let paths = test_paths("selfheal");
+        let target = paths.root.join("vault.json");
+        let legacy = r#"{"services":{"svc":{"id":"svc","label":"S","keys":[]}}}"#;
+        let sealed = seal_text(&paths, legacy).expect("seal");
+        std::fs::write(&target, &sealed).expect("write sealed");
+        // One flipped ciphertext byte fails closed under the same key.
+        let mut value: serde_json::Value = serde_json::from_str(&sealed).expect("envelope");
+        let mut raw = BASE64_STANDARD
+            .decode(value.get("data").unwrap().as_str().unwrap())
+            .expect("data");
+        raw[0] ^= 0x01;
+        value["data"] = serde_json::Value::String(BASE64_STANDARD.encode(raw));
+        std::fs::write(&target, serde_json::to_string_pretty(&value).unwrap())
+            .expect("corrupt");
+        let stored = std::fs::read_to_string(&target).expect("read corrupted");
+        assert!(open_text(&paths, &stored).is_err(), "tampered seal must fail");
+        // No backup yet: nothing to heal from.
+        assert!(recover_plaintext_from_backup(&paths, &target).is_none());
+        std::fs::write(migrate_backup_path(&target), legacy).expect("plant backup");
+        assert_eq!(
+            recover_plaintext_from_backup(&paths, &target).as_deref(),
+            Some(legacy)
+        );
         let _ = std::fs::remove_dir_all(&paths.root);
     }
 

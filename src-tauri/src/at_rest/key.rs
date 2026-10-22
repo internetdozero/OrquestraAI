@@ -50,10 +50,28 @@ pub(super) fn file_key(paths: &OrquestraPaths) -> Result<[u8; 32], String> {
     Ok(key)
 }
 
+/// True when the OS keyring must not be touched: integration-test suites
+/// set `ORQUESTRA_KEYRING_DISABLE=1` (see `tests/common`), and any storage
+/// root under the OS temp dir is a scratch tree by construction — the real
+/// `~/.orquestra` never lives there. Both keep hermetic suites off the
+/// operator's real keyring entry, which is global per service/account and
+/// would otherwise be read (or created) by every test process.
+fn keyring_disabled(root: &Path) -> bool {
+    if std::env::var("ORQUESTRA_KEYRING_DISABLE")
+        .map(|flag| flag == "1" || flag.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+    {
+        return true;
+    }
+    root.starts_with(std::env::temp_dir())
+}
+
 fn resolve(root: &Path) -> Result<[u8; 32], String> {
     // Unit tests must never touch the operator's real keyring: every test
     // writes temp-dir vaults, so the 0600 fallback key is the hermetic path.
-    if cfg!(test) {
+    // Integration tests (`cfg!(test)` is false for them) are covered by
+    // `keyring_disabled`: the env flag plus the temp-root check.
+    if cfg!(test) || keyring_disabled(root) {
         return fallback_key(root);
     }
     if has_session_bus() {

@@ -307,8 +307,34 @@ pub(super) fn load_catalog(paths: &OrquestraPaths, seed: &Path) -> Result<Catalo
             return Err(format!("failed to read {}: {error}", path.display()));
         }
     };
-    let (plaintext, legacy) = crate::at_rest::open_text(paths, &content)
-        .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
+    let (plaintext, legacy) = match crate::at_rest::open_text(paths, &content) {
+        Ok(opened) => opened,
+        Err(error) if error.contains("failed to unseal") => {
+            // The sealed file no longer opens under the current file key
+            // (rotation, restored backup, flipped byte). Heal from the
+            // `.migrate-bak` plaintext backup instead of bricking the catalog.
+            let Some(recovered) =
+                crate::at_rest::recover_plaintext_from_backup(paths, &path)
+            else {
+                return Err(format!("failed to unseal {}: {error}", path.display()));
+            };
+            let catalog: Catalog = serde_json::from_str(&recovered).map_err(|parse| {
+                format!("failed to parse {}: {parse}", path.display())
+            })?;
+            let backup = crate::at_rest::migrate_backup_path(&path);
+            crate::log_warn!(
+                "catalog unseal failed ({}); recovered from {} and re-sealed under the current file key",
+                error,
+                backup.display()
+            );
+            let sealed = crate::at_rest::seal_text(paths, &recovered)?;
+            write_config(&path, &sealed, true).map(|_| ())?;
+            return Ok(catalog);
+        }
+        Err(error) => {
+            return Err(format!("failed to unseal {}: {error}", path.display()));
+        }
+    };
     let catalog: Catalog = serde_json::from_str(&plaintext)
         .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
     // First read of a pre-encryption file migrates it (backup + sealed

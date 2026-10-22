@@ -32,10 +32,17 @@ pub fn with_temp_home<T>(label: &str, body: impl FnOnce(&Path) -> T) -> T {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let previous = std::env::var_os("HOME");
+    // Hermetic keyring isolation: scratch suites must never read (or create)
+    // the operator's real OS keyring entry, which is global per
+    // service/account and shared with the host install. Belt and suspenders
+    // with the temp-root check in `at_rest::key`: the flag covers relocated
+    // temp dirs, the root check covers callers that bypass this helper.
+    let previous_flag = std::env::var_os("ORQUESTRA_KEYRING_DISABLE");
     let home = unique_dir(label);
     std::fs::create_dir_all(&home).expect("scratch HOME");
     unsafe {
         std::env::set_var("HOME", &home);
+        std::env::set_var("ORQUESTRA_KEYRING_DISABLE", "1");
     }
     let outcome = body(&home);
     match previous {
@@ -44,6 +51,14 @@ pub fn with_temp_home<T>(label: &str, body: impl FnOnce(&Path) -> T) -> T {
         },
         None => unsafe {
             std::env::remove_var("HOME");
+        },
+    }
+    match previous_flag {
+        Some(value) => unsafe {
+            std::env::set_var("ORQUESTRA_KEYRING_DISABLE", value);
+        },
+        None => unsafe {
+            std::env::remove_var("ORQUESTRA_KEYRING_DISABLE");
         },
     }
     let _ = std::fs::remove_dir_all(&home);
