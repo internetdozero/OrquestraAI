@@ -25,7 +25,10 @@ pub use store::{mask_key, KeyHealth, VaultServicePublic};
 
 use atomic::update_vault;
 pub use proxy::{vault_http_request, vault_test_connection, VaultHttpResult, VaultTestResult};
-use store::{load_vault, resolve_saved_tag, to_public, validate_id, VaultKey, VaultService};
+use store::{
+    load_vault, purge_migration_backup, resolve_saved_tag, to_public, validate_id, VaultKey,
+    VaultService,
+};
 
 pub use exec::{child_env, scrub_output};
 pub use http::{effective_headers, scrub_body, scrub_text, strip_response_headers};
@@ -214,6 +217,34 @@ pub fn vault_exec(service: String, command: serde_json::Value) -> Result<VaultEx
         stdout,
         stderr,
         used_key_index: used,
+    })
+}
+
+/// Per-file outcome of a migration-backup purge: both secret-bearing files
+/// (`vault.json`, `mcps.json`) may keep a `.migrate-bak` plaintext backup.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PurgeBackupsReport {
+    pub vault_purged: bool,
+    pub catalog_purged: bool,
+}
+
+/// Zeroize and unlink the `.migrate-bak` plaintext backups left by the
+/// at-rest encryption migration. Runs only after both sealed files prove
+/// they still open (schema-level reload here, unseal gate inside the purge
+/// itself), so this never destroys the only readable copy. The backups are
+/// kept until the operator explicitly purges them — auto-deleting on first
+/// write would strand a user whose new key cannot open the sealed files.
+#[tauri::command]
+pub fn vault_purge_migration_backups() -> Result<PurgeBackupsReport, String> {
+    let paths = crate::paths::OrquestraPaths::resolve()?;
+    load_vault(&paths)?;
+    crate::mcp::list_mcps()?;
+    let vault_purged = purge_migration_backup(&paths)?;
+    let catalog_purged = crate::mcp::purge_catalog_migration_backup()?;
+    Ok(PurgeBackupsReport {
+        vault_purged,
+        catalog_purged,
     })
 }
 

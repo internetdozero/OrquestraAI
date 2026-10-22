@@ -13,5 +13,6 @@ permissions = [
   "allow-vault-set-primary",
   "allow-vault-test-connection",
   "allow-vault-remove-key",
+  "allow-vault-purge-migration-backups",
   "allow-reveal-mcp-secret",
 ]

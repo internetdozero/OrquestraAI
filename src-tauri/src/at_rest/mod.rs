@@ -77,6 +77,72 @@ pub(crate) fn recover_plaintext_from_backup(
     Some(candidate)
 }
 
+/// Overwrite `<path>.migrate-bak` with zeroes and unlink it, so a discarded
+/// plaintext backup is not recoverable with file-carving tools.
+///
+/// Fail-closed ordering: the sealed file must still open under the current
+/// file key first — a backup is never destroyed while it might be the only
+/// readable copy (see `recover_plaintext_from_backup`). Symlinks are refused
+/// and a missing backup reports `Ok(false)`. Best effort on SSDs and
+/// copy-on-write filesystems, where stale blocks may survive outside the
+/// filesystem's reach: rotate exposed provider keys regardless (see
+/// `docs/vault.md`).
+pub(crate) fn purge_migration_backup(paths: &OrquestraPaths, path: &Path) -> Result<bool, String> {
+    let backup = migrate_backup_path(path);
+    let metadata = match std::fs::symlink_metadata(&backup) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => {
+            return Err(format!(
+                "failed to inspect {}: {error}",
+                backup.display()
+            ));
+        }
+        Ok(metadata) => metadata,
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(format!(
+            "refusing to purge {}: not a regular file",
+            backup.display()
+        ));
+    }
+    // Gate: the live file must open before its backup may die.
+    let stored = std::fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    open_text(paths, &stored).map_err(|error| {
+        format!(
+            "refusing to purge {}: sealed file does not open ({error})",
+            backup.display()
+        )
+    })?;
+    zeroize_file_contents(&backup, metadata.len())?;
+    std::fs::remove_file(&backup)
+        .map_err(|error| format!("failed to remove {}: {error}", backup.display()))?;
+    Ok(true)
+}
+
+/// Overwrite a file's bytes with zeroes without changing its length, then
+/// sync, so the plaintext is gone before the directory entry is unlinked.
+fn zeroize_file_contents(path: &Path, len: u64) -> Result<(), String> {
+    use std::io::{Seek, SeekFrom, Write};
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(path)
+        .map_err(|error| format!("failed to open {} for purge: {error}", path.display()))?;
+    file.seek(SeekFrom::Start(0))
+        .map_err(|error| format!("failed to rewind {} for purge: {error}", path.display()))?;
+    let zeroes = [0u8; 65536];
+    let mut remaining = len;
+    while remaining > 0 {
+        let chunk = remaining.min(zeroes.len() as u64) as usize;
+        file.write_all(&zeroes[..chunk])
+            .map_err(|error| format!("failed to purge {}: {error}", path.display()))?;
+        remaining -= chunk as u64;
+    }
+    file.sync_all()
+        .map_err(|error| format!("failed to sync {} for purge: {error}", path.display()))?;
+    Ok(())
+}
+
 /// Back up legacy `path` to `<path>.migrate-bak` and return the sealed
 /// replacement. The caller persists the sealed text with its own atomic
 /// writer; if that write fails the original is untouched and still loads.
@@ -161,6 +227,68 @@ mod tests {
             recover_plaintext_from_backup(&paths, &target).as_deref(),
             Some(legacy)
         );
+        let _ = std::fs::remove_dir_all(&paths.root);
+    }
+
+    /// Task #320: purge zeroizes then unlinks; a missing backup is `Ok(false)`.
+    #[test]
+    fn purge_zeroizes_then_removes_the_backup() {
+        let paths = test_paths("purge");
+        let target = paths.root.join("vault.json");
+        let legacy = r#"{"services":{"svc":{"id":"svc","label":"S","keys":[]}}}"#;
+        let sealed = seal_text(&paths, legacy).expect("seal");
+        std::fs::write(&target, &sealed).expect("write sealed");
+        let backup = migrate_backup_path(&target);
+        std::fs::write(&backup, legacy).expect("plant backup");
+        assert!(purge_migration_backup(&paths, &target).expect("purge"));
+        assert!(!backup.exists(), "backup must be unlinked");
+        assert!(
+            !purge_migration_backup(&paths, &target).expect("re-purge"),
+            "absent backup reports Ok(false)"
+        );
+        let _ = std::fs::remove_dir_all(&paths.root);
+    }
+
+    /// Task #320: while the sealed file does not open, the backup — possibly
+    /// the only readable copy — survives the refused purge.
+    #[test]
+    fn purge_refuses_while_the_sealed_file_does_not_open() {
+        use base64::prelude::*;
+        let paths = test_paths("purge-refuse");
+        let target = paths.root.join("vault.json");
+        let legacy = r#"{"services":{"svc":{"id":"svc","label":"S","keys":[]}}}"#;
+        let sealed = seal_text(&paths, legacy).expect("seal");
+        let mut value: serde_json::Value = serde_json::from_str(&sealed).expect("envelope");
+        let mut raw = BASE64_STANDARD
+            .decode(value.get("data").unwrap().as_str().unwrap())
+            .expect("data");
+        raw[0] ^= 0x01;
+        value["data"] = serde_json::Value::String(BASE64_STANDARD.encode(raw));
+        std::fs::write(&target, serde_json::to_string_pretty(&value).unwrap())
+            .expect("corrupt sealed");
+        let backup = migrate_backup_path(&target);
+        std::fs::write(&backup, legacy).expect("plant backup");
+        assert!(purge_migration_backup(&paths, &target).is_err());
+        assert_eq!(
+            std::fs::read_to_string(&backup).expect("backup survives"),
+            legacy
+        );
+        let _ = std::fs::remove_dir_all(&paths.root);
+    }
+
+    /// Task #320: the zeroize helper blanks every byte past the 64KB chunk
+    /// boundary without changing the file length.
+    #[test]
+    fn zeroize_helper_blanks_every_byte() {
+        let paths = test_paths("purge-zero");
+        let file = paths.root.join("scratch.bin");
+        let original: Vec<u8> = (0..100_000u32).map(|i| (i % 251) as u8).collect();
+        std::fs::write(&file, &original).expect("write scratch");
+        let len = std::fs::metadata(&file).expect("meta").len();
+        zeroize_file_contents(&file, len).expect("zeroize");
+        let blanked = std::fs::read(&file).expect("read blanked");
+        assert_eq!(blanked.len(), original.len());
+        assert!(blanked.iter().all(|byte| *byte == 0));
         let _ = std::fs::remove_dir_all(&paths.root);
     }
 

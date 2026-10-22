@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vault-purge-migration-backups"
+description = "Enables the vault_purge_migration_backups command without any pre-configured scope."
+commands.allow = ["vault_purge_migration_backups"]
+
+[[permission]]
+identifier = "deny-vault-purge-migration-backups"
+description = "Denies the vault_purge_migration_backups command without any pre-configured scope."
+commands.deny = ["vault_purge_migration_backups"]

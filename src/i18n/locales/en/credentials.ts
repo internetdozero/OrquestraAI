@@ -160,6 +160,18 @@ export const credentials: TranslationSchema["credentials"] = {
   toastRotated: (index: number, label: string) => `Key #${index} rotated in ${label}`,
   toastUpdated: (label: string) => `Service ${label} updated`,
   toastSaved: (id: string) => `Service ${id} saved`,
+  purgeBackups: "Purge plaintext backups",
+  purgeBackupsTitle: "Purge plaintext migration backups?",
+  purgeBackupsLead:
+    "The at-rest encryption migration left plaintext copies of your secrets on disk. Purging overwrites their bytes with zeroes and deletes them.",
+  purgeBackupsRotateWarning:
+    "Secrets saved before v0.1.0-alpha.5 may have been readable on disk. Rotate those provider keys after purging.",
+  confirmPurgeBackups: "Overwrite & delete",
+  purging: "Purging…",
+  toastBackupsPurged: (purged: boolean, catalogPurged: boolean) =>
+    purged || catalogPurged
+      ? `Plaintext backups purged: ${[purged ? "vault" : null, catalogPurged ? "catalog" : null].filter(Boolean).join(", ")}`
+      : "No plaintext backups were left to purge",
   detailsFor: (label: string) => `${label} details`,
   presetDescriptions: {
     openai: "GPT models and embeddings.",

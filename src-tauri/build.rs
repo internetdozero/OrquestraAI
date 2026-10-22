@@ -126,6 +126,7 @@ fn main() {
             "vault_exec",
             "vault_test_connection",
             "vault_remove_key",
+            "vault_purge_migration_backups",
         ]),
     ))
     .expect("tauri build failed");

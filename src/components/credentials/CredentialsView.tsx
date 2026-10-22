@@ -5,6 +5,7 @@ import {
   listVaultPresets,
   vaultDeleteService,
   vaultListServices,
+  vaultPurgeMigrationBackups,
   vaultRemoveKey,
   vaultSaveService,
   vaultSetPrimary,
@@ -15,6 +16,7 @@ import {
 } from "../../lib/vault.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { AddCredentialModal } from "../vault/AddCredentialModal.tsx";
+import { MigrationBackupPurgeModal } from "./MigrationBackupPurgeModal.tsx";
 import {
   CredentialsHeader,
   type CredentialStatusFilter,
@@ -41,6 +43,8 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
     localStorage.getItem("credentials-view") === "list" ? "list" : "grid",
   );
   const [modalOpen, setModalOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+  const [purging, setPurging] = useState(false);
   // Browser preview (vite dev without the Tauri core) renders fixture data
   // so the dashboard stays reviewable outside the desktop app, like McpView.
   const [mockMode] = useState(devMockMode);
@@ -125,6 +129,19 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
       );
     });
   }, [services, query, statusFilter, typeFilter]);
+
+  async function purgeBackups(): Promise<void> {
+    setPurging(true);
+    try {
+      const report = await vaultPurgeMigrationBackups();
+      setPurgeOpen(false);
+      onToast(s.toastBackupsPurged(report.vaultPurged, report.catalogPurged));
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPurging(false);
+    }
+  }
 
   async function mutate(action: () => Promise<unknown>, done: string): Promise<void> {
     try {
@@ -251,6 +268,7 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
         view={view}
         onViewChange={setView}
         onAdd={() => setModalOpen(true)}
+        onPurgeBackups={isTauri && !mockMode ? () => setPurgeOpen(true) : undefined}
       />
 
       {visible.length === 0 ? (
@@ -303,6 +321,12 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
           await refresh();
           onToast(s.toastSaved(input.id));
         }}
+      />
+      <MigrationBackupPurgeModal
+        open={purgeOpen}
+        purging={purging}
+        onCancel={() => setPurgeOpen(false)}
+        onConfirm={() => void purgeBackups()}
       />
     </div>
   );

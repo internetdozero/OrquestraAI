@@ -237,3 +237,19 @@ export function vaultTestConnection(service: string, keyIndex?: number): Promise
 export function vaultRemoveKey(id: string, index: number): Promise<VaultService> {
   return invoke<VaultService>("vault_remove_key", { id, index });
 }
+
+/** Per-file outcome of a migration-backup purge. */
+export interface PurgeBackupsReport {
+  vaultPurged: boolean;
+  catalogPurged: boolean;
+}
+
+/**
+ * Zeroize and unlink the `.migrate-bak` plaintext backups left by the
+ * at-rest encryption migration. The backend only purges a backup whose
+ * sealed file still opens, and reports per file; call it behind an
+ * explicit user confirmation (see MigrationBackupPurgeModal).
+ */
+export function vaultPurgeMigrationBackups(): Promise<PurgeBackupsReport> {
+  return invoke<PurgeBackupsReport>("vault_purge_migration_backups");
+}

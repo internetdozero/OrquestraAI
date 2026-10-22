@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚠️ Aviso de Segurança — Rotação de Chaves Legadas & Expurgo de Backups
+
+- **Backups `.migrate-bak` em texto puro:** a migração para a criptografia em repouso (AES-256-GCM) preservou cópias legíveis dos segredos em `vault.json.migrate-bak` e `mcps.json.migrate-bak` como rede de segurança. Esses arquivos ficam no disco com modo `0600`, mas qualquer segredo salvo antes da `v0.1.0-alpha.5` pode ter transitado em texto puro.
+- **Ação recomendada:** (1) confirme que seus serviços carregam normalmente; (2) use o botão **"Purge plaintext backups"** na tela de Credenciais (comando `vault_purge_migration_backups`, com confirmação explícita) para sobrescrever os backups com zeros e excluí-los; (3) **rotacione as chaves de API dos provedores** salvas antes da `alpha.5` nos respectivos painéis (GitHub, OpenAI, Anthropic, Cloudflare etc.). A exclusão é _best-effort_ em SSDs e filesystems copy-on-write — a rotação elimina o risco residual.
+- O expurgo nunca destrói a única cópia legível: cada backup só é apagado se o arquivo lacrado correspondente ainda abrir sob a chave atual.
+
 ## [0.1.0-alpha.5] - 2026-10-22
 
 > **Resumo da Versão:** Consolidação dos avanços entre `alpha.3` e `alpha.5`. Esta versão eleva o OrquestraAI para uma plataforma segura de execução: introduz o **Blind Vault** com criptografia em repouso AES-256-GCM, motor de streaming de transcripts linha a linha (eliminando picos de memória em históricos massivos), concorrência atômica com autoridade `flock`, updater assinado com Ed25519 nativo e portões de segurança 100% limpos no CodeQL. _(A release `alpha.4` foi imediatamente substituída por esta versão para resolução de alertas estáticos)._

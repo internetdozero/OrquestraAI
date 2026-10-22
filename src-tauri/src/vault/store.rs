@@ -266,6 +266,13 @@ pub(super) fn load_vault(paths: &OrquestraPaths) -> Result<VaultFile, String> {
     Ok(vault)
 }
 
+/// Zeroize and unlink the vault's `.migrate-bak` plaintext backup. The
+/// sealed vault must still open under the current key, so this never
+/// destroys the only readable copy; see `crate::at_rest`.
+pub(super) fn purge_migration_backup(paths: &OrquestraPaths) -> Result<bool, String> {
+    crate::at_rest::purge_migration_backup(paths, &vault_path(paths))
+}
+
 pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<(), String> {
     let path = vault_path(paths);
     if fs::symlink_metadata(&path)

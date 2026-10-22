@@ -287,7 +287,7 @@ pub fn apply_harness_selections_at(
     Ok(changed)
 }
 
-fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
+pub(super) fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
     paths.root.join(CATALOG_FILE)
 }
 
