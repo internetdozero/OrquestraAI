@@ -162,6 +162,16 @@ mod tests {
     }
 
     #[test]
+    fn seed_defaults_to_a_file_inside_the_storage_root() {
+        // The operator override is process-global; only assert the default
+        // when the test runner did not set it.
+        if std::env::var_os("ORQUESTRA_SEED_MCP_CATALOG").is_none() {
+            let root = PathBuf::from("/tmp/orquestra-test-root");
+            assert_eq!(seed_catalog_path(&root), root.join("seed-mcps.json"));
+        }
+    }
+
+    #[test]
     fn json_envelopes_keep_foreign_keys_and_entries() {
         let existing = r#"{
   "numStartups": 42,

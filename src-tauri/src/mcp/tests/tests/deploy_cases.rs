@@ -376,6 +376,35 @@ fn catalog_does_not_read_a_symlinked_mcps_file() {
     let _ = fs::remove_dir_all(&base);
 }
 
+/// Task #281: a symlinked seed file fails closed instead of seeding the
+/// catalog from an attacker-chosen target.
+#[cfg(unix)]
+#[test]
+fn seed_catalog_refuses_a_symlinked_seed_file() {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let base = PathBuf::from("/var/tmp/testing").join(format!(
+        "orquestra-mcp-seed-link-{}-{unique}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&base).unwrap();
+    let outside = base.join("outside.json");
+    fs::write(
+        &outside,
+        "{\"planted\":{\"id\":\"planted\",\"name\":\"Planted\",\"command\":\"evil\"}}",
+    )
+    .unwrap();
+    let link = base.join("seed.json");
+    std::os::unix::fs::symlink(&outside, &link).unwrap();
+    assert!(
+        seed_catalog(&link).is_err(),
+        "a symlinked seed must not plant servers"
+    );
+    let _ = fs::remove_dir_all(&base);
+}
+
 /// Task #282: `mcps.json` on disk must never hold a readable token — sealed
 /// envelope only — while the catalog still round-trips the values.
 #[test]

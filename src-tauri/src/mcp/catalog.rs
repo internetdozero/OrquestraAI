@@ -21,11 +21,22 @@ use crate::paths::OrquestraPaths;
 mod mutate;
 pub use mutate::{delete_mcp, save_mcp};
 
+/// Optional one-time dataset used to seed the catalog on first launch.
+///
+/// User-scoped by design: `<root>/seed-mcps.json`, overridable with
+/// `ORQUESTRA_SEED_MCP_CATALOG` for operators carrying an external dataset.
+/// A world-writable default (the old `/mnt/amnesic` path) would let any
+/// local user plant malicious MCP servers into someone else's first
+/// launch; whatever path resolves here must additionally pass the symlink
+/// refusal in [`seed_catalog`].
+pub(super) fn seed_catalog_path(root: &Path) -> PathBuf {
+    std::env::var_os("ORQUESTRA_SEED_MCP_CATALOG")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| root.join("seed-mcps.json"))
+}
+
 /// Master catalog file name inside `~/.orquestra`.
 const CATALOG_FILE: &str = "mcps.json";
-
-/// One-time dataset used to seed a fresh catalog on first launch.
-pub(super) const SEED_CATALOG: &str = "/mnt/amnesic/temporary_mcps/MASTER_MCP_CATALOG.json";
 
 /// The catalog plus the bookkeeping needed to clean up after deletions.
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -71,7 +82,7 @@ pub(super) struct SeedEntry {
 /// existed still report correctly.
 pub fn list_mcps() -> Result<Vec<McpServer>, String> {
     let paths = OrquestraPaths::resolve()?;
-    let catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     Ok(catalog
         .mcps
         .into_values()
@@ -94,7 +105,7 @@ pub fn list_mcps_masked() -> Result<Vec<McpServer>, String> {
 /// Return a single secret only after an explicit operator reveal action.
 pub fn reveal_mcp_secret(id: &str, key: &str) -> Result<String, String> {
     let paths = OrquestraPaths::resolve()?;
-    let catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     let server = catalog
         .mcps
         .get(id)
@@ -127,7 +138,7 @@ pub fn reveal_mcp_secret(id: &str, key: &str) -> Result<String, String> {
 /// that every adapted harness inherits; a harness id edits that harness alone.
 pub fn set_mcp_state(id: &str, harness_id: Option<&str>, enabled: bool) -> Result<(), String> {
     let paths = OrquestraPaths::resolve()?;
-    let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     let scope = harness_id.unwrap_or(GLOBAL_SCOPE);
 
     {
@@ -171,7 +182,7 @@ pub fn batch_set_mcp_all(harness_id: Option<&str>, enabled: bool) -> Result<(), 
         return Err(format!("{scope} has no MCP adapter yet"));
     }
 
-    let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     for server in catalog.mcps.values_mut() {
         if scope == GLOBAL_SCOPE {
             server.global_enabled = enabled;
@@ -203,7 +214,7 @@ pub fn apply_global_selection_at(
     paths: &OrquestraPaths,
     enabled: &[String],
 ) -> Result<usize, String> {
-    let mut catalog = load_catalog(paths, Path::new(SEED_CATALOG))?;
+    let mut catalog = load_catalog(paths, &seed_catalog_path(&paths.root))?;
     let wanted: BTreeSet<&str> = enabled.iter().map(String::as_str).collect();
     let mut changed = 0usize;
 
@@ -239,7 +250,7 @@ pub fn apply_harness_selections_at(
     paths: &OrquestraPaths,
     harness_mcps: &HashMap<String, Vec<String>>,
 ) -> Result<usize, String> {
-    let mut catalog = load_catalog(paths, Path::new(SEED_CATALOG))?;
+    let mut catalog = load_catalog(paths, &seed_catalog_path(&paths.root))?;
     // Transpose to `server_id -> wanted harnesses`, keeping valid targets.
     let mut wanted: HashMap<&str, BTreeSet<&str>> = HashMap::new();
     for (harness, ids) in harness_mcps {
@@ -316,9 +327,13 @@ pub(super) fn load_catalog(paths: &OrquestraPaths, seed: &Path) -> Result<Catalo
     Ok(catalog)
 }
 
-/// Populate a first-run catalog from the audited machine dataset. A missing
+/// Populate a first-run catalog from the user-scoped seed dataset. A missing
 /// seed file is not an error: the operator can still add servers by hand.
+/// A symlinked seed fails closed — unlike the catalog itself, the seed is
+/// allowed to be operator-supplied, so a link could redirect first-launch
+/// seeding at an attacker-chosen file.
 pub(super) fn seed_catalog(seed: &Path) -> Result<Catalog, String> {
+    refuse_catalog_symlink(seed, "seed from")?;
     if !seed.is_file() {
         return Ok(Catalog::default());
     }

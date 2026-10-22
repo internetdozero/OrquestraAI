@@ -1,11 +1,10 @@
 //! Insert, replace and delete one MCP server, including masked-secret restore.
 
 use std::collections::HashMap;
-use std::path::Path;
 
 use super::super::secrets::{mask_server, mask_value, restore_masked_args};
 use super::super::McpServer;
-use super::{deploy_current, load_catalog, save_catalog, validate_server, SEED_CATALOG};
+use super::{deploy_current, load_catalog, save_catalog, seed_catalog_path, validate_server};
 use crate::harness;
 use crate::official::is_official_mcp;
 use crate::paths::OrquestraPaths;
@@ -15,7 +14,7 @@ pub fn save_mcp(server: McpServer) -> Result<(), String> {
     validate_server(&server)?;
 
     let paths = OrquestraPaths::resolve()?;
-    let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
 
     let mut server = server;
     // Recompute: the flag is derived from the id, never client state.
@@ -61,7 +60,7 @@ fn restore_masked_values(
 /// deploy to strip it out of every harness config it was written into.
 pub fn delete_mcp(id: &str) -> Result<(), String> {
     let paths = OrquestraPaths::resolve()?;
-    let mut catalog = load_catalog(&paths, Path::new(SEED_CATALOG))?;
+    let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
 
     if catalog.mcps.remove(id).is_none() {
         return Err(format!("unknown MCP server: {id}"));

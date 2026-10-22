@@ -8,7 +8,18 @@ use std::path::{Path, PathBuf};
 use crate::harness::{harness_ids, GLOBAL_SCOPE};
 
 /// Optional one-time dataset used to populate an empty vault on first launch.
-const SEED_DIR: &str = "/mnt/amnesic/temporary_skills";
+///
+/// User-scoped by design: `<root>/seed-skills`, overridable with
+/// `ORQUESTRA_SEED_SKILLS_DIR` for operators carrying an external dataset.
+/// A world-writable default (the old `/mnt/amnesic` path) would let any
+/// local user plant skills into someone else's first launch; whatever path
+/// resolves here must additionally pass the symlink refusal in
+/// [`seed_vault`].
+pub(crate) fn seed_skills_dir(root: &Path) -> PathBuf {
+    std::env::var_os("ORQUESTRA_SEED_SKILLS_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| root.join("seed-skills"))
+}
 
 pub(crate) const AGENTS_FILE: &str = "AGENTS.md";
 
@@ -62,10 +73,10 @@ impl OrquestraPaths {
     }
 
     /// Ensure the directory layout, then seed an empty vault from the
-    /// temporary dataset on first launch.
+    /// user-scoped dataset on first launch.
     pub fn bootstrap(&self) -> Result<(), String> {
         self.ensure_layout()?;
-        seed_vault(&self.vault)
+        seed_vault(&self.root, &self.vault)
     }
 }
 
@@ -74,21 +85,32 @@ pub(crate) fn create_dir(path: &Path) -> Result<(), String> {
         .map_err(|error| format!("failed to create {}: {error}", path.display()))
 }
 
-/// Populate an empty vault from `SEED_DIR`, copying directory trees verbatim.
-/// A missing seed directory, or a non-empty vault, is not an error.
-fn seed_vault(vault: &Path) -> Result<(), String> {
+/// Populate an empty vault from the user-scoped seed dir, copying directory
+/// trees verbatim. A missing seed directory, or a non-empty vault, is not
+/// an error. A symlinked seed root fails closed: it would otherwise let an
+/// attacker redirect first-launch seeding at an arbitrary tree.
+fn seed_vault(root: &Path, vault: &Path) -> Result<(), String> {
     let mut entries = fs::read_dir(vault)
         .map_err(|error| format!("failed to read vault {}: {error}", vault.display()))?;
     if entries.next().is_some() {
         return Ok(());
     }
 
-    let seed = Path::new(SEED_DIR);
+    let seed = seed_skills_dir(root);
+    if fs::symlink_metadata(&seed)
+        .ok()
+        .is_some_and(|meta| meta.file_type().is_symlink())
+    {
+        return Err(format!(
+            "refusing to seed from {}: not a real directory",
+            seed.display()
+        ));
+    }
     if !seed.is_dir() {
         return Ok(());
     }
 
-    let seed_entries = fs::read_dir(seed)
+    let seed_entries = fs::read_dir(&seed)
         .map_err(|error| format!("failed to read seed dataset {}: {error}", seed.display()))?;
 
     for entry in seed_entries.flatten() {
@@ -233,5 +255,64 @@ mod tests {
             }
         });
         assert_eq!(seen.lock().unwrap_or_else(|p| p.into_inner()).len(), 8000);
+    }
+
+    fn temp_seed_root(label: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let root = std::env::temp_dir().join(format!(
+            "orquestra-seed-{label}-{}-{nanos}",
+            std::process::id()
+        ));
+        fs::create_dir_all(root.join("vault")).expect("vault dir");
+        root
+    }
+
+    /// Task #281: the default seed lives inside the storage root, never on
+    /// a world-writable mount.
+    #[test]
+    fn seed_defaults_to_a_dir_inside_the_storage_root() {
+        // The operator override is process-global; only assert the default
+        // when the test runner did not set it.
+        if std::env::var_os("ORQUESTRA_SEED_SKILLS_DIR").is_none() {
+            let root = PathBuf::from("/tmp/orquestra-test-root");
+            assert_eq!(seed_skills_dir(&root), root.join("seed-skills"));
+        }
+    }
+
+    /// Task #281: first launch copies the user-scoped seed into an empty vault.
+    #[test]
+    fn seed_vault_copies_from_the_user_scoped_seed_dir() {
+        let root = temp_seed_root("copy");
+        let vault = root.join("vault");
+        fs::create_dir_all(root.join("seed-skills/demo")).expect("seed skill");
+        fs::write(root.join("seed-skills/demo/SKILL.md"), "demo\n").expect("seed file");
+        seed_vault(&root, &vault).expect("seed");
+        assert!(vault.join("demo/SKILL.md").is_file());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// Task #281: a symlinked seed root fails closed instead of seeding the
+    /// vault from an attacker-chosen tree.
+    #[cfg(unix)]
+    #[test]
+    fn seed_vault_refuses_a_symlinked_seed_dir() {
+        let root = temp_seed_root("link");
+        let vault = root.join("vault");
+        let outside = root.join("outside");
+        fs::create_dir_all(outside.join("evil")).expect("outside");
+        fs::write(outside.join("evil/SKILL.md"), "evil\n").expect("evil file");
+        std::os::unix::fs::symlink(&outside, root.join("seed-skills")).expect("link");
+        assert!(
+            seed_vault(&root, &vault).is_err(),
+            "a symlinked seed must not plant skills"
+        );
+        assert!(
+            fs::read_dir(&vault).expect("read vault").next().is_none(),
+            "the vault must stay empty"
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 }

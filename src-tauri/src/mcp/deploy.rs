@@ -9,7 +9,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use super::catalog::{load_catalog, save_catalog, SEED_CATALOG};
+use super::catalog::{load_catalog, save_catalog, seed_catalog_path};
 use super::secrets::parse_dotenv;
 use super::serializers::{render_codex_toml, render_jsonc_block, render_mcp_servers};
 use super::{McpServer, McpTargetStatus};
@@ -49,12 +49,13 @@ pub fn deploy_mcps_reporting() -> Result<Vec<String>, String> {
     let paths = OrquestraPaths::resolve()?;
     paths.ensure_layout()?;
     let home = bridge::home_dir()?;
-    deploy_at(&home, &paths, Path::new(SEED_CATALOG))
+    deploy_at(&home, &paths, &seed_catalog_path(&paths.root))
 }
 
 pub(super) fn deploy_current(paths: &OrquestraPaths) -> Result<(), String> {
     let home = bridge::home_dir()?;
-    deploy_at(&home, paths, Path::new(SEED_CATALOG)).map(|_| ())
+    let seed = seed_catalog_path(&paths.root);
+    deploy_at(&home, paths, &seed).map(|_| ())
 }
 
 // ---------------------------------------------------------------------------
