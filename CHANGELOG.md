@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Removed CodeQL findings from security tests by generating fallback encryption keys with the OS random source and keeping refresh error details out of assertion messages.
+
 ### Security
 
 - Plaintext migration backups (`.migrate-bak`): the at-rest encryption migration kept readable copies of the secrets in `vault.json.migrate-bak` and `mcps.json.migrate-bak` as a safety net. These files stay on disk with mode `0600`, but any secret stored before `v0.1.0-alpha.5` may have existed as plaintext.
