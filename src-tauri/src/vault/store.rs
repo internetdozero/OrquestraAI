@@ -220,49 +220,14 @@ pub(super) fn load_vault(paths: &OrquestraPaths) -> Result<VaultFile, String> {
             return Err(format!("failed to read {}: {error}", path.display()));
         }
     };
-    let (plaintext, legacy) = match crate::at_rest::open_text(paths, &content) {
-        Ok(opened) => opened,
-        Err(error) if error.contains("failed to unseal") => {
-            // The sealed file no longer opens under the current file key
-            // (rotation, restored backup, flipped byte). Heal from the
-            // `.migrate-bak` plaintext backup instead of losing every secret.
-            let Some(recovered) =
-                crate::at_rest::recover_plaintext_from_backup(paths, &path)
-            else {
-                return Err(format!("failed to unseal {}: {error}", path.display()));
-            };
-            let vault: VaultFile = serde_json::from_str(&recovered).map_err(|parse| {
-                format!("failed to parse {}: {parse}", path.display())
-            })?;
-            let backup = crate::at_rest::migrate_backup_path(&path);
-            crate::log_warn!(
-                "vault unseal failed ({}); recovered from {} and re-sealed under the current file key",
-                error,
-                backup.display()
-            );
-            let sealed = crate::at_rest::seal_text(paths, &recovered)?;
-            super::atomic::write_private(&path, &sealed)?;
-            return Ok(vault);
-        }
-        Err(error) => {
-            return Err(format!("failed to unseal {}: {error}", path.display()));
-        }
-    };
+    // The at-rest layer owns legacy migration (backup + verify + unlink),
+    // v1 → v2 upgrades, keyring promotion, and backup self-healing — the
+    // loader just parses the returned plaintext.
+    let (plaintext, _) =
+        crate::at_rest::open_stored(paths, &path, &content, crate::at_rest::AAD_VAULT)
+            .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
     let vault: VaultFile = serde_json::from_str(&plaintext)
         .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
-    // First read of a pre-encryption file migrates it: plaintext backup +
-    // sealed rewrite. Reads stay available even if the rewrite fails — the
-    // next save seals it — and dual-read covers crashes in between.
-    if legacy {
-        match crate::at_rest::migrate_legacy_file(&path, &plaintext, paths) {
-            Ok(sealed) => {
-                if let Err(error) = super::atomic::write_private(&path, &sealed) {
-                    crate::log_warn!("vault migration rewrite failed: {error}");
-                }
-            }
-            Err(error) => crate::log_warn!("vault migration backup failed: {error}"),
-        }
-    }
     Ok(vault)
 }
 
@@ -270,7 +235,7 @@ pub(super) fn load_vault(paths: &OrquestraPaths) -> Result<VaultFile, String> {
 /// sealed vault must still open under the current key, so this never
 /// destroys the only readable copy; see `crate::at_rest`.
 pub(super) fn purge_migration_backup(paths: &OrquestraPaths) -> Result<bool, String> {
-    crate::at_rest::purge_migration_backup(paths, &vault_path(paths))
+    crate::at_rest::purge_migration_backup(paths, &vault_path(paths), crate::at_rest::AAD_VAULT)
 }
 
 pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<(), String> {
@@ -287,7 +252,7 @@ pub(super) fn save_vault(paths: &OrquestraPaths, vault: &VaultFile) -> Result<()
     let mut content = serde_json::to_string_pretty(vault)
         .map_err(|error| format!("failed to serialize the credential vault: {error}"))?;
     content.push('\n');
-    let sealed = crate::at_rest::seal_text(paths, &content)?;
+    let sealed = crate::at_rest::seal_text(paths, &content, crate::at_rest::AAD_VAULT)?;
     super::atomic::write_private(&path, &sealed)
 }
 

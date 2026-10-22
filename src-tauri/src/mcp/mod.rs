@@ -29,7 +29,7 @@ pub use catalog::{
 pub fn purge_catalog_migration_backup() -> Result<bool, String> {
     let paths = crate::paths::OrquestraPaths::resolve()?;
     let path = catalog::catalog_path(&paths);
-    crate::at_rest::purge_migration_backup(&paths, &path)
+    crate::at_rest::purge_migration_backup(&paths, &path, crate::at_rest::AAD_MCPS)
 }
 pub use deploy::{deploy_mcps, deploy_mcps_reporting, list_targets};
 pub use secrets::mask_secret;

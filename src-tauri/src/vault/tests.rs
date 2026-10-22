@@ -862,9 +862,10 @@ fn vault_file_on_disk_holds_no_plaintext_secrets() {
     std::fs::remove_dir_all(&paths.root).expect("cleanup");
 }
 
-/// Task #282: a pre-encryption plaintext vault migrates on first load — a
-/// `0600` backup keeps the original bytes, the file is rewritten sealed,
-/// and every value survives.
+/// Task #282 (hardened by #323): a pre-encryption plaintext vault migrates
+/// on first load — the file is rewritten sealed (v2, AAD-bound), every value
+/// survives, and the plaintext backup is unlinked once the sealed file
+/// verifies, so no readable secret lingers on disk.
 #[test]
 fn legacy_plaintext_vault_migrates_on_first_load() {
     use super::store::{load_vault, vault_path};
@@ -883,10 +884,9 @@ fn legacy_plaintext_vault_migrates_on_first_load() {
         "legacy values must survive migration"
     );
     let backup = path.with_extension("json.migrate-bak");
-    assert_eq!(
-        std::fs::read_to_string(&backup).expect("read backup"),
-        legacy,
-        "migration must keep a byte-identical plaintext backup"
+    assert!(
+        !backup.exists(),
+        "the plaintext backup is unlinked once the sealed file verifies"
     );
     let raw = std::fs::read_to_string(&path).expect("read migrated vault");
     assert!(
@@ -894,6 +894,23 @@ fn legacy_plaintext_vault_migrates_on_first_load() {
         "migrated file must not hold the secret in plaintext"
     );
     assert!(raw.contains("orquestraSealed"));
+    let envelope: serde_json::Value = serde_json::from_str(&raw).expect("envelope");
+    assert_eq!(
+        envelope.get("orquestraSealed").and_then(|v| v.as_u64()),
+        Some(2)
+    );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
+    assert!(
+        crate::at_rest::is_migrated(&paths.root),
+        "migration persists the downgrade-protection flag"
+    );
     std::fs::remove_dir_all(&paths.root).expect("cleanup");
 }
 
