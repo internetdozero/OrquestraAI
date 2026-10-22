@@ -109,7 +109,10 @@ pub(super) fn save_skill_content(
     }
     let directory = skill_directory(paths, id)?;
     let target = directory.join(SKILL_FILE);
-    let temporary = directory.join(format!(".{SKILL_FILE}.tmp-{}", std::process::id()));
+    let temporary = directory.join(format!(
+        ".{SKILL_FILE}.tmp-{}",
+        crate::paths::unique_tmp_suffix()
+    ));
 
     fs::write(&temporary, content).map_err(|error| {
         let _ = fs::remove_file(&temporary);

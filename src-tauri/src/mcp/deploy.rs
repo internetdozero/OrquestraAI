@@ -316,7 +316,7 @@ pub(super) fn write_config(path: &Path, content: &str, secret: bool) -> Result<b
         path.file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| "config".to_string()),
-        std::process::id()
+        crate::paths::unique_tmp_suffix()
     ));
 
     let mut file = fs::OpenOptions::new()

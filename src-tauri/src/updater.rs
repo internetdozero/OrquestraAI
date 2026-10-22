@@ -98,7 +98,7 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
             .file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| "orquestra".to_string()),
-        std::process::id()
+        crate::paths::unique_tmp_suffix()
     ));
     fs::copy(&binary_path, &sibling)
         .map_err(|error| format!("failed to stage {}: {error}", sibling.display()))?;

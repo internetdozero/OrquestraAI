@@ -286,7 +286,7 @@ pub(super) fn save_to(root: &Path, file: &PresetFile) -> Result<(), String> {
         .map_err(|error| format!("failed to serialize presets: {error}"))?;
     content.push('\n');
 
-    let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
+    let temporary = path.with_extension(format!("tmp-{}", crate::paths::unique_tmp_suffix()));
     fs::write(&temporary, &content)
         .map_err(|error| format!("failed to write {}: {error}", temporary.display()))?;
 

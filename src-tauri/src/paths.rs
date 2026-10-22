@@ -157,6 +157,29 @@ pub(crate) fn scratch_root() -> PathBuf {
     std::env::temp_dir().join("orquestra-ai")
 }
 
+/// Unique suffix for atomic-write temp files (`.{name}.tmp-{suffix}` or
+/// `{stem}.tmp-{suffix}`).
+///
+/// PID alone collides across Tauri IPC threads in one process, so two
+/// concurrent saves would truncate and rename the same temp file and
+/// interleave their bytes. Thread id + nanos + a process-wide counter make
+/// every attempt unique. Temp files stay beside their target (same
+/// filesystem), so the final rename is still atomic.
+pub(crate) fn unique_tmp_suffix() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let thread_tag: String = format!("{:?}", std::thread::current().id())
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .collect();
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("tmp-{}-{thread_tag}-{nanos}-{seq}", std::process::id())
+}
+
 /// Create a fresh unique scratch dir under [`scratch_root`] with `0o700`
 /// permissions on Unix. The caller owns cleanup (`remove_dir_all`).
 /// Uniqueness comes from pid + nanos + an atomic counter, so concurrent
@@ -186,4 +209,29 @@ pub(crate) fn fresh_scratch_dir(prefix: &str) -> Result<PathBuf, String> {
         let _ = fs::set_permissions(&dir, fs::Permissions::from_mode(0o700));
     }
     Ok(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    /// The regression this helper exists for: concurrent temp files in one
+    /// process must never share a name, or two IPC threads truncate and
+    /// rename each other's payload mid-write.
+    #[test]
+    fn tmp_suffixes_are_unique_across_threads() {
+        let seen = std::sync::Mutex::new(HashSet::new());
+        std::thread::scope(|scope| {
+            for _ in 0..16 {
+                scope.spawn(|| {
+                    for _ in 0..500 {
+                        let mut guard = seen.lock().unwrap_or_else(|p| p.into_inner());
+                        assert!(guard.insert(unique_tmp_suffix()), "tmp name reused");
+                    }
+                });
+            }
+        });
+        assert_eq!(seen.lock().unwrap_or_else(|p| p.into_inner()).len(), 8000);
+    }
 }

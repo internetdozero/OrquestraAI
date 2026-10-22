@@ -60,9 +60,10 @@ pub(crate) fn read_agents(paths: &OrquestraPaths) -> Result<String, String> {
 pub(crate) fn write_agents(paths: &OrquestraPaths, content: &str) -> Result<(), String> {
     create_dir(&paths.root)?;
     let path = paths.agents_path();
-    let temporary = paths
-        .root
-        .join(format!(".{AGENTS_FILE}.tmp-{}", std::process::id()));
+    let temporary = paths.root.join(format!(
+        ".{AGENTS_FILE}.tmp-{}",
+        crate::paths::unique_tmp_suffix()
+    ));
 
     fs::write(&temporary, content).map_err(|error| {
         let _ = fs::remove_file(&temporary);

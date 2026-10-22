@@ -148,7 +148,7 @@ pub fn rewrite_jsonl(
     let temporary = path.with_file_name(format!(
         ".{}.tmp-{}",
         path.file_name().unwrap_or_default().to_string_lossy(),
-        std::process::id()
+        crate::paths::unique_tmp_suffix()
     ));
 
     let mut handle = fs::File::create(&temporary)
@@ -193,7 +193,7 @@ pub fn remove_json_key(root: &Path, path: &Path, key: &str) -> Result<bool, Stri
     let temporary = path.with_file_name(format!(
         ".{}.tmp-{}",
         path.file_name().unwrap_or_default().to_string_lossy(),
-        std::process::id()
+        crate::paths::unique_tmp_suffix()
     ));
     fs::write(&temporary, content)
         .map_err(|error| format!("failed to write {}: {error}", temporary.display()))?;

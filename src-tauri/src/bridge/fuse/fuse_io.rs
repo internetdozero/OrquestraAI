@@ -278,7 +278,7 @@ pub(crate) fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
         path.file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| "config".to_string()),
-        std::process::id()
+        crate::paths::unique_tmp_suffix()
     ));
 
     fs::write(&temporary, content).map_err(|error| {
@@ -344,4 +344,62 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
     } as u32;
 
     (if month <= 2 { year + 1 } else { year }, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The PID-tmp regression: concurrent saves to one target must each
+    /// land whole — never interleaved — because every attempt now writes a
+    /// unique temp file and the rename is atomic. 1MB payloads force
+    /// multi-syscall writes, which is what mixed bytes under the old
+    /// `.tmp-{pid}` name.
+    #[test]
+    fn concurrent_same_target_writes_never_interleave() {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let dir = std::env::temp_dir().join(format!(
+            "orquestra-fuse-race-{}-{nanos}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        let target = dir.join("config.json");
+        // Distinct first bytes so any mix is detected, not just length.
+        let payload_a = format!("A{}", "a".repeat(1_000_000));
+        let payload_b = format!("B{}", "b".repeat(1_000_000));
+
+        std::thread::scope(|scope| {
+            for thread in 0..8 {
+                let (target, payload_a, payload_b) =
+                    (&target, payload_a.as_str(), payload_b.as_str());
+                scope.spawn(move || {
+                    let payload = if thread % 2 == 0 {
+                        payload_a
+                    } else {
+                        payload_b
+                    };
+                    for _ in 0..15 {
+                        write_atomic(target, payload).expect("atomic write");
+                    }
+                });
+            }
+        });
+
+        let final_body = std::fs::read_to_string(&target).expect("target");
+        assert!(
+            final_body == payload_a || final_body == payload_b,
+            "interleaved write of {} bytes",
+            final_body.len()
+        );
+        let leftovers: Vec<_> = std::fs::read_dir(&dir)
+            .expect("scan")
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.file_name().to_string_lossy().contains(".tmp-"))
+            .collect();
+        assert!(leftovers.is_empty(), "temp files leaked: {leftovers:?}");
+        std::fs::remove_dir_all(&dir).expect("cleanup");
+    }
 }

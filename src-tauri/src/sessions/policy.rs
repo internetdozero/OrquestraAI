@@ -105,7 +105,10 @@ pub(crate) fn save_to(root: &Path, file: &PolicyFile) -> Result<(), String> {
             path.display()
         ));
     }
-    let temporary = root.join(format!(".{POLICY_FILE}.tmp-{}", std::process::id()));
+    let temporary = root.join(format!(
+        ".{POLICY_FILE}.tmp-{}",
+        crate::paths::unique_tmp_suffix()
+    ));
 
     let mut content = serde_json::to_string_pretty(file)
         .map_err(|error| format!("failed to serialize the session policy: {error}"))?;
