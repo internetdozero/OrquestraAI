@@ -51,5 +51,9 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 futures-util = { version = "0.3", default-features = false }
 minisign-verify = "0.3.0"
 
+[dev-dependencies]
+# Integration tests simulate a live peer by holding the lockfile `flock`.
+libc = "0.2"
+
 # Release profiles live in the workspace root `Cargo.toml`; Cargo ignores (and
 # warns about) profiles declared by a non-root workspace member.
