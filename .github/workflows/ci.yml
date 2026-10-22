@@ -70,6 +70,47 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --workspace -- -D warnings
 
+  windows-check:
+    # Windows port baseline (task #231, item 2a). The workspace does not build
+    # for Windows yet — `orquestra-bridge` calls `std::os::unix::fs::symlink`
+    # unconditionally and the single-instance guard is Unix-only — so this job
+    # is deliberately non-blocking: it reports the port's compile state on
+    # every push instead of failing the pipeline. Remove `continue-on-error`
+    # once the workspace is green here, and it becomes the gate that keeps it
+    # that way before any Windows runtime work is claimed as done.
+    name: Windows check
+    runs-on: windows-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      # Check out the repository.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Tauri's build script resolves the frontend, as in the Linux job.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      # MSVC is the toolchain the eventual Windows release will use, and
+      # rusqlite's bundled SQLite needs a C compiler: windows-latest ships both.
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Cargo check (workspace)
+        run: cargo check --workspace
+
   node-tests:
     # Node test job: runs frontend unit tests and the TS typecheck.
     name: Node tests
