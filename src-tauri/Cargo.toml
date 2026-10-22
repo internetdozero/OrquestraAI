@@ -34,6 +34,8 @@ orquestra-harness = { path = "../crates/orquestra-harness" }
 orquestra-vault = { path = "../crates/orquestra-vault" }
 # Harness fusion: backups, projections and fleet status.
 orquestra-bridge = { path = "../crates/orquestra-bridge" }
+# Unified session catalog: the nine harness adapters and their wire types.
+orquestra-sessions = { path = "../crates/orquestra-sessions" }
 # `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }
@@ -45,10 +47,9 @@ libc.workspace = true
 serde_json.workspace = true
 serde_yaml = "0.9"
 json5.workspace = true
-# Every harness keeps its chat history in SQLite. `bundled` ships the engine
-# inside the binary so a release build never depends on a system libsqlite3,
-# and sessions are opened read-only so a running agent keeps its locks.
-rusqlite = { version = "0.31", features = ["bundled"] }
+# The idea vault's own database; the session stores moved to
+# `orquestra-sessions`, which shares the same bundled engine.
+rusqlite.workspace = true
 # Download transport for the updater; the blind vault proxy in
 # `orquestra-vault` uses the same configuration.
 reqwest.workspace = true

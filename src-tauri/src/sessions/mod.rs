@@ -5,16 +5,21 @@
 //! writes to a harness store — a harness that is broken, locked or absent is
 //! reported on stderr and skipped, so one bad database cannot empty the tab.
 //!
-//! Purge execution and the auto-purge daemon live in `purge` and `scheduler`;
-//! the React view is still to come.
+//! The catalog itself — the wire types and the nine harness adapters — lives
+//! in `orquestra-sessions`; this module keeps the IPC commands, the pin and
+//! retention sidecar (`policy`), purge execution (`purge`) and the auto-purge
+//! daemon (`scheduler`). The React view is still to come.
 
-pub mod adapters;
+// The catalog layers live in `orquestra-sessions`; re-exported here so every
+// `crate::sessions::{adapters, types}` path (commands, purge, policy, tests)
+// reads exactly as before.
+pub use orquestra_sessions::{adapters, types};
+
 mod policy;
 pub mod purge;
 mod scheduler;
 #[cfg(test)]
 mod tests;
-pub mod types;
 
 use std::collections::HashMap;
 

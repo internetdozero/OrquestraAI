@@ -7,7 +7,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::types::{TranscriptTurn, UnifiedSession};
 
 use super::{fsops, transcript, utils, SessionAdapter};
 

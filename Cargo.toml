@@ -6,6 +6,7 @@ members = [
     "crates/orquestra-harness",
     "crates/orquestra-vault",
     "crates/orquestra-bridge",
+    "crates/orquestra-sessions",
 ]
 
 # Shared dependency versions. Every member opts in with `dep.workspace = true`,
@@ -21,6 +22,11 @@ json5 = "1.3"
 # `[mcp_servers.*]` blocks inside a hand-maintained config.toml, and losing
 # its comments, key order or unrelated sections would be unacceptable.
 toml_edit = "0.22"
+# Every harness keeps its chat history in SQLite (and the idea vault keeps its
+# own database). `bundled` ships the engine inside the binary so a release
+# build never depends on a system libsqlite3; session stores are opened
+# read-only so a running agent keeps its locks.
+rusqlite = { version = "0.31", features = ["bundled"] }
 aes-gcm = "0.10.3"
 base64 = "0.23.1"
 rand = "0.9.5"

@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::UnifiedSession;
+use crate::types::UnifiedSession;
 
 use super::fsops;
 use super::utils::{self, text_cell, timestamp_secs, trim_title};

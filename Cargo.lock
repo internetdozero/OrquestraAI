@@ -2702,6 +2702,7 @@ dependencies = [
  "orquestra-bridge",
  "orquestra-core",
  "orquestra-harness",
+ "orquestra-sessions",
  "orquestra-vault",
  "reqwest 0.12.28",
  "rusqlite",
@@ -2741,6 +2742,16 @@ dependencies = [
  "orquestra-core",
  "serde_json",
  "toml_edit 0.22.27",
+]
+
+[[package]]
+name = "orquestra-sessions"
+version = "0.1.0"
+dependencies = [
+ "orquestra-core",
+ "rusqlite",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

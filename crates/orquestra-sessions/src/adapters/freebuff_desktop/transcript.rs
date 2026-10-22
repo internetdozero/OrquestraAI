@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use crate::sessions::types::TranscriptTurn;
+use crate::types::TranscriptTurn;
 
 use super::super::{time, transcript, utils};
 use super::{real_dir, DB_NAME, PROJECTS_REL};

@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;
 
-use crate::sessions::types::UnifiedSession;
+use crate::types::UnifiedSession;
 
 use super::{fsops, utils};
 

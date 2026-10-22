@@ -380,7 +380,7 @@ fn a_symlinked_session_file_is_not_sized_or_loaded() {
 
     assert_eq!(super::super::utils::file_size(&link), 0);
     assert_eq!(
-        crate::sessions::adapters::fsops::size_of(&link),
+        crate::adapters::fsops::size_of(&link),
         0,
         "reclaim estimates must not follow a file symlink"
     );

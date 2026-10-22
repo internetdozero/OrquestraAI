@@ -6,7 +6,7 @@
 
 use std::path::Path;
 
-use crate::sessions::types::TranscriptTurn;
+use crate::types::TranscriptTurn;
 
 use super::super::{transcript, utils};
 

@@ -30,7 +30,7 @@ pub mod utils;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::types::{TranscriptTurn, UnifiedSession};
 
 pub use utils::home;
 
@@ -129,7 +129,7 @@ pub fn list_all() -> Result<Vec<UnifiedSession>, String> {
     let (sessions, warnings) = collect(&home);
 
     for warning in &warnings {
-        crate::log_warn!("sessions: skipped {warning}");
+        orquestra_core::log_warn!("sessions: skipped {warning}");
     }
 
     Ok(sessions)

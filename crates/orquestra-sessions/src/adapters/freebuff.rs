@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::types::{TranscriptTurn, UnifiedSession};
 
 use super::{freebuff_desktop, fsops, transcript, utils, SessionAdapter};
 

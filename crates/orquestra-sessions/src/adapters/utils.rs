@@ -18,7 +18,7 @@ use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OpenFlags, Row};
 use serde_json::Value;
 
-use crate::sessions::types::TITLE_LIMIT;
+use crate::types::TITLE_LIMIT;
 
 /// Refuse to load a JSONL index bigger than this; such a file is a runaway
 /// artifact, and parsing it would cost more than the listing is worth.
@@ -444,7 +444,7 @@ mod tests {
         assert_eq!(dir_size(&outside), 4100, "real files still count");
         assert_eq!(dir_size(&session), 0, "the link itself is not walked");
         assert_eq!(
-            crate::sessions::adapters::fsops::size_of(&session),
+            crate::adapters::fsops::size_of(&session),
             0,
             "reclaim estimates use the same rule"
         );

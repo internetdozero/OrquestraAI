@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::types::{TranscriptTurn, UnifiedSession};
 
 use super::{sqlite_store, SessionAdapter};
 

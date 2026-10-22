@@ -11,7 +11,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use crate::sessions::types::TranscriptTurn;
+use crate::types::TranscriptTurn;
 
 pub use super::transcript_clean::clean_turn_content;
 use super::utils::{
