@@ -39,7 +39,7 @@ pub fn home_dir() -> Option<PathBuf> {
 pub fn home_dir_with(lookup: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
     HOME_VARS
         .iter()
-        .find_map(|name| lookup(name).filter(|value| names_a_directory(value)))
+        .find_map(|name| lookup(name).filter(names_a_directory))
         .map(PathBuf::from)
 }
 
