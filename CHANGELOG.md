@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0-alpha.4] - 2026-10-22
+## [0.1.0-alpha.5] - 2026-10-22
+
+### Fixed
+
+- **CodeQL Cryptographic Value Alerts:**
+  - Resolved static analysis alerts by generating nonces and encryption keys dynamically via `Aes256Gcm` and `OsRng` without fixed-size zeroed byte buffers.
+  - Replaced test hardcoded keys with dynamic test keys.
+- **Skill Security Scanning:**
+  - Preserved live security scans across skill directories to avoid stale cache hits when scripts are added to subdirectories.
+- **Code Style & Formatting:**
+  - Formatted `src-tauri/tests/fixtures/ipc-contract.json` and `src/lib/vault.ts` with Prettier.
 
 ### Added
 
