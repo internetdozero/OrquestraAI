@@ -192,6 +192,130 @@ _used_ server-side by the two blind calls — they never appear in a result.
 serves `--mcp-status` health probes used by `scripts/check-card-motion.mjs`.
 `--help`/`-h` prints usage.
 
+## Worked examples
+
+Wire keys are `snake_case` (Tauri deserializes them into the Rust parameter
+names); success payloads come back `camelCase`. Secrets never appear in any
+response — leaked key material is replaced with `[REDACTED]`.
+
+### `vault_http_request` (blind, failover)
+
+```jsonc
+// invoke("vault_http_request", …)
+{
+  "service": "openai",
+  "endpoint": "https://api.openai.com/v1/models",
+  "method": "GET"
+}
+// → { status, headers, body, usedKeyIndex, rotated }
+{
+  "status": 200,
+  "headers": { "content-type": "application/json" },
+  "body": "{\"data\":[]}",
+  "usedKeyIndex": 0,
+  "rotated": false
+}
+```
+
+When the active key is rejected (401/402/403/429) the core retries the next
+pooled key and reports which one worked:
+
+```jsonc
+// invoke("vault_http_request", …) — first key expired
+{
+  "service": "openai",
+  "endpoint": "https://api.openai.com/v1/models",
+  "method": "GET",
+  "key_tag": "workers" // optional: restrict failover to keys with this tag
+}
+// →
+{
+  "status": 200,
+  "headers": {},
+  "body": "{\"data\":[]}",
+  "usedKeyIndex": 1,
+  "rotated": true
+}
+```
+
+Auth response headers are stripped and any secret echoed in the body is
+scrubbed before the response crosses IPC:
+
+```jsonc
+{ "status": 200, "headers": {}, "body": "key=[REDACTED]", "usedKeyIndex": 0, "rotated": false }
+```
+
+Failure (unknown service) rejects the promise with a plain string:
+
+```
+"unknown vault service: openai"
+```
+
+### `vault_exec` (blind, allowlisted binary)
+
+```jsonc
+// invoke("vault_exec", …) — command MUST be an array; argv[0] must be a
+// bare name on the exec allowlist. No shell, no pipes, no redirects.
+{
+  "service": "cloudflare",
+  "command": ["wrangler", "r2", "object", "list", "my-bucket"]
+}
+// → { code, stdout, stderr, usedKeyIndex }
+{
+  "code": 0,
+  "stdout": "objects…(key material shown as [REDACTED])",
+  "stderr": "",
+  "usedKeyIndex": 0
+}
+```
+
+A shell string is rejected, never executed:
+
+```jsonc
+{ "service": "cloudflare", "command": "wrangler r2 object list my-bucket" }
+// → Error: "vault exec needs a command array, argv[0] must be an allowlisted binary"
+```
+
+### `vault_test_connection` (blind ping)
+
+```jsonc
+// invoke("vault_test_connection", { service: "openai" })
+// → { success, latencyMs, message, health }
+{
+  "success": true,
+  "latencyMs": 312,
+  "message": "ok",
+  "health": "ok",
+}
+// invoke("vault_test_connection", { service: "openai", key_index: 1 })
+// pins the probe to one pooled key instead of the active one.
+```
+
+The observed health is persisted, so the next `vault_list_services` reflects
+it in `health` / `key_health`.
+
+### Purge flow (dry run first)
+
+```jsonc
+// 1. invoke("estimate_purge", { filter: { olderThanDays: 90 } })
+{
+  "sessionsCount": 41,
+  "reclaimedBytes": 187291648,
+  "affectedHarnesses": ["codex", "claude"],
+  "skippedPinnedCount": 3,
+  "skippedActiveCount": 1
+}
+// 2. invoke("purge_sessions", { filter: { olderThanDays: 90 } })
+{
+  "deletedCount": 41,
+  "failedCount": 0,
+  "reclaimedBytes": 187291648,
+  "errors": []
+}
+// Pinned sessions are skipped unless the filter sets ignorePinned: true;
+// a session a running agent holds open is always skipped and reported.
+```
+
 ## Coverage check
 
 `scripts/ipc-docs.test.mjs` parses the `generate_handler!` list and asserts
