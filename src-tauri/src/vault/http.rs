@@ -88,8 +88,27 @@ pub(super) async fn execute_once(
     headers: &[(String, String)],
     body: Option<&str>,
 ) -> Result<(u16, HashMap<String, String>, String), String> {
+    // Same-host redirects only: a compromised API must not bounce the call
+    // — and its auth headers — to an attacker host. reqwest already strips
+    // `Authorization` on cross-host hops; refusing them outright removes the
+    // SSRF-via-redirect class entirely.
+    let same_host_only = reqwest::redirect::Policy::custom(|attempt| {
+        let current = attempt.url().host_str().unwrap_or("").to_ascii_lowercase();
+        let first = attempt
+            .previous()
+            .first()
+            .and_then(|url| url.host_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if !current.is_empty() && current == first {
+            attempt.follow()
+        } else {
+            attempt.stop()
+        }
+    });
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
+        .redirect(same_host_only)
         .build()
         .map_err(|error| format!("vault http client failed: {error}"))?;
     let verb = method.to_ascii_uppercase();

@@ -41,9 +41,6 @@ pub async fn vault_http_request(
     if endpoint.trim().is_empty() {
         return Err("vault http needs an endpoint URL".to_string());
     }
-    if !(endpoint.starts_with("https://") || endpoint.starts_with("http://")) {
-        return Err("vault endpoint must start with http(s)://".to_string());
-    }
     let verb = method.unwrap_or_else(|| "GET".to_string());
     let extra = headers.unwrap_or_default();
     let tag = key_tag.as_deref().and_then(normalize_tag);
@@ -55,6 +52,11 @@ pub async fn vault_http_request(
         .services
         .remove(&service)
         .ok_or_else(|| format!("unknown vault service: {service}"))?;
+    // SSRF gate: the key rides in the headers, so the endpoint must be an
+    // https URL on this preset's allowlisted hosts — attacker hosts,
+    // plain http, IP literals and unknown presets die here, before any
+    // secret is loaded into memory for the call.
+    super::endpoints::validate_endpoint(&snapshot.preset, &endpoint)?;
     if snapshot.keys.is_empty() {
         return Err(format!("vault service {service} has no keys"));
     }

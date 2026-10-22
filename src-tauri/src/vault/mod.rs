@@ -6,6 +6,7 @@
 //! output. `vault_list_services` exposes masked metadata only.
 
 mod atomic;
+mod endpoints;
 mod exec;
 mod http;
 mod presets;
