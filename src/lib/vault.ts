@@ -244,6 +244,10 @@ export function vaultHttpRequest(input: {
  * Blind exec: secret lives only in the child env, output is scrubbed.
  * Array only — the backend allowlists argv[0] and runs with no shell, so
  * shell strings are rejected server-side and must not be sent.
+ *
+ * Destructive and capability-gated (`vault-ops`): every caller must present
+ * an explicit user confirmation (what runs, with which service) before
+ * invoking, mirroring the PurgeConfirmModal gate on `purge_sessions`.
  */
 export function vaultExec(service: string, command: string[]): Promise<VaultExecResult> {
   return invoke<VaultExecResult>("vault_exec", { service, command });

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-harness-summary"
+description = "Enables the harness_summary command without any pre-configured scope."
+commands.allow = ["harness_summary"]
+
+[[permission]]
+identifier = "deny-harness-summary"
+description = "Denies the harness_summary command without any pre-configured scope."
+commands.deny = ["harness_summary"]

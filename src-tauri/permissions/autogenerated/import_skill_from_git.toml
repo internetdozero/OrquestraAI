@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-import-skill-from-git"
+description = "Enables the import_skill_from_git command without any pre-configured scope."
+commands.allow = ["import_skill_from_git"]
+
+[[permission]]
+identifier = "deny-import-skill-from-git"
+description = "Denies the import_skill_from_git command without any pre-configured scope."
+commands.deny = ["import_skill_from_git"]

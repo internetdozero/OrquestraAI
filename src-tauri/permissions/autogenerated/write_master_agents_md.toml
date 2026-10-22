@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-write-master-agents-md"
+description = "Enables the write_master_agents_md command without any pre-configured scope."
+commands.allow = ["write_master_agents_md"]
+
+[[permission]]
+identifier = "deny-write-master-agents-md"
+description = "Denies the write_master_agents_md command without any pre-configured scope."
+commands.deny = ["write_master_agents_md"]

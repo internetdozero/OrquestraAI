@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-blackboard-notes"
+description = "Enables the list_blackboard_notes command without any pre-configured scope."
+commands.allow = ["list_blackboard_notes"]
+
+[[permission]]
+identifier = "deny-list-blackboard-notes"
+description = "Denies the list_blackboard_notes command without any pre-configured scope."
+commands.deny = ["list_blackboard_notes"]

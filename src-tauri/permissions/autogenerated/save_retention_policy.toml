@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-retention-policy"
+description = "Enables the save_retention_policy command without any pre-configured scope."
+commands.allow = ["save_retention_policy"]
+
+[[permission]]
+identifier = "deny-save-retention-policy"
+description = "Denies the save_retention_policy command without any pre-configured scope."
+commands.deny = ["save_retention_policy"]

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core permissions for the OrquestraAI main window.",
+  "description": "Core plugin defaults plus safe read-only app commands for the OrquestraAI main window. Destructive commands live in the vault-ops, update-ops, session-ops and admin-ops capabilities.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "safe-read"]
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-create-idea"
+description = "Enables the create_idea command without any pre-configured scope."
+commands.allow = ["create_idea"]
+
+[[permission]]
+identifier = "deny-create-idea"
+description = "Denies the create_idea command without any pre-configured scope."
+commands.deny = ["create_idea"]

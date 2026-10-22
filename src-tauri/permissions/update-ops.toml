@@ -1,0 +1,11 @@
+# Binary replacement and upstream sync. Granted to the main window by
+# `capabilities/update-ops.json`; without that file these invokes fail closed
+# with a permission error.
+[[set]]
+identifier = "update-ops"
+description = "Desktop binary update, official extension sync, restart."
+permissions = [
+  "allow-apply-app-update",
+  "allow-sync-official-extensions",
+  "allow-restart-app",
+]

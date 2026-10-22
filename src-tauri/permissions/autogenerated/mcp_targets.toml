@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mcp-targets"
+description = "Enables the mcp_targets command without any pre-configured scope."
+commands.allow = ["mcp_targets"]
+
+[[permission]]
+identifier = "deny-mcp-targets"
+description = "Denies the mcp_targets command without any pre-configured scope."
+commands.deny = ["mcp_targets"]

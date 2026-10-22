@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "update-ops",
+  "description": "Desktop binary update, official extension sync and restart for the main window. Removing this file denies apply_app_update and restart_app with a permission error.",
+  "windows": ["main"],
+  "permissions": ["update-ops"]
+}

@@ -14,6 +14,8 @@ pub mod harness;
 pub mod ideas;
 pub mod janitor;
 #[cfg(test)]
+mod ipc_acl;
+#[cfg(test)]
 mod ipc_contract;
 pub mod mcp;
 mod official;

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-import-skill"
+description = "Enables the import_skill command without any pre-configured scope."
+commands.allow = ["import_skill"]
+
+[[permission]]
+identifier = "deny-import-skill"
+description = "Denies the import_skill command without any pre-configured scope."
+commands.deny = ["import_skill"]

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "vault-ops",
+  "description": "Vault key lifecycle and blind secret use (HTTP proxy, exec) for the main window. Removing this file denies vault_exec, vault_http_request and secret reveal with a permission error.",
+  "windows": ["main"],
+  "permissions": ["vault-ops"]
+}

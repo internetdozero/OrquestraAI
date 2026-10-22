@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-official-store"
+description = "Enables the list_official_store command without any pre-configured scope."
+commands.allow = ["list_official_store"]
+
+[[permission]]
+identifier = "deny-list-official-store"
+description = "Denies the list_official_store command without any pre-configured scope."
+commands.deny = ["list_official_store"]

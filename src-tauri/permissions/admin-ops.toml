@@ -1,0 +1,34 @@
+# All remaining mutating commands: skill/MCP/preset writes, harness bridge
+# deployment, cache sweep, and idea writes. Granted to the main window by
+# `capabilities/admin-ops.json`; without that file these invokes fail closed
+# with a permission error.
+[[set]]
+identifier = "admin-ops"
+description = "Config mutations, deletions, deployments, idea writes."
+permissions = [
+  "allow-sweep-system-caches",
+  "allow-set-skill-state",
+  "allow-batch-set-all",
+  "allow-save-skill-content",
+  "allow-delete-skill",
+  "allow-import-skill",
+  "allow-import-skill-from-git",
+  "allow-write-master-agents-md",
+  "allow-deploy-harness-bridge",
+  "allow-set-mcp-state",
+  "allow-batch-set-mcp-all",
+  "allow-save-mcp",
+  "allow-delete-mcp",
+  "allow-deploy-mcps",
+  "allow-apply-preset",
+  "allow-save-preset",
+  "allow-delete-preset",
+  "allow-update-preset",
+  "allow-reset-preset",
+  "allow-create-idea",
+  "allow-update-idea",
+  "allow-update-idea-status",
+  "allow-delete-idea",
+  "allow-post-blackboard-note",
+  "allow-mark-note-read",
+]

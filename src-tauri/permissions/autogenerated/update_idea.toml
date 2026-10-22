@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-idea"
+description = "Enables the update_idea command without any pre-configured scope."
+commands.allow = ["update_idea"]
+
+[[permission]]
+identifier = "deny-update-idea"
+description = "Denies the update_idea command without any pre-configured scope."
+commands.deny = ["update_idea"]

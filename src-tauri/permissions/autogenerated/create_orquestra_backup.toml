@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-create-orquestra-backup"
+description = "Enables the create_orquestra_backup command without any pre-configured scope."
+commands.allow = ["create_orquestra_backup"]
+
+[[permission]]
+identifier = "deny-create-orquestra-backup"
+description = "Denies the create_orquestra_backup command without any pre-configured scope."
+commands.deny = ["create_orquestra_backup"]

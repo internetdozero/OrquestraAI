@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-batch-set-mcp-all"
+description = "Enables the batch_set_mcp_all command without any pre-configured scope."
+commands.allow = ["batch_set_mcp_all"]
+
+[[permission]]
+identifier = "deny-batch-set-mcp-all"
+description = "Denies the batch_set_mcp_all command without any pre-configured scope."
+commands.deny = ["batch_set_mcp_all"]

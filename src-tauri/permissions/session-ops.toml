@@ -1,0 +1,12 @@
+# Session destruction and retention policy (which gates auto-purge).
+# Granted to the main window by `capabilities/session-ops.json`; without that
+# file these invokes fail closed with a permission error. `purge_sessions` is
+# additionally gated behind the PurgeConfirmModal estimate dialog in the UI.
+[[set]]
+identifier = "session-ops"
+description = "Session purge and retention policy."
+permissions = [
+  "allow-purge-sessions",
+  "allow-save-retention-policy",
+  "allow-toggle-pin-session",
+]

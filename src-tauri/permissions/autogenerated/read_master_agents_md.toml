@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-master-agents-md"
+description = "Enables the read_master_agents_md command without any pre-configured scope."
+commands.allow = ["read_master_agents_md"]
+
+[[permission]]
+identifier = "deny-read-master-agents-md"
+description = "Denies the read_master_agents_md command without any pre-configured scope."
+commands.deny = ["read_master_agents_md"]

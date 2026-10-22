@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "admin-ops",
+  "description": "Config mutations, deletions, deployments and idea writes for the main window. Removing this file denies skill/MCP/preset writes and bridge deployment with a permission error.",
+  "windows": ["main"],
+  "permissions": ["admin-ops"]
+}

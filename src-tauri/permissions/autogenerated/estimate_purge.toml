@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-estimate-purge"
+description = "Enables the estimate_purge command without any pre-configured scope."
+commands.allow = ["estimate_purge"]
+
+[[permission]]
+identifier = "deny-estimate-purge"
+description = "Denies the estimate_purge command without any pre-configured scope."
+commands.deny = ["estimate_purge"]

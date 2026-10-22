@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vault-test-connection"
+description = "Enables the vault_test_connection command without any pre-configured scope."
+commands.allow = ["vault_test_connection"]
+
+[[permission]]
+identifier = "deny-vault-test-connection"
+description = "Denies the vault_test_connection command without any pre-configured scope."
+commands.deny = ["vault_test_connection"]

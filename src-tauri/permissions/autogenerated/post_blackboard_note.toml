@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-post-blackboard-note"
+description = "Enables the post_blackboard_note command without any pre-configured scope."
+commands.allow = ["post_blackboard_note"]
+
+[[permission]]
+identifier = "deny-post-blackboard-note"
+description = "Denies the post_blackboard_note command without any pre-configured scope."
+commands.deny = ["post_blackboard_note"]

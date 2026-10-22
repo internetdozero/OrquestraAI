@@ -1,0 +1,36 @@
+# Safe read-only commands plus low-risk local UI affordances (folder picker,
+# help links, backup snapshot, tray preference). Granted to the main window by
+# `capabilities/default.json`. Anything that writes vault secrets, mutates
+# configs, deletes data, or replaces the binary lives in the other scope sets.
+[[set]]
+identifier = "safe-read"
+description = "Read-only queries and harmless local UI affordances."
+permissions = [
+  "allow-core-status",
+  "allow-log-ui-error",
+  "allow-get-system-health",
+  "allow-list-skills",
+  "allow-read-skill-content",
+  "allow-harness-summary",
+  "allow-read-master-agents-md",
+  "allow-get-bridge-status",
+  "allow-list-mcps",
+  "allow-list-official-store",
+  "allow-mcp-targets",
+  "allow-list-presets",
+  "allow-list-ideas",
+  "allow-list-idea-projects",
+  "allow-get-productivity-metrics",
+  "allow-get-unified-sessions",
+  "allow-get-session-transcript",
+  "allow-list-blackboard-notes",
+  "allow-get-retention-policy",
+  "allow-list-vault-presets",
+  "allow-vault-list-services",
+  "allow-estimate-purge",
+  "allow-pick-folder",
+  "allow-open-url",
+  "allow-open-in-file-manager",
+  "allow-create-orquestra-backup",
+  "allow-set-minimize-to-tray",
+]

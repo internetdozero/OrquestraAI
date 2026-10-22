@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vault-http-request"
+description = "Enables the vault_http_request command without any pre-configured scope."
+commands.allow = ["vault_http_request"]
+
+[[permission]]
+identifier = "deny-vault-http-request"
+description = "Denies the vault_http_request command without any pre-configured scope."
+commands.deny = ["vault_http_request"]

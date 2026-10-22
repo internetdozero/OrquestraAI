@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-deploy-harness-bridge"
+description = "Enables the deploy_harness_bridge command without any pre-configured scope."
+commands.allow = ["deploy_harness_bridge"]
+
+[[permission]]
+identifier = "deny-deploy-harness-bridge"
+description = "Denies the deploy_harness_bridge command without any pre-configured scope."
+commands.deny = ["deploy_harness_bridge"]

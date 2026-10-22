@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-unified-sessions"
+description = "Enables the get_unified_sessions command without any pre-configured scope."
+commands.allow = ["get_unified_sessions"]
+
+[[permission]]
+identifier = "deny-get-unified-sessions"
+description = "Denies the get_unified_sessions command without any pre-configured scope."
+commands.deny = ["get_unified_sessions"]

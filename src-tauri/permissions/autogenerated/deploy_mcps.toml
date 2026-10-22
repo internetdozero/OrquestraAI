@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-deploy-mcps"
+description = "Enables the deploy_mcps command without any pre-configured scope."
+commands.allow = ["deploy_mcps"]
+
+[[permission]]
+identifier = "deny-deploy-mcps"
+description = "Denies the deploy_mcps command without any pre-configured scope."
+commands.deny = ["deploy_mcps"]
