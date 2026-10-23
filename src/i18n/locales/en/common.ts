@@ -8,6 +8,7 @@ export const common: TranslationSchema["common"] = {
   searchPlaceholderMcps: "Search MCP servers, commands, descriptions…",
   searchAriaLabelMcps: "Search MCP servers",
   refreshSkills: "Refresh skills",
+  reloadView: "Reload view",
   rescanVault: "Rescan the vault",
   activeSkills: "Active Skills",
   agentsChip: "AGENTS.md",

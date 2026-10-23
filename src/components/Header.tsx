@@ -128,6 +128,19 @@ export function Header({
   const windowControl =
     "grid h-7 w-8 shrink-0 place-items-center rounded-md text-zinc-500 transition outline-none hover:bg-white/10 hover:text-zinc-200 focus-visible:bg-white/10 focus-visible:text-zinc-200 focus-visible:ring-2 focus-visible:ring-emerald-500/40";
 
+  // Universal rescan: every view reloads through the shell token.
+  const refreshButton = (
+    <button
+      type="button"
+      onClick={onRefresh}
+      disabled={refreshing}            title={t.common.reloadView}
+            aria-label={t.common.reloadView}
+      className="grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 disabled:cursor-wait disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
+    >
+      <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
+    </button>
+  );
+
   const glyph = "size-3";
 
   const windowControls = isTauri ? (
@@ -230,16 +243,7 @@ export function Header({
               </kbd>
             </div>            {/* Refresh + window controls */}
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={refreshing}
-                title={t.common.rescanVault}
-                aria-label={t.common.refreshSkills}
-                className="grid size-8 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 disabled:cursor-wait disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
-              >
-                <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
-              </button>
+              {refreshButton}
               {isTauri && (
                 <>
                   <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
@@ -248,25 +252,18 @@ export function Header({
               )}
             </div>
           </>
-        ) : mode === "sessions" ? (
-          <>
-            <div className="flex-1 self-stretch" />
-            {isTauri && (
-              <>
-                <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
-                {windowControls}
-              </>
-            )}
-          </>
         ) : (
           <>
             <div className="flex-1 self-stretch" />
-            {isTauri && (
-              <>
-                <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
-                {windowControls}
-              </>
-            )}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {refreshButton}
+              {isTauri && (
+                <>
+                  <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
+                  {windowControls}
+                </>
+              )}
+            </div>
           </>
         )}
       </div>

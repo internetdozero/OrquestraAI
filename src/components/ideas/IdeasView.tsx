@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Lightbulb } from "lucide-react";
 import { useIdeas } from "../../hooks/useIdeas";
 import { useI18n } from "../../hooks/useI18n";
@@ -21,16 +21,27 @@ interface IdeasViewProps {
   isTauri: boolean;
   onToast: (message: string) => void;
   onError: (message: string) => void;
+  /** Shell refresh button bumps this to reload ideas and notes. */
+  reloadToken?: number;
 }
 
 /**
  * Full-width Ideas view: kanban or grouped list, detail viewer, and the
  * inter-agent blackboard behind the tab pills.
  */
-export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
+export function IdeasView({ isTauri, onToast, onError, reloadToken = 0 }: IdeasViewProps) {
   const { t } = useI18n();
   const [mockMode] = useState(devMockMode);
   const state = useIdeas({ isTauri, onToast, onError });
+  const { refreshAll } = state;
+
+  // The shell asks for a rescan by bumping the token; skip the mount value.
+  const lastReloadToken = useRef(reloadToken);
+  useEffect(() => {
+    if (reloadToken === lastReloadToken.current) return;
+    lastReloadToken.current = reloadToken;
+    void refreshAll();
+  }, [reloadToken, refreshAll]);
   const s = t.ideas;
   const [mode, setMode] = useState<BoardMode>("board");
   const [formOpen, setFormOpen] = useState(false);
@@ -93,14 +104,12 @@ export function IdeasView({ isTauri, onToast, onError }: IdeasViewProps) {
         </p>
       )}
       <IdeasHeader
-        loading={state.loading}
         activeTab={state.activeTab}
         onTabChange={state.setActiveTab}
         mode={mode}
         onModeChange={setMode}
         onNewIdea={openCreate}
         onNewNote={() => setNoteOpen(true)}
-        onRefresh={() => void state.refreshAll()}
       />
 
       <ProductivitySubPanel projects={state.projects} />

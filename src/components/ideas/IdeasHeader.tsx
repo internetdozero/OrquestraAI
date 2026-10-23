@@ -1,4 +1,4 @@
-import { LayoutGrid, Plus, RefreshCw, Rows3 } from "lucide-react";
+import { LayoutGrid, Plus, Rows3 } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import type { IdeasTab } from "../../hooks/useIdeas";
 import { actionButtonClass } from "../ui";
@@ -7,7 +7,6 @@ import { cn } from "../../lib/utils";
 export type BoardMode = "board" | "list";
 
 interface IdeasHeaderProps {
-  loading: boolean;
   activeTab: IdeasTab;
   onTabChange: (tab: IdeasTab) => void;
   /** Board/list switcher; hidden on the blackboard tab. */
@@ -15,7 +14,6 @@ interface IdeasHeaderProps {
   onModeChange: (mode: BoardMode) => void;
   onNewIdea: () => void;
   onNewNote: () => void;
-  onRefresh: () => void;
 }
 
 /**
@@ -23,14 +21,12 @@ interface IdeasHeaderProps {
  * and refresh actions sharing one right-side baseline.
  */
 export function IdeasHeader({
-  loading,
   activeTab,
   onTabChange,
   mode,
   onModeChange,
   onNewIdea,
   onNewNote,
-  onRefresh,
 }: IdeasHeaderProps) {
   const { t } = useI18n();
   const s = t.ideas;
@@ -112,16 +108,6 @@ export function IdeasHeader({
         >
           <Plus className="size-3.5" aria-hidden="true" />
           {onIdeas ? s.newIdea : s.newNote}
-        </button>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          title={t.common.refreshSkills}
-          aria-label={t.common.refreshSkills}
-          className="grid size-8.5 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:text-zinc-200 disabled:opacity-60"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
         </button>
       </div>
     </div>

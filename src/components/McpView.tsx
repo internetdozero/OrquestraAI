@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Loader2, Plug, Plus, RefreshCw, Unplug, Waypoints } from "lucide-react";
+import { AlertTriangle, Loader2, Plug, Plus, Unplug, Waypoints } from "lucide-react";
 import { coversHarness, sortMcps, type McpServer, type McpSortMode } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -9,7 +9,7 @@ import { useMcpMutations } from "../hooks/useMcpMutations";
 import { useMcpStoreActions } from "../hooks/useMcpStoreActions";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { sumMcpTokens } from "../lib/tokens";
-import { cn, formatTokens } from "../lib/utils";
+import { formatTokens } from "../lib/utils";
 import { McpCard } from "./McpCard";
 import { McpEmptyState } from "./McpEmptyState";
 import { StatePanel } from "./ui";
@@ -100,13 +100,11 @@ export function McpView({
     saving,
     formError,
     setFormError,
-    deploying,
     batchPending,
     toggle,
     applyAll,
     remove,
     save,
-    recompile,
   } = useMcpMutations({
     scope,
     scopeLabel,
@@ -195,15 +193,6 @@ export function McpView({
                 {activeServers.length}/{servers.length}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => void recompile()}
-              disabled={deploying || loading}
-              title={t.mcps.recompile}
-              className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 disabled:cursor-wait disabled:opacity-60"
-            >
-              <RefreshCw className={cn("size-4", deploying && "animate-spin")} />
-            </button>
             <button
               type="button"
               onClick={() => {

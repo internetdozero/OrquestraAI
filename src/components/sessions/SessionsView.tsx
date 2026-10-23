@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { History, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { History } from "lucide-react";
 import { useSessions } from "../../hooks/useSessions";
 import { useI18n } from "../../hooks/useI18n";
 import type { UnifiedSession } from "../../lib/sessions";
@@ -18,12 +18,29 @@ interface SessionsViewProps {
   notifyOnPurge: boolean;
   onToast: (message: string) => void;
   onError: (message: string) => void;
+  /** Shell refresh button bumps this to rescan the sessions. */
+  reloadToken?: number;
 }
 
 /** First-class Sessions view: inspect, filter, pin, purge, configure retention. */
-export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: SessionsViewProps) {
+export function SessionsView({
+  isTauri,
+  notifyOnPurge,
+  onToast,
+  onError,
+  reloadToken = 0,
+}: SessionsViewProps) {
   const { t } = useI18n();
   const state = useSessions({ isTauri, notifyOnPurge, onToast, onError });
+  const { refreshSessions } = state;
+
+  // The shell asks for a rescan by bumping the token; skip the mount value.
+  const lastReloadToken = useRef(reloadToken);
+  useEffect(() => {
+    if (reloadToken === lastReloadToken.current) return;
+    lastReloadToken.current = reloadToken;
+    void refreshSessions();
+  }, [reloadToken, refreshSessions]);
   const s = t.sessions;
   const [inspecting, setInspecting] = useState<UnifiedSession | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{
@@ -51,15 +68,6 @@ export function SessionsView({ isTauri, notifyOnPurge, onToast, onError }: Sessi
             <p className="text-[11.5px] text-zinc-500">{s.subtitle}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void state.refreshSessions()}
-          disabled={state.loading}
-          title={t.common.refreshSkills}
-          className="grid size-8.5 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:text-zinc-200 disabled:opacity-60"
-        >
-          <RefreshCw className={`size-4 ${state.loading ? "animate-spin" : ""}`} />
-        </button>
       </div>
 
       {state.error && (

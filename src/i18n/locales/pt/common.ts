@@ -11,6 +11,7 @@ export const common = {
   searchPlaceholderMcps: "Buscar servidores MCP, comandos, descrições…",
   searchAriaLabelMcps: "Buscar servidores MCP",
   refreshSkills: "Atualizar skills",
+  reloadView: "Recarregar visão",
   rescanVault: "Reescanear o cofre",
   activeSkills: "Skills ativas",
   agentsChip: "AGENTS.md",

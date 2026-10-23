@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Unplug } from "lucide-react";
 import { useAgentsFile } from "../hooks/useAgentsFile";
 import { useI18n } from "../hooks/useI18n";
@@ -13,10 +13,19 @@ interface AgentsViewProps {
   onError: (message: string) => void;
   /** Clears the shell's stale error once the file round-trips cleanly. */
   onClear: () => void;
+  /** Shell refresh button bumps this to re-read the file from disk. */
+  reloadToken?: number;
 }
 
 /** Route for the master `~/.orquestra/AGENTS.md`, loaded and saved over IPC. */
-export function AgentsView({ isTauri, error, onToast, onError, onClear }: AgentsViewProps) {
+export function AgentsView({
+  isTauri,
+  error,
+  onToast,
+  onError,
+  onClear,
+  reloadToken = 0,
+}: AgentsViewProps) {
   const { t } = useI18n();
   const agents = useAgentsFile({ isTauri, onToast, onError, onClear });
   const { load } = agents;
@@ -24,6 +33,14 @@ export function AgentsView({ isTauri, error, onToast, onError, onClear }: Agents
   useEffect(() => {
     if (isTauri) void load();
   }, [isTauri, load]);
+
+  // The shell asks for a re-read by bumping the token; skip the mount value.
+  const lastReloadToken = useRef(reloadToken);
+  useEffect(() => {
+    if (!isTauri || reloadToken === lastReloadToken.current) return;
+    lastReloadToken.current = reloadToken;
+    void load();
+  }, [isTauri, reloadToken, load]);
 
   if (!isTauri) {
     return (

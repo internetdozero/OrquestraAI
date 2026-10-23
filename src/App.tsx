@@ -260,7 +260,10 @@ export default function App() {
         query={query}
         onQueryChange={setQuery}
         onRefresh={() => {
+          // Every view reloads through the shared token; skills additionally
+          // refreshes harness counters with a toast.
           setReloadToken((token) => token + 1);
+          if (view !== "skills") return;
           void summaries.refresh();
           showToast(t.common.refreshSkills);
         }}
@@ -314,7 +317,12 @@ export default function App() {
           >
             <Suspense fallback={<ViewFallback />}>
               {view === "ideas" ? (
-                <IdeasView isTauri={isTauri} onToast={showToast} onError={setError} />
+                <IdeasView
+                  isTauri={isTauri}
+                  onToast={showToast}
+                  onError={setError}
+                  reloadToken={reloadToken}
+                />
               ) : view === "agents" ? (
                 <AgentsView
                   isTauri={isTauri}
@@ -322,6 +330,7 @@ export default function App() {
                   onToast={showToast}
                   onError={setError}
                   onClear={clearError}
+                  reloadToken={reloadToken}
                 />
               ) : view === "sessions" ? (
                 <SessionsView
@@ -329,9 +338,15 @@ export default function App() {
                   notifyOnPurge={prefs.settings.notifyOnPurge}
                   onToast={showToast}
                   onError={setError}
+                  reloadToken={reloadToken}
                 />
               ) : view === "credentials" ? (
-                <CredentialsView isTauri={isTauri} onToast={showToast} onError={setError} />
+                <CredentialsView
+                  isTauri={isTauri}
+                  onToast={showToast}
+                  onError={setError}
+                  reloadToken={reloadToken}
+                />
               ) : view === "mcps" ? (
                 <McpView
                   isTauri={isTauri}

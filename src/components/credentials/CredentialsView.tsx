@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { devMockMode } from "../../lib/fixtures.ts";
 import {
@@ -30,9 +30,11 @@ interface CredentialsViewProps {
   isTauri: boolean;
   onToast: (message: string) => void;
   onError: (message: string) => void;
+  /** Shell refresh button bumps this to reload services. */
+  reloadToken?: number;
 }
 
-export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewProps) {
+export function CredentialsView({ isTauri, onToast, onError, reloadToken = 0 }: CredentialsViewProps) {
   const [services, setServices] = useState<VaultService[]>([]);
   const [presets, setPresets] = useState<VaultPreset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,14 @@ export function CredentialsView({ isTauri, onToast, onError }: CredentialsViewPr
   const refresh = useCallback(async () => {
     setServices(await vaultListServices());
   }, []);
+
+  // The shell asks for a rescan by bumping the token; skip the mount value.
+  const lastReloadToken = useRef(reloadToken);
+  useEffect(() => {
+    if (reloadToken === lastReloadToken.current) return;
+    lastReloadToken.current = reloadToken;
+    void refresh();
+  }, [reloadToken, refresh]);
 
   useEffect(() => {
     if (!isTauri && !mockMode) {
