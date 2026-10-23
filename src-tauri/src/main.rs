@@ -5,7 +5,19 @@
 // which re-exports them from `orquestra-core`.
 pub use orquestra_core::log_error;
 
+#[cfg(target_os = "linux")]
+fn prefer_native_wayland_backend() {
+    let is_wayland_session = std::env::var_os("WAYLAND_DISPLAY").is_some();
+    let backend_is_x11 = std::env::var("GDK_BACKEND").as_deref() == Ok("x11");
+    if is_wayland_session && backend_is_x11 {
+        std::env::set_var("GDK_BACKEND", "wayland");
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "linux")]
+    prefer_native_wayland_backend();
+
     // Headless operator entry points: the same bridge code the UI invokes,
     // usable from a terminal so fusion can be scripted or verified over SSH.
     let args: Vec<String> = std::env::args().collect();

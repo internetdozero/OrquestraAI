@@ -285,9 +285,9 @@ pub use cli::{
 pub fn run() {
     if let Err(error) = tauri::Builder::default()
         .setup(|app| {
-            #[cfg(target_os = "linux")] // Explicitly apply GTK decorations; config alone left this window frameless.
+            #[cfg(target_os = "linux")]
             if let Some(window) = app.get_webview_window("main") {
-                window.set_decorations(true)?;
+                window.set_background_color(Some(tauri::window::Color(9, 9, 11, 255)))?;
             }
             match OrquestraPaths::resolve().and_then(|paths| paths.bootstrap()) {
                 Ok(()) => {}
