@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, History, Orbit, RefreshCw, Search } from "lucide-react";
+import { Orbit, RefreshCw, Search } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useI18n } from "../hooks/useI18n";
 import type { ActiveView } from "../lib/views";
@@ -251,10 +251,6 @@ export function Header({
         ) : mode === "sessions" ? (
           <>
             <div className="flex-1 self-stretch" />
-            <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
-              <History className="size-3 text-emerald-400/80" />
-              {t.sessions.title}
-            </span>
             {isTauri && (
               <>
                 <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
@@ -265,10 +261,6 @@ export function Header({
         ) : (
           <>
             <div className="flex-1 self-stretch" />
-            <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
-              <FileText className="size-3 text-emerald-400/80" />
-              {t.common.agentsChip}
-            </span>
             {isTauri && (
               <>
                 <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
