@@ -74,7 +74,7 @@ export function Header({
   });
 
   const windowControl =
-    "grid size-9 shrink-0 place-items-center rounded-lg text-zinc-500 transition outline-none hover:bg-white/10 hover:text-zinc-200 focus-visible:bg-white/10 focus-visible:text-zinc-200 focus-visible:ring-2 focus-visible:ring-emerald-500/40";
+    "grid h-7 w-8 shrink-0 place-items-center rounded-md text-zinc-500 transition outline-none hover:bg-white/10 hover:text-zinc-200 focus-visible:bg-white/10 focus-visible:text-zinc-200 focus-visible:ring-2 focus-visible:ring-emerald-500/40";
 
   const windowControls = isTauri ? (
     <div className="flex shrink-0 items-center gap-0.5">
@@ -82,10 +82,9 @@ export function Header({
         type="button"
         onClick={runWindow(() => getCurrentWindow().minimize())}
         title={t.common.titlebar.minimize}
-        aria-label={t.common.titlebar.minimize}
-        className={windowControl}
-      >
-        <Minus className="size-4" />
+        aria-label={t.common.titlebar.minimize}                      className={windowControl}
+                    >
+                      <Minus className="size-3.5" />
       </button>
       <button
         type="button"
@@ -94,16 +93,15 @@ export function Header({
         aria-label={maximized ? t.common.titlebar.restore : t.common.titlebar.maximize}
         className={windowControl}
       >
-        {maximized ? <Copy className="size-3.5" /> : <Square className="size-3.5" />}
+        {maximized ? <Copy className="size-3" /> : <Square className="size-3" />}
       </button>
       <button
         type="button"
         onClick={runWindow(() => getCurrentWindow().close())}
         title={t.common.titlebar.closeWindow}
-        aria-label={t.common.titlebar.closeWindow}
-        className={cn(windowControl, "hover:bg-rose-500/80 hover:text-white")}
-      >
-        <X className="size-4" />
+        aria-label={t.common.titlebar.closeWindow}                      className={cn(windowControl, "hover:bg-rose-500/80 hover:text-white")}
+                    >
+                      <X className="size-3.5" />
       </button>
     </div>
   ) : null;
@@ -203,7 +201,7 @@ export function Header({
               </button>
               {isTauri && (
                 <>
-                  <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />
+                  <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
                   {windowControls}
                 </>
               )}
@@ -218,7 +216,7 @@ export function Header({
             </span>
             {isTauri && (
               <>
-                <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />
+                <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
                 {windowControls}
               </>
             )}
@@ -232,7 +230,7 @@ export function Header({
             </span>
             {isTauri && (
               <>
-                <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />
+                <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
                 {windowControls}
               </>
             )}
