@@ -85,8 +85,13 @@ pub struct HarnessSpec {
     pub install_rel: &'static str,
     /// Source paths that all become symlinks to `active/<id>`.
     pub skills_links: &'static [&'static str],
-    /// Harness instruction file replaced by a symlink to the master AGENTS.md.
-    pub instructions_rel: Option<&'static str>,
+    /// Harness instruction files replaced by symlinks to the master AGENTS.md.
+    /// Empty when the harness reads no global instruction file. A harness may
+    /// list several locations (e.g. Freebuff Desktop's per-platform globals);
+    /// fusion links every location whose parent directory exists and treats a
+    /// missing parent as nothing to do, so bridging never blocks on a path
+    /// the current platform does not use.
+    pub instructions_rels: &'static [&'static str],
     /// JSONC config that receives `skills.paths`.
     pub config_rel: Option<&'static str>,
     /// MCP config this harness reads, when it has an adapter.
@@ -153,6 +158,25 @@ mod tests {
             resolve_install_dir_with(spec, home, &whitespace),
             home.join(".claude")
         );
+    }
+
+    #[test]
+    fn freebuff_claims_both_global_instruction_locations() {
+        let spec = find("freebuff").expect("freebuff is registered");
+        // Manicode's existing location plus Freebuff Desktop's per-platform
+        // globals: fusion links whichever the operator's setup created.
+        for rel in [
+            ".config/manicode/AGENTS.md",
+            ".freebuff/AGENTS.md",
+            ".config/freebuff/AGENTS.md",
+        ] {
+            assert!(
+                spec.instructions_rels.contains(&rel),
+                "freebuff misses {rel}"
+            );
+        }
+        // Single-location harnesses keep exactly one entry.
+        assert_eq!(find("codex").expect("registered").instructions_rels.len(), 1);
     }
 
     #[test]

@@ -393,6 +393,7 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
     }
 
+    mod instructions;
     mod secondary;
     mod shared_root;
 }

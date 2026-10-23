@@ -131,7 +131,7 @@ fn fuse_harness(
         )?;
     }
 
-    if let Some(rel) = spec.instructions_rel {
+    for rel in spec.instructions_rels {
         let source = home.join(rel);
         if !ancestor_is_symlink(home, &source) {
             link_instructions(&source, paths, backup, spec, rel, imported)?;

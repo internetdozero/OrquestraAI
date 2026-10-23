@@ -19,7 +19,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: Some("ANTIGRAVITY_CONFIG_DIR"),
         install_rel: ".gemini/config",
         skills_links: &[".gemini/config/skills"],
-        instructions_rel: Some(".gemini/config/AGENTS.md"),
+        instructions_rels: &[".gemini/config/AGENTS.md"],
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".gemini/config/mcp_config.json",
@@ -40,7 +40,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: Some("CODEX_HOME"),
         install_rel: ".codex",
         skills_links: &[".codex/skills"],
-        instructions_rel: Some(".codex/AGENTS.md"),
+        instructions_rels: &[".codex/AGENTS.md"],
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".codex/config.toml",
@@ -73,7 +73,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: Some("CLAUDE_CONFIG_DIR"),
         install_rel: ".claude",
         skills_links: &[".claude/skills"],
-        instructions_rel: Some(".claude/CLAUDE.md"),
+        instructions_rels: &[".claude/CLAUDE.md"],
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".claude.json",
@@ -99,7 +99,14 @@ pub const HARNESSES: &[HarnessSpec] = &[
             ".freebuff/skills",
             ".config/manicode/skills",
         ],
-        instructions_rel: Some(".config/manicode/AGENTS.md"),
+        // Freebuff Desktop reads its global instructions beside the install
+        // root on some platforms and under XDG config on others; fusion links
+        // whichever locations the operator's setup created (see HarnessSpec).
+        instructions_rels: &[
+            ".config/manicode/AGENTS.md",
+            ".freebuff/AGENTS.md",
+            ".config/freebuff/AGENTS.md",
+        ],
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".agents/mcp.json",
@@ -115,7 +122,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: Some("OPENCODE_CONFIG_DIR"),
         install_rel: ".config/opencode",
         skills_links: &[],
-        instructions_rel: None,
+        instructions_rels: &[],
         config_rel: Some(".config/opencode/opencode.jsonc"),
         mcp: Some(McpSpec {
             rel: ".config/opencode/opencode.jsonc",
@@ -131,7 +138,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: Some("KILO_CONFIG_DIR"),
         install_rel: ".config/kilo",
         skills_links: &[],
-        instructions_rel: None,
+        instructions_rels: &[],
         config_rel: Some(".config/kilo/kilo.jsonc"),
         mcp: Some(McpSpec {
             rel: ".config/kilo/kilo.jsonc",
@@ -147,7 +154,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: None,
         install_rel: ".copilot",
         skills_links: &[".copilot/skills"],
-        instructions_rel: None,
+        instructions_rels: &[],
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".copilot/mcp-config.json",
@@ -163,7 +170,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: None,
         install_rel: ".hermes",
         skills_links: &[".hermes/skills"],
-        instructions_rel: None,
+        instructions_rels: &[],
         config_rel: None,
         mcp: None,
         secondary: &[SecondarySpec {
@@ -179,7 +186,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         env_override: None,
         install_rel: ".grok",
         skills_links: &[".grok/skills"],
-        instructions_rel: None,
+        instructions_rels: &[],
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".grok/config.toml",

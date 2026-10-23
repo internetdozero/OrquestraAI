@@ -56,13 +56,16 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
                 .iter()
                 .all(|rel| is_linked_to(&home.join(rel), &projection));
 
+            // The primary instruction path stays the first entry so the IPC
+            // shape is unchanged; the linked gate covers every location.
             let instructions_path = spec
-                .instructions_rel
+                .instructions_rels
+                .first()
                 .map(|rel| home.join(rel).to_string_lossy().into_owned());
             let instructions_linked = spec
-                .instructions_rel
-                .map(|rel| is_linked_to(&home.join(rel), &master))
-                .unwrap_or(true);
+                .instructions_rels
+                .iter()
+                .all(|rel| instructions_satisfied(home, rel, &master));
 
             let config_path = spec
                 .config_rel
@@ -311,6 +314,21 @@ pub(super) fn is_link(path: &Path) -> bool {
     fs::symlink_metadata(path)
         .map(|metadata| metadata.file_type().is_symlink())
         .unwrap_or(false)
+}
+
+/// True when an instruction location needs no more work: either it already
+/// resolves to the master file, or its parent was never created on this
+/// platform so fusion has nothing to claim (mirroring `link_instructions`,
+/// which skips a parentless location instead of provisioning one).
+fn instructions_satisfied(home: &Path, rel: &str, master: &Path) -> bool {
+    let source = home.join(rel);
+    if ancestor_is_symlink(home, &source) {
+        return true;
+    }
+    if !path_present(&source) && !parent_is_dir(&source) {
+        return true;
+    }
+    is_linked_to(&source, master)
 }
 
 pub(super) fn is_linked_to(link: &Path, target: &Path) -> bool {
