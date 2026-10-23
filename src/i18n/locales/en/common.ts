@@ -15,6 +15,12 @@ export const common: TranslationSchema["common"] = {
     en: "English",
   },
   close: "Close",
+  titlebar: {
+    minimize: "Minimize",
+    maximize: "Maximize",
+    restore: "Restore",
+    closeWindow: "Close window",
+  },
   dismiss: "Dismiss",
   unexpected: "Unexpected error",
   viewCrashedHint:

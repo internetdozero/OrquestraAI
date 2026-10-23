@@ -3,5 +3,13 @@
   "identifier": "default",
   "description": "Core plugin defaults plus safe read-only app commands for the OrquestraAI main window. Destructive commands live in the vault-ops, update-ops, session-ops and admin-ops capabilities.",
   "windows": ["main"],
-  "permissions": ["core:default", "safe-read"]
+  "permissions": [
+    "core:default",
+    "safe-read",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging"
+  ]
 }

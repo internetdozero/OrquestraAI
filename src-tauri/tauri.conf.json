@@ -20,6 +20,7 @@
         "minHeight": 600,
         "center": true,
         "resizable": true,
+        "decorations": false,
         "fullscreen": false,
         "theme": "Dark",
         "backgroundColor": "#09090b"

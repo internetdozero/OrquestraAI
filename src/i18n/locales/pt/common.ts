@@ -18,6 +18,12 @@ export const common = {
     en: "English",
   },
   close: "Fechar",
+  titlebar: {
+    minimize: "Minimizar",
+    maximize: "Maximizar",
+    restore: "Restaurar",
+    closeWindow: "Fechar janela",
+  },
   dismiss: "Dispensar",
   unexpected: "Erro inesperado",
   viewCrashedHint:

@@ -7,6 +7,7 @@ import { PresetBar } from "./components/PresetBar";
 import { Sidebar } from "./components/Sidebar";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
+import { TitleBar } from "./components/TitleBar";
 import { ModalFallback, ViewFallback } from "./components/ui";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
@@ -253,6 +254,8 @@ export default function App() {
         <div className="absolute -top-40 left-1/4 size-[32rem] rounded-full bg-emerald-500/[0.06] blur-[120px]" />
         <div className="absolute top-1/3 -right-32 size-[26rem] rounded-full bg-cyan-500/[0.05] blur-[120px]" />
       </div>
+
+      <TitleBar isTauri={isTauri} />
 
       <Header
         mode={view}
