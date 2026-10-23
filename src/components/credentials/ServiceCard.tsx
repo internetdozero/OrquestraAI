@@ -7,7 +7,6 @@ import { useI18n } from "../../hooks/useI18n.ts";
 import { BrandIcon } from "../vault/BrandIcons.tsx";
 import { ServiceDetailModal } from "./ServiceDetailModal.tsx";
 import { ServiceEnabledToggle } from "./ServiceEnabledToggle.tsx";
-import { StatusDot } from "./StatusDot.tsx";
 
 interface ServiceCardProps {
   service: VaultService;
@@ -110,11 +109,6 @@ export function ServiceCard({
             busy={toggling || busy}
             label={service.label}
             onToggle={() => void handleToggleEnabled()}
-          />
-          <StatusDot
-            health={service.health}
-            label={s.healthName(service.health)}
-            className="mt-1"
           />
         </div>
 
