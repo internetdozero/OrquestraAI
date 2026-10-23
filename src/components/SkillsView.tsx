@@ -18,7 +18,6 @@ import { SkillScopeSelector } from "./SkillScopeSelector";
 import { SkillsState, type SkillsStateKind } from "./SkillsStates";
 import { SkillsToolbar } from "./SkillsToolbar";
 import { OfficialStore } from "./OfficialStore";
-import { StoreTabs } from "./StoreTabs";
 import { ErrorBanner, SkeletonGrid } from "./ui";
 
 interface SkillsViewProps {
@@ -250,8 +249,6 @@ export function SkillsView({
         installedIds={installedHarnessIds}
       />
 
-      <StoreTabs showStore={showStore} onChange={setShowStore} />
-
       <SkillsToolbar
         scope={scope}
         activeCount={activeCount}
@@ -266,6 +263,8 @@ export function SkillsView({
         batchPending={batchPending}
         onApplyAll={(enabled) => void applyAll(enabled)}
         onImport={() => setImportOpen(true)}
+        showStore={showStore}
+        onShowStoreChange={setShowStore}
       />
 
       {banner && hasSkills && (

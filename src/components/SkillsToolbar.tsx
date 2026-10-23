@@ -9,10 +9,11 @@ import {
   Zap,
 } from "lucide-react";
 import type { SortMode } from "../lib/skills";
-import { GLOBAL_SCOPE, HARNESSES, scopeLabel } from "../lib/harnesses";
-import { cn, formatTokens } from "../lib/utils";
+import { GLOBAL_SCOPE, HARNESSES } from "../lib/harnesses";
+import { formatTokens } from "../lib/utils";
 import { useI18n } from "../hooks/useI18n";
 import { CustomDropdown } from "./CustomDropdown";
+import { StoreTabs } from "./StoreTabs";
 import { actionButtonClass, StatTile } from "./ui";
 
 /** Order control for the skill grid, sat with the other grid controls. */
@@ -54,11 +55,14 @@ interface SkillsToolbarProps {
   batchPending: boolean;
   onApplyAll: (enabled: boolean) => void;
   onImport: () => void;
+  /** Library | Official Store switch, sat with the other grid controls. */
+  showStore: boolean;
+  onShowStoreChange: (show: boolean) => void;
 }
 
 /**
- * Dashboard head for one scope: the three metric tiles, the scope identity and
- * the wrapping control cluster (sort, result count, bulk projections).
+ * Dashboard head for one scope: the three metric tiles and a single control
+ * row (Library | Store switch, sort, result count, bulk projections).
  *
  * Everything here is `flex-wrap` with `min-w-0` children: at the 900px minimum
  * window the control cluster drops to its own row instead of squeezing the
@@ -78,18 +82,13 @@ export function SkillsToolbar({
   batchPending,
   onApplyAll,
   onImport,
+  showStore,
+  onShowStoreChange,
 }: SkillsToolbarProps) {
   const { t } = useI18n();
   const isGlobal = scope === GLOBAL_SCOPE.id;
   const definition = isGlobal ? GLOBAL_SCOPE : HARNESSES.find((harness) => harness.id === scope);
   const label = definition?.label ?? "Global";
-  const ScopeIcon = definition?.icon ?? GLOBAL_SCOPE.icon;
-
-  const description = isGlobal
-    ? t.skills.universalBaselineDesc(HARNESSES.length)
-    : inheritedCount > 0
-      ? t.skills.inheritedDesc(inheritedCount, scopeLabel(scope))
-      : t.skills.isolatedDesc(scopeLabel(scope));
 
   return (
     <>
@@ -119,30 +118,8 @@ export function SkillsToolbar({
         />
       </section>
 
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className={cn(
-              "grid size-10 shrink-0 place-items-center rounded-xl border",
-              isGlobal
-                ? "accent-border accent-bg-soft accent-text"
-                : "border-white/[0.08] bg-white/[0.03] text-zinc-300",
-            )}
-          >
-            <ScopeIcon className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
-              {t.skills.scopeLabel}
-            </p>
-            <h2 className="text-base font-semibold tracking-tight text-zinc-100">
-              {t.skills.configuring(label)}
-            </h2>
-            <p className="mt-0.5 max-w-xl text-[11px] leading-relaxed text-zinc-500">
-              {description}
-            </p>
-          </div>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <StoreTabs showStore={showStore} onChange={onShowStoreChange} className="mb-0" />
 
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:flex-none">
           <SortSelect value={sortMode} onChange={onSortModeChange} />
