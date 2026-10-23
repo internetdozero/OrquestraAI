@@ -277,8 +277,8 @@ fn deploy_harness_bridge() -> Result<BridgeReport, String> {
 }
 
 pub use cli::{
-    apply_preset_json, bridge_status_json, deploy_bridge_json, deploy_mcp_json, mcp_status_json,
-    set_mcp_state_cli,
+    apply_preset_json, bridge_status_json, deploy_bridge_json, deploy_mcp_json,
+    dispatch_native_cli, mcp_status_json, set_mcp_state_cli, CliError,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

@@ -9,6 +9,20 @@ fn main() {
     // Headless operator entry points: the same bridge code the UI invokes,
     // usable from a terminal so fusion can be scripted or verified over SSH.
     let args: Vec<String> = std::env::args().collect();
+    if let Some(result) = orquestra_ai_lib::dispatch_native_cli(&args[1..]) {
+        match result {
+            Ok(output) => println!("{output}"),
+            Err(orquestra_ai_lib::CliError::Usage(error)) => {
+                crate::log_error!("{error}");
+                std::process::exit(2);
+            }
+            Err(orquestra_ai_lib::CliError::Operation(error)) => {
+                crate::log_error!("{error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     match args.get(1).map(String::as_str) {
         Some("--bridge-status") => {
             match orquestra_ai_lib::bridge_status_json() {
@@ -99,14 +113,20 @@ fn main() {
         Some("--help" | "-h") => {
             println!(
                 "OrquestraAI — universal AI harness control plane\n\n\
-                 Usage: orquestra [--bridge-status | --bridge-deploy | --mcp-status |\n                                   --mcp-deploy | --mcp-set <id> <scope> <on|off> |\n                                   --preset <id>]\n\n\
+                 Usage: orquestra [legacy flags] | ideas <add|list|status> |\n\
+                                   sessions <list|purge> | bridge status\n\n\
                  \x20 (no flag)        Launch the desktop control plane\n\
                  \x20 --bridge-status   Print harness link state as JSON\n\
                  \x20 --bridge-deploy   Back up and link every installed harness (JSON report)\n\
                  \x20 --mcp-status      Print the master MCP catalog as JSON\n\
                  \x20 --mcp-deploy      Compile active MCPs into every harness config (JSON report)\n\
                  \x20 --mcp-set         Toggle one server: --mcp-set <id> <global|harness> <on|off>\n\
-                 \x20 --preset          Apply a mission preset: --preset <id> (JSON report)"
+                 \x20 --preset          Apply a mission preset: --preset <id> (JSON report)\n\
+                 \x20 ideas add         ideas add --project <name> --title <text> [--json]\n\
+                 \x20 ideas list/status ideas list [--status all]; ideas status <id> <status>\n\
+                 \x20 sessions list     sessions list [--harness <id>] [--search <text>] [--json]\n\
+                 \x20 sessions purge   Dry run by default; --yes requires a filter\n\
+                 \x20 bridge status     Show bridge health; add --json to any new command"
             );
             return;
         }

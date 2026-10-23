@@ -2,6 +2,9 @@
 
 use crate::{bridge, mcp, presets};
 
+mod native;
+pub use native::{dispatch_native_cli, CliError};
+
 /// JSON snapshot of the bridge for the headless `--bridge-status` flag.
 pub fn bridge_status_json() -> Result<String, String> {
     serde_json::to_string_pretty(&bridge::get_bridge_status()?)

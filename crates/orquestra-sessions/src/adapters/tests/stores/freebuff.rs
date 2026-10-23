@@ -53,13 +53,15 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
     home.database(
         ".config/freebuff-desktop/projects/OrquestraAI-abc123/desktop-v2.db",
         "CREATE TABLE threads (id TEXT PRIMARY KEY, project_id TEXT, project_path TEXT,
-                                title TEXT, created_at INTEGER, updated_at INTEGER);
+                                title TEXT, created_at INTEGER, updated_at INTEGER,
+                                last_turn_finished_at INTEGER, last_prompt_at INTEGER);
          CREATE TABLE messages (seq INTEGER PRIMARY KEY AUTOINCREMENT, thread_id TEXT,
                                 role TEXT, parts_json TEXT DEFAULT '[]',
                                 attachments_json TEXT DEFAULT '[]', ts INTEGER);
          CREATE TABLE freebuff_conversation_search (text TEXT, thread_id TEXT);
          INSERT INTO threads VALUES ('11111111-2222-3333-4444-555555555555', 'abc123',
-           '/work/stale', 'Desktop native', 1792324543519, 1792324942904);
+           '/work/stale', 'Desktop native', 1792324543519, 1792324942904,
+           1792324595000, 1792324580000);
          INSERT INTO messages (thread_id, role, parts_json, attachments_json, ts) VALUES
            ('11111111-2222-3333-4444-555555555555', 'user', '[{\"kind\":\"text\"}]', '[]', 1792324544000),
            ('11111111-2222-3333-4444-555555555555', 'assistant', '[{\"kind\":\"text\"}]', '[]', 1792324600000);
@@ -94,8 +96,9 @@ fn freebuff_desktop_lists_threads_and_deletes_them() {
     // project.json wins over the stale row path.
     assert_eq!(desktop.project_path.as_deref(), Some("/work/orquestra"));
     assert_eq!(desktop.turns_count, 2);
-    // Epoch millis normalized to ISO 8601 UTC.
-    assert_eq!(desktop.updated_at, "2026-10-18T12:02:22Z");
+    // The latest message timestamp wins over prompt/turn and row-mutation
+    // timestamps (including sidebar archive/sync updates).
+    assert_eq!(desktop.updated_at, "2026-10-18T11:56:40Z");
     assert_eq!(desktop.created_at.as_deref(), Some("2026-10-18T11:55:43Z"));
     // Message payload bytes plus the thread folder plus the worktree's real
     // files; node_modules inside the worktree is pruned.

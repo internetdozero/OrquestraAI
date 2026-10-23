@@ -191,9 +191,7 @@ struct ThreadRow {
     message_bytes: u64,
 }
 
-/// One grouped query per database: the thread plus its message count and the
-/// bytes of its message payloads. Columns are discovered, not assumed, so a
-/// release that renames one still lists its threads.
+/// One grouped query per database; discovered columns keep schema variations compatible.
 fn query_threads(connection: &Connection, database: &Path) -> Result<Vec<ThreadRow>, String> {
     if !utils::table_exists(connection, "threads")? {
         return Ok(Vec::new());
@@ -236,23 +234,45 @@ fn query_threads(connection: &Connection, database: &Path) -> Result<Vec<ThreadR
         size_terms.join(" + ")
     };
 
-    // The join is conditional: a database without a `messages` table still
-    // lists its threads with zero turns rather than failing the project.
+    let mut activity_terms = Vec::new();
+    if joined {
+        if let Some(column) = ["ts", "timestamp"]
+            .into_iter()
+            .find(|column| message_columns.contains(&column.to_string()))
+        {
+            activity_terms.push(format!("MAX(m.{column})"));
+        }
+    }
+    for column in [
+        "last_turn_finished_at",
+        "last_prompt_at",
+        "created_at",
+        "updated_at",
+    ] {
+        if columns.contains(&column.to_string()) {
+            activity_terms.push(format!("t.{column}"));
+        }
+    }
+    let activity_expr = match activity_terms.as_slice() {
+        [] => "NULL".to_string(),
+        [only] => only.clone(),
+        _ => format!("COALESCE({})", activity_terms.join(", ")),
+    };
+
+    // Without a `messages` table, threads still list with zero turns.
     let join = if joined {
         "LEFT JOIN messages m ON m.thread_id = t.id"
     } else {
         ""
     };
-    // Positional `ORDER BY 5`: the alias is `NULL` when this release has no
-    // `updated_at`, and ordering by a missing identifier would fail.
+    // Activity column 5 drives both the displayed session time and ordering.
     let sql = format!(
-        "SELECT t.id, {}, {}, {}, {}, {count_expr}, {size_expr} \
+        "SELECT t.id, {}, {}, {}, {activity_expr}, {count_expr}, {size_expr} \
          FROM threads t {join} \
          GROUP BY t.id ORDER BY 5 DESC",
         pick("title"),
         pick("project_path"),
         pick("created_at"),
-        pick("updated_at"),
     );
 
     let mut statement = connection
