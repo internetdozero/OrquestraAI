@@ -1,5 +1,16 @@
-import { useEffect, useRef } from "react";
-import { FileText, History, Orbit, RefreshCw, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Copy,
+  FileText,
+  History,
+  Minus,
+  Orbit,
+  RefreshCw,
+  Search,
+  Square,
+  X,
+} from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useI18n } from "../hooks/useI18n";
 import type { ActiveView } from "../lib/views";
 import { cn } from "../lib/utils";
@@ -13,6 +24,8 @@ interface HeaderProps {
   refreshing: boolean;
   /** The platform view being shown; the skills view owns its harness scope. */
   mode?: ActiveView;
+  /** True inside the desktop shell: fuses frameless window controls into the header. */
+  isTauri: boolean;
 }
 
 export function Header({
@@ -23,10 +36,77 @@ export function Header({
   onRefresh,
   refreshing,
   mode = "skills",
+  isTauri,
 }: HeaderProps) {
   const { t } = useI18n();
   const searchRef = useRef<HTMLInputElement>(null);
   const showSearch = mode === "skills" || mode === "mcps";
+  const [maximized, setMaximized] = useState(false);
+
+  useEffect(() => {
+    if (!isTauri) return;
+    let active = true;
+    const sync = async () => {
+      try {
+        if (active) setMaximized(await getCurrentWindow().isMaximized());
+      } catch {
+        // Window API unavailable (permissions, tests): keep last state.
+      }
+    };
+    void sync();
+    const onChange = () => void sync();
+    window.addEventListener("focus", onChange);
+    window.addEventListener("resize", onChange);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onChange);
+      window.removeEventListener("resize", onChange);
+    };
+  }, [isTauri]);
+
+  const runWindow = (action: () => Promise<void>) => () => {
+    void action().catch(() => undefined);
+  };
+  const toggleMaximize = runWindow(async () => {
+    const win = getCurrentWindow();
+    await win.toggleMaximize();
+    setMaximized(await win.isMaximized());
+  });
+
+  const windowControl =
+    "grid size-9 shrink-0 place-items-center rounded-lg text-zinc-500 transition outline-none hover:bg-white/10 hover:text-zinc-200 focus-visible:bg-white/10 focus-visible:text-zinc-200 focus-visible:ring-2 focus-visible:ring-emerald-500/40";
+
+  const windowControls = isTauri ? (
+    <div className="flex shrink-0 items-center gap-0.5">
+      <button
+        type="button"
+        onClick={runWindow(() => getCurrentWindow().minimize())}
+        title={t.common.titlebar.minimize}
+        aria-label={t.common.titlebar.minimize}
+        className={windowControl}
+      >
+        <Minus className="size-4" />
+      </button>
+      <button
+        type="button"
+        onClick={toggleMaximize}
+        title={maximized ? t.common.titlebar.restore : t.common.titlebar.maximize}
+        aria-label={maximized ? t.common.titlebar.restore : t.common.titlebar.maximize}
+        className={windowControl}
+      >
+        {maximized ? <Copy className="size-3.5" /> : <Square className="size-3.5" />}
+      </button>
+      <button
+        type="button"
+        onClick={runWindow(() => getCurrentWindow().close())}
+        title={t.common.titlebar.closeWindow}
+        aria-label={t.common.titlebar.closeWindow}
+        className={cn(windowControl, "hover:bg-rose-500/80 hover:text-white")}
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  ) : null;
 
   useEffect(() => {
     if (!showSearch) return;
@@ -47,8 +127,12 @@ export function Header({
   return (
     <header className="relative z-20 shrink-0 border-b border-white/5 bg-[#0b0b0e]/85 backdrop-blur-xl">
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-4 sm:px-6">
-        {/* Brand */}
-        <div className="flex min-w-0 items-center gap-3">
+        {/* Brand (doubles as a drag handle in the desktop shell) */}
+        <div
+          className="flex min-w-0 items-center gap-3"
+          data-tauri-drag-region={isTauri || undefined}
+          onDoubleClick={isTauri ? toggleMaximize : undefined}
+        >
           <div className="accent-bg-soft accent-border relative grid size-9 shrink-0 place-items-center rounded-xl border">
             <div className="accent-bg-soft absolute inset-0 rounded-xl blur-md" />
             <Orbit className="accent-text relative size-[18px]" />
@@ -88,9 +172,13 @@ export function Header({
               </kbd>
             </div>
 
-            {/* Active skills badge + refresh */}
+            {/* Active skills badge + refresh + window controls */}
             <div className="flex shrink-0 items-center gap-2">
-              <div className="accent-bg-soft accent-border hidden items-center gap-2 rounded-lg border px-3 py-2 md:flex">
+              <div
+                className="accent-bg-soft accent-border hidden items-center gap-2 rounded-lg border px-3 py-2 md:flex"
+                data-tauri-drag-region={isTauri || undefined}
+                onDoubleClick={isTauri ? toggleMaximize : undefined}
+              >
                 <span className="relative flex size-2">
                   <span className="accent-dot relative inline-flex size-2 rounded-full" />
                 </span>
@@ -110,23 +198,41 @@ export function Header({
               >
                 <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
               </button>
+              {isTauri && (
+                <>
+                  <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />
+                  {windowControls}
+                </>
+              )}
             </div>
           </>
         ) : mode === "sessions" ? (
           <>
-            <div className="flex-1" />
+            <div data-tauri-drag-region={isTauri || undefined} className="flex-1 self-stretch" />
             <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
               <History className="size-3 text-emerald-400/80" />
               {t.sessions.title}
             </span>
+            {isTauri && (
+              <>
+                <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />
+                {windowControls}
+              </>
+            )}
           </>
         ) : (
           <>
-            <div className="flex-1" />
+            <div data-tauri-drag-region={isTauri || undefined} className="flex-1 self-stretch" />
             <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
               <FileText className="size-3 text-emerald-400/80" />
               {t.common.agentsChip}
             </span>
+            {isTauri && (
+              <>
+                <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />
+                {windowControls}
+              </>
+            )}
           </>
         )}
       </div>
