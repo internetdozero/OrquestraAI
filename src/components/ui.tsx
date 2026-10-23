@@ -1,5 +1,5 @@
 import { useCallback, type HTMLAttributes, type ReactNode } from "react";
-import { AlertTriangle, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Search, type LucideIcon } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import { cn } from "../lib/utils";
 
@@ -67,6 +67,42 @@ export function StatePanel({
         <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">{description}</p>
       </div>
       {children}
+    </div>
+  );
+}
+
+/**
+ * In-grid search field shared by the registry toolbars (skills, MCPs).
+ * Same look as the old window-bar search: icon left, Ctrl K hint right.
+ * Carries `data-view-search` so the global Ctrl/Cmd+K shortcut finds it.
+ */
+export function ToolbarSearchInput({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="relative mr-auto min-w-0 flex-1 basis-56 sm:max-w-xs">
+      <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        spellCheck={false}
+        data-view-search
+        className="h-9 w-full rounded-lg border border-white/10 bg-zinc-900/60 pr-14 pl-8 text-[12px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-emerald-500/10 [&::-webkit-search-cancel-button]:appearance-none"
+      />
+      <kbd className="pointer-events-none absolute top-1/2 right-1.5 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-white/10 bg-white/[0.04] px-1 font-mono text-[9px] text-zinc-500 sm:flex">
+        Ctrl&nbsp;K
+      </kbd>
     </div>
   );
 }

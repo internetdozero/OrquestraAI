@@ -221,6 +221,8 @@ export function McpView({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <StoreTabs showStore={showStore} onChange={setShowStore} className="mb-0" />
           <McpToolbar
+            query={query}
+            onQueryChange={(value) => onQueryChange?.(value)}
             scope={scope}
             scopeLabel={scopeLabel}
             visibleCount={visibleServers.length}

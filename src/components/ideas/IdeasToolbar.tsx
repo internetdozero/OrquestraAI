@@ -46,6 +46,7 @@ export function IdeasToolbar({
       <label className="relative min-w-44 flex-1 basis-52">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
         <input
+          data-view-search
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={s.searchPlaceholder}

@@ -47,6 +47,7 @@ export function SessionsToolbar({ filter, onChange, visibleCount }: SessionsTool
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
           <input
             type="search"
+            data-view-search
             value={filter.query}
             onChange={(e) => onChange({ ...filter, query: e.target.value })}
             placeholder={s.searchPlaceholder}

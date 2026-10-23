@@ -1,17 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { Orbit, RefreshCw, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Orbit, RefreshCw } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useI18n } from "../hooks/useI18n";
-import type { ActiveView } from "../lib/views";
 import { cn } from "../lib/utils";
 
 interface HeaderProps {
-  query: string;
-  onQueryChange: (value: string) => void;
   onRefresh: () => void;
   refreshing: boolean;
-  /** The platform view being shown; the skills view owns its harness scope. */
-  mode?: ActiveView;
   /** True inside the desktop shell: fuses frameless window controls into the header. */
   isTauri: boolean;
 }
@@ -82,17 +77,8 @@ function CloseGlyph({ className }: { className?: string }) {
   );
 }
 
-export function Header({
-  query,
-  onQueryChange,
-  onRefresh,
-  refreshing,
-  mode = "skills",
-  isTauri,
-}: HeaderProps) {
+export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
   const { t } = useI18n();
-  const searchRef = useRef<HTMLInputElement>(null);
-  const showSearch = mode === "skills" || mode === "mcps";
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
@@ -173,22 +159,6 @@ export function Header({
     </div>
   ) : null;
 
-  useEffect(() => {
-    if (!showSearch) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      const isShortcut = (event.metaKey || event.ctrlKey) && event.key === "k";
-      if (!isShortcut) return;
-
-      event.preventDefault();
-      searchRef.current?.focus();
-      searchRef.current?.select();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSearch]);
-
   return (
     <header
       className="relative z-20 shrink-0 border-b border-white/5 bg-[#0b0b0e]/85 backdrop-blur-xl"
@@ -219,53 +189,17 @@ export function Header({
           </div>
         </div>
 
-        {showSearch ? (
-          <>
-            {/* Search: pinned to the true window center, clear of both flanks. */}
-            <div className="absolute top-1/2 left-1/2 w-[min(28rem,calc(100%-36rem))] -translate-x-1/2 -translate-y-1/2">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
-              <input
-                ref={searchRef}
-                type="search"
-                value={query}
-                onChange={(event) => onQueryChange(event.target.value)}
-                placeholder={
-                  mode === "mcps" ? t.common.searchPlaceholderMcps : t.common.searchPlaceholder
-                }
-                aria-label={
-                  mode === "mcps" ? t.common.searchAriaLabelMcps : t.common.searchAriaLabel
-                }
-                spellCheck={false}
-                className="h-8 w-full rounded-lg border border-white/10 bg-zinc-900/60 pr-14 pl-8 text-[13px] leading-8 text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-emerald-500/10 [&::-webkit-search-cancel-button]:appearance-none"
-              />
-              <kbd className="pointer-events-none absolute top-1/2 right-1.5 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-white/10 bg-white/[0.04] px-1 font-mono text-[9px] text-zinc-500 sm:flex">
-                Ctrl&nbsp;K
-              </kbd>
-            </div>            {/* Refresh + window controls */}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {refreshButton}
-              {isTauri && (
-                <>
-                  <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
-                  {windowControls}
-                </>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex-1 self-stretch" />
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {refreshButton}
-              {isTauri && (
-                <>
-                  <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
-                  {windowControls}
-                </>
-              )}
-            </div>
-          </>
-        )}
+        <div className="flex-1 self-stretch" />
+        {/* Refresh + window controls */}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {refreshButton}
+          {isTauri && (
+            <>
+              <span aria-hidden className="mx-0.5 h-4 w-px bg-white/10" />
+              {windowControls}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="hairline-gradient h-px w-full opacity-60" />

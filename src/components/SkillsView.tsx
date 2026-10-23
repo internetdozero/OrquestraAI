@@ -265,6 +265,8 @@ export function SkillsView({
         onImport={() => setImportOpen(true)}
         showStore={showStore}
         onShowStoreChange={setShowStore}
+        query={query}
+        onQueryChange={onQueryChange}
       />
 
       {banner && hasSkills && (

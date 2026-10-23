@@ -14,7 +14,7 @@ import { formatTokens } from "../lib/utils";
 import { useI18n } from "../hooks/useI18n";
 import { CustomDropdown } from "./CustomDropdown";
 import { StoreTabs } from "./StoreTabs";
-import { actionButtonClass, StatTile } from "./ui";
+import { actionButtonClass, StatTile, ToolbarSearchInput } from "./ui";
 
 /** Order control for the skill grid, sat with the other grid controls. */
 function SortSelect({ value, onChange }: { value: SortMode; onChange: (mode: SortMode) => void }) {
@@ -58,6 +58,9 @@ interface SkillsToolbarProps {
   /** Library | Official Store switch, sat with the other grid controls. */
   showStore: boolean;
   onShowStoreChange: (show: boolean) => void;
+  /** Live search text owned by the parent view. */
+  query: string;
+  onQueryChange: (query: string) => void;
 }
 
 /**
@@ -84,6 +87,8 @@ export function SkillsToolbar({
   onImport,
   showStore,
   onShowStoreChange,
+  query,
+  onQueryChange,
 }: SkillsToolbarProps) {
   const { t } = useI18n();
   const isGlobal = scope === GLOBAL_SCOPE.id;
@@ -122,6 +127,12 @@ export function SkillsToolbar({
         <StoreTabs showStore={showStore} onChange={onShowStoreChange} className="mb-0" />
 
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:flex-none">
+          <ToolbarSearchInput
+            value={query}
+            onChange={onQueryChange}
+            placeholder={t.common.searchPlaceholder}
+            ariaLabel={t.common.searchAriaLabel}
+          />
           <SortSelect value={sortMode} onChange={onSortModeChange} />
           <span className="font-mono text-[10.5px] whitespace-nowrap text-zinc-500">
             {t.skills.shownCount(visibleCount)}

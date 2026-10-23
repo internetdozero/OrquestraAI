@@ -244,6 +244,20 @@ export default function App() {
     clearError();
   };
 
+  // Global search shortcut: focuses the visible view's search field.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+      const target = document.querySelector<HTMLInputElement>("[data-view-search]");
+      if (!target) return;
+      event.preventDefault();
+      target.focus();
+      target.select();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   if (!essentialsReady) return <BootScreen />;
 
   return (
@@ -256,9 +270,6 @@ export default function App() {
 
       <Header
         isTauri={isTauri}
-        mode={view}
-        query={query}
-        onQueryChange={setQuery}
         onRefresh={() => {
           // Every view reloads through the shared token; skills additionally
           // refreshes harness counters with a toast.
