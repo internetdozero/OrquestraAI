@@ -16,11 +16,11 @@ jobs:
     steps:
       # Check out the repository.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Set up Node.js (needed for npm ci; debug cargo test does not embed UI).
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -80,11 +80,11 @@ jobs:
     steps:
       # Check out the repository.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Tauri's build script resolves the frontend, as in the Linux job.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -118,11 +118,11 @@ jobs:
     steps:
       # Check out the repository.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Tauri's build script resolves the frontend, as in the Linux job.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -154,11 +154,11 @@ jobs:
     steps:
       # Check out the repository.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Set up Node.js with npm caching.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
