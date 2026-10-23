@@ -262,10 +262,13 @@ export default function App() {
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-[#09090b] text-zinc-100">
-      {/* Ambient background wash */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 size-[32rem] rounded-full bg-emerald-500/[0.06] blur-[120px]" />
-        <div className="absolute top-1/3 -right-32 size-[26rem] rounded-full bg-cyan-500/[0.05] blur-[120px]" />
+      {/* Ambient background wash. Static radial gradients on purpose: the
+          previous blur-[120px] wash forced a full-window repaint on every
+          resize frame, and on a transparent WebKitGTK surface that lags as a
+          white/translucent band during maximize. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/4 size-[32rem] rounded-full bg-[radial-gradient(closest-side,rgb(16_185_129/0.07),transparent)]" />
+        <div className="absolute top-1/3 -right-32 size-[26rem] rounded-full bg-[radial-gradient(closest-side,rgb(6_182_214/0.06),transparent)]" />
       </div>
 
       <Header

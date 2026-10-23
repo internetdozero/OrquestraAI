@@ -210,15 +210,11 @@ export function useVirtualRows({
     let frame = 0;
     const onFrame = () => {
       frame = 0;
-      updateRef.current();
-    };
-    const schedule = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(onFrame);
-    };
-    // Resize can move the grid across a breakpoint (or grid-vs-list): recheck
-    // the column count there, never on the scroll path.
-    const onResize = () => {
+      // Resize can move the grid across a breakpoint (or grid-vs-list):
+      // recheck the column count here, never on the scroll path, and never
+      // synchronously inside the ResizeObserver callback (which runs before
+      // paint — forcing style/layout there stalls the compositor mid-resize
+      // and shows as a white band on transparent surfaces).
       const current = gridRef.current;
       if (current) {
         const measured = readColumns(current);
@@ -230,19 +226,26 @@ export function useVirtualRows({
       }
       updateRef.current();
     };
+    const schedule = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(onFrame);
+    };
+    // Both scroll and resize coalesce into one frame: during a maximize
+    // animation the observer fires every frame, and only the latest geometry
+    // matters.
 
     const parent = getParent();
     parent?.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", onResize);
+    window.addEventListener("resize", schedule);
     let observer: ResizeObserver | null = null;
     if (parent) {
-      observer = new ResizeObserver(onResize);
+      observer = new ResizeObserver(schedule);
       observer.observe(parent);
     }
 
     return () => {
       parent?.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", schedule);
       observer?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };

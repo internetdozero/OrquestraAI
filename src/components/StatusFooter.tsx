@@ -49,8 +49,11 @@ export function StatusFooter({
 
   const tone = !isTauri || bridgeStatuses.length === 0 ? "zinc" : connected ? "emerald" : "amber";
 
+  // Solid background on purpose: backdrop-blur over a resizing transparent
+  // surface flickers white during maximize, and the footer sits on the app's
+  // own canvas so the blur sampled nothing behind it anyway.
   return (
-    <footer className="relative z-20 shrink-0 border-t border-white/5 bg-[#0b0b0e]/85 px-4 py-2.5 backdrop-blur-xl sm:px-6">
+    <footer className="relative z-20 shrink-0 border-t border-white/5 bg-[#0b0b0e] px-4 py-2.5 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[11px] text-zinc-500">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
