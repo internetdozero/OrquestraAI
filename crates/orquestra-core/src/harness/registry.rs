@@ -101,7 +101,11 @@ pub const HARNESSES: &[HarnessSpec] = &[
         ],
         instructions_rel: Some(".config/manicode/AGENTS.md"),
         config_rel: None,
-        mcp: None,
+        mcp: Some(McpSpec {
+            rel: ".agents/mcp.json",
+            format: McpFormat::JsonMcpServers,
+            entry_type: None,
+        }),
         secondary: &[],
         note: Some("Manicode and ~/.agents/skills share the Freebuff projection"),
     },
