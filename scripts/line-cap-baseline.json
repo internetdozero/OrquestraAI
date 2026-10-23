@@ -4,6 +4,5 @@
   "crates/orquestra-vault/src/vault/tests.rs": 1283,
   "src-tauri/src/mcp/catalog.rs": 416,
   "src-tauri/src/mcp/tests/tests/deploy_cases.rs": 436,
-  "src-tauri/src/official.rs": 415,
   "src-tauri/src/updater.rs": 524
 }
