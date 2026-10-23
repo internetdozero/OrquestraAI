@@ -23,7 +23,8 @@ pub(super) fn run(args: &[String]) -> Result<String, CliError> {
 }
 
 fn paths() -> Result<orquestra_core::paths::OrquestraPaths, CliError> {
-    orquestra_core::paths::OrquestraPaths::resolve().map_err(|error| CliError::Operation(error.to_string()))
+    orquestra_core::paths::OrquestraPaths::resolve()
+        .map_err(|error| CliError::Operation(error.to_string()))
 }
 
 /// Masked services only: ids, labels, kill-switch, health, key counts.
@@ -37,7 +38,11 @@ fn list(args: &[String]) -> Result<String, CliError> {
         services
             .iter()
             .map(|service| {
-                let state = if service.enabled { "enabled" } else { "disabled" };
+                let state = if service.enabled {
+                    "enabled"
+                } else {
+                    "disabled"
+                };
                 format!(
                     "{} ({}): {state}, {}, {} keys",
                     service.id, service.label, service.health, service.total_keys
@@ -67,13 +72,16 @@ fn set_enabled(args: &[String]) -> Result<String, CliError> {
         "off" | "false" | "disable" => false,
         other => return Err(usage(format!("expected on|off, got {other}"))),
     };
-    let service =
-        orquestra_vault::vault::service::set_service_enabled(&paths()?, id, enabled)
-            .map_err(CliError::Operation)?;
+    let service = orquestra_vault::vault::service::set_service_enabled(&paths()?, id, enabled)
+        .map_err(CliError::Operation)?;
     let human = format!(
         "Service {} {}.",
         service.label,
-        if service.enabled { "enabled" } else { "disabled" }
+        if service.enabled {
+            "enabled"
+        } else {
+            "disabled"
+        }
     );
     rendered(&service, as_json, human)
 }
@@ -119,14 +127,18 @@ fn exec(args: &[String]) -> Result<String, CliError> {
     // generated callsites can separate flags from the child command.
     let mut parts: Vec<&str> = args.iter().map(String::as_str).collect();
     let Some(service) = parts.first().copied() else {
-        return Err(usage("usage: orquestra vault exec <service> [--] <argv…>".to_string()));
+        return Err(usage(
+            "usage: orquestra vault exec <service> [--] <argv…>".to_string(),
+        ));
     };
     parts.remove(0);
     if parts.first() == Some(&"--") {
         parts.remove(0);
     }
     if service.starts_with('-') || parts.is_empty() {
-        return Err(usage("usage: orquestra vault exec <service> [--] <argv…>".to_string()));
+        return Err(usage(
+            "usage: orquestra vault exec <service> [--] <argv…>".to_string(),
+        ));
     }
     let command =
         serde_json::to_value(&parts).map_err(|error| CliError::Operation(error.to_string()))?;
