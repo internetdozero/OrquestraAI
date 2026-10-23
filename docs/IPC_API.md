@@ -196,6 +196,20 @@ calls refuse them, so agents only ever reach enabled services.
 serves `--mcp-status` health probes used by `scripts/check-card-motion.mjs`.
 `--help`/`-h` prints usage.
 
+Native subcommands (`src-tauri/src/cli/native/`, no window) follow the same
+backend: `ideas`, `sessions`, `bridge status` and `vault`. The vault one
+exists so the `orquestra-core` MCP server never reads `vault.json` off disk
+(sealed since alpha.5) — it delegates instead:
+
+`vault list [--json]` → masked `VaultServicePublic[]` (ids, labels,
+`enabled`, health, key counts; never secrets) ·
+`vault set-enabled <id> <on|off> [--json]` → flips the kill-switch; disabled
+services stay listed but the blind calls refuse them ·
+`vault http --service <id> --endpoint <url> [--method …] [--headers …] [--body …] [--key-tag …]` →
+scrubbed `VaultHttpResult` JSON ·
+`vault exec <service> [--] <argv…>` → scrubbed `VaultExecResult` JSON.
+`http`/`exec` refuse disabled services exactly like the IPC blind calls.
+
 ## Worked examples
 
 Wire keys are `snake_case` (Tauri deserializes them into the Rust parameter

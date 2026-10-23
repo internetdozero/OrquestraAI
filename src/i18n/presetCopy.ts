@@ -1,7 +1,9 @@
 import type { Preset } from "../lib/presets";
 import type { TranslationSchema } from "./locales/pt";
 
-const BUILTIN_IDS = ["stealth", "rust-dev", "web-fullstack", "full-power"] as const;
+// Factory profiles shipped by the Rust core; today that is only full-power.
+// Extra ids here would promise presets the backend never emits.
+const BUILTIN_IDS = ["full-power"] as const;
 
 type BuiltinId = (typeof BUILTIN_IDS)[number];
 
@@ -18,9 +20,6 @@ export function presentPreset(
     const defaultCopy = t.presets.builtins[preset.id];
     // Check if user has overridden the name or description away from factory English defaults
     const originalNames: Record<BuiltinId, string> = {
-      stealth: "Stealth",
-      "rust-dev": "Rust Dev",
-      "web-fullstack": "Web Fullstack",
       "full-power": "Full Power",
     };
     const isCustomName = preset.name !== originalNames[preset.id];

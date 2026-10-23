@@ -49,21 +49,6 @@ export const presets: TranslationSchema["presets"] = {
   warnDeploy: (detail: string) => `MCP deploy incomplete: ${detail}`,
   warnBridge: (detail: string) => `harness bridge not refreshed: ${detail}`,
   builtins: {
-    stealth: {
-      name: "Stealth",
-      description:
-        "Zero-bloat profile: one lightweight skill plus the core MCPs, so a rate-limited model keeps its whole context window.",
-    },
-    "rust-dev": {
-      name: "Rust Dev",
-      description:
-        "Systems and low-level work: repository, module and knowledge servers without the frontend or design tooling.",
-    },
-    "web-fullstack": {
-      name: "Web Fullstack",
-      description:
-        "Frontend and cloud work: UI generation, browser automation, design assets and the deployment edge.",
-    },
     "full-power": {
       name: "Full Power",
       description:

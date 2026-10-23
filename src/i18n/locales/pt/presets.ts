@@ -46,21 +46,6 @@ export const presets = {
   warnDeploy: (detail: string) => `implantação MCP incompleta: ${detail}`,
   warnBridge: (detail: string) => `ponte de harnesses não atualizada: ${detail}`,
   builtins: {
-    stealth: {
-      name: "Furtivo",
-      description:
-        "Perfil sem excesso: uma skill leve mais os MCPs essenciais, para um modelo com limite de taxa manter a janela de contexto.",
-    },
-    "rust-dev": {
-      name: "Dev Rust",
-      description:
-        "Trabalho de sistemas e baixo nível: servidores de repositório, módulo e conhecimento, sem as ferramentas de frontend ou design.",
-    },
-    "web-fullstack": {
-      name: "Web fullstack",
-      description:
-        "Trabalho de frontend e nuvem: geração de UI, automação de navegador, assets de design e a borda de deploy.",
-    },
     "full-power": {
       name: "Potência total",
       description:

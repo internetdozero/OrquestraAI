@@ -138,6 +138,7 @@ fn main() {
                  \x20 ideas list/status ideas list [--status all]; ideas status <id> <status>\n\
                  \x20 sessions list     sessions list [--harness <id>] [--search <text>] [--json]\n\
                  \x20 sessions purge   Dry run by default; --yes requires a filter\n\
+                 \x20 vault            Blind vault for scripts: vault <list|set-enabled|http|exec>\n\
                  \x20 bridge status     Show bridge health; add --json to any new command"
             );
             return;

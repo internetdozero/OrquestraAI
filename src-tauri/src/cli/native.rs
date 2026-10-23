@@ -7,6 +7,7 @@ use serde::Serialize;
 mod bridge;
 mod ideas;
 mod sessions;
+mod vault;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CliError {
@@ -21,6 +22,7 @@ pub fn dispatch_native_cli(args: &[String]) -> Option<Result<String, CliError>> 
         Some("ideas") => Some(ideas::run(&args[1..])),
         Some("sessions") => Some(sessions::run(&args[1..])),
         Some("bridge") => Some(bridge::run(&args[1..])),
+        Some("vault") => Some(vault::run(&args[1..])),
         _ => None,
     }
 }
