@@ -12,7 +12,7 @@ export function KindPill({ kind }: { kind: string }) {
   return (
     <span
       className={cn(
-        "rounded border px-1.5 py-px font-mono text-[9.5px] font-medium tracking-wide uppercase",
+        "shrink-0 rounded border px-1.5 py-px font-mono text-[9.5px] font-medium tracking-wide uppercase",
         kind === "npx"
           ? "border-cyan-500/25 bg-cyan-500/10 text-cyan-300/90"
           : kind === "python"
@@ -151,26 +151,30 @@ export const McpCard = memo(function McpCard({
           >
             {server.name}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {/* Single line, never wraps: same virtualization-jump rationale as
+              SkillCard — a wrapped meta row changes the card height per row. */}
+          <div className="mt-1 flex min-w-0 flex-nowrap items-center gap-x-2 overflow-hidden">
             <KindPill kind={kind} />
             {server.official === true && <OfficialBadge />}
             {locked ? (
-              <span className="accent-text text-[9.5px] font-medium opacity-90">
+              <span className="accent-text min-w-0 truncate text-[9.5px] font-medium opacity-90">
                 {t.skills.inheritedFromGlobal}
               </span>
             ) : active ? (
-              <span className="accent-text flex items-center gap-1 text-[10px] font-medium">
-                <span className="accent-dot size-1 rounded-full" />
-                {t.skills.activePill}
+              <span className="accent-text flex min-w-0 items-center gap-1 truncate text-[10px] font-medium">
+                <span className="accent-dot size-1 shrink-0 rounded-full" />
+                <span className="truncate">{t.skills.activePill}</span>
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] text-zinc-600">
-                <span className="size-1 rounded-full bg-zinc-600" />
-                {t.mcps.inactive}
+              <span className="flex min-w-0 items-center gap-1 truncate text-[10px] text-zinc-600">
+                <span className="size-1 shrink-0 rounded-full bg-zinc-600" />
+                <span className="truncate">{t.mcps.inactive}</span>
               </span>
             )}
             {anyActive && !active && (
-              <span className="font-mono text-[9.5px] text-zinc-600">{t.mcps.onElsewhere}</span>
+              <span className="min-w-0 shrink-0 truncate font-mono text-[9.5px] text-zinc-600">
+                {t.mcps.onElsewhere}
+              </span>
             )}
           </div>
         </div>
