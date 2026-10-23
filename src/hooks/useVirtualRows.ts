@@ -128,7 +128,7 @@ export function useVirtualRows({
   // no column reads here, so scroll/resize frames stay off the layout path
   // except for the two rects the position math needs.
   const updateWindow = useCallback(() => {
-    const rowTotal = rowsFor(itemCount, columnsRef.current);
+    const rowTotal = rowsFor(itemCount, columns);
     if (!virtual) {
       const full = { start: 0, end: rowTotal, topSpace: 0, bottomSpace: 0 };
       setWin((previous) => (sameWindow(previous, full) ? previous : full));
