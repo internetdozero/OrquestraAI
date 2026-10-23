@@ -113,6 +113,7 @@ fn official_skill(
     category: &str,
     repo_url: Option<&str>,
     tag_list: &[&str],
+    has_scripts: bool,
     legacy_id: Option<&str>,
     fallback_repo_url: Option<&str>,
 ) -> OfficialSkillEntry {
@@ -125,7 +126,7 @@ fn official_skill(
         official: true,
         tier: "official".to_string(),
         tags: tags(tag_list),
-        has_scripts: false,
+        has_scripts,
         legacy_id: legacy_id.map(str::to_string),
         fallback_repo_url: fallback_repo_url.map(str::to_string),
     }
@@ -171,8 +172,9 @@ pub fn official_store() -> OfficialStore {
             "AI & Agents",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra"),
             &["agents", "orchestration"],
+            true,
             None,
-            Some("https://github.com/internetdozero/orquestra.git"),
+            None,
         ),
         official_skill(
             "orquestra-modular-start",
@@ -180,8 +182,9 @@ pub fn official_store() -> OfficialStore {
             "Infra",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-modular-start"),
             &["scaffold", "infra"],
+            true,
             Some("modular-start"),
-            Some("https://github.com/internetdozero/modular-start.git"),
+            None,
         ),
         official_skill(
             "orquestra-agent-orchestrator",
@@ -189,8 +192,9 @@ pub fn official_store() -> OfficialStore {
             "AI & Agents",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-agent-orchestrator"),
             &["agents", "fleet"],
+            true,
             Some("agent-orchestrator"),
-            Some("https://github.com/internetdozero/agent-orchestrator.git"),
+            None,
         ),
         official_skill(
             "orquestra-smart-build-router",
@@ -198,7 +202,8 @@ pub fn official_store() -> OfficialStore {
             "AI & Agents",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-smart-build-router"),
             &["agents", "routing"],
-            None,
+            false,
+            Some("smart-build-router"),
             None,
         ),
         official_skill(
@@ -207,6 +212,7 @@ pub fn official_store() -> OfficialStore {
             "AI & Agents",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-autonomous-audit"),
             &["audit", "security", "testing", "autonomous"],
+            false,
             Some("autonomous-audit"),
             None,
         ),
@@ -216,8 +222,9 @@ pub fn official_store() -> OfficialStore {
             "Frontend",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/lean-screen"),
             &["frontend", "ui", "layout"],
+            false,
             None,
-            Some("https://github.com/internetdozero/lean-screen.git"),
+            None,
         ),
         official_skill(
             "ux-best-practices",
@@ -225,8 +232,9 @@ pub fn official_store() -> OfficialStore {
             "Frontend",
             Some("https://github.com/internetdozero/orquestra-extensions.git#skills/ux-best-practices"),
             &["frontend", "ux", "accessibility"],
+            false,
             None,
-            Some("https://github.com/internetdozero/ux-best-practices.git"),
+            None,
         ),
     ];
     skills.extend(crate::community::community_skills());
@@ -409,6 +417,46 @@ mod tests {
                         "unverified remote for {kind} {id}: {url}"
                     );
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn official_skills_have_expected_scripts_and_legacy_ids() {
+        let store = official_store();
+        for skill in store.skills.iter().filter(|s| s.official) {
+            match skill.id.as_str() {
+                "orquestra" => {
+                    assert!(skill.has_scripts);
+                    assert_eq!(skill.legacy_id, None);
+                    assert_eq!(skill.fallback_repo_url, None);
+                }
+                "orquestra-modular-start" => {
+                    assert!(skill.has_scripts);
+                    assert_eq!(skill.legacy_id.as_deref(), Some("modular-start"));
+                    assert_eq!(skill.fallback_repo_url, None);
+                }
+                "orquestra-agent-orchestrator" => {
+                    assert!(skill.has_scripts);
+                    assert_eq!(skill.legacy_id.as_deref(), Some("agent-orchestrator"));
+                    assert_eq!(skill.fallback_repo_url, None);
+                }
+                "orquestra-smart-build-router" => {
+                    assert!(!skill.has_scripts);
+                    assert_eq!(skill.legacy_id.as_deref(), Some("smart-build-router"));
+                    assert_eq!(skill.fallback_repo_url, None);
+                }
+                "orquestra-autonomous-audit" => {
+                    assert!(!skill.has_scripts);
+                    assert_eq!(skill.legacy_id.as_deref(), Some("autonomous-audit"));
+                    assert_eq!(skill.fallback_repo_url, None);
+                }
+                "lean-screen" | "ux-best-practices" => {
+                    assert!(!skill.has_scripts);
+                    assert_eq!(skill.legacy_id, None);
+                    assert_eq!(skill.fallback_repo_url, None);
+                }
+                _ => {}
             }
         }
     }
