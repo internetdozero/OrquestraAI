@@ -6,7 +6,7 @@ export function useJanitor(options: {
   isTauri: boolean;
   /** Gates the sweep-completion toast; errors always surface. */
   notifyOnPurge: boolean;
-  /** Polls only while true (e.g. the Janitor modal is open). Defaults to false. */
+  /** Polls fast while true (e.g. the Janitor modal is open); otherwise a relaxed background heartbeat keeps the footer fresh. Defaults to false. */
   active?: boolean;
   onToast: (message: string) => void;
   onError: (message: string) => void;
@@ -31,12 +31,18 @@ export function useJanitor(options: {
   }, [isTauri, onError, t]);
 
   useEffect(() => {
-    if (!isTauri || !active) return;
+    if (!isTauri) return;
+    // Populate immediately so the footer chip never sits on `—`.
     void refresh();
-    const timer = window.setInterval(() => {
-      if (document.hidden) return;
-      void refresh();
-    }, 5_000);
+    // Fast polling while the operator watches, relaxed heartbeat otherwise.
+    // Hidden tabs stay silent to preserve system resources.
+    const timer = window.setInterval(
+      () => {
+        if (document.hidden) return;
+        void refresh();
+      },
+      active ? 5_000 : 30_000,
+    );
     return () => window.clearInterval(timer);
   }, [isTauri, active, refresh]);
 
