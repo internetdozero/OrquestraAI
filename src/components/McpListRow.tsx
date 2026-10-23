@@ -49,7 +49,10 @@ export const McpListRow = memo(function McpListRow({
         <Plug className="size-4" />
       </span>
       <div className="w-44 min-w-0 shrink-0">
-        <h3 className="truncate font-mono text-[13px] font-medium text-zinc-100" title={server.name}>
+        <h3
+          className="truncate font-mono text-[13px] font-medium text-zinc-100"
+          title={server.name}
+        >
           {server.name}
         </h3>
         <div className="mt-0.5 flex items-center gap-1.5">

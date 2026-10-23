@@ -34,7 +34,12 @@ interface CredentialsViewProps {
   reloadToken?: number;
 }
 
-export function CredentialsView({ isTauri, onToast, onError, reloadToken = 0 }: CredentialsViewProps) {
+export function CredentialsView({
+  isTauri,
+  onToast,
+  onError,
+  reloadToken = 0,
+}: CredentialsViewProps) {
   const [services, setServices] = useState<VaultService[]>([]);
   const [presets, setPresets] = useState<VaultPreset[]>([]);
   const [loading, setLoading] = useState(true);

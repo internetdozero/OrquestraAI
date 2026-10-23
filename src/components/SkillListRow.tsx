@@ -91,7 +91,11 @@ export const SkillListRow = memo(function SkillListRow({
           aria-label={`${t.skills.deleteSkill}: ${skill.name}`}
           className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
         >
-          {deleteBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+          {deleteBusy ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Trash2 className="size-3.5" />
+          )}
         </button>
         <button
           type="button"

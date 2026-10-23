@@ -119,8 +119,9 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
     <button
       type="button"
       onClick={onRefresh}
-      disabled={refreshing}            title={t.common.reloadView}
-            aria-label={t.common.reloadView}
+      disabled={refreshing}
+      title={t.common.reloadView}
+      aria-label={t.common.reloadView}
       className="grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200 disabled:cursor-wait disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"
     >
       <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
@@ -135,9 +136,10 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
         type="button"
         onClick={runWindow(() => getCurrentWindow().minimize())}
         title={t.common.titlebar.minimize}
-        aria-label={t.common.titlebar.minimize}                      className={windowControl}
-                    >
-                      <MinimizeGlyph className={glyph} />
+        aria-label={t.common.titlebar.minimize}
+        className={windowControl}
+      >
+        <MinimizeGlyph className={glyph} />
       </button>
       <button
         type="button"
@@ -152,9 +154,10 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
         type="button"
         onClick={runWindow(() => getCurrentWindow().close())}
         title={t.common.titlebar.closeWindow}
-        aria-label={t.common.titlebar.closeWindow}                      className={cn(windowControl, "hover:bg-rose-500/80 hover:text-white")}
-                    >
-                      <CloseGlyph className={glyph} />
+        aria-label={t.common.titlebar.closeWindow}
+        className={cn(windowControl, "hover:bg-rose-500/80 hover:text-white")}
+      >
+        <CloseGlyph className={glyph} />
       </button>
     </div>
   ) : null;
@@ -166,7 +169,9 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
         if (!isTauri || event.button !== 0) return;
         const target = event.target as HTMLElement | null;
         if (target?.closest("button, input, a, select, textarea")) return;
-        void getCurrentWindow().startDragging().catch(() => undefined);
+        void getCurrentWindow()
+          .startDragging()
+          .catch(() => undefined);
       }}
     >
       <div className="flex h-11 items-center gap-3 pl-4 pr-2 sm:gap-4 sm:pl-6 sm:pr-2">

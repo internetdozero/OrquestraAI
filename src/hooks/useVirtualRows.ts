@@ -175,10 +175,7 @@ export function useVirtualRows({
         continue;
       }
       const rowIndex = startRow + Math.floor(cardIndex / measuredColumns);
-      rowMaxHeights.set(
-        rowIndex,
-        mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight),
-      );
+      rowMaxHeights.set(rowIndex, mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight));
       cardIndex += 1;
     }
     let changed = false;

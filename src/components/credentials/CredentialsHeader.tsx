@@ -1,11 +1,4 @@
-import {
-  AlertTriangle,
-  KeyRound,
-  Layers,
-  Plus,
-  ShieldCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { AlertTriangle, KeyRound, Layers, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { CustomDropdown } from "../CustomDropdown.tsx";
