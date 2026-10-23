@@ -7,6 +7,9 @@ import { VirtualCardGrid } from "./VirtualCardGrid";
 /** Shared card grid: one column until there is room for two or three. */
 export const SKILL_GRID_CLASS = "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3";
 
+/** Shared list stack: compact rows, one per line. */
+export const SKILL_LIST_CLASS = "flex flex-col gap-2";
+
 const skillKey = (skill: SkillItem) => skill.id;
 
 /** Section heading that separates the active block from the idle tail. */
@@ -40,6 +43,11 @@ function GridGroupLabel({
 
 interface SkillGridProps {
   renderCard: (skill: SkillItem) => ReactNode;
+  /** Compact row used when `view` is `"list"`. */
+  renderRow: (skill: SkillItem) => ReactNode;
+  /** Grid and list render through the same mounted grids: switching views
+   *  only swaps props, so the virtualization window (and scroll) survives. */
+  view: "grid" | "list";
   /** Card to reveal and flash after it crossed between the groups. */
   focusKey?: string | null;
 }
@@ -53,12 +61,16 @@ export function GroupedSkillGrid({
   activeSkills,
   idleSkills,
   renderCard,
+  renderRow,
+  view,
   focusKey = null,
 }: SkillGridProps & {
   activeSkills: SkillItem[];
   idleSkills: SkillItem[];
 }) {
   const { t } = useI18n();
+  const renderItem = view === "list" ? renderRow : renderCard;
+  const className = view === "list" ? SKILL_LIST_CLASS : SKILL_GRID_CLASS;
 
   return (
     <div className="space-y-5">
@@ -68,8 +80,8 @@ export function GroupedSkillGrid({
           <VirtualCardGrid
             items={activeSkills}
             keyOf={skillKey}
-            renderItem={renderCard}
-            className={SKILL_GRID_CLASS}
+            renderItem={renderItem}
+            className={className}
             focusKey={focusKey}
           />
         </section>
@@ -85,8 +97,8 @@ export function GroupedSkillGrid({
           <VirtualCardGrid
             items={idleSkills}
             keyOf={skillKey}
-            renderItem={renderCard}
-            className={SKILL_GRID_CLASS}
+            renderItem={renderItem}
+            className={className}
             focusKey={focusKey}
           />
         </section>
@@ -99,14 +111,16 @@ export function GroupedSkillGrid({
 export function FlatSkillGrid({
   skills,
   renderCard,
+  renderRow,
+  view,
   focusKey = null,
 }: SkillGridProps & { skills: SkillItem[] }) {
   return (
     <VirtualCardGrid
       items={skills}
       keyOf={skillKey}
-      renderItem={renderCard}
-      className={SKILL_GRID_CLASS}
+      renderItem={view === "list" ? renderRow : renderCard}
+      className={view === "list" ? SKILL_LIST_CLASS : SKILL_GRID_CLASS}
       focusKey={focusKey}
     />
   );

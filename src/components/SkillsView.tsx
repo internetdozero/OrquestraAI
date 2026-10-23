@@ -17,7 +17,6 @@ import { SkillScopeSelector } from "./SkillScopeSelector";
 import { SkillsState, type SkillsStateKind } from "./SkillsStates";
 import { SkillsToolbar } from "./SkillsToolbar";
 import { OfficialStore } from "./OfficialStore";
-import { VirtualCardGrid } from "./VirtualCardGrid";
 import { ErrorBanner, SkeletonGrid } from "./ui";
 
 interface SkillsViewProps {
@@ -107,6 +106,13 @@ export function SkillsView({
   useEffect(() => {
     localStorage.setItem("skills-view", view);
   }, [view]);
+
+  // Switching views keeps the same mounted grids (only props change), and a
+  // stale highlight must not scroll the fresh layout to an old card.
+  const handleViewChange = useCallback((next: "grid" | "list") => {
+    setView(next);
+    setFlash(null);
+  }, []);
 
   // A new scope starts from a clean slate: no stale query or shell error.
   const selectScope = useCallback(
@@ -290,7 +296,7 @@ export function SkillsView({
         query={query}
         onQueryChange={onQueryChange}
         view={view}
-        onViewChange={setView}
+        onViewChange={handleViewChange}
       />
 
       {banner && hasSkills && (
@@ -315,25 +321,21 @@ export function SkillsView({
             onRescan={() => void reload()}
             onClearQuery={() => onQueryChange("")}
           />
-        ) : view === "list" ? (
-          <VirtualCardGrid
-            items={visibleSkills}
-            keyOf={(skill) => skill.id}
-            renderItem={renderSkillRow}
-            className="flex flex-col gap-2"
-            focusKey={flash?.follow ? flash.id : null}
-          />
         ) : isGrouped ? (
           <GroupedSkillGrid
             activeSkills={activeSkills}
             idleSkills={idleSkills}
             renderCard={renderSkillCard}
+            renderRow={renderSkillRow}
+            view={view}
             focusKey={flash?.follow ? flash.id : null}
           />
         ) : (
           <FlatSkillGrid
             skills={visibleSkills}
             renderCard={renderSkillCard}
+            renderRow={renderSkillRow}
+            view={view}
             focusKey={flash?.follow ? flash.id : null}
           />
         ))}
