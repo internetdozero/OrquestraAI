@@ -60,7 +60,7 @@ pub(crate) fn official_mcps() -> Vec<OfficialMcpEntry> {
         official_mcp(
             "orquestra-core",
             "Orquestra Core",
-            "MCP control plane for OrquestraAI: project skills just in time, flip MCP servers, read the master AGENTS.md and check harness links.",
+            "MCP control plane for OrquestraAI: project skills just in time, flip MCP servers, use stored vault credentials blind, read the master AGENTS.md and check harness links.",
             "mcps/orquestra-core",
             "https://github.com/internetdozero/orquestra-core-mcp.git",
             "orquestra-core",
