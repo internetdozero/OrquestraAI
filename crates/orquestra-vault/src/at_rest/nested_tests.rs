@@ -131,7 +131,8 @@ fn backup_recovery_unwraps_a_nested_backup() {
 
     // A backup that opens to nothing usable is refused instead of being
     // re-sealed into a deeper nesting.
-    let foreign: [u8; 32] = [7; 32];
+    use aes_gcm::aead::KeyInit;
+    let foreign: [u8; 32] = aes_gcm::Aes256Gcm::generate_key(&mut aes_gcm::aead::OsRng).into();
     let sealed_foreign = envelope::seal(&foreign, catalog.as_bytes(), AAD_VAULT).expect("foreign");
     write_private_new(&migrate_backup_path(&target), sealed_foreign.as_bytes())
         .expect("plant foreign backup");
