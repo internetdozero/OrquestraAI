@@ -10,12 +10,16 @@
 /** Vertical gap between card rows; matches `gap-3` in the grid classes. */
 export const GRID_GAP = 12;
 
+/** Vertical gap between list rows; matches `gap-2` in the list classes. */
+export const LIST_GAP = 8;
+
 /**
- * Height assumed for a row until it has been measured on screen. Cards
- * measure 196–215px, so 204px keeps the cumulative spacer delta near zero
- * as unvisited rows enter the viewport.
+ * Height assumed for a row until it has been measured on screen. Skill cards
+ * measure ~188–212px (avg ~198px), so the estimate keeps the cumulative
+ * spacer delta near zero as unvisited rows enter the viewport. Views whose
+ * rows differ (list rows, MCP cards) pass their own estimate instead.
  */
-export const DEFAULT_ROW_HEIGHT = 204;
+export const DEFAULT_ROW_HEIGHT = 198;
 
 export interface GridWindow {
   /** First rendered row (inclusive). */
@@ -59,15 +63,19 @@ export function rowHeightAt(
 /**
  * Offset of the top of `row` in grid content coordinates. Gaps live between
  * rows, so a row's offset counts the gap that follows each earlier row.
+ * `gap` must match the container's CSS gap, otherwise every unvisited row
+ * drifts the scroll position by the difference (list rows with a grid gap
+ * visibly jump as they enter the viewport).
  */
 export function rowOffset(
   heights: ReadonlyMap<number, number>,
   row: number,
   estimate: number = DEFAULT_ROW_HEIGHT,
+  gap: number = GRID_GAP,
 ): number {
   let offset = 0;
   for (let index = 0; index < row; index += 1) {
-    offset += rowHeightAt(heights, index, estimate) + GRID_GAP;
+    offset += rowHeightAt(heights, index, estimate) + gap;
   }
   return offset;
 }
@@ -77,9 +85,10 @@ export function totalHeight(
   rowTotal: number,
   heights: ReadonlyMap<number, number>,
   estimate: number = DEFAULT_ROW_HEIGHT,
+  gap: number = GRID_GAP,
 ): number {
   if (rowTotal <= 0) return 0;
-  return Math.max(0, rowOffset(heights, rowTotal, estimate) - GRID_GAP);
+  return Math.max(0, rowOffset(heights, rowTotal, estimate, gap) - gap);
 }
 
 /**
@@ -97,6 +106,7 @@ export function windowFor({
   viewHeight,
   estimate = DEFAULT_ROW_HEIGHT,
   overscanRows = 2,
+  gap = GRID_GAP,
 }: {
   rowTotal: number;
   heights: ReadonlyMap<number, number>;
@@ -104,6 +114,7 @@ export function windowFor({
   viewHeight: number;
   estimate?: number;
   overscanRows?: number;
+  gap?: number;
 }): GridWindow {
   if (rowTotal <= 0) {
     return { start: 0, end: 0, topSpace: 0, bottomSpace: 0 };
@@ -117,7 +128,7 @@ export function windowFor({
   while (start < rowTotal) {
     const height = rowHeightAt(heights, start, estimate);
     if (rowTop + height >= scrollTop) break;
-    rowTop += height + GRID_GAP;
+    rowTop += height + gap;
     start += 1;
   }
 
@@ -125,7 +136,7 @@ export function windowFor({
   let end = start;
   let cursor = rowTop;
   while (end < rowTotal && cursor <= viewBottom) {
-    cursor += rowHeightAt(heights, end, estimate) + GRID_GAP;
+    cursor += rowHeightAt(heights, end, estimate) + gap;
     end += 1;
   }
 
@@ -134,15 +145,15 @@ export function windowFor({
 
   let topSpace = 0;
   for (let row = 0; row < start; row += 1) {
-    topSpace += rowHeightAt(heights, row, estimate) + GRID_GAP;
+    topSpace += rowHeightAt(heights, row, estimate) + gap;
   }
-  if (start > 0) topSpace = Math.max(0, topSpace - GRID_GAP);
+  if (start > 0) topSpace = Math.max(0, topSpace - gap);
 
   let bottomSpace = 0;
   for (let row = end; row < rowTotal; row += 1) {
-    bottomSpace += rowHeightAt(heights, row, estimate) + GRID_GAP;
+    bottomSpace += rowHeightAt(heights, row, estimate) + gap;
   }
-  if (end < rowTotal) bottomSpace = Math.max(0, bottomSpace - GRID_GAP);
+  if (end < rowTotal) bottomSpace = Math.max(0, bottomSpace - gap);
 
   return { start, end, topSpace, bottomSpace };
 }

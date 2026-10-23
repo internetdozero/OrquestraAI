@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   DEFAULT_ROW_HEIGHT,
+  GRID_GAP,
   mergeRowHeight,
   rowOffset,
   rowsFor,
@@ -52,15 +53,20 @@ function sameWindow(left: GridWindow, right: GridWindow): boolean {
 /**
  * Row-windowed rendering for the card grids.
  *
- * Rows are measured from the DOM after every commit and remembered, so the
- * spacers above the window always add up to the real height of the rows they
- * stand in for — scrolling past a row never shifts content retroactively. Rows
- * that have never been on screen fall back to `estimate`, which only affects
- * the height of the list below the viewport.
+ * Scroll frames only recompute the window from remembered heights — pure
+ * math over two bounding rects, no per-card reads — so fast scrolling never
+ * forces a synchronous layout per card. Measuring happens once per commit in
+ * the layout effect below, before paint, and the window is recomputed with
+ * the fresh heights so the spacers are exact for the frame being painted.
+ *
+ * `estimate`/`gap` must match the rendered rows: every unvisited row counts
+ * the estimate, so a wrong estimate shifts the whole list by the per-row
+ * error each time a row resolves to its real height.
  */
 export function useVirtualRows({
   itemCount,
   estimate = DEFAULT_ROW_HEIGHT,
+  gap = GRID_GAP,
   // Five buffered rows (~15 cards) above and below absorb fast flick-scrolls
   // so no blank void shows before React commits the next frame.
   overscanRows = 5,
@@ -68,11 +74,17 @@ export function useVirtualRows({
 }: {
   itemCount: number;
   estimate?: number;
+  gap?: number;
   overscanRows?: number;
   enabled?: boolean;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
+  // `undefined` means unresolved; resolved once, the scroll chain is stable
+  // for the life of the grid (unlike per-frame ancestor walks + style reads).
+  const parentRef = useRef<HTMLElement | null | undefined>(undefined);
   const heightsRef = useRef(new Map<number, number>());
+  const countRef = useRef(itemCount);
+  const columnsRef = useRef(1);
   const windowRef = useRef<GridWindow>(EMPTY_WINDOW);
   const updateRef = useRef<() => void>(() => {});
   const [columns, setColumns] = useState(1);
@@ -80,84 +92,75 @@ export function useVirtualRows({
 
   const virtual = enabled && itemCount > VIRTUALIZE_AFTER;
 
-  const update = useCallback(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-
-    const measuredColumns = readColumns(grid);
-    const columnsChanged = measuredColumns !== columns;
-    if (columnsChanged) {
-      // Row indices mean a different set of cards at a new column count, so
-      // every remembered height is stale. Estimates carry this one frame.
-      heightsRef.current.clear();
-      setColumns(measuredColumns);
+  const getParent = useCallback((): HTMLElement | null => {
+    if (parentRef.current === undefined) {
+      const grid = gridRef.current;
+      parentRef.current = grid ? scrollParentOf(grid) : null;
     }
+    return parentRef.current ?? null;
+  }, []);
 
-    const rowTotal = rowsFor(itemCount, measuredColumns);
+  const windowFromHeights = useCallback(
+    (rowTotal: number): GridWindow | null => {
+      const grid = gridRef.current;
+      if (!grid) return null;
+      const parent = getParent();
+      const gridRect = grid.getBoundingClientRect();
+      const viewTop = Math.max(
+        0,
+        parent ? parent.getBoundingClientRect().top - gridRect.top : -gridRect.top,
+      );
+      const viewHeight = parent ? parent.clientHeight : window.innerHeight;
+      return windowFor({
+        rowTotal,
+        heights: heightsRef.current,
+        scrollTop: viewTop,
+        viewHeight,
+        estimate,
+        overscanRows,
+        gap,
+      });
+    },
+    [estimate, gap, getParent, overscanRows],
+  );
 
+  // Cheap part: window from remembered heights only. No card measurement and
+  // no column reads here, so scroll/resize frames stay off the layout path
+  // except for the two rects the position math needs.
+  const updateWindow = useCallback(() => {
+    const rowTotal = rowsFor(itemCount, columnsRef.current);
     if (!virtual) {
-      heightsRef.current.clear();
       const full = { start: 0, end: rowTotal, topSpace: 0, bottomSpace: 0 };
       setWin((previous) => (sameWindow(previous, full) ? previous : full));
       return;
     }
+    const next = windowFromHeights(rowTotal);
+    if (next) setWin((previous) => (sameWindow(previous, next) ? previous : next));
+  }, [columns, itemCount, virtual, windowFromHeights]);
 
-    // Every rendered row is complete, so card n belongs to row `start + n/cols`.
-    // A grid track is as tall as its tallest item, so fold every card of a
-    // row into that row's maximum instead of letting the last measured card
-    // overwrite the earlier (possibly taller) ones.
-    if (!columnsChanged) {
-      const startRow = windowRef.current.start;
-      const rowMaxHeights = new Map<number, number>();
-      let cardIndex = 0;
-      for (const child of Array.from(grid.children)) {
-        if (!(child instanceof HTMLElement) || child.hasAttribute(SPACER_ATTR)) {
-          continue;
-        }
-        const rowIndex = startRow + Math.floor(cardIndex / measuredColumns);
-        rowMaxHeights.set(
-          rowIndex,
-          mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight),
-        );
-        cardIndex += 1;
-      }
-      for (const [rowIndex, maxHeight] of rowMaxHeights) {
-        if (maxHeight > 0) heightsRef.current.set(rowIndex, maxHeight);
-      }
-    }
-
-    const parent = scrollParentOf(grid);
-    const gridRect = grid.getBoundingClientRect();
-    const viewTop = Math.max(
-      0,
-      parent ? parent.getBoundingClientRect().top - gridRect.top : -gridRect.top,
-    );
-    const viewHeight = parent ? parent.clientHeight : window.innerHeight;
-
-    const next = windowFor({
-      rowTotal,
-      heights: heightsRef.current,
-      scrollTop: viewTop,
-      viewHeight,
-      estimate,
-      overscanRows,
-    });
-
-    setWin((previous) => (sameWindow(previous, next) ? previous : next));
-  }, [columns, estimate, itemCount, overscanRows, virtual]);
-
-  // Measures rendered cards from the DOM after commit so heightsRef is always
-  // accurate for the next scroll frame, without re-triggering setWin synchronously.
+  // Expensive part, once per commit and before paint: fold the committed
+  // cards into their rows' maxima, then recompute the window with the fresh
+  // heights so this frame's spacers already account for what just mounted.
   useLayoutEffect(() => {
-    updateRef.current = update;
+    updateRef.current = updateWindow;
     windowRef.current = win;
 
     const grid = gridRef.current;
     if (!grid) return;
 
-    const measuredColumns = readColumns(grid);
-    if (measuredColumns !== columns) {
+    // New items mean new rows: heights remembered for the old rows would
+    // offset the new spacers by the old cards' sizes.
+    if (countRef.current !== itemCount) {
+      countRef.current = itemCount;
       heightsRef.current.clear();
+    }
+
+    const measuredColumns = readColumns(grid);
+    if (measuredColumns !== columnsRef.current) {
+      // Row indices mean a different set of cards at a new column count (or
+      // grid-vs-list switch), so every remembered height is stale.
+      heightsRef.current.clear();
+      columnsRef.current = measuredColumns;
       setColumns(measuredColumns);
       return;
     }
@@ -172,31 +175,39 @@ export function useVirtualRows({
         continue;
       }
       const rowIndex = startRow + Math.floor(cardIndex / measuredColumns);
-      rowMaxHeights.set(rowIndex, mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight));
+      rowMaxHeights.set(
+        rowIndex,
+        mergeRowHeight(rowMaxHeights.get(rowIndex), child.offsetHeight),
+      );
       cardIndex += 1;
     }
+    let changed = false;
     for (const [rowIndex, maxHeight] of rowMaxHeights) {
-      if (maxHeight > 0) heightsRef.current.set(rowIndex, maxHeight);
+      if (maxHeight > 0 && heightsRef.current.get(rowIndex) !== maxHeight) {
+        heightsRef.current.set(rowIndex, maxHeight);
+        changed = true;
+      }
+    }
+    if (changed) {
+      const rowTotal = rowsFor(itemCount, measuredColumns);
+      const next = windowFromHeights(rowTotal);
+      if (next) setWin((previous) => (sameWindow(previous, next) ? previous : next));
     }
     // Runs on every input that can move or resize rows: the scrolled window,
-    // the measured column count, the virtualization switch, and the update
-    // callback itself (whose identity tracks the remaining inputs). Scroll
-    // and resize frames re-invoke update() through updateRef, which
-    // re-measures, so no commit passes unmeasured.
-  }, [update, win, columns, virtual]);
+    // the measured column count, the virtualization switch, the item count,
+    // and the update callback itself (whose identity tracks estimate/gap).
+  }, [updateWindow, win, itemCount, virtual, windowFromHeights]);
 
-  // Initial calculation on mount and whenever column count stabilizes.
+  // Initial calculation on mount and whenever the window inputs settle.
   useEffect(() => {
-    update();
-  }, [update]);
+    updateWindow();
+  }, [updateWindow]);
 
   useEffect(() => {
     const grid = gridRef.current;
     if (!virtual || !grid) return;
 
-    const parent = scrollParentOf(grid);
     let frame = 0;
-
     const onFrame = () => {
       frame = 0;
       updateRef.current();
@@ -205,26 +216,37 @@ export function useVirtualRows({
       if (frame) return;
       frame = window.requestAnimationFrame(onFrame);
     };
-
-    let lastSize = "";
-    const observer = new ResizeObserver(() => {
-      const size = `${parent?.clientWidth ?? 0}x${parent?.clientHeight ?? 0}`;
-      if (size === lastSize) return;
-      lastSize = size;
+    // Resize can move the grid across a breakpoint (or grid-vs-list): recheck
+    // the column count there, never on the scroll path.
+    const onResize = () => {
+      const current = gridRef.current;
+      if (current) {
+        const measured = readColumns(current);
+        if (measured !== columnsRef.current) {
+          heightsRef.current.clear();
+          columnsRef.current = measured;
+          setColumns(measured);
+        }
+      }
       updateRef.current();
-    });
+    };
 
+    const parent = getParent();
     parent?.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    if (parent) observer.observe(parent);
+    window.addEventListener("resize", onResize);
+    let observer: ResizeObserver | null = null;
+    if (parent) {
+      observer = new ResizeObserver(onResize);
+      observer.observe(parent);
+    }
 
     return () => {
       parent?.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      observer.disconnect();
+      window.removeEventListener("resize", onResize);
+      observer?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [virtual]);
+  }, [virtual, getParent]);
 
   /** Bring a row into view when its card is not mounted yet. */
   const scrollToRow = useCallback(
@@ -232,8 +254,8 @@ export function useVirtualRows({
       const grid = gridRef.current;
       if (!grid) return;
 
-      const offset = rowOffset(heightsRef.current, Math.max(0, row), estimate);
-      const parent = scrollParentOf(grid);
+      const offset = rowOffset(heightsRef.current, Math.max(0, row), estimate, gap);
+      const parent = getParent();
 
       if (!parent) {
         window.scrollTo({
@@ -251,7 +273,7 @@ export function useVirtualRows({
       });
       updateRef.current();
     },
-    [estimate],
+    [estimate, gap, getParent],
   );
 
   return { gridRef, columns, virtual, rows: win, scrollToRow };

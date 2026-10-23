@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { GRID_GAP, LIST_GAP } from "../lib/virtualRows";
 import { cn } from "../lib/utils";
 import type { SkillItem } from "../lib/skills";
 import { useI18n } from "../hooks/useI18n";
@@ -9,6 +10,12 @@ export const SKILL_GRID_CLASS = "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-c
 
 /** Shared list stack: compact rows, one per line. */
 export const SKILL_LIST_CLASS = "flex flex-col gap-2";
+
+/** Measured grid row: stabilized cards are a uniform ~190px. */
+export const SKILL_GRID_ESTIMATE = 190;
+
+/** Measured list row: compact rows are a uniform ~57px. */
+export const SKILL_LIST_ESTIMATE = 57;
 
 const skillKey = (skill: SkillItem) => skill.id;
 
@@ -69,8 +76,11 @@ export function GroupedSkillGrid({
   idleSkills: SkillItem[];
 }) {
   const { t } = useI18n();
-  const renderItem = view === "list" ? renderRow : renderCard;
-  const className = view === "list" ? SKILL_LIST_CLASS : SKILL_GRID_CLASS;
+  const list = view === "list";
+  const renderItem = list ? renderRow : renderCard;
+  const className = list ? SKILL_LIST_CLASS : SKILL_GRID_CLASS;
+  const estimate = list ? SKILL_LIST_ESTIMATE : SKILL_GRID_ESTIMATE;
+  const gap = list ? LIST_GAP : GRID_GAP;
 
   return (
     <div className="space-y-5">
@@ -82,6 +92,8 @@ export function GroupedSkillGrid({
             keyOf={skillKey}
             renderItem={renderItem}
             className={className}
+            estimate={estimate}
+            gap={gap}
             focusKey={focusKey}
           />
         </section>
@@ -99,6 +111,8 @@ export function GroupedSkillGrid({
             keyOf={skillKey}
             renderItem={renderItem}
             className={className}
+            estimate={estimate}
+            gap={gap}
             focusKey={focusKey}
           />
         </section>
@@ -115,12 +129,15 @@ export function FlatSkillGrid({
   view,
   focusKey = null,
 }: SkillGridProps & { skills: SkillItem[] }) {
+  const list = view === "list";
   return (
     <VirtualCardGrid
       items={skills}
       keyOf={skillKey}
-      renderItem={view === "list" ? renderRow : renderCard}
-      className={view === "list" ? SKILL_LIST_CLASS : SKILL_GRID_CLASS}
+      renderItem={list ? renderRow : renderCard}
+      className={list ? SKILL_LIST_CLASS : SKILL_GRID_CLASS}
+      estimate={list ? SKILL_LIST_ESTIMATE : SKILL_GRID_ESTIMATE}
+      gap={list ? LIST_GAP : GRID_GAP}
       focusKey={focusKey}
     />
   );

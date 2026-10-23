@@ -8,6 +8,7 @@ import { useMcpCatalog } from "../hooks/useMcpCatalog";
 import { useMcpMutations } from "../hooks/useMcpMutations";
 import { useMcpStoreActions } from "../hooks/useMcpStoreActions";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
+import { GRID_GAP, LIST_GAP } from "../lib/virtualRows";
 import { sumMcpTokens } from "../lib/tokens";
 import { formatTokens } from "../lib/utils";
 import { McpCard } from "./McpCard";
@@ -305,6 +306,8 @@ export function McpView({
               items={visibleServers}
               keyOf={(server) => server.id}
               className="flex flex-col gap-2"
+              estimate={60}
+              gap={LIST_GAP}
               renderItem={renderServerRow}
             />
           ) : (
@@ -312,6 +315,8 @@ export function McpView({
               items={visibleServers}
               keyOf={(server) => server.id}
               className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+              estimate={240}
+              gap={GRID_GAP}
               renderItem={(server) => (
                 <McpCard
                   server={server}

@@ -128,25 +128,28 @@ export const SkillCard = memo(function SkillCard({
           >
             {skill.name}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-px text-[10px] font-medium tracking-wide text-zinc-400 uppercase">
+          {/* Single line, never wraps: a wrapped meta row makes its card ~20px
+              taller, so rows sharing the stretch would shift height as they
+              enter the virtualized viewport (scroll jump). */}
+          <div className="mt-1 flex min-w-0 flex-nowrap items-center gap-x-2 overflow-hidden">
+            <span className="shrink-0 rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-px text-[10px] font-medium tracking-wide text-zinc-400 uppercase">
               {skill.category}
             </span>
             {skill.official === true && <OfficialBadge />}
             {inherited ? (
-              <span className="accent-text flex items-center gap-1 text-[9.5px] font-medium opacity-90">
-                <Lock className="size-2.5" />
-                {t.skills.inheritedFromGlobal}
+              <span className="accent-text flex min-w-0 items-center gap-1 truncate text-[9.5px] font-medium opacity-90">
+                <Lock className="size-2.5 shrink-0" />
+                <span className="truncate">{t.skills.inheritedFromGlobal}</span>
               </span>
             ) : active ? (
-              <span className="accent-text flex items-center gap-1 text-[10px] font-medium">
-                <span className="accent-dot size-1 rounded-full" />
-                {t.skills.activePill}
+              <span className="accent-text flex min-w-0 items-center gap-1 truncate text-[10px] font-medium">
+                <span className="accent-dot size-1 shrink-0 rounded-full" />
+                <span className="truncate">{t.skills.activePill}</span>
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] text-zinc-600">
-                <span className="size-1 rounded-full bg-zinc-600" />
-                {t.skills.idlePill}
+              <span className="flex min-w-0 items-center gap-1 truncate text-[10px] text-zinc-600">
+                <span className="size-1 shrink-0 rounded-full bg-zinc-600" />
+                <span className="truncate">{t.skills.idlePill}</span>
               </span>
             )}
           </div>
@@ -187,7 +190,10 @@ export const SkillCard = memo(function SkillCard({
         </div>
       </div>
 
-      <p className="line-clamp-2 text-[12.5px] leading-relaxed text-zinc-400">
+      {/* Reserve two lines even for short descriptions: without the min-h,
+          one-line cards render ~20px shorter and every row they share shifts
+          height as it enters the virtualized viewport (scroll jump). */}
+      <p className="line-clamp-2 min-h-10 text-[12.5px] leading-relaxed text-zinc-400">
         {skill.description}
       </p>
 

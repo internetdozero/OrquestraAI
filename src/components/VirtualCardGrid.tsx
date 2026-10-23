@@ -12,6 +12,8 @@ interface VirtualCardGridProps<T> {
   focusKey?: string | null;
   /** Row height assumed before a row has been measured. */
   estimate?: number;
+  /** Vertical gap in px; must match the container's CSS gap. */
+  gap?: number;
 }
 
 /**
@@ -30,10 +32,12 @@ export function VirtualCardGrid<T>({
   className,
   focusKey = null,
   estimate,
+  gap,
 }: VirtualCardGridProps<T>) {
   const { gridRef, columns, virtual, rows, scrollToRow } = useVirtualRows({
     itemCount: items.length,
     estimate,
+    gap,
   });
   const revealed = useRef<string | null>(null);
 

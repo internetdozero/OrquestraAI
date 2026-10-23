@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_ROW_HEIGHT,
   GRID_GAP,
+  LIST_GAP,
   mergeRowHeight,
   rowHeightAt,
   rowOffset,
@@ -22,14 +23,14 @@ import {
 } from "../src/lib/virtualRows.ts";
 
 /** Compose a window the way the DOM does: spacer, rows, spacer. */
-function renderedHeight(window, heights, estimate = DEFAULT_ROW_HEIGHT) {
+function renderedHeight(window, heights, estimate = DEFAULT_ROW_HEIGHT, gap = GRID_GAP) {
   let middle = 0;
   for (let row = window.start; row < window.end; row += 1) {
     middle += rowHeightAt(heights, row, estimate);
   }
   const rows = window.end - window.start;
   const gaps = rows - 1 + (window.topSpace > 0 ? 1 : 0) + (window.bottomSpace > 0 ? 1 : 0);
-  return window.topSpace + middle + window.bottomSpace + gaps * GRID_GAP;
+  return window.topSpace + middle + window.bottomSpace + gaps * gap;
 }
 
 test("rowsFor chunks items into complete rows", () => {
@@ -186,6 +187,30 @@ test("spacers account for irregular tallest-item row heights", () => {
       );
     }
   }
+});
+
+test("a custom gap reproduces the full list height", () => {
+  // List rows use gap-2 (8px), not the grid's gap-3: spacers must account
+  // with the list gap or every row drifts the scroll by the difference.
+  const heights = new Map([
+    [0, 57],
+    [1, 57],
+    [2, 57],
+  ]);
+  assert.equal(totalHeight(3, heights, DEFAULT_ROW_HEIGHT, LIST_GAP), 57 * 3 + LIST_GAP * 2);
+  assert.equal(rowOffset(heights, 2, DEFAULT_ROW_HEIGHT, LIST_GAP), 57 * 2 + LIST_GAP * 2);
+  const window = windowFor({
+    rowTotal: 30,
+    heights: new Map(),
+    scrollTop: 500,
+    viewHeight: 600,
+    overscanRows: 2,
+    gap: LIST_GAP,
+  });
+  assert.equal(
+    renderedHeight(window, heights, DEFAULT_ROW_HEIGHT, LIST_GAP),
+    totalHeight(30, heights, DEFAULT_ROW_HEIGHT, LIST_GAP),
+  );
 });
 
 test("an empty grid produces no spacers", () => {
