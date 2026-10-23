@@ -285,6 +285,10 @@ pub use cli::{
 pub fn run() {
     if let Err(error) = tauri::Builder::default()
         .setup(|app| {
+            #[cfg(target_os = "linux")] // Explicitly apply GTK decorations; config alone left this window frameless.
+            if let Some(window) = app.get_webview_window("main") {
+                window.set_decorations(true)?;
+            }
             match OrquestraPaths::resolve().and_then(|paths| paths.bootstrap()) {
                 Ok(()) => {}
                 Err(error) => crate::log_error!("storage bootstrap failed: {error}"),

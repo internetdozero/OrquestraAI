@@ -42,9 +42,7 @@
 
   body {
     margin: 0;
-    /* Transparent so the frameless desktop shell floats with rounded
-       corners; the app root paints its own canvas behind everything. */
-    background-color: transparent;
+    background-color: var(--color-canvas);
     color: #f4f4f5;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
