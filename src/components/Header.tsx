@@ -8,8 +8,6 @@ import { cn } from "../lib/utils";
 interface HeaderProps {
   query: string;
   onQueryChange: (value: string) => void;
-  activeCount: number;
-  totalCount: number;
   onRefresh: () => void;
   refreshing: boolean;
   /** The platform view being shown; the skills view owns its harness scope. */
@@ -87,8 +85,6 @@ function CloseGlyph({ className }: { className?: string }) {
 export function Header({
   query,
   onQueryChange,
-  activeCount,
-  totalCount,
   onRefresh,
   refreshing,
   mode = "skills",
@@ -232,20 +228,8 @@ export function Header({
               <kbd className="pointer-events-none absolute top-1/2 right-1.5 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-white/10 bg-white/[0.04] px-1 font-mono text-[9px] text-zinc-500 sm:flex">
                 Ctrl&nbsp;K
               </kbd>
-            </div>
-
-            {/* Active skills badge + refresh + window controls */}
+            </div>            {/* Refresh + window controls */}
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              <div className="accent-bg-soft accent-border hidden items-center gap-1.5 rounded-lg border px-2.5 py-1 md:flex">
-                <span className="relative flex size-1.5">
-                  <span className="accent-dot relative inline-flex size-1.5 rounded-full" />
-                </span>
-                <span className="accent-text text-[11px] font-medium">{t.common.activeSkills}</span>
-                <span className="accent-text font-mono text-[11px] opacity-70">
-                  {activeCount}/{totalCount}
-                </span>
-              </div>
-
               <button
                 type="button"
                 onClick={onRefresh}

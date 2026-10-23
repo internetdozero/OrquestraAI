@@ -259,8 +259,6 @@ export default function App() {
         mode={view}
         query={query}
         onQueryChange={setQuery}
-        activeCount={skillStats.active}
-        totalCount={skillStats.total}
         onRefresh={() => {
           setReloadToken((token) => token + 1);
           void summaries.refresh();
