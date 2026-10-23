@@ -9,11 +9,9 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useSkillsCache } from "../hooks/useSkillsCache";
 import { useSkillGridActions } from "../hooks/useSkillGridActions";
 import { useSkillStoreActions } from "../hooks/useSkillStoreActions";
-import { ConfirmModal } from "./ConfirmModal";
 import { SkillCard } from "./SkillCard";
 import { SkillListRow } from "./SkillListRow";
-import { EditSkillModal } from "./skills/EditSkillModal";
-import { ImportSkillModal } from "./skills/ImportSkillModal";
+import { SkillsModals } from "./skills/SkillsModals";
 import { FlatSkillGrid, GroupedSkillGrid } from "./SkillsGrid";
 import { SkillScopeSelector } from "./SkillScopeSelector";
 import { SkillsState, type SkillsStateKind } from "./SkillsStates";
@@ -349,46 +347,30 @@ export function SkillsView({
         />
       )}
 
-      {editingSkill && (
-        <EditSkillModal
-          skillId={editingSkill.id}
-          skillName={editingSkill.name}
-          onClose={() => setEditingId(null)}
-          onSaved={(name) => {
-            onSummaryStale();
-            void invalidate();
-            onToast?.(t.skills.editSaved(name));
-          }}
-          onError={(message) => setError(message)}
-        />
-      )}
-
-      {importOpen && (
-        <ImportSkillModal
-          isTauri={isTauri}
-          onClose={() => setImportOpen(false)}
-          onError={(message) => setError(message)}
-          onImported={(skill) => {
-            onSummaryStale();
-            void invalidate();
-            onDismissExternalError();
-            setError(null);
-            onToast?.(t.skills.import.success(skill.name));
-          }}
-        />
-      )}
-
-      {pendingDeleteSkill && (
-        <ConfirmModal
-          title={t.skills.deleteTitle}
-          message={t.skills.deleteConfirm(pendingDeleteSkill.name)}
-          confirmLabel={t.common.delete}
-          cancelLabel={t.skills.deleteCancel}
-          tone="danger"
-          onCancel={() => setPendingDeleteSkill(null)}
-          onConfirm={() => void confirmDeleteSkill()}
-        />
-      )}
+      <SkillsModals
+        isTauri={isTauri}
+        editingSkill={editingSkill}
+        onCloseEditor={() => setEditingId(null)}
+        onSaved={(name) => {
+          onSummaryStale();
+          void invalidate();
+          onToast?.(t.skills.editSaved(name));
+        }}
+        onEditError={(message) => setError(message)}
+        importOpen={importOpen}
+        onCloseImport={() => setImportOpen(false)}
+        onImportError={(message) => setError(message)}
+        onImported={(skill) => {
+          onSummaryStale();
+          void invalidate();
+          onDismissExternalError();
+          setError(null);
+          onToast?.(t.skills.import.success(skill.name));
+        }}
+        pendingDeleteSkill={pendingDeleteSkill}
+        onCancelDelete={() => setPendingDeleteSkill(null)}
+        onConfirmDelete={() => void confirmDeleteSkill()}
+      />
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-[10.5px] text-zinc-600">
         <Waypoints className="size-3 shrink-0" />
