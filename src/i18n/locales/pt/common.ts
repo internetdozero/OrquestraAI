@@ -8,6 +8,8 @@ export const common = {
   tagline: "Plano de Controle Universal de Harnesses",
   searchPlaceholder: "Buscar skills, categorias, descrições…",
   searchAriaLabel: "Buscar skills",
+  searchPlaceholderMcps: "Buscar servidores MCP, comandos, descrições…",
+  searchAriaLabelMcps: "Buscar servidores MCP",
   refreshSkills: "Atualizar skills",
   rescanVault: "Reescanear o cofre",
   activeSkills: "Skills ativas",

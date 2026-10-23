@@ -212,18 +212,22 @@ export function Header({
 
         {showSearch ? (
           <>
-            {/* Search */}
-            <div className="relative mx-auto w-full max-w-md flex-1">
+            {/* Search: pinned to the true window center, clear of both flanks. */}
+            <div className="absolute top-1/2 left-1/2 w-[min(28rem,calc(100%-36rem))] -translate-x-1/2 -translate-y-1/2">
               <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
               <input
                 ref={searchRef}
                 type="search"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                placeholder={t.common.searchPlaceholder}
-                aria-label={t.common.searchAriaLabel}
+                placeholder={
+                  mode === "mcps" ? t.common.searchPlaceholderMcps : t.common.searchPlaceholder
+                }
+                aria-label={
+                  mode === "mcps" ? t.common.searchAriaLabelMcps : t.common.searchAriaLabel
+                }
                 spellCheck={false}
-                className="h-8 w-full rounded-lg border border-white/10 bg-zinc-900/60 pr-14 pl-8 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-emerald-500/10 [&::-webkit-search-cancel-button]:appearance-none"
+                className="h-8 w-full rounded-lg border border-white/10 bg-zinc-900/60 pr-14 pl-8 text-[13px] leading-8 text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/40 focus:bg-zinc-900 focus:ring-2 focus:ring-emerald-500/10 [&::-webkit-search-cancel-button]:appearance-none"
               />
               <kbd className="pointer-events-none absolute top-1/2 right-1.5 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-white/10 bg-white/[0.04] px-1 font-mono text-[9px] text-zinc-500 sm:flex">
                 Ctrl&nbsp;K
@@ -231,7 +235,7 @@ export function Header({
             </div>
 
             {/* Active skills badge + refresh + window controls */}
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <div className="accent-bg-soft accent-border hidden items-center gap-1.5 rounded-lg border px-2.5 py-1 md:flex">
                 <span className="relative flex size-1.5">
                   <span className="accent-dot relative inline-flex size-1.5 rounded-full" />

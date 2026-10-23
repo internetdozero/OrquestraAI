@@ -5,6 +5,8 @@ export const common: TranslationSchema["common"] = {
   tagline: "Universal Harness Control Plane",
   searchPlaceholder: "Search skills, categories, descriptions…",
   searchAriaLabel: "Search skills",
+  searchPlaceholderMcps: "Search MCP servers, commands, descriptions…",
+  searchAriaLabelMcps: "Search MCP servers",
   refreshSkills: "Refresh skills",
   rescanVault: "Rescan the vault",
   activeSkills: "Active Skills",
