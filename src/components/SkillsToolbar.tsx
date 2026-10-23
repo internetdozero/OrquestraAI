@@ -14,7 +14,7 @@ import { formatTokens } from "../lib/utils";
 import { useI18n } from "../hooks/useI18n";
 import { CustomDropdown } from "./CustomDropdown";
 import { StoreTabs } from "./StoreTabs";
-import { actionButtonClass, StatTile, ToolbarSearchInput, ViewModeToggle } from "./ui";
+import { actionButtonClass, ToolbarSearchInput, ViewModeToggle } from "./ui";
 
 /** Order control for the skill grid, sat with the other grid controls. */
 function SortSelect({ value, onChange }: { value: SortMode; onChange: (mode: SortMode) => void }) {
@@ -45,9 +45,7 @@ interface SkillsToolbarProps {
   activeCount: number;
   totalCount: number;
   disabledCount: number;
-  inheritedCount: number;
   savedTokens: number;
-  visibleCount: number;
   sortMode: SortMode;
   onSortModeChange: (mode: SortMode) => void;
   /** Batch buttons are live (bridge attached, list loaded, nothing pending). */
@@ -79,9 +77,7 @@ export function SkillsToolbar({
   activeCount,
   totalCount,
   disabledCount,
-  inheritedCount,
   savedTokens,
-  visibleCount,
   sortMode,
   onSortModeChange,
   canBatch,
@@ -102,30 +98,37 @@ export function SkillsToolbar({
 
   return (
     <>
-      <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile
-          label={t.skills.activeSkills}
-          value={`${activeCount} / ${totalCount}`}
-          hint={isGlobal ? t.skills.projectedBaseline : t.skills.effectiveInHarness}
-          icon={Layers}
-          accent
-        />
-        <StatTile
-          label={t.skills.tokensSaved}
-          value={`≈ ${formatTokens(savedTokens)}`}
-          hint={t.skills.tokensSavedHint}
-          icon={Zap}
-        />
-        <StatTile
-          label={t.skills.disabledSkills}
-          value={`${disabledCount}`}
-          hint={
-            isGlobal
-              ? t.skills.indexedVault(totalCount)
-              : t.skills.lockedByGlobalCount(inheritedCount)
-          }
-          icon={CircleSlash}
-        />
+      <section
+        aria-label={`${t.skills.activeSkills}, ${t.skills.tokensSaved}, ${t.skills.disabledSkills}`}
+        className="mb-4 flex min-w-0 flex-col gap-y-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 px-4 py-3 @min-[680px]:flex-row @min-[680px]:flex-wrap @min-[680px]:items-center @min-[680px]:gap-x-8"
+      >
+        <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
+          <Layers className="size-3.5 shrink-0 text-zinc-500" />
+          <span className="text-zinc-500">{t.skills.activeSkills} </span>
+          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">
+            {activeCount} / {totalCount}
+          </span>
+        </p>
+        <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
+          <Zap className="size-3.5 shrink-0 text-zinc-500" />
+          <span className="text-zinc-500">{t.skills.tokensSaved} </span>
+          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">≈ {formatTokens(savedTokens)}</span>
+        </p>
+        <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
+          <CircleSlash className="size-3.5 shrink-0 text-zinc-500" />
+          <span className="text-zinc-500">{t.skills.disabledSkills} </span>
+          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">{disabledCount}</span>
+        </p>
+        <span aria-hidden="true" className="hidden h-5 w-px bg-white/10 @min-[680px]:block" />
+        <button
+          type="button"
+          onClick={onImport}
+          className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/[0.07] px-3 py-1 text-[11px] font-medium whitespace-nowrap text-zinc-200 transition hover:bg-emerald-500/15 hover:text-emerald-100 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none @min-[680px]:ml-auto @min-[680px]:w-auto @min-[680px]:shrink-0"
+          title={t.skills.import.title}
+        >
+          <FolderDown className="size-3.5" />
+          {t.skills.importAction}
+        </button>
       </section>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
@@ -140,27 +143,15 @@ export function SkillsToolbar({
           />
           <SortSelect value={sortMode} onChange={onSortModeChange} />
           <ViewModeToggle view={view} onChange={onViewChange} />
-          <span className="font-mono text-[10.5px] whitespace-nowrap text-zinc-500">
-            {t.skills.shownCount(visibleCount)}
-          </span>
-          <button
-            type="button"
-            onClick={onImport}
-            className={actionButtonClass}
-            title={t.skills.import.title}
-          >
-            <FolderDown className="mr-1 inline size-3" />
-            {t.skills.importAction}
-          </button>
           <button
             type="button"
             onClick={() => onApplyAll(true)}
             disabled={!canBatch}
             className={actionButtonClass}
             title={t.skills.symlinkAllInto(label)}
+            aria-label={t.skills.symlinkAllInto(label)}
           >
-            <Power className="mr-1 inline size-3" />
-            {t.skills.enableAll}
+            <Power className="size-3.5" />
           </button>
           <button
             type="button"
@@ -168,13 +159,13 @@ export function SkillsToolbar({
             disabled={!canBatch}
             className={actionButtonClass}
             title={isGlobal ? t.skills.unlinkAllGlobal : t.skills.unlinkAllHarness(label)}
+            aria-label={isGlobal ? t.skills.unlinkAllGlobal : t.skills.unlinkAllHarness(label)}
           >
             {batchPending ? (
-              <Loader2 className="mr-1 inline size-3 animate-spin" />
+              <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <PowerOff className="mr-1 inline size-3" />
+              <PowerOff className="size-3.5" />
             )}
-            {t.skills.disableAll}
           </button>
         </div>
       </div>

@@ -92,6 +92,9 @@ pub async fn request(
         &endpoint,
         Some(&snapshot),
     )?;
+    if !snapshot.enabled {
+        return Err(format!("vault service {service} is disabled"));
+    }
     if snapshot.keys.is_empty() {
         return Err(format!("vault service {service} has no keys"));
     }
@@ -296,6 +299,9 @@ pub async fn test_connection(
             .services
             .get(&service)
             .ok_or_else(|| format!("unknown vault service: {service}"))?;
+        if !snapshot.enabled {
+            return Err(format!("vault service {service} is disabled"));
+        }
         if snapshot.keys.is_empty() {
             return Err(format!("vault service {service} has no keys"));
         }

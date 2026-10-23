@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, ShieldCheck, X } from "lucide-react";
-import { listOfficialStore, type OfficialMcpEntry, type OfficialSkillEntry } from "../lib/tauri";
+import type { OfficialMcpEntry, OfficialSkillEntry } from "../lib/tauri";
+import { ensureStoreCatalog, readStoreCache } from "../lib/storeCache";
 import { useI18n } from "../hooks/useI18n";
 import { StoreCard } from "./StoreCard";
 import { StoreFilters, type StoreTierFilter } from "./StoreFilters";
@@ -40,7 +41,13 @@ function toMessage(cause: unknown, fallback: string): string {
 export function OfficialStore({ kind, statusOf, actionFor, projectScope }: OfficialStoreProps) {
   const { t } = useI18n();
   const s = t.store;
-  const [entries, setEntries] = useState<StoreEntry[] | null>(null);
+  // A warm cache paints immediately; the store unmounts on every tab toggle,
+  // so a cold start here is the flash. Revalidate silently underneath.
+  const [entries, setEntries] = useState<StoreEntry[] | null>(() => {
+    const cached = readStoreCache();
+    if (!cached) return null;
+    return kind === "skill" ? cached.skills : cached.mcps;
+  });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -49,7 +56,7 @@ export function OfficialStore({ kind, statusOf, actionFor, projectScope }: Offic
 
   useEffect(() => {
     let cancelled = false;
-    listOfficialStore()
+    ensureStoreCatalog()
       .then((store) => {
         if (!cancelled) setEntries(kind === "skill" ? store.skills : store.mcps);
       })

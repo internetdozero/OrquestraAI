@@ -27,14 +27,12 @@ interface CredentialsHeaderProps {
   onQueryChange: (query: string) => void;
   statusFilter: CredentialStatusFilter;
   onStatusFilterChange: (filter: CredentialStatusFilter) => void;
-  typeOptions: { id: string; label: string }[];
+  typeOptions: { id: string; label: string; group?: string }[];
   typeFilter: string;
   onTypeFilterChange: (preset: string) => void;
   view: CredentialViewMode;
   onViewChange: (view: CredentialViewMode) => void;
   onAdd: () => void;
-  /** Purge `.migrate-bak` plaintext backups. Absent in browser preview. */
-  onPurgeBackups?: () => void;
 }
 
 export function CredentialsHeader({
@@ -52,7 +50,6 @@ export function CredentialsHeader({
   view,
   onViewChange,
   onAdd,
-  onPurgeBackups,
 }: CredentialsHeaderProps) {
   const { t } = useI18n();
   const s = t.credentials;
@@ -142,16 +139,6 @@ export function CredentialsHeader({
             </button>
           ))}
         </div>
-        {onPurgeBackups != null && (
-          <button
-            type="button"
-            onClick={onPurgeBackups}
-            title={s.purgeBackupsTitle}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[12.5px] font-medium text-zinc-300 transition hover:border-rose-500/40 hover:text-rose-200"
-          >
-            <ShieldCheck className="size-3.5" /> {s.purgeBackups}
-          </button>
-        )}
         <button
           type="button"
           onClick={onAdd}

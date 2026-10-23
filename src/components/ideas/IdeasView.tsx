@@ -94,7 +94,7 @@ export function IdeasView({ isTauri, onToast, onError, reloadToken = 0 }: IdeasV
   }
 
   return (
-    <div className="w-full max-w-none space-y-3 px-4">
+    <div className="@container w-full max-w-none space-y-3 px-4">
       {mockMode && (
         <p
           role="status"

@@ -1,8 +1,8 @@
 {
   "crates/orquestra-bridge/src/fuse/fuse_io.rs": 405,
-  "crates/orquestra-vault/src/vault/store.rs": 485,
-  "crates/orquestra-vault/src/vault/tests.rs": 1283,
+  "crates/orquestra-vault/src/vault/store.rs": 498,
+  "crates/orquestra-vault/src/vault/tests.rs": 1284,
   "src-tauri/src/mcp/catalog.rs": 416,
-  "src-tauri/src/mcp/tests/tests/deploy_cases.rs": 436,
+  "src-tauri/src/mcp/tests/tests/deploy_cases.rs": 458,
   "src-tauri/src/updater.rs": 524
 }

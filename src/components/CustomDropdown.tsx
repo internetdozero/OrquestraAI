@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -6,6 +6,8 @@ import { cn } from "../lib/utils";
 export interface DropdownOption<T extends string> {
   id: T;
   label: string;
+  /** Section header rendered above the first consecutive option of the group. */
+  group?: string;
 }
 
 interface CustomDropdownProps<T extends string> {
@@ -224,26 +226,40 @@ export function CustomDropdown<T extends string>({
             aria-label={ariaLabel}
             className="dropdown-pop fixed z-40 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.08] bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md"
           >
-            {options.map((option) => {
+            {options.map((option, index) => {
               const active = option.id === value;
+              const header =
+                option.group && (index === 0 || options[index - 1]?.group !== option.group)
+                  ? option.group
+                  : null;
               return (
-                <li key={option.id} role="option" aria-selected={active}>
-                  <button
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      onChange(option.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs text-zinc-300 transition-colors hover:bg-emerald-500/10 hover:text-emerald-300",
-                      active && "bg-emerald-500/10 text-emerald-300",
-                    )}
-                  >
-                    <span>{option.label}</span>
-                    {active && <Check className="size-3 shrink-0" aria-hidden="true" />}
-                  </button>
-                </li>
+                <Fragment key={option.id}>
+                  {header && (
+                    <li
+                      aria-hidden="true"
+                      className="px-2.5 pt-2 pb-0.5 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase"
+                    >
+                      {header}
+                    </li>
+                  )}
+                  <li role="option" aria-selected={active}>
+                    <button
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onChange(option.id);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs text-zinc-300 transition-colors hover:bg-emerald-500/10 hover:text-emerald-300",
+                        active && "bg-emerald-500/10 text-emerald-300",
+                      )}
+                    >
+                      <span>{option.label}</span>
+                      {active && <Check className="size-3 shrink-0" aria-hidden="true" />}
+                    </button>
+                  </li>
+                </Fragment>
               );
             })}
           </ul>,

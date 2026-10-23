@@ -102,6 +102,11 @@ export function Sidebar({
     credentials: null,
   };
 
+  // AGENTS.md lives pinned at the bottom, just above Settings, instead of
+  // in the main list above the inheritance card.
+  const mainViews = VIEWS.filter((definition) => definition.id !== "agents");
+  const agentsView = VIEWS.find((definition) => definition.id === "agents")!;
+
   return (
     <aside className="relative z-10 flex w-60 shrink-0 flex-col border-r border-white/[0.06] bg-[#0b0b0e]/70">
       <div className="flex-1 overflow-y-auto px-2 py-4">
@@ -115,7 +120,7 @@ export function Sidebar({
         </div>
 
         <div className="space-y-0.5">
-          {VIEWS.map((definition) => {
+          {mainViews.map((definition) => {
             const copy = t.sidebar.views[definition.id];
             return (
               <ViewButton
@@ -140,6 +145,16 @@ export function Sidebar({
             {t.sidebar.inheritance.body}
           </p>
         </div>
+      </div>
+      <div className="shrink-0 px-2 pb-1">
+        <ViewButton
+          view={agentsView}
+          label={t.sidebar.views.agents.label}
+          hint={t.sidebar.views.agents.hint}
+          active={view === "agents"}
+          count={null}
+          onSelect={onSelect}
+        />
       </div>
       <div className="flex shrink-0 items-center justify-between border-t border-white/[0.06] px-3 py-2.5">
         <button

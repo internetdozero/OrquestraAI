@@ -36,18 +36,6 @@ export const VIEWS: ViewDefinition[] = [
     hint: "MCP servers compiled into every harness",
   },
   {
-    id: "agents",
-    label: "AGENTS.md",
-    icon: FileText,
-    hint: "Master rules projected into every harness",
-  },
-  {
-    id: "sessions",
-    label: "Sessions",
-    icon: History,
-    hint: "Unified chat history across every harness",
-  },
-  {
     id: "ideas",
     label: "Ideas",
     icon: Lightbulb,
@@ -58,5 +46,17 @@ export const VIEWS: ViewDefinition[] = [
     label: "Credentials",
     icon: KeyRound,
     hint: "Blind API key vault with failover",
+  },
+  {
+    id: "sessions",
+    label: "Sessions",
+    icon: History,
+    hint: "Unified chat history across every harness",
+  },
+  {
+    id: "agents",
+    label: "AGENTS.md",
+    icon: FileText,
+    hint: "Master rules projected into every harness",
   },
 ];

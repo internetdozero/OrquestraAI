@@ -138,7 +138,6 @@ export function SkillsView({
 
   const activeCount = skills.filter((skill) => skill.harnessEnabled).length;
   const disabledCount = skills.length - activeCount;
-  const inheritedCount = skills.filter((skill) => skill.inheritedFromGlobal).length;
   const savedTokens = skills.reduce(
     (sum, skill) =>
       skill.harnessEnabled ? sum : sum + entryTokens(skill.name, skill.description, skill.tokens),
@@ -268,7 +267,7 @@ export function SkillsView({
     scope === GLOBAL_SCOPE.id ? `${projectionPath}/global` : `${projectionPath}/${scope}`;
 
   return (
-    <div className="mx-auto w-full max-w-[1400px]">
+    <div className="@container mx-auto w-full max-w-[1400px]">
       <SkillScopeSelector
         scope={scope}
         onSelect={selectScope}
@@ -282,9 +281,7 @@ export function SkillsView({
         activeCount={activeCount}
         totalCount={skills.length}
         disabledCount={disabledCount}
-        inheritedCount={inheritedCount}
         savedTokens={savedTokens}
-        visibleCount={visibleSkills.length}
         sortMode={sortMode}
         onSortModeChange={setSortMode}
         canBatch={canBatch}

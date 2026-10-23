@@ -13,6 +13,7 @@ fn test_service(preset: &str, secrets: &[&str]) -> VaultService {
         id: "svc".to_string(),
         label: "Svc".to_string(),
         preset: preset.to_string(),
+        enabled: true,
         description: String::new(),
         keys: secrets
             .iter()

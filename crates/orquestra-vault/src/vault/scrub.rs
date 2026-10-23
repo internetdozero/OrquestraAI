@@ -182,6 +182,7 @@ mod tests {
             id: "svc".to_string(),
             label: "Svc".to_string(),
             preset: "openai".to_string(),
+            enabled: true,
             description: String::new(),
             keys: vec![VaultKey {
                 id: "key-0".to_string(),

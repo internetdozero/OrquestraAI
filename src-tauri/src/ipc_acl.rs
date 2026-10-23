@@ -147,6 +147,7 @@ mod tests {
             "vault_http_request",
             "vault_save_service",
             "vault_delete_service",
+            "vault_set_service_enabled",
             "vault_set_primary",
             "vault_remove_key",
             "vault_purge_migration_backups",

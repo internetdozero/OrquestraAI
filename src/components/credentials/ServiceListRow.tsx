@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { BrandIcon } from "../vault/BrandIcons.tsx";
 import { ServiceDetailModal } from "./ServiceDetailModal.tsx";
+import { ServiceEnabledToggle } from "./ServiceEnabledToggle.tsx";
 import { StatusDot } from "./StatusDot.tsx";
 import type { ServiceEditInput } from "./ServiceEditForm.tsx";
 
@@ -21,6 +22,7 @@ interface ServiceListRowProps {
   onSaveTag: (index: number, tag: string | null) => Promise<void>;
   onReplaceKey: (index: number, secret: string) => Promise<void>;
   onSaveService: (input: ServiceEditInput) => Promise<void>;
+  onToggleEnabled: () => Promise<void>;
 }
 
 /** Single-line summary for list view; full management lives in the modal. */
@@ -37,11 +39,13 @@ export function ServiceListRow({
   onSaveTag,
   onReplaceKey,
   onSaveService,
+  onToggleEnabled,
 }: ServiceListRowProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const { t } = useI18n();
   const s = t.credentials;
 
@@ -54,6 +58,15 @@ export function ServiceListRow({
       await onTest(service.activeKeyIndex);
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function handleToggleEnabled(): Promise<void> {
+    setToggling(true);
+    try {
+      await onToggleEnabled();
+    } finally {
+      setToggling(false);
     }
   }
 
@@ -73,7 +86,18 @@ export function ServiceListRow({
 
   return (
     <>
-      <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/60 px-3 py-2.5">
+      <div
+        className={cn(
+          "flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/60 px-3 py-2.5",
+          !service.enabled && "opacity-60",
+        )}
+      >
+        <ServiceEnabledToggle
+          enabled={service.enabled}
+          busy={toggling || busy}
+          label={service.label}
+          onToggle={() => void handleToggleEnabled()}
+        />
         <span className="shrink-0 overflow-hidden rounded-lg border border-white/[0.07]">
           <BrandIcon presetId={presetId} size={32} />
         </span>

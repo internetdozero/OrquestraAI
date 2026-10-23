@@ -109,7 +109,7 @@ export function ProductivitySubPanel({ projects }: ProductivitySubPanelProps) {
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 @min-[560px]:grid-cols-3">
                 <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                   <p className="flex items-center gap-1.5 text-[10.5px] font-medium tracking-wide text-zinc-500 uppercase">
                     <Flame className="size-3 text-amber-300/80" aria-hidden="true" />

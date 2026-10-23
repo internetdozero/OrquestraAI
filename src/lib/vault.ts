@@ -27,12 +27,49 @@ export interface VaultPreset {
   metaFields: VaultMetaField[];
 }
 
+/** Section of the type-filter menu a preset belongs to. */
+export type PresetTypeGroup = "ai" | "infra" | "media" | "other";
+
+const AI_PRESETS = new Set([
+  "openai",
+  "anthropic",
+  "gemini",
+  "groq",
+  "deepseek",
+  "deepgram",
+  "elevenlabs",
+  "exa",
+  "tavily",
+  "openrouter",
+  "jules",
+]);
+const INFRA_PRESETS = new Set([
+  "cloudflare",
+  "supabase",
+  "aws",
+  "vercel",
+  "neon",
+  "github",
+  "stripe",
+]);
+const MEDIA_PRESETS = new Set(["unsplash", "pixabay", "pexels", "bluesky", "pix"]);
+
+/** Section a preset id renders under in the type filter; unknown ids fall to `other`. */
+export function presetTypeGroup(presetId: string): PresetTypeGroup {
+  if (AI_PRESETS.has(presetId)) return "ai";
+  if (INFRA_PRESETS.has(presetId)) return "infra";
+  if (MEDIA_PRESETS.has(presetId)) return "media";
+  return "other";
+}
+
 /** Masked service: no plaintext secrets ever cross IPC. */
 export interface VaultService {
   id: string;
   label: string;
   preset: string;
   description: string;
+  /** Operator kill-switch: disabled services are refused by the blind proxy. */
+  enabled: boolean;
   activeKeyIndex: number;
   totalKeys: number;
   maskedKeys: string[];
@@ -123,6 +160,7 @@ const mockServices: VaultService[] = [
     label: "GitHub Main",
     preset: "github",
     description: "CI and automation token pool.",
+    enabled: true,
     activeKeyIndex: 0,
     totalKeys: 2,
     maskedKeys: ["ghp_abC...9f82", "ghp_xyZ...41de"],
@@ -137,6 +175,7 @@ const mockServices: VaultService[] = [
     label: "OpenAI Pool",
     preset: "openai",
     description: "Inference keys with failover.",
+    enabled: true,
     activeKeyIndex: 1,
     totalKeys: 2,
     maskedKeys: ["sk-pro...7a01", "sk-pro...c3b9"],
@@ -151,6 +190,7 @@ const mockServices: VaultService[] = [
     label: "Cloudflare Multi-API",
     preset: "cloudflare",
     description: "Scoped tokens per API surface.",
+    enabled: true,
     activeKeyIndex: 0,
     totalKeys: 2,
     maskedKeys: ["cf_wor...1234", "cf_d1-...5678"],
@@ -204,6 +244,11 @@ export function vaultDeleteService(id: string): Promise<void> {
 
 export function vaultSetPrimary(id: string, index: number): Promise<VaultService> {
   return invoke<VaultService>("vault_set_primary", { id, index });
+}
+
+/** Flip the operator kill-switch; the backend persists and re-lists it. */
+export function vaultSetServiceEnabled(id: string, enabled: boolean): Promise<VaultService> {
+  return invoke<VaultService>("vault_set_service_enabled", { id, enabled });
 }
 
 // NOTE: the backend still registers `vault_http_request` and `vault_exec`,

@@ -33,8 +33,8 @@ export function ScopeTabs({
   onSelect: (scope: string) => void;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-1.5">
-      <span className="px-1.5 text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase">
+    <div className="mb-4 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-1.5">
+      <span className="shrink-0 px-1.5 text-[9.5px] font-medium tracking-[0.12em] text-zinc-600 uppercase">
         {label}
       </span>
 
@@ -50,7 +50,7 @@ export function ScopeTabs({
             aria-pressed={active}
             title={tab.title}
             className={cn(
-              "flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition",
+              "flex shrink-0 items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition",
               active
                 ? "accent-bg-soft accent-text"
                 : tab.dimmed

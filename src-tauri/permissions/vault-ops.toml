@@ -10,6 +10,7 @@ description = "Vault key lifecycle (no blind key use)."
 permissions = [
   "allow-vault-save-service",
   "allow-vault-delete-service",
+  "allow-vault-set-service-enabled",
   "allow-vault-set-primary",
   "allow-vault-test-connection",
   "allow-vault-remove-key",

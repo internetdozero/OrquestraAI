@@ -121,6 +121,7 @@ fn main() {
             "vault_list_services",
             "vault_save_service",
             "vault_delete_service",
+            "vault_set_service_enabled",
             "vault_set_primary",
             "vault_http_request",
             "vault_exec",

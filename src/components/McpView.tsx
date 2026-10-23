@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Loader2, Plug, Plus, Unplug, Waypoints } from "lucide-react";
+import { AlertTriangle, Loader2, Unplug, Waypoints } from "lucide-react";
 import { coversHarness, sortMcps, type McpServer, type McpSortMode } from "../lib/mcps";
 import { useI18n } from "../hooks/useI18n";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -10,7 +10,6 @@ import { useMcpStoreActions } from "../hooks/useMcpStoreActions";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { GRID_GAP, LIST_GAP } from "../lib/virtualRows";
 import { sumMcpTokens } from "../lib/tokens";
-import { formatTokens } from "../lib/utils";
 import { McpCard } from "./McpCard";
 import { McpListRow } from "./McpListRow";
 import { McpEmptyState } from "./McpEmptyState";
@@ -21,7 +20,6 @@ import { McpScopeSelector } from "./McpScopeSelector";
 import { McpToolbar } from "./McpToolbar";
 import { VirtualCardGrid } from "./VirtualCardGrid";
 import { OfficialStore } from "./OfficialStore";
-import { StoreTabs } from "./StoreTabs";
 
 interface McpViewProps {
   isTauri: boolean;
@@ -132,6 +130,11 @@ export function McpView({
     [setFormError],
   );
   const handleDeleteServer = useCallback((server: McpServer) => void remove(server), [remove]);
+  const handleAddServer = useCallback(() => {
+    setEditing(null);
+    setFormError(null);
+    setFormOpen(true);
+  }, [setFormError]);
   const renderServerRow = useCallback(
     (server: McpServer) => (
       <McpListRow
@@ -182,7 +185,7 @@ export function McpView({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-5 sm:px-6">
-      <div className="mx-auto w-full max-w-[1400px]">
+      <div className="@container mx-auto w-full max-w-[1400px]">
         {mockMode && (
           <p
             role="status"
@@ -191,46 +194,6 @@ export function McpView({
             {t.mcps.mockBanner}
           </p>
         )}
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
-              {t.mcps.headerChip}
-            </p>
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-100">
-              {t.mcps.registryTitle}
-            </h2>
-            <p className="mt-0.5 max-w-2xl text-[11px] leading-relaxed text-zinc-500">
-              {t.mcps.subtitle}
-            </p>
-            <p className="mt-1 font-mono text-[10.5px] text-zinc-600" title={t.tokens.scopeHint}>
-              {t.tokens.entry} ≈ {formatTokens(scopeTokens.entry)} · {t.tokens.full} ≈{" "}
-              {formatTokens(scopeTokens.full)} {t.tokens.unit}
-            </p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="accent-border accent-bg-soft flex items-center gap-2 rounded-lg border px-3 py-2">
-              <Plug className="accent-text size-3.5" />
-              <span className="accent-text text-[11.5px] font-medium">{t.mcps.active}</span>
-              <span className="accent-text font-mono text-[11.5px] opacity-70">
-                {activeServers.length}/{servers.length}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(null);
-                setFormError(null);
-                setFormOpen(true);
-              }}
-              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-[11.5px] font-medium text-emerald-200 transition hover:bg-emerald-500/25"
-            >
-              <Plus className="size-3.5" />
-              {t.mcps.addServer}
-            </button>
-          </div>
-        </div>
-
         {/* The toggle writes to whichever scope is chosen here. */}
         <McpScopeSelector
           scope={scope}
@@ -241,24 +204,27 @@ export function McpView({
           }}
         />
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <StoreTabs showStore={showStore} onChange={setShowStore} className="mb-0" />
-          <McpToolbar
-            query={query}
-            onQueryChange={(value) => onQueryChange?.(value)}
-            scope={scope}
-            scopeLabel={scopeLabel}
-            visibleCount={visibleServers.length}
-            totalCount={servers.length}
-            sortMode={sortMode}
-            onSortModeChange={setSortMode}
-            canBatch={(isTauri || mockMode) && servers.length > 0 && !batchPending && !loading}
-            batchPending={batchPending}
-            onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
-            view={view}
-            onViewChange={setView}
-          />
-        </div>
+        <McpToolbar
+          query={query}
+          onQueryChange={(value) => onQueryChange?.(value)}
+          scope={scope}
+          scopeLabel={scopeLabel}
+          activeCount={activeServers.length}
+          totalCount={servers.length}
+          inactiveCount={servers.length - activeServers.length}
+          entryTokens={scopeTokens.entry}
+          fullTokens={scopeTokens.full}
+          sortMode={sortMode}
+          onSortModeChange={setSortMode}
+          canBatch={(isTauri || mockMode) && servers.length > 0 && !batchPending && !loading}
+          batchPending={batchPending}
+          onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
+          onAdd={handleAddServer}
+          showStore={showStore}
+          onShowStoreChange={setShowStore}
+          view={view}
+          onViewChange={setView}
+        />
 
         {error && (
           <div
@@ -286,11 +252,7 @@ export function McpView({
           ) : visibleServers.length === 0 ? (
             <McpEmptyState
               onExploreStore={() => setShowStore(true)}
-              onAddManual={() => {
-                setEditing(null);
-                setFormError(null);
-                setFormOpen(true);
-              }}
+              onAddManual={handleAddServer}
             />
           ) : view === "list" ? (
             <VirtualCardGrid

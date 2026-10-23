@@ -5,6 +5,7 @@ export const mcps = {
   subtitle:
     "Um catálogo em ~/.orquestra/mcps.json, compilado no dialeto de cada harness. O Global é a linha de base; um harness pode aderir por cima dele.",
   active: "Ativos",
+  scopeTokens: "Tokens do escopo",
   sortMcps: "Ordenar servidores",
   orderGrid: "Ordenar a grade de servidores",
   sortOptions: {

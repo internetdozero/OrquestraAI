@@ -2,21 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { devMockMode } from "../../lib/fixtures.ts";
 import {
-  listVaultPresets,
+  presetTypeGroup,
   vaultDeleteService,
-  vaultListServices,
-  vaultPurgeMigrationBackups,
   vaultRemoveKey,
   vaultSaveService,
   vaultSetPrimary,
+  vaultSetServiceEnabled,
   vaultTestConnection,
   type VaultPreset,
   type VaultService,
   type VaultTestResult,
 } from "../../lib/vault.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
+import {
+  ensureVaultCatalog,
+  readVaultCache,
+  refreshVaultCatalog,
+} from "../../lib/vaultCache.ts";
 import { AddCredentialModal } from "../vault/AddCredentialModal.tsx";
-import { MigrationBackupPurgeModal } from "./MigrationBackupPurgeModal.tsx";
 import {
   CredentialsHeader,
   type CredentialStatusFilter,
@@ -40,9 +43,10 @@ export function CredentialsView({
   onError,
   reloadToken = 0,
 }: CredentialsViewProps) {
-  const [services, setServices] = useState<VaultService[]>([]);
-  const [presets, setPresets] = useState<VaultPreset[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Warm cache paints immediately; a cold mount fetches once like before.
+  const [services, setServices] = useState<VaultService[]>(() => readVaultCache()?.services ?? []);
+  const [presets, setPresets] = useState<VaultPreset[]>(() => readVaultCache()?.presets ?? []);
+  const [loading, setLoading] = useState(() => readVaultCache() === null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>("All");
   const [typeFilter, setTypeFilter] = useState("All");
@@ -50,48 +54,49 @@ export function CredentialsView({
     localStorage.getItem("credentials-view") === "list" ? "list" : "grid",
   );
   const [modalOpen, setModalOpen] = useState(false);
-  const [purgeOpen, setPurgeOpen] = useState(false);
-  const [purging, setPurging] = useState(false);
   // Browser preview (vite dev without the Tauri core) renders fixture data
   // so the dashboard stays reviewable outside the desktop app, like McpView.
   const [mockMode] = useState(devMockMode);
   const { t } = useI18n();
   const s = t.credentials;
 
+  // Silent refresh: a warm mount repaints from cache and only the cold
+  // mount (or an explicit shell rescan) ever shows the loading panel.
+  const load = useCallback(
+    async (force = false) => {
+      if (!isTauri && !mockMode) {
+        setLoading(false);
+        return;
+      }
+      if (!force && readVaultCache() === null) setLoading(true);
+      try {
+        const next = force ? await refreshVaultCatalog() : await ensureVaultCatalog();
+        setPresets(next.presets);
+        setServices(next.services);
+      } catch (err: unknown) {
+        onError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isTauri, mockMode, onError],
+  );
+
   const refresh = useCallback(async () => {
-    setServices(await vaultListServices());
-  }, []);
+    await load(true);
+  }, [load]);
 
   // The shell asks for a rescan by bumping the token; skip the mount value.
   const lastReloadToken = useRef(reloadToken);
   useEffect(() => {
     if (reloadToken === lastReloadToken.current) return;
     lastReloadToken.current = reloadToken;
-    void refresh();
-  }, [reloadToken, refresh]);
+    void load(true);
+  }, [reloadToken, load]);
 
   useEffect(() => {
-    if (!isTauri && !mockMode) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    Promise.all([listVaultPresets(), vaultListServices()])
-      .then(([presetList, serviceList]) => {
-        if (cancelled) return;
-        setPresets(presetList);
-        setServices(serviceList);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) onError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isTauri, mockMode, onError]);
+    void load(false);
+  }, [load]);
 
   const presetLabels = useMemo(() => {
     const labels = new Map<string, string>();
@@ -119,17 +124,27 @@ export function CredentialsView({
   }, [view]);
 
   const typeOptions = useMemo(() => {
+    const groupLabels = {
+      ai: s.typeGroupAi,
+      infra: s.typeGroupInfra,
+      media: s.typeGroupMedia,
+      other: s.typeGroupOther,
+    } as const;
+    const order = ["ai", "infra", "media", "other"] as const;
     const seen = new Map<string, string>();
     for (const service of services) {
       if (!seen.has(service.preset)) {
         seen.set(service.preset, presetLabels.get(service.preset) ?? service.preset);
       }
     }
-    return [
-      { id: "All", label: s.typeAll },
-      ...[...seen.entries()].map(([id, label]) => ({ id, label })),
-    ];
-  }, [services, presetLabels, s.typeAll]);
+    const grouped = order.flatMap((group) =>
+      [...seen.entries()]
+        .filter(([id]) => presetTypeGroup(id) === group)
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, label]) => ({ id, label, group: groupLabels[group] })),
+    );
+    return [{ id: "All", label: s.typeAll }, ...grouped];
+  }, [services, presetLabels, s.typeAll, s.typeGroupAi, s.typeGroupInfra, s.typeGroupMedia, s.typeGroupOther]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -144,19 +159,6 @@ export function CredentialsView({
       );
     });
   }, [services, query, statusFilter, typeFilter]);
-
-  async function purgeBackups(): Promise<void> {
-    setPurging(true);
-    try {
-      const report = await vaultPurgeMigrationBackups();
-      setPurgeOpen(false);
-      onToast(s.toastBackupsPurged(report.vaultPurged, report.catalogPurged));
-    } catch (err) {
-      onError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setPurging(false);
-    }
-  }
 
   async function mutate(action: () => Promise<unknown>, done: string): Promise<void> {
     try {
@@ -193,6 +195,13 @@ export function CredentialsView({
           s.toastExtended(service.label),
         ),
       onDelete: () => mutate(() => vaultDeleteService(service.id), s.toastDeleted(service.label)),
+      onToggleEnabled: () => {
+        const next = !service.enabled;
+        return mutate(
+          () => vaultSetServiceEnabled(service.id, next),
+          next ? s.toastEnabled(service.label) : s.toastDisabled(service.label),
+        );
+      },
       onSaveTag: (index: number, tag: string | null) =>
         mutate(
           () =>
@@ -283,7 +292,6 @@ export function CredentialsView({
         view={view}
         onViewChange={setView}
         onAdd={() => setModalOpen(true)}
-        onPurgeBackups={isTauri && !mockMode ? () => setPurgeOpen(true) : undefined}
       />
 
       {visible.length === 0 ? (
@@ -336,12 +344,6 @@ export function CredentialsView({
           await refresh();
           onToast(s.toastSaved(input.id));
         }}
-      />
-      <MigrationBackupPurgeModal
-        open={purgeOpen}
-        purging={purging}
-        onCancel={() => setPurgeOpen(false)}
-        onConfirm={() => void purgeBackups()}
       />
     </div>
   );

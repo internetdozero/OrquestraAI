@@ -71,6 +71,14 @@ pub fn vault_save_service(
     )
 }
 
+/// Flip the operator kill-switch: disabled services stay listed (masked)
+/// but the blind proxy and exec refuse them.
+#[tauri::command]
+pub fn vault_set_service_enabled(id: String, enabled: bool) -> Result<VaultServicePublic, String> {
+    let paths = OrquestraPaths::resolve()?;
+    service::set_service_enabled(&paths, &id, enabled)
+}
+
 /// Remove one service from the vault.
 #[tauri::command]
 pub fn vault_delete_service(id: String) -> Result<(), String> {

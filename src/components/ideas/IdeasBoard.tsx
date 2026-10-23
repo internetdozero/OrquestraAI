@@ -111,7 +111,7 @@ export function IdeasBoard({
   };
 
   return (
-    <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:flex">
+    <div className="grid grid-cols-1 items-start gap-3 @min-[560px]:grid-cols-2 @min-[980px]:flex">
       {COLUMNS.map((column) => {
         const rows = ideas.filter((idea) => idea.status === column.status);
         // Empty columns auto-collapse to the slim strip so zero-card
@@ -147,8 +147,8 @@ export function IdeasBoard({
                   column.status,
                 );
               }}
-              className={cn(
-                "w-full overflow-hidden rounded-xl border bg-black/20 hover:border-white/[0.12] hover:bg-white/[0.02] xl:w-11 xl:shrink-0",
+            className={cn(
+              "w-full overflow-hidden rounded-xl border bg-black/20 hover:border-white/[0.12] hover:bg-white/[0.02] @min-[980px]:w-11 @min-[980px]:shrink-0",
                 dropStatus === column.status
                   ? "border-amber-500/50 bg-amber-500/[0.04]"
                   : "border-white/[0.05]",
@@ -202,7 +202,7 @@ export function IdeasBoard({
               );
             }}
             className={cn(
-              "flex min-w-0 flex-col gap-2 rounded-xl border bg-black/20 p-2.5 transition-colors xl:min-w-0 xl:flex-1",
+              "flex min-w-0 flex-col gap-2 rounded-xl border bg-black/20 p-2.5 transition-colors @min-[980px]:min-w-0 @min-[980px]:flex-1",
               dropStatus === column.status
                 ? "border-amber-500/50 bg-amber-500/[0.04]"
                 : "border-white/[0.05]",

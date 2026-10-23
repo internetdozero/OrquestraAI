@@ -116,6 +116,9 @@ pub fn save_service(
         } else {
             input.label
         },
+        // The editor round-trips masks, not the kill-switch: keep whatever
+        // the toggle set, defaulting new services to enabled.
+        enabled: previous.as_ref().map(|prev| prev.enabled).unwrap_or(true),
         preset: input.preset,
         description: input.description.unwrap_or_default(),
         keys: next_keys,
@@ -141,6 +144,24 @@ pub fn delete_service(paths: &OrquestraPaths, id: &str) -> Result<(), String> {
             return Err(format!("unknown vault service: {id}"));
         }
         Ok(())
+    })
+}
+
+/// Flip the operator kill-switch: disabled services stay listed (masked)
+/// but the blind proxy and exec refuse them, so agents only ever reach
+/// enabled services.
+pub fn set_service_enabled(
+    paths: &OrquestraPaths,
+    id: &str,
+    enabled: bool,
+) -> Result<VaultServicePublic, String> {
+    update_vault(paths, |vault| {
+        let service = vault
+            .services
+            .get_mut(id)
+            .ok_or_else(|| format!("unknown vault service: {id}"))?;
+        service.enabled = enabled;
+        Ok(to_public(service))
     })
 }
 
@@ -188,6 +209,10 @@ pub fn remove_key(
     })
 }
 
+#[cfg(test)]
+#[path = "enabled_tests.rs"]
+mod tests;
+
 /// Blind exec response: exit code + scrubbed output streams.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -214,6 +239,9 @@ pub fn execute(
         .ok_or_else(|| format!("unknown vault service: {service}"))?;
     if current.keys.is_empty() {
         return Err(format!("vault service {service} has no keys"));
+    }
+    if !current.enabled {
+        return Err(format!("vault service {service} is disabled"));
     }
     let used = current.active.min(current.keys.len().saturating_sub(1));
     let secret = current

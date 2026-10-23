@@ -66,6 +66,7 @@
     "vault_remove_key",
     "vault_save_service",
     "vault_set_primary",
+    "vault_set_service_enabled",
     "vault_test_connection",
     "write_master_agents_md"
   ],
@@ -114,6 +115,7 @@
       "vault_save_service",
       "vault_delete_service",
       "vault_set_primary",
+      "vault_set_service_enabled",
       "vault_test_connection",
       "vault_remove_key",
       "vault_purge_migration_backups",

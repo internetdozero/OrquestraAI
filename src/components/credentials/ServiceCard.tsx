@@ -6,6 +6,7 @@ import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { BrandIcon } from "../vault/BrandIcons.tsx";
 import { ServiceDetailModal } from "./ServiceDetailModal.tsx";
+import { ServiceEnabledToggle } from "./ServiceEnabledToggle.tsx";
 import { StatusDot } from "./StatusDot.tsx";
 
 interface ServiceCardProps {
@@ -20,6 +21,7 @@ interface ServiceCardProps {
   onSaveTag: (index: number, tag: string | null) => Promise<void>;
   onReplaceKey: (index: number, secret: string) => Promise<void>;
   onSaveService: (input: ServiceEditInput) => Promise<void>;
+  onToggleEnabled: () => Promise<void>;
   presets: VaultPreset[];
 }
 
@@ -37,11 +39,13 @@ export function ServiceCard({
   onSaveTag,
   onReplaceKey,
   onSaveService,
+  onToggleEnabled,
   presets,
 }: ServiceCardProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testNote, setTestNote] = useState<string | null>(null);
   const { t } = useI18n();
@@ -62,6 +66,15 @@ export function ServiceCard({
     }
   }
 
+  async function handleToggleEnabled(): Promise<void> {
+    setToggling(true);
+    try {
+      await onToggleEnabled();
+    } finally {
+      setToggling(false);
+    }
+  }
+
   async function handleDelete(): Promise<void> {
     if (!confirmingDelete) {
       setConfirmingDelete(true);
@@ -78,7 +91,12 @@ export function ServiceCard({
 
   return (
     <>
-      <div className="flex h-full flex-col rounded-xl border border-white/[0.07] bg-zinc-900/60 p-3.5">
+      <div
+        className={cn(
+          "flex h-full flex-col rounded-xl border border-white/[0.07] bg-zinc-900/60 p-3.5",
+          !service.enabled && "opacity-60",
+        )}
+      >
         <div className="flex items-start gap-2.5">
           <span className="shrink-0 overflow-hidden rounded-lg border border-white/[0.07]">
             <BrandIcon presetId={presetId} size={36} />
@@ -87,6 +105,12 @@ export function ServiceCard({
             <h3 className="truncate text-sm font-semibold text-zinc-100">{service.label}</h3>
             <p className="mt-0.5 truncate font-mono text-[10.5px] text-zinc-500">{service.id}</p>
           </div>
+          <ServiceEnabledToggle
+            enabled={service.enabled}
+            busy={toggling || busy}
+            label={service.label}
+            onToggle={() => void handleToggleEnabled()}
+          />
           <StatusDot
             health={service.health}
             label={s.healthName(service.health)}

@@ -57,6 +57,11 @@ pub struct VaultService {
     pub label: String,
     #[serde(default = "default_preset")]
     pub preset: String,
+    /// Operator kill-switch: disabled services stay listed but are never
+    /// injected — the blind proxy and exec refuse them, so agents can only
+    /// ever reach enabled services.
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
     #[serde(default)]
     pub description: String,
     #[serde(default)]
@@ -80,6 +85,12 @@ fn default_preset() -> String {
     "custom".to_string()
 }
 
+/// Pre-toggle vault files carry no flag; they load as enabled so the
+/// kill-switch is opt-out, never a surprise lockout after an upgrade.
+fn default_enabled() -> bool {
+    true
+}
+
 /// Masked public view: no plaintext secrets cross IPC.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -89,6 +100,7 @@ pub struct VaultServicePublic {
     pub preset: String,
     pub description: String,
     pub active_key_index: usize,
+    pub enabled: bool,
     pub total_keys: usize,
     pub masked_keys: Vec<String>,
     pub health: String,
@@ -180,6 +192,7 @@ pub(super) fn to_public(service: &VaultService) -> VaultServicePublic {
         preset: service.preset.clone(),
         description: service.description.clone(),
         active_key_index: service.active,
+        enabled: service.enabled,
         total_keys: service.keys.len(),
         masked_keys: service
             .keys

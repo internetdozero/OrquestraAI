@@ -7,6 +7,7 @@ export const mcps: TranslationSchema["mcps"] = {
   subtitle:
     "One catalog in ~/.orquestra/mcps.json compiled into each harness's own dialect. Global is the baseline; a harness can opt in on top of it.",
   active: "Active",
+  scopeTokens: "Scope tokens",
   sortMcps: "Sort servers",
   orderGrid: "Order the server grid",
   sortOptions: {

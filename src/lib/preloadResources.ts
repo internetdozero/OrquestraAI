@@ -1,6 +1,7 @@
 import { ensureAgentsText } from "./agentsCache";
 import { HARNESSES, GLOBAL_SCOPE } from "./harnesses";
 import { ensureMcpCatalog } from "./mcpCache";
+import { ensureVaultCatalog } from "./vaultCache";
 import { ensureUnifiedSessions } from "./sessions";
 import { hasSkillsCache } from "./skillsCache";
 import { loadSkillsScope } from "./skillsLoader";
@@ -77,6 +78,11 @@ export async function preloadBackground(isCancelled: () => boolean): Promise<voi
   await whenIdle(isCancelled);
   if (isCancelled()) return;
   await ensureAgentsText().catch(() => undefined);
+  if (isCancelled()) return;
+
+  await whenIdle(isCancelled);
+  if (isCancelled()) return;
+  await ensureVaultCatalog().catch(() => undefined);
   if (isCancelled()) return;
 
   // Index the session catalog while the user is still on the first screen,
