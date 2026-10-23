@@ -32,6 +32,8 @@ mod envelope;
 mod io;
 mod key;
 mod migrate;
+#[cfg(test)]
+mod nested_tests;
 mod seal;
 #[cfg(test)]
 mod tests;

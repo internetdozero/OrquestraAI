@@ -27,6 +27,23 @@ pub const AAD_VAULT: &[u8] = b"vault.v1";
 /// Payload domain for the MCP catalog (`mcps.json`).
 pub const AAD_MCPS: &[u8] = b"mcps.v1";
 
+/// True when `bytes` parse as one of our sealed envelopes. The seal path
+/// uses it to refuse input that is already sealed: sealing an envelope
+/// nests it, and the reader opens a single layer, so the inner catalog
+/// silently disappears (the "credentials vanished" incident).
+pub(super) fn is_envelope_bytes(bytes: &[u8]) -> bool {
+    serde_json::from_slice::<serde_json::Value>(bytes)
+        .map(|value| is_sealed(&value))
+        .unwrap_or(false)
+}
+
+/// True when the value carries the seal marker with an unrecognized
+/// version. Those files must fail closed: sealing over them (or treating
+/// them as legacy plaintext) would nest or destroy a future envelope.
+pub(super) fn has_unknown_version(value: &serde_json::Value) -> bool {
+    value.get(MARKER).is_some() && sealed_version(value).is_none()
+}
+
 /// True when the parsed file value is one of our sealed envelopes (v1 or
 /// v2). Legacy files (`services` / `mcps` at the top level) never carry
 /// the marker.

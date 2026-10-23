@@ -13,6 +13,51 @@ use super::migrate::{migrate_legacy_and_verify, self_heal, self_heal_no_key};
 use super::seal::seal_with_key;
 use super::{AAD_MCPS, AAD_VAULT};
 
+/// Maximum envelope layers unwrapped before giving up: one layer is the
+/// norm, anything deeper is damage from a past double-seal bug.
+const MAX_NESTING: usize = 8;
+
+/// Unwrap nested envelopes (`v1(v2(...))` left behind when a v1-only writer
+/// sealed an already-sealed file). Returns the innermost plaintext plus how
+/// many layers came off. Fails closed when an inner layer does not open:
+/// returning half-opened bytes would hand the caller an envelope instead of
+/// the catalog, which reads back as silently empty.
+fn normalize_nested(
+    key: &[u8; 32],
+    text: &str,
+    aad: &[u8],
+    path: &Path,
+) -> Result<(String, usize), String> {
+    let mut current = text.to_string();
+    let mut layers = 0;
+    loop {
+        let value: serde_json::Value = match serde_json::from_str(&current) {
+            Ok(value) => value,
+            Err(_) => break,
+        };
+        if !envelope::is_sealed(&value) {
+            break;
+        }
+        if layers >= MAX_NESTING {
+            return Err(format!(
+                "{} nests sealed envelopes too deeply; refusing to unwrap",
+                path.display()
+            ));
+        }
+        let (plaintext, _) = envelope::open(key, &value, aad).map_err(|_| {
+            format!(
+                "{} holds a nested envelope that does not open under the available key; \
+                 restore it from its .migrate-bak backup",
+                path.display()
+            )
+        })?;
+        current = String::from_utf8(plaintext)
+            .map_err(|error| format!("unsealed secrets are not valid text: {error}"))?;
+        layers += 1;
+    }
+    Ok((current, layers))
+}
+
 /// Open a stored file's text with the full migration flow (Task #323).
 /// Returns the plaintext plus whether it was legacy input.
 ///
@@ -20,6 +65,10 @@ use super::{AAD_MCPS, AAD_VAULT};
 ///   set; otherwise backed up `0600`, sealed, verified, and unlinked.
 /// - Sealed v1: opened without AAD, then re-sealed as v2.
 /// - Sealed v2: opened with the caller's AAD (swapped domains fail).
+/// - Nested envelopes are unwrapped (bounded) and the file is re-sealed as
+///   a single layer, so past double-seals self-repair on the next read.
+/// - An unrecognized envelope version fails closed without touching the
+///   file: sealing over it would nest or destroy a future envelope.
 /// - Key fallback: the keyring key is tried first, then `.file-key` (reads
 ///   never create key material). A fallback success promotes its bytes into
 ///   the keyring and re-seals under the active key; `.file-key` is removed
@@ -42,6 +91,12 @@ pub fn open_stored(
             return Ok((stored.to_string(), true));
         }
     };
+    if envelope::has_unknown_version(&value) {
+        return Err(format!(
+            "refusing to read {}: unsupported sealed envelope version; refusing to touch the file",
+            path.display()
+        ));
+    }
     if !envelope::is_sealed(&value) {
         if key::is_migrated(&paths.root) {
             return Err(refuse_plaintext(path));
@@ -58,15 +113,32 @@ pub fn open_stored(
                     key::cache_insert(&paths.root, kp);
                     let text = String::from_utf8(plaintext)
                         .map_err(|error| format!("unsealed secrets are not valid text: {error}"))?;
-                    if version == 1 {
-                        let resealed = seal_with_key(&kp, text.as_bytes(), aad)?;
-                        persist_sealed(path, &resealed)?;
-                        verify_reopen(paths, path, aad, Some(&text))?;
-                        key::mark_migrated(&paths.root)?;
-                    } else {
-                        let _ = maybe_remove_fallback(paths);
+                    match normalize_nested(&kp, &text, aad, path) {
+                        Ok((text, nested)) => {
+                            if nested > 0 {
+                                key::warn_once(format!(
+                                    "unwrapped {nested} nested envelope layer(s) in {}; re-sealed as a single layer",
+                                    path.display()
+                                ));
+                            }
+                            if version == 1 || nested > 0 {
+                                let resealed = seal_with_key(&kp, text.as_bytes(), aad)?;
+                                persist_sealed(path, &resealed)?;
+                                verify_reopen(paths, path, aad, Some(&text))?;
+                                key::mark_migrated(&paths.root)?;
+                            } else {
+                                let _ = maybe_remove_fallback(paths);
+                            }
+                            return Ok((text, false));
+                        }
+                        Err(error) => {
+                            // The outer layer opened but an inner one did not:
+                            // keep going so the fallback key and the backup
+                            // self-heal still get their chance.
+                            key::warn_once(format!("{error}; trying the fallback key"));
+                            keyring_err = Some(error);
+                        }
                     }
-                    return Ok((text, false));
                 }
                 Err(error) => keyring_err = Some(error),
             },
@@ -84,6 +156,16 @@ pub fn open_stored(
             Ok((plaintext, version)) => {
                 let text = String::from_utf8(plaintext)
                     .map_err(|error| format!("unsealed secrets are not valid text: {error}"))?;
+                let (text, nested) = match normalize_nested(&kf, &text, aad, path) {
+                    Ok(normalized) => normalized,
+                    Err(error) => return self_heal(paths, path, aad, keyring_err, error),
+                };
+                if nested > 0 {
+                    key::warn_once(format!(
+                        "unwrapped {nested} nested envelope layer(s) in {}; re-sealed as a single layer",
+                        path.display()
+                    ));
+                }
                 if key::keyring_usable(&paths.root) {
                     key::cache_insert(&paths.root, kf);
                     let migration = key::promote_fallback_to_keyring(&kf).and_then(|active| {
@@ -115,7 +197,7 @@ pub fn open_stored(
                             key::cache_insert(&paths.root, kf);
                         }
                     }
-                } else if version == 1 {
+                } else if version == 1 || nested > 0 {
                     // Headless host with no keyring: no promotion target, but
                     // the v1 → v2 upgrade still applies under the same key.
                     key::cache_insert(&paths.root, kf);

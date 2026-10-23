@@ -26,6 +26,11 @@ pub(super) fn migrate_backup_path(path: &Path) -> PathBuf {
 /// Read the backup: sealed backups open under the available keys first, a
 /// plaintext backup is returned as-is. Only valid-JSON candidates qualify,
 /// so the caller can schema-parse the result.
+///
+/// Nested envelopes (the double-seal incident) are unwrapped layer by
+/// layer. A candidate that is still sealed afterwards is refused: handing
+/// it back would make self-heal re-seal an envelope instead of the
+/// catalog, growing the nesting instead of repairing it.
 pub(super) fn recover_plaintext_from_backup(
     paths: &OrquestraPaths,
     path: &Path,
@@ -35,13 +40,23 @@ pub(super) fn recover_plaintext_from_backup(
     if stored.trim().is_empty() {
         return None;
     }
-    let candidate = match serde_json::from_str::<serde_json::Value>(&stored) {
+    let mut candidate = match serde_json::from_str::<serde_json::Value>(&stored) {
         Ok(value) if envelope::is_sealed(&value) => {
             try_open_with_available_keys(paths, &value, aad).ok()?
         }
         _ => stored,
     };
-    serde_json::from_str::<serde_json::Value>(&candidate).ok()?;
+    for _ in 0..8 {
+        let value: serde_json::Value = serde_json::from_str(&candidate).ok()?;
+        if !envelope::is_sealed(&value) {
+            break;
+        }
+        candidate = try_open_with_available_keys(paths, &value, aad).ok()?;
+    }
+    let value: serde_json::Value = serde_json::from_str(&candidate).ok()?;
+    if envelope::is_sealed(&value) {
+        return None;
+    }
     Some(candidate)
 }
 
