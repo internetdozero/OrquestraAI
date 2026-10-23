@@ -1,7 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { BootScreen } from "./components/BootScreen";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { PresetBar } from "./components/PresetBar";
@@ -245,39 +244,10 @@ export default function App() {
     clearError();
   };
 
-  // Frameless shell floats with rounded corners; a maximized window fills
-  // the workspace edge to edge instead.
-  const [maximized, setMaximized] = useState(false);
-  useEffect(() => {
-    if (!isTauri) return;
-    let active = true;
-    const sync = async () => {
-      try {
-        if (active) setMaximized(await getCurrentWindow().isMaximized());
-      } catch {
-        // Window API unavailable (permissions, tests): keep square corners.
-      }
-    };
-    void sync();
-    const onChange = () => void sync();
-    window.addEventListener("focus", onChange);
-    window.addEventListener("resize", onChange);
-    return () => {
-      active = false;
-      window.removeEventListener("focus", onChange);
-      window.removeEventListener("resize", onChange);
-    };
-  }, [isTauri]);
-
   if (!essentialsReady) return <BootScreen />;
 
   return (
-    <div
-      className={cn(
-        "relative flex h-full flex-col overflow-hidden bg-[#09090b] text-zinc-100",
-        isTauri && !maximized && "rounded-xl ring-1 ring-white/10",
-      )}
-    >
+    <div className="relative flex h-full flex-col overflow-hidden bg-[#09090b] text-zinc-100">
       {/* Ambient background wash */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/4 size-[32rem] rounded-full bg-emerald-500/[0.06] blur-[120px]" />

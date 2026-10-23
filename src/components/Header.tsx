@@ -125,12 +125,19 @@ export function Header({
   }, [showSearch]);
 
   return (
-    <header className="relative z-20 shrink-0 border-b border-white/5 bg-[#0b0b0e]/85 backdrop-blur-xl">
-      <div className="flex h-16 items-center gap-3 px-4 sm:gap-4 sm:px-6">
+    <header
+      className="relative z-20 shrink-0 border-b border-white/5 bg-[#0b0b0e]/85 backdrop-blur-xl"
+      onMouseDown={(event) => {
+        if (!isTauri || event.button !== 0) return;
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("button, input, a, select, textarea")) return;
+        void getCurrentWindow().startDragging().catch(() => undefined);
+      }}
+    >
+      <div className="flex h-12 items-center gap-3 px-4 sm:gap-4 sm:px-6">
         {/* Brand (doubles as a drag handle in the desktop shell) */}
         <div
           className="flex min-w-0 items-center gap-3"
-          data-tauri-drag-region={isTauri || undefined}
           onDoubleClick={isTauri ? toggleMaximize : undefined}
         >
           <div className="accent-bg-soft accent-border relative grid size-9 shrink-0 place-items-center rounded-xl border">
@@ -174,11 +181,7 @@ export function Header({
 
             {/* Active skills badge + refresh + window controls */}
             <div className="flex shrink-0 items-center gap-2">
-              <div
-                className="accent-bg-soft accent-border hidden items-center gap-2 rounded-lg border px-3 py-2 md:flex"
-                data-tauri-drag-region={isTauri || undefined}
-                onDoubleClick={isTauri ? toggleMaximize : undefined}
-              >
+              <div className="accent-bg-soft accent-border hidden items-center gap-2 rounded-lg border px-3 py-2 md:flex">
                 <span className="relative flex size-2">
                   <span className="accent-dot relative inline-flex size-2 rounded-full" />
                 </span>
@@ -208,7 +211,7 @@ export function Header({
           </>
         ) : mode === "sessions" ? (
           <>
-            <div data-tauri-drag-region={isTauri || undefined} className="flex-1 self-stretch" />
+            <div className="flex-1 self-stretch" />
             <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
               <History className="size-3 text-emerald-400/80" />
               {t.sessions.title}
@@ -222,7 +225,7 @@ export function Header({
           </>
         ) : (
           <>
-            <div data-tauri-drag-region={isTauri || undefined} className="flex-1 self-stretch" />
+            <div className="flex-1 self-stretch" />
             <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10.5px] text-zinc-500">
               <FileText className="size-3 text-emerald-400/80" />
               {t.common.agentsChip}
