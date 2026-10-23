@@ -11,6 +11,7 @@ import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { sumMcpTokens } from "../lib/tokens";
 import { formatTokens } from "../lib/utils";
 import { McpCard } from "./McpCard";
+import { McpListRow } from "./McpListRow";
 import { McpEmptyState } from "./McpEmptyState";
 import { StatePanel } from "./ui";
 import { McpDetailDrawer } from "./McpDetailDrawer";
@@ -53,6 +54,9 @@ export function McpView({
   const [sortMode, setSortMode] = useState<McpSortMode>("active");
   // Server whose execution details are open in the inspector drawer.
   const [inspecting, setInspecting] = useState<McpServer | null>(null);
+  const [view, setView] = useState<"grid" | "list">(() =>
+    localStorage.getItem("mcps-view") === "list" ? "list" : "grid",
+  );
   const [showStore, setShowStore] = useState(false);
 
   const activeServers = useMemo(
@@ -68,6 +72,10 @@ export function McpView({
   useEffect(() => {
     onActiveCountChange?.(activeServers.length);
   }, [activeServers.length, onActiveCountChange]);
+
+  useEffect(() => {
+    localStorage.setItem("mcps-view", view);
+  }, [view]);
 
   const scopeLabel =
     scope === GLOBAL_SCOPE.id
@@ -132,6 +140,29 @@ export function McpView({
     [setFormError],
   );
   const handleDeleteServer = useCallback((server: McpServer) => void remove(server), [remove]);
+  const renderServerRow = useCallback(
+    (server: McpServer) => (
+      <McpListRow
+        server={server}
+        scope={scope}
+        scopeLabel={scopeLabel}
+        busy={busyIds.has(server.id)}
+        onToggle={handleToggleServer}
+        onInspect={handleInspectServer}
+        onEdit={handleEditServer}
+        onDelete={handleDeleteServer}
+      />
+    ),
+    [
+      scope,
+      scopeLabel,
+      busyIds,
+      handleToggleServer,
+      handleInspectServer,
+      handleEditServer,
+      handleDeleteServer,
+    ],
+  );
 
   const { statusOf: storeStatusOf, actionFor: storeActionFor } = useMcpStoreActions(servers, {
     scope,
@@ -232,6 +263,8 @@ export function McpView({
             canBatch={(isTauri || mockMode) && servers.length > 0 && !batchPending && !loading}
             batchPending={batchPending}
             onApplyAll={(enabled) => void applyAll(enabled, servers.length)}
+            view={view}
+            onViewChange={setView}
           />
         </div>
 
@@ -266,6 +299,13 @@ export function McpView({
                 setFormError(null);
                 setFormOpen(true);
               }}
+            />
+          ) : view === "list" ? (
+            <VirtualCardGrid
+              items={visibleServers}
+              keyOf={(server) => server.id}
+              className="flex flex-col gap-2"
+              renderItem={renderServerRow}
             />
           ) : (
             <VirtualCardGrid

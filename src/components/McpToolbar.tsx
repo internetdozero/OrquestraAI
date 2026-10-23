@@ -3,7 +3,7 @@ import type { McpSortMode } from "../lib/mcps";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { useI18n } from "../hooks/useI18n";
 import { CustomDropdown } from "./CustomDropdown";
-import { actionButtonClass, ToolbarSearchInput } from "./ui";
+import { actionButtonClass, ToolbarSearchInput, ViewModeToggle } from "./ui";
 
 /** Order control for the MCP grid, sat with the other grid controls. */
 function SortSelect({
@@ -49,6 +49,9 @@ interface McpToolbarProps {
   /** Live search text owned by the parent view. */
   query: string;
   onQueryChange: (query: string) => void;
+  /** Grid | list switch for the server grid. */
+  view: "grid" | "list";
+  onViewChange: (view: "grid" | "list") => void;
 }
 
 /**
@@ -70,6 +73,8 @@ export function McpToolbar({
   onApplyAll,
   query,
   onQueryChange,
+  view,
+  onViewChange,
 }: McpToolbarProps) {
   const { t } = useI18n();
   const isGlobal = scope === GLOBAL_SCOPE.id;
@@ -83,6 +88,7 @@ export function McpToolbar({
         ariaLabel={t.common.searchAriaLabelMcps}
       />
       <SortSelect value={sortMode} onChange={onSortModeChange} />
+      <ViewModeToggle view={view} onChange={onViewChange} />
       <span className="font-mono text-[10.5px] whitespace-nowrap text-zinc-500">
         {t.mcps.shownCount(visibleCount)}
         <span className="text-zinc-600"> / {totalCount}</span>

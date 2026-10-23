@@ -15,8 +15,6 @@ export const credentials = {
   },
   typeAll: "Todos os tipos",
   typeAria: "Filtrar por tipo de serviço",
-  gridAria: "Ver em grade",
-  listAria: "Ver em lista",
   addService: "Adicionar serviço",
   loadingTitle: "Carregando credenciais…",
   loadingBody: "Lendo os pools mascarados do cofre.",

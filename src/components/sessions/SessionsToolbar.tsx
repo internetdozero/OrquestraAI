@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { ArrowDownWideNarrow, ListFilter, Pin, Search, TriangleAlert } from "lucide-react";
+import { ArrowDownWideNarrow, ListFilter, Pin, TriangleAlert } from "lucide-react";
 import { HARNESSES } from "../../lib/harnesses";
 import { useI18n } from "../../hooks/useI18n";
 import type { SessionFilterState, SessionSort } from "../../hooks/useSessions";
 import { cn } from "../../lib/utils";
 import { CustomDropdown, type DropdownOption } from "../CustomDropdown";
+import { ToolbarSearchInput } from "../ui";
 
 interface SessionsToolbarProps {
   filter: SessionFilterState;
@@ -43,19 +44,13 @@ export function SessionsToolbar({ filter, onChange, visibleCount }: SessionsTool
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 p-3">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="search"
-            data-view-search
-            value={filter.query}
-            onChange={(e) => onChange({ ...filter, query: e.target.value })}
-            placeholder={s.searchPlaceholder}
-            aria-label={s.searchAria}
-            spellCheck={false}
-            className="h-8.5 w-full rounded-lg border border-white/10 bg-zinc-900/60 py-1.5 pr-3 pl-8 text-[12.5px] text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/10 [&::-webkit-search-cancel-button]:appearance-none"
-          />
-        </div>
+        <ToolbarSearchInput
+          value={filter.query}
+          onChange={(query) => onChange({ ...filter, query })}
+          placeholder={s.searchPlaceholder}
+          ariaLabel={s.searchAria}
+          className="mr-0 basis-auto sm:max-w-none"
+        />
         <div className="flex flex-wrap items-center gap-2">
           <CustomDropdown
             value={filter.harness}

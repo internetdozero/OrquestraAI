@@ -17,8 +17,6 @@ export const credentials: TranslationSchema["credentials"] = {
   },
   typeAll: "All types",
   typeAria: "Filter by service type",
-  gridAria: "Grid view",
-  listAria: "List view",
   addService: "Add service",
   loadingTitle: "Loading credentials…",
   loadingBody: "Reading masked pools from the vault.",

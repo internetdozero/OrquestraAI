@@ -2,16 +2,14 @@ import {
   AlertTriangle,
   KeyRound,
   Layers,
-  LayoutGrid,
-  List,
   Plus,
-  Search,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { CustomDropdown } from "../CustomDropdown.tsx";
+import { ToolbarSearchInput, ViewModeToggle } from "../ui.tsx";
 
 export type CredentialStatusFilter = "All" | "Healthy" | "RateLimited" | "QuotaExceeded";
 
@@ -119,17 +117,13 @@ export function CredentialsHeader({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-44 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
-          <input
-            value={query}
-            data-view-search
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder={s.searchPlaceholder}
-            aria-label={s.searchAria}
-            className="w-full rounded-lg border border-white/10 bg-zinc-900 py-1.5 pr-2 pl-8 text-[12.5px] text-zinc-100 placeholder:text-zinc-600"
-          />
-        </div>
+        <ToolbarSearchInput
+          value={query}
+          onChange={onQueryChange}
+          placeholder={s.searchPlaceholder}
+          ariaLabel={s.searchAria}
+          className="min-w-44"
+        />
         <CustomDropdown
           value={typeFilter}
           ariaLabel={s.typeAria}
@@ -137,38 +131,7 @@ export function CredentialsHeader({
           options={typeOptions}
           onChange={onTypeFilterChange}
         />
-        <div className="flex gap-1" role="group" aria-label="View mode">
-          <button
-            type="button"
-            onClick={() => onViewChange("grid")}
-            title={s.gridAria}
-            aria-label={s.gridAria}
-            aria-pressed={view === "grid"}
-            className={cn(
-              "rounded-lg p-2 transition",
-              view === "grid"
-                ? "accent-bg-soft accent-text"
-                : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200",
-            )}
-          >
-            <LayoutGrid className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewChange("list")}
-            title={s.listAria}
-            aria-label={s.listAria}
-            aria-pressed={view === "list"}
-            className={cn(
-              "rounded-lg p-2 transition",
-              view === "list"
-                ? "accent-bg-soft accent-text"
-                : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200",
-            )}
-          >
-            <List className="size-3.5" />
-          </button>
-        </div>
+        <ViewModeToggle view={view} onChange={onViewChange} />
         <div className="flex gap-1" role="group" aria-label={s.filterHealthAria}>
           {STATUS_FILTERS.map((filter) => (
             <button

@@ -1,5 +1,5 @@
 import { useCallback, type HTMLAttributes, type ReactNode } from "react";
-import { AlertTriangle, Search, type LucideIcon } from "lucide-react";
+import { AlertTriangle, LayoutGrid, List, Search, type LucideIcon } from "lucide-react";
 import { useI18n } from "../hooks/useI18n";
 import { cn } from "../lib/utils";
 
@@ -81,14 +81,17 @@ export function ToolbarSearchInput({
   onChange,
   placeholder,
   ariaLabel,
+  className,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   ariaLabel: string;
+  /** Override the outer wrapper (default: left-anchored flexible toolbar slot). */
+  className?: string;
 }) {
   return (
-    <div className="relative mr-auto min-w-0 flex-1 basis-56 sm:max-w-xs">
+    <div className={cn("relative mr-auto min-w-0 flex-1 basis-56 sm:max-w-xs", className)}>
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
       <input
         type="search"
@@ -103,6 +106,52 @@ export function ToolbarSearchInput({
       <kbd className="pointer-events-none absolute top-1/2 right-1.5 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-white/10 bg-white/[0.04] px-1 font-mono text-[9px] text-zinc-500 sm:flex">
         Ctrl&nbsp;K
       </kbd>
+    </div>
+  );
+}
+
+/** Grid | list switch shared by the registry views (skills, MCPs, credentials). */
+export function ViewModeToggle({
+  view,
+  onChange,
+}: {
+  view: "grid" | "list";
+  onChange: (view: "grid" | "list") => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <div className="flex shrink-0 gap-1" role="group" aria-label={t.common.viewModeAria}>
+      <button
+        type="button"
+        onClick={() => onChange("grid")}
+        title={t.common.gridView}
+        aria-label={t.common.gridView}
+        aria-pressed={view === "grid"}
+        className={cn(
+          "rounded-lg p-2 transition",
+          view === "grid"
+            ? "accent-bg-soft accent-text"
+            : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200",
+        )}
+      >
+        <LayoutGrid className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("list")}
+        title={t.common.listView}
+        aria-label={t.common.listView}
+        aria-pressed={view === "list"}
+        className={cn(
+          "rounded-lg p-2 transition",
+          view === "list"
+            ? "accent-bg-soft accent-text"
+            : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200",
+        )}
+      >
+        <List className="size-3.5" />
+      </button>
     </div>
   );
 }

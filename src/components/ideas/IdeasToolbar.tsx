@@ -1,6 +1,7 @@
-import { Archive, FolderGit2, Gauge, Search } from "lucide-react";
+import { Archive, FolderGit2, Gauge } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import { CustomDropdown } from "../CustomDropdown";
+import { ToolbarSearchInput } from "../ui";
 import { cn } from "../../lib/utils";
 
 interface IdeasToolbarProps {
@@ -43,18 +44,13 @@ export function IdeasToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <label className="relative min-w-44 flex-1 basis-52">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-zinc-500" />
-        <input
-          data-view-search
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={s.searchPlaceholder}
-          aria-label={s.searchAria}
-          spellCheck={false}
-          className="h-8.5 w-full rounded-lg border border-white/10 bg-white/[0.03] pr-2.5 pl-8 text-[12px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-amber-500/40 focus:ring-2 focus:ring-amber-500/10"
-        />
-      </label>
+      <ToolbarSearchInput
+        value={search}
+        onChange={onSearchChange}
+        placeholder={s.searchPlaceholder}
+        ariaLabel={s.searchAria}
+        className="basis-52"
+      />
 
       <div
         className="flex min-w-0 flex-1 basis-80 flex-wrap items-center justify-center gap-1.5"

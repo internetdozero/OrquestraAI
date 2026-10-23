@@ -11,6 +11,7 @@ import { useSkillGridActions } from "../hooks/useSkillGridActions";
 import { useSkillStoreActions } from "../hooks/useSkillStoreActions";
 import { ConfirmModal } from "./ConfirmModal";
 import { SkillCard } from "./SkillCard";
+import { SkillListRow } from "./SkillListRow";
 import { EditSkillModal } from "./skills/EditSkillModal";
 import { ImportSkillModal } from "./skills/ImportSkillModal";
 import { FlatSkillGrid, GroupedSkillGrid } from "./SkillsGrid";
@@ -18,6 +19,7 @@ import { SkillScopeSelector } from "./SkillScopeSelector";
 import { SkillsState, type SkillsStateKind } from "./SkillsStates";
 import { SkillsToolbar } from "./SkillsToolbar";
 import { OfficialStore } from "./OfficialStore";
+import { VirtualCardGrid } from "./VirtualCardGrid";
 import { ErrorBanner, SkeletonGrid } from "./ui";
 
 interface SkillsViewProps {
@@ -84,6 +86,9 @@ export function SkillsView({
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [batchPending, setBatchPending] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("active");
+  const [view, setView] = useState<"grid" | "list">(() =>
+    localStorage.getItem("skills-view") === "list" ? "list" : "grid",
+  );
   const [showStore, setShowStore] = useState(false);
   // Highlight the card that just changed. `follow` scrolls to it only when it
   // was enabled; disabling must leave the viewport where the user is.
@@ -100,6 +105,10 @@ export function SkillsView({
     setPendingIds(new Set());
     setFlash(null);
   }
+
+  useEffect(() => {
+    localStorage.setItem("skills-view", view);
+  }, [view]);
 
   // A new scope starts from a clean slate: no stale query or shell error.
   const selectScope = useCallback(
@@ -197,6 +206,21 @@ export function SkillsView({
     [requestDeleteSkill],
   );
 
+  const renderSkillRow = useCallback(
+    (skill: SkillItem) => (
+      <SkillListRow
+        key={skill.id}
+        skill={skill}
+        onToggle={handleToggleSkill}
+        onEdit={handleEditSkill}
+        onDelete={handleDeleteSkill}
+        busy={batchPending || pendingIds.has(skill.id)}
+        deleteBusy={deletingIds.has(skill.id)}
+      />
+    ),
+    [handleToggleSkill, handleEditSkill, handleDeleteSkill, batchPending, pendingIds, deletingIds],
+  );
+
   const renderSkillCard = useCallback(
     (skill: SkillItem) => (
       <SkillCard
@@ -267,6 +291,8 @@ export function SkillsView({
         onShowStoreChange={setShowStore}
         query={query}
         onQueryChange={onQueryChange}
+        view={view}
+        onViewChange={setView}
       />
 
       {banner && hasSkills && (
@@ -290,6 +316,14 @@ export function SkillsView({
             query={query}
             onRescan={() => void reload()}
             onClearQuery={() => onQueryChange("")}
+          />
+        ) : view === "list" ? (
+          <VirtualCardGrid
+            items={visibleSkills}
+            keyOf={(skill) => skill.id}
+            renderItem={renderSkillRow}
+            className="flex flex-col gap-2"
+            focusKey={flash?.follow ? flash.id : null}
           />
         ) : isGrouped ? (
           <GroupedSkillGrid
