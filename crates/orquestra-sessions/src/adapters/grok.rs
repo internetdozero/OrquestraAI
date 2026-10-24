@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use crate::types::{TranscriptTurn, UnifiedSession};
 
-use super::{fsops, transcript, utils, SessionAdapter};
+use super::{SessionAdapter, fsops, transcript, utils};
 
 const HARNESS: &str = "grok";
 const STORE_REL: &str = ".grok/sessions";
@@ -110,7 +110,11 @@ impl Grok {
     }
 
     /// `session_id -> (folder, bytes, encoded cwd)`.
-    fn folders(&self) -> HashMap<String, (PathBuf, u64, String)> {
+    fn folders(
+        &self,
+        indexed: &HashMap<String, Indexed>,
+        active: &BTreeSet<String>,
+    ) -> HashMap<String, (PathBuf, u64, String)> {
         let mut found = HashMap::new();
         let store = self.store();
         if !real_dir(&store) {
@@ -140,6 +144,13 @@ impl Grok {
                 let path = entry.path();
                 let id = entry.file_name().to_string_lossy().into_owned();
                 let size = utils::dir_size(&path);
+                if size == 0
+                    && !has_chat_history(&path)
+                    && !indexed.contains_key(&id)
+                    && !active.contains(&id)
+                {
+                    continue;
+                }
                 found.insert(id, (path, size, encoded.clone()));
             }
         }
@@ -209,15 +220,49 @@ impl SessionAdapter for Grok {
         if !real_dir(&store) {
             return Ok(());
         }
+
+        let indexed = self.indexed()?;
+        let active: BTreeSet<String> = self.active_ids().into_iter().collect();
+        if let Ok(projects) = std::fs::read_dir(&store) {
+            for project in projects.flatten() {
+                if !project
+                    .file_type()
+                    .map(|kind| kind.is_dir())
+                    .unwrap_or(false)
+                {
+                    continue;
+                }
+                let Ok(sessions) = std::fs::read_dir(project.path()) else {
+                    continue;
+                };
+                for session in sessions.flatten() {
+                    if !session
+                        .file_type()
+                        .map(|kind| kind.is_dir())
+                        .unwrap_or(false)
+                    {
+                        continue;
+                    }
+                    let id = session.file_name().to_string_lossy().into_owned();
+                    let path = session.path();
+                    if !indexed.contains_key(&id)
+                        && !active.contains(&id)
+                        && !has_chat_history(&path)
+                        && is_empty_stub(&path)
+                    {
+                        fsops::remove_path(&store, &path)?;
+                    }
+                }
+                fsops::remove_if_empty(&store, &project.path());
+            }
+        }
+
         fsops::vacuum(&store.join(DATABASE))
     }
 
-    /// Conversation turns in `sessions/<encoded-cwd>/<id>/chat_history.jsonl`.
-    /// The folder layout mirrors [`Self::folders`]: every project directory
-    /// is scanned for the session folder, so an encoded cwd the index forgot
-    /// still resolves. A missing log is an empty feed, not an error.
-    ///
-    /// [`Self::folders`]: Grok::folders
+    /// Read turns from `sessions/<encoded-cwd>/<id>/chat_history.jsonl`.
+    /// A missing log or encoded cwd absent from the index is handled by scanning
+    /// project folders and returning an empty feed when no log exists.
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
         if session_id.is_empty()
             || session_id.contains('/')
@@ -260,7 +305,8 @@ impl SessionAdapter for Grok {
 
     fn list_sessions(&self) -> Result<Vec<UnifiedSession>, String> {
         let indexed = self.indexed()?;
-        let folders = self.folders();
+        let active: BTreeSet<String> = self.active_ids().into_iter().collect();
+        let folders = self.folders(&indexed, &active);
 
         let ids: BTreeSet<String> = indexed.keys().chain(folders.keys()).cloned().collect();
 
@@ -278,6 +324,11 @@ impl SessionAdapter for Grok {
                 .and_then(|index| index.cwd.clone())
                 .or_else(|| folder.and_then(|(_, _, encoded)| utils::decode_path_hint(encoded)));
             session.size_bytes = folder.map(|(_, size, _)| *size).unwrap_or(0);
+            session.turns_count = self
+                .read_transcript(&id)
+                .iter()
+                .filter(|turn| turn.role == "user")
+                .count();
             session.updated_at = index
                 .and_then(|index| index.updated)
                 .or_else(|| folder.and_then(|(path, _, _)| utils::modified_secs(path)))
@@ -289,6 +340,42 @@ impl SessionAdapter for Grok {
 
         Ok(sessions)
     }
+}
+
+fn has_chat_history(session: &Path) -> bool {
+    std::fs::symlink_metadata(session.join("chat_history.jsonl")).is_ok()
+}
+
+/// Only empty regular files and real directories qualify; unknown entries stay.
+fn is_empty_stub(path: &Path) -> bool {
+    let mut pending = vec![path.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(directory) else {
+            return false;
+        };
+        for entry in entries {
+            let Ok(entry) = entry else {
+                return false;
+            };
+            let Ok(kind) = entry.file_type() else {
+                return false;
+            };
+            if kind.is_dir() {
+                pending.push(entry.path());
+            } else if kind.is_file() {
+                if entry
+                    .metadata()
+                    .map(|metadata| metadata.len() != 0)
+                    .unwrap_or(true)
+                {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 fn single_segment(id: &str) -> bool {

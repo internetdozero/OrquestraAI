@@ -1,9 +1,9 @@
 //! Harnesses whose store is an index database: Hermes and Grok, plus the
 //! fleet-level cases (one corrupt store, one absent harness).
 
-use crate::adapters::{collect, HARNESS_IDS};
+use crate::adapters::{HARNESS_IDS, collect};
 
-use super::{adapter, TestHome};
+use super::{TestHome, adapter};
 
 #[test]
 fn hermes_counts_messages_and_log_files() {
@@ -57,6 +57,90 @@ fn grok_merges_the_index_with_session_folders() {
     // Only the folder exists, so the encoded path is decoded for the project.
     assert_eq!(sessions[1].project_path.as_deref(), Some("/work/b"));
     assert_eq!(sessions[1].size_bytes, unindexed);
+}
+
+#[test]
+fn grok_ignores_and_prunes_empty_stubs_but_keeps_live_and_real_sessions() {
+    let home = TestHome::new();
+    home.database(
+        ".grok/sessions/session_search.sqlite",
+        "CREATE TABLE session_docs (session_id TEXT PRIMARY KEY, cwd TEXT, updated_at INTEGER,
+                                    title TEXT);
+         INSERT INTO session_docs VALUES ('indexed', '/work/indexed', 0, 'Indexed');",
+    );
+    std::fs::create_dir_all(home.0.join(".grok/sessions/proj/ghost/terminal")).unwrap();
+    std::fs::create_dir_all(home.0.join(".grok/sessions/proj/active/terminal")).unwrap();
+    std::fs::create_dir_all(home.0.join(".grok/sessions/proj/active-session/terminal")).unwrap();
+    std::fs::create_dir_all(home.0.join(".grok/sessions/proj/active-id/terminal")).unwrap();
+    std::fs::create_dir_all(home.0.join(".grok/sessions/proj/indexed/terminal")).unwrap();
+    home.write(
+        ".grok/active_sessions.json",
+        "[\"active\",{\"session_id\":\"active-session\"},{\"id\":\"active-id\"}]",
+    );
+    home.write(
+        ".grok/sessions/proj/real/chat_history.jsonl",
+        "{\"type\":\"user\",\"content\":\"question\"}\n\
+         {\"type\":\"assistant\",\"content\":\"answer\"}\n",
+    );
+
+    let grok = adapter(&home.0, "grok");
+    let sessions = grok.list_sessions().expect("list");
+    assert!(!sessions.iter().any(|session| session.id == "ghost"));
+    assert!(sessions.iter().any(|session| session.id == "active"));
+    assert!(
+        sessions
+            .iter()
+            .any(|session| session.id == "active-session")
+    );
+    assert!(sessions.iter().any(|session| session.id == "active-id"));
+    assert!(sessions.iter().any(|session| session.id == "indexed"));
+    assert_eq!(
+        sessions
+            .iter()
+            .find(|session| session.id == "real")
+            .expect("real session")
+            .turns_count,
+        1,
+        "turns_count represents parsed user turns from chat_history.jsonl"
+    );
+
+    grok.optimize_storage().expect("prune empty startup stubs");
+    assert!(!home.0.join(".grok/sessions/proj/ghost").exists());
+    assert!(home.0.join(".grok/sessions/proj/active/terminal").is_dir());
+    assert!(
+        home.0
+            .join(".grok/sessions/proj/active-session/terminal")
+            .is_dir()
+    );
+    assert!(
+        home.0
+            .join(".grok/sessions/proj/active-id/terminal")
+            .is_dir()
+    );
+    assert!(home.0.join(".grok/sessions/proj/indexed/terminal").is_dir());
+    assert!(
+        home.0
+            .join(".grok/sessions/proj/real/chat_history.jsonl")
+            .is_file()
+    );
+}
+
+#[test]
+fn grok_preserves_active_sessions_from_object_key_maps() {
+    let home = TestHome::new();
+    std::fs::create_dir_all(home.0.join(".grok/sessions/proj/map-active/terminal")).unwrap();
+    home.write(".grok/active_sessions.json", "{\"map-active\":true}");
+
+    let grok = adapter(&home.0, "grok");
+    let sessions = grok.list_sessions().expect("list");
+    assert!(sessions.iter().any(|session| session.id == "map-active"));
+
+    grok.optimize_storage().expect("preserve active map entry");
+    assert!(
+        home.0
+            .join(".grok/sessions/proj/map-active/terminal")
+            .is_dir()
+    );
 }
 
 #[test]
