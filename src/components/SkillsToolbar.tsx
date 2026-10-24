@@ -100,7 +100,7 @@ export function SkillsToolbar({
     <>
       <section
         aria-label={`${t.skills.activeSkills}, ${t.skills.tokensSaved}, ${t.skills.disabledSkills}`}
-        className="mb-4 flex min-w-0 flex-col gap-y-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 px-4 py-3 @min-[680px]:flex-row @min-[680px]:flex-wrap @min-[680px]:items-center @min-[680px]:gap-x-8"
+        className="mb-4 flex min-w-0 flex-col gap-y-2 rounded-xl border border-white/[0.06] bg-zinc-900/30 px-4 py-3 @min-[680px]:flex-row @min-[680px]:flex-wrap @min-[680px]:items-center @min-[680px]:gap-x-4"
       >
         <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
           <Layers className="size-3.5 shrink-0 text-zinc-500" />
@@ -112,12 +112,16 @@ export function SkillsToolbar({
         <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
           <Zap className="size-3.5 shrink-0 text-zinc-500" />
           <span className="text-zinc-500">{t.skills.tokensSaved} </span>
-          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">≈ {formatTokens(savedTokens)}</span>
+          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">
+            ≈ {formatTokens(savedTokens)}
+          </span>
         </p>
         <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
           <CircleSlash className="size-3.5 shrink-0 text-zinc-500" />
           <span className="text-zinc-500">{t.skills.disabledSkills} </span>
-          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">{disabledCount}</span>
+          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">
+            {disabledCount}
+          </span>
         </p>
         <span aria-hidden="true" className="hidden h-5 w-px bg-white/10 @min-[680px]:block" />
         <button

@@ -32,8 +32,6 @@ interface MenuBox {
   left: number;
   minWidth: number;
   maxHeight: number;
-  /** Which edge the enter animation grows from. */
-  placement: "bottom" | "top";
 }
 
 /**
@@ -68,7 +66,6 @@ function measureMenu(trigger: DOMRect, menu: HTMLElement | null): MenuBox {
     left: Math.round(left),
     minWidth: Math.round(Math.min(width, viewportW - VIEWPORT_MARGIN * 2)),
     maxHeight: Math.round(Math.max(160, viewportH - VIEWPORT_MARGIN * 2)),
-    placement: flipAbove ? "top" : "bottom",
   };
 }
 
@@ -77,9 +74,8 @@ function measureMenu(trigger: DOMRect, menu: HTMLElement | null): MenuBox {
  *
  * The menu is portaled to `document.body` and positioned with `position:
  * fixed`, so a scrollable or `overflow-hidden` ancestor can no longer clip it
- * (or swallow the click that opened it). It mounts already placed, and a
- * one-shot enter animation avoids the opacity transition that used to fade the
- * panel back out on the opening click.
+ * (or swallow the click that opened it). It mounts in its measured position
+ * without a transform animation that can make the panel appear to wobble.
  */
 export function CustomDropdown<T extends string>({
   value,
@@ -108,8 +104,7 @@ export function CustomDropdown<T extends string>({
       previous.top === next.top &&
       previous.left === next.left &&
       previous.minWidth === next.minWidth &&
-      previous.maxHeight === next.maxHeight &&
-      previous.placement === next.placement
+      previous.maxHeight === next.maxHeight
         ? previous
         : next,
     );
@@ -141,7 +136,6 @@ export function CustomDropdown<T extends string>({
     menu.style.minWidth = `${box.minWidth}px`;
     menu.style.maxHeight = `${box.maxHeight}px`;
     menu.style.visibility = "visible";
-    menu.style.transformOrigin = box.placement === "top" ? "bottom center" : "top center";
   }, [box, open]);
 
   useEffect(() => {
@@ -224,7 +218,7 @@ export function CustomDropdown<T extends string>({
             id={listId}
             role="listbox"
             aria-label={ariaLabel}
-            className="dropdown-pop fixed z-40 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.08] bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md"
+            className="fixed z-40 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.08] bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md"
           >
             {options.map((option, index) => {
               const active = option.id === value;
