@@ -14,11 +14,7 @@ import {
   type VaultTestResult,
 } from "../../lib/vault.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
-import {
-  ensureVaultCatalog,
-  readVaultCache,
-  refreshVaultCatalog,
-} from "../../lib/vaultCache.ts";
+import { ensureVaultCatalog, readVaultCache, refreshVaultCatalog } from "../../lib/vaultCache.ts";
 import { AddCredentialModal } from "../vault/AddCredentialModal.tsx";
 import {
   CredentialsHeader,
@@ -144,7 +140,15 @@ export function CredentialsView({
         .map(([id, label]) => ({ id, label, group: groupLabels[group] })),
     );
     return [{ id: "All", label: s.typeAll }, ...grouped];
-  }, [services, presetLabels, s.typeAll, s.typeGroupAi, s.typeGroupInfra, s.typeGroupMedia, s.typeGroupOther]);
+  }, [
+    services,
+    presetLabels,
+    s.typeAll,
+    s.typeGroupAi,
+    s.typeGroupInfra,
+    s.typeGroupMedia,
+    s.typeGroupOther,
+  ]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
