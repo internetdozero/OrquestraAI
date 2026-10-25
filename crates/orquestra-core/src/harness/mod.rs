@@ -176,7 +176,10 @@ mod tests {
             );
         }
         // Single-location harnesses keep exactly one entry.
-        assert_eq!(find("codex").expect("registered").instructions_rels.len(), 1);
+        assert_eq!(
+            find("codex").expect("registered").instructions_rels.len(),
+            1
+        );
     }
 
     #[test]

@@ -1,9 +1,9 @@
 //! Harnesses whose store is an index database: Hermes and Grok, plus the
 //! fleet-level cases (one corrupt store, one absent harness).
 
-use crate::adapters::{HARNESS_IDS, collect};
+use crate::adapters::{collect, HARNESS_IDS};
 
-use super::{TestHome, adapter};
+use super::{adapter, TestHome};
 
 #[test]
 fn hermes_counts_messages_and_log_files() {
@@ -87,11 +87,9 @@ fn grok_ignores_and_prunes_empty_stubs_but_keeps_live_and_real_sessions() {
     let sessions = grok.list_sessions().expect("list");
     assert!(!sessions.iter().any(|session| session.id == "ghost"));
     assert!(sessions.iter().any(|session| session.id == "active"));
-    assert!(
-        sessions
-            .iter()
-            .any(|session| session.id == "active-session")
-    );
+    assert!(sessions
+        .iter()
+        .any(|session| session.id == "active-session"));
     assert!(sessions.iter().any(|session| session.id == "active-id"));
     assert!(sessions.iter().any(|session| session.id == "indexed"));
     assert_eq!(
@@ -107,22 +105,19 @@ fn grok_ignores_and_prunes_empty_stubs_but_keeps_live_and_real_sessions() {
     grok.optimize_storage().expect("prune empty startup stubs");
     assert!(!home.0.join(".grok/sessions/proj/ghost").exists());
     assert!(home.0.join(".grok/sessions/proj/active/terminal").is_dir());
-    assert!(
-        home.0
-            .join(".grok/sessions/proj/active-session/terminal")
-            .is_dir()
-    );
-    assert!(
-        home.0
-            .join(".grok/sessions/proj/active-id/terminal")
-            .is_dir()
-    );
+    assert!(home
+        .0
+        .join(".grok/sessions/proj/active-session/terminal")
+        .is_dir());
+    assert!(home
+        .0
+        .join(".grok/sessions/proj/active-id/terminal")
+        .is_dir());
     assert!(home.0.join(".grok/sessions/proj/indexed/terminal").is_dir());
-    assert!(
-        home.0
-            .join(".grok/sessions/proj/real/chat_history.jsonl")
-            .is_file()
-    );
+    assert!(home
+        .0
+        .join(".grok/sessions/proj/real/chat_history.jsonl")
+        .is_file());
 }
 
 #[test]
@@ -136,11 +131,10 @@ fn grok_preserves_active_sessions_from_object_key_maps() {
     assert!(sessions.iter().any(|session| session.id == "map-active"));
 
     grok.optimize_storage().expect("preserve active map entry");
-    assert!(
-        home.0
-            .join(".grok/sessions/proj/map-active/terminal")
-            .is_dir()
-    );
+    assert!(home
+        .0
+        .join(".grok/sessions/proj/map-active/terminal")
+        .is_dir());
 }
 
 #[test]

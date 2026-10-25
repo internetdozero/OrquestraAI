@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use crate::types::{TranscriptTurn, UnifiedSession};
 
-use super::{SessionAdapter, fsops, transcript, utils};
+use super::{fsops, transcript, utils, SessionAdapter};
 
 const HARNESS: &str = "grok";
 const STORE_REL: &str = ".grok/sessions";
