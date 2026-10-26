@@ -147,8 +147,8 @@ export function IdeasBoard({
                   column.status,
                 );
               }}
-            className={cn(
-              "w-full overflow-hidden rounded-xl border bg-black/20 hover:border-white/[0.12] hover:bg-white/[0.02] @min-[980px]:w-11 @min-[980px]:shrink-0",
+              className={cn(
+                "w-full overflow-hidden rounded-xl border bg-black/20 hover:border-white/[0.12] hover:bg-white/[0.02] @min-[980px]:w-11 @min-[980px]:shrink-0",
                 dropStatus === column.status
                   ? "border-amber-500/50 bg-amber-500/[0.04]"
                   : "border-white/[0.05]",

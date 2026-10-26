@@ -1,13 +1,4 @@
-import {
-  ArrowUpDown,
-  CircleSlash,
-  Loader2,
-  Plug,
-  Plus,
-  Power,
-  PowerOff,
-  Zap,
-} from "lucide-react";
+import { ArrowUpDown, CircleSlash, Loader2, Plug, Plus, Power, PowerOff, Zap } from "lucide-react";
 import type { McpSortMode } from "../lib/mcps";
 import { GLOBAL_SCOPE } from "../lib/harnesses";
 import { formatTokens } from "../lib/utils";
@@ -131,7 +122,9 @@ export function McpToolbar({
         <p className="flex w-full items-center gap-2 text-[11px] font-medium tracking-wider uppercase @min-[680px]:w-auto @min-[680px]:shrink-0">
           <CircleSlash className="size-3.5 shrink-0 text-zinc-500" />
           <span className="text-zinc-500">{t.mcps.inactive} </span>
-          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">{inactiveCount}</span>
+          <span className="ml-auto font-mono text-[13px] text-zinc-100 @min-[680px]:ml-0">
+            {inactiveCount}
+          </span>
         </p>
         <span aria-hidden="true" className="hidden h-5 w-px bg-white/10 @min-[680px]:block" />
         <button
