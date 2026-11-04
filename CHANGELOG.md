@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-11-04
+
 ### Added
 
 - Installer checks Linux runtime libraries before replacing an installation and provides `--check-deps` to diagnose a broken launch later without reinstalling.
@@ -26,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Installer release-tag resolution:** the curl installer now reads the release tag from the `/releases/latest` redirect instead of the final asset URL (GitHub now serves assets from `release-assets.githubusercontent.com`), fixing "Security Error: could not safely resolve the release tag". This release is signed with the version-bound trusted comment the installer requires.
 - Vault recovery falls back to verified migration backups without destroying the original files, and keeps fallback-key reads available if keyring promotion fails.
 - Windows home-directory lookup falls back to `USERPROFILE`; environment-mutating tests are serialized to avoid cross-test races.
 - Janitor health checks fail closed when socket liveness cannot be established.
