@@ -152,14 +152,16 @@ echo "ℹ️  Platform: ${OS}/${ARCH}"
 
 # 3. Fetch Release Binary and Checksums
 LATEST_RELEASE_URL="https://github.com/${REPO}/releases/latest"
-EFFECTIVE_SUMS_URL=$(curl -fsSL -w '%{url_effective}' \
-    "${LATEST_RELEASE_URL}/download/SHA256SUMS.txt" \
-    -o "${TMP_DIR}/SHA256SUMS.txt") || {
-    echo "❌ Error: Could not download release checksums." >&2
+# Resolve the tag from the first redirect of /releases/latest (not the final
+# URL: release assets are now served from release-assets.githubusercontent.com,
+# so %{url_effective} no longer contains the tag).
+LATEST_TAG_URL=$(curl -fsS --proto '=https' -o /dev/null -w '%{redirect_url}' \
+    "${LATEST_RELEASE_URL}") || {
+    echo "❌ Error: Could not resolve the latest release." >&2
     exit 1
 }
-RELEASE_TAG=$(printf '%s' "$EFFECTIVE_SUMS_URL" | sed -n \
-    's#^.*/releases/download/\([^/]*\)/SHA256SUMS\.txt$#\1#p')
+RELEASE_TAG=$(printf '%s' "$LATEST_TAG_URL" | sed -n \
+    "s#^https://github\\.com/${REPO}/releases/tag/\\([^/?#]*\\)\$#\\1#p")
 case "$RELEASE_TAG" in
     ""|*[!A-Za-z0-9._+-]*)
         echo "❌ Security Error: could not safely resolve the release tag." >&2
@@ -168,6 +170,10 @@ case "$RELEASE_TAG" in
 esac
 RELEASE_VERSION=${RELEASE_TAG#v}
 RELEASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}"
+curl -fsSL "${RELEASE_URL}/SHA256SUMS.txt" -o "${TMP_DIR}/SHA256SUMS.txt" || {
+    echo "❌ Error: Could not download release checksums." >&2
+    exit 1
+}
 echo "ℹ️  Release tag: ${RELEASE_TAG}"
 ASSET=""
 for candidate in $ASSET_CANDIDATES; do

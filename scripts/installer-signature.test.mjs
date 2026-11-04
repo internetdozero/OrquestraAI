@@ -41,9 +41,11 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 case "$url" in
-  */download/SHA256SUMS.txt)
+  */releases/latest)
+    printf '%s' 'https://github.com/internetdozero/OrquestraAI/releases/tag/v1.2.3'
+    ;;
+  */releases/download/v1.2.3/SHA256SUMS.txt)
     cp "$FIXTURE_DIR/SHA256SUMS.txt" "$output"
-    printf '%s' 'https://github.com/internetdozero/OrquestraAI/releases/download/v1.2.3/SHA256SUMS.txt'
     ;;
   */SHA256SUMS.txt.minisig)
     if [ -s "$FIXTURE_DIR/SHA256SUMS.txt.minisig" ]; then
