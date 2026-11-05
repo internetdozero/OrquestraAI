@@ -44,6 +44,26 @@ pub use envelope::{AAD_MCPS, AAD_VAULT};
 pub use seal::seal_text;
 pub use unseal::open_stored;
 
+/// Open a vault JSON supplied for explicit import without migrating or
+/// modifying either the source file or the active vault. Plaintext imports
+/// are allowed here because `save_vault` seals them before persistence.
+pub fn open_import_text(
+    paths: &orquestra_core::paths::OrquestraPaths,
+    stored: &str,
+    aad: &[u8],
+) -> Result<String, String> {
+    let value: serde_json::Value = serde_json::from_str(stored)
+        .map_err(|error| format!("the import is not valid JSON: {error}"))?;
+    if envelope::has_unknown_version(&value) {
+        return Err("the encrypted file uses an unsupported Orquestra format version".to_string());
+    }
+    if envelope::is_sealed(&value) {
+        return unseal::try_open_with_available_keys(paths, &value, aad)
+            .map_err(|_| "could not decrypt this file with this installation's key".to_string());
+    }
+    Ok(stored.to_string())
+}
+
 // Test-only surface: production code reaches the flag via `key::is_migrated`.
 #[cfg(test)]
 pub(crate) use key::is_migrated;

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { KeyRound } from "lucide-react";
 import { devMockMode } from "../../lib/fixtures.ts";
 import {
   presetTypeGroup,
   vaultDeleteService,
+  vaultImportServices,
   vaultRemoveKey,
   vaultSaveService,
   vaultSetPrimary,
@@ -50,6 +51,8 @@ export function CredentialsView({
     localStorage.getItem("credentials-view") === "list" ? "list" : "grid",
   );
   const [modalOpen, setModalOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
   // Browser preview (vite dev without the Tauri core) renders fixture data
   // so the dashboard stays reviewable outside the desktop app, like McpView.
   const [mockMode] = useState(devMockMode);
@@ -171,6 +174,23 @@ export function CredentialsView({
       onToast(done);
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function importVaultFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    setImporting(true);
+    onToast(s.toastImporting);
+    try {
+      const imported = await vaultImportServices(await file.text());
+      await refresh();
+      onToast(s.toastImported(imported.length));
+    } catch (err) {
+      onError(s.importFailed(err instanceof Error ? err.message : String(err)));
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -296,6 +316,17 @@ export function CredentialsView({
         view={view}
         onViewChange={setView}
         onAdd={() => setModalOpen(true)}
+        onImport={() => importInput.current?.click()}
+        importing={importing}
+        canImport={isTauri}
+      />
+      <input
+        ref={importInput}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        aria-label={s.importDescription}
+        onChange={(event) => void importVaultFile(event)}
       />
 
       {visible.length === 0 ? (

@@ -1,4 +1,12 @@
-import { AlertTriangle, KeyRound, Layers, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  KeyRound,
+  Layers,
+  Plus,
+  ShieldCheck,
+  Upload,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
 import { CustomDropdown } from "../CustomDropdown.tsx";
@@ -33,6 +41,9 @@ interface CredentialsHeaderProps {
   view: CredentialViewMode;
   onViewChange: (view: CredentialViewMode) => void;
   onAdd: () => void;
+  onImport: () => void;
+  importing: boolean;
+  canImport: boolean;
 }
 
 export function CredentialsHeader({
@@ -50,6 +61,9 @@ export function CredentialsHeader({
   view,
   onViewChange,
   onAdd,
+  onImport,
+  importing,
+  canImport,
 }: CredentialsHeaderProps) {
   const { t } = useI18n();
   const s = t.credentials;
@@ -139,6 +153,15 @@ export function CredentialsHeader({
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={onImport}
+          disabled={importing || !canImport}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-[12.5px] font-medium text-zinc-200 transition hover:bg-white/[0.06] disabled:cursor-wait disabled:opacity-60"
+          title={s.importDescription}
+        >
+          <Upload className="size-3.5" /> {importing ? s.importing : s.import}
+        </button>
         <button
           type="button"
           onClick={onAdd}

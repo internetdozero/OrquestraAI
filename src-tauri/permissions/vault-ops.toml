@@ -8,6 +8,7 @@
 identifier = "vault-ops"
 description = "Vault key lifecycle (no blind key use)."
 permissions = [
+  "allow-vault-import-services",
   "allow-vault-save-service",
   "allow-vault-delete-service",
   "allow-vault-set-service-enabled",

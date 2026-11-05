@@ -13,13 +13,54 @@ use super::atomic::update_vault;
 use super::exec;
 use super::store::{
     load_vault, mask_key, purge_migration_backup as purge_store_backup, resolve_saved_tag,
-    to_public, validate_id, KeyHealth, VaultKey, VaultService, VaultServicePublic,
+    to_public, validate_id, KeyHealth, VaultFile, VaultKey, VaultService, VaultServicePublic,
 };
+
+const MAX_IMPORT_BYTES: usize = 16 * 1024 * 1024;
 
 /// Masked services: names, active index, counts, health. No secrets.
 pub fn list_services(paths: &OrquestraPaths) -> Result<Vec<VaultServicePublic>, String> {
     let vault = load_vault(paths)?;
     Ok(vault.services.values().map(to_public).collect())
+}
+
+/// Import a plaintext or locally encrypted vault JSON, merging services by
+/// id. The active vault is only written after the complete import validates.
+pub fn import_services(
+    paths: &OrquestraPaths,
+    content: &str,
+) -> Result<Vec<VaultServicePublic>, String> {
+    if content.len() > MAX_IMPORT_BYTES {
+        return Err("the credential file is too large to import (16 MB maximum)".to_string());
+    }
+    let plaintext = crate::at_rest::open_import_text(paths, content, crate::at_rest::AAD_VAULT)?;
+    let mut imported: VaultFile = serde_json::from_str(&plaintext)
+        .map_err(|error| format!("the credential JSON has an invalid vault structure: {error}"))?;
+    if imported.services.is_empty() {
+        return Err("the credential file contains no services".to_string());
+    }
+    for (id, service) in &mut imported.services {
+        validate_id(id)?;
+        if service.id != *id {
+            return Err(format!("service id does not match its vault entry: {id}"));
+        }
+        if service.keys.is_empty() || service.keys.iter().any(|key| key.secret.trim().is_empty()) {
+            return Err(format!("service {id} has no valid credential keys"));
+        }
+        service.active = service.active.min(service.keys.len() - 1);
+        for (index, key) in service.keys.iter_mut().enumerate() {
+            key.id = format!("key-{index}");
+        }
+    }
+    let imported_ids: Vec<String> = imported.services.keys().cloned().collect();
+
+    update_vault(paths, |vault| {
+        vault.services.extend(imported.services);
+        Ok(imported_ids
+            .iter()
+            .filter_map(|id| vault.services.get(id).map(to_public))
+            .collect())
+    })
 }
 
 /// Everything needed to register or replace one service.

@@ -61,6 +61,7 @@
     "vault_delete_service",
     "vault_exec",
     "vault_http_request",
+    "vault_import_services",
     "vault_list_services",
     "vault_purge_migration_backups",
     "vault_remove_key",
@@ -112,6 +113,7 @@
       "set_minimize_to_tray"
     ],
     "vault-ops": [
+      "vault_import_services",
       "vault_save_service",
       "vault_delete_service",
       "vault_set_primary",

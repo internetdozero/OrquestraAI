@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vault-import-services"
+description = "Enables the vault_import_services command without any pre-configured scope."
+commands.allow = ["vault_import_services"]
+
+[[permission]]
+identifier = "deny-vault-import-services"
+description = "Denies the vault_import_services command without any pre-configured scope."
+commands.deny = ["vault_import_services"]

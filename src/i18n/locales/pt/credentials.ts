@@ -20,6 +20,13 @@ export const credentials = {
   typeGroupMedia: "Mídia & social",
   typeGroupOther: "Outros",
   addService: "Adicionar serviço",
+  import: "Importar JSON",
+  importing: "Importando…",
+  importDescription: "JSON do cofre em texto puro ou criptografado por esta instalação",
+  toastImporting: "Importando credenciais…",
+  toastImported: (count: number) =>
+    `${count} serviço${count === 1 ? "" : "s"} importado${count === 1 ? "" : "s"}`,
+  importFailed: (reason: string) => `Falha ao importar credenciais: ${reason}`,
   loadingTitle: "Carregando credenciais…",
   loadingBody: "Lendo os pools mascarados do cofre.",
   needDesktopTitle: "Credenciais exigem o app desktop",

@@ -38,6 +38,14 @@ pub fn vault_list_services() -> Result<Vec<VaultServicePublic>, String> {
     service::list_services(&paths)
 }
 
+/// Import plaintext or locally encrypted vault JSON, then persist it using
+/// this installation's at-rest key. The source is never changed.
+#[tauri::command]
+pub fn vault_import_services(content: String) -> Result<Vec<VaultServicePublic>, String> {
+    let paths = OrquestraPaths::resolve()?;
+    service::import_services(&paths, &content)
+}
+
 /// Register or replace a service with 1+ keys. Masked placeholders for
 /// existing keys are preserved so the drawer can round-trip safely.
 #[tauri::command]

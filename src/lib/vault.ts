@@ -212,6 +212,11 @@ export function vaultListServices(): Promise<VaultService[]> {
   return invoke<VaultService[]>("vault_list_services");
 }
 
+/** Import a plaintext or locally encrypted vault JSON; Rust seals on write. */
+export function vaultImportServices(content: string): Promise<VaultService[]> {
+  return invoke<VaultService[]>("vault_import_services", { content });
+}
+
 export function vaultSaveService(input: {
   id: string;
   label: string;
