@@ -20,6 +20,7 @@ fn freebuff_status(report: &BridgeReport) -> &HarnessStatus {
 #[test]
 fn freebuff_links_install_root_instructions() {
     let test = TestHome::new("freebuff-install-root");
+    test.mkdir(".agents");
 
     test.mkdir(".freebuff/worktrees");
     test.write(".freebuff/AGENTS.md", "Freebuff house rules\n");
@@ -48,7 +49,7 @@ fn freebuff_links_install_root_instructions() {
 #[test]
 fn freebuff_without_manicode_directory_needs_no_backup() {
     let test = TestHome::new("freebuff-no-manicode");
-    test.mkdir(".freebuff");
+    test.mkdir(".agents");
 
     let report = deploy_at(&test.home, &test.paths).unwrap();
     assert!(report.errors.is_empty(), "errors: {:?}", report.errors);
@@ -56,7 +57,7 @@ fn freebuff_without_manicode_directory_needs_no_backup() {
     assert!(!test.paths.root.join("backups").exists());
     assert!(freebuff_status(&report).bridged);
     assert_linked(
-        &test.home.join(".freebuff/skills"),
+        &test.home.join(".agents/skills"),
         &test.paths.projection_dir("freebuff"),
     );
 
@@ -68,6 +69,7 @@ fn freebuff_without_manicode_directory_needs_no_backup() {
 #[test]
 fn freebuff_links_xdg_config_instructions() {
     let test = TestHome::new("freebuff-xdg");
+    test.mkdir(".agents");
 
     test.mkdir(".freebuff/worktrees");
     test.mkdir(".config/freebuff");
@@ -95,6 +97,7 @@ fn freebuff_links_xdg_config_instructions() {
 #[test]
 fn freebuff_instruction_content_is_preserved() {
     let test = TestHome::new("freebuff-preserve");
+    test.mkdir(".agents");
 
     test.mkdir(".freebuff/worktrees");
     test.write(".freebuff/AGENTS.md", "Freebuff house rules\n");
@@ -125,6 +128,7 @@ fn freebuff_instruction_content_is_preserved() {
 #[test]
 fn freebuff_instructions_setup_is_idempotent() {
     let test = TestHome::new("freebuff-idempotent");
+    test.mkdir(".agents");
 
     test.mkdir(".freebuff/worktrees");
     test.write(".freebuff/AGENTS.md", "Freebuff house rules\n");

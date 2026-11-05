@@ -71,6 +71,7 @@ pub(super) fn deploy_at(
     seed: &Path,
 ) -> Result<Vec<String>, String> {
     let mut catalog = load_catalog(paths, seed)?;
+    super::catalog::ensure_active_official(&mut catalog, paths)?;
     let dotenv_path = paths.root.join(".env");
     if fs::symlink_metadata(&dotenv_path)
         .ok()

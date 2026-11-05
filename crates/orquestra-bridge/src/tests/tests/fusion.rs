@@ -36,6 +36,7 @@ fn fusion_backs_up_links_and_preserves_harness_state() {
 
     // Copilot, Freebuff and Manicode.
     test.skill(".copilot/skills", "zeta");
+    test.mkdir(".agents");
     test.mkdir(".freebuff/worktrees");
     test.mkdir(".config/manicode");
 

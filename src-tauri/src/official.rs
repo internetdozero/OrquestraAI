@@ -134,8 +134,8 @@ fn official_skill(
 
 /// One curated MCP server in the Official Store. `command`/`args` are the
 /// console-script entry points from each repo's `pyproject.toml`, used to
-/// pre-fill a disabled catalog entry the operator enables after installing
-/// the package.
+/// pre-fill a catalog entry that the native adapter installs on activation
+/// when its executable is not already present.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OfficialMcpEntry {

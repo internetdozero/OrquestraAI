@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use super::super::secrets::{mask_server, mask_value, restore_masked_args};
 use super::super::McpServer;
-use super::{deploy_current, load_catalog, save_catalog, seed_catalog_path, validate_server};
+use super::{
+    deploy_current, install, load_catalog, save_catalog, seed_catalog_path, validate_server,
+};
 use crate::harness;
 use crate::official::is_official_mcp;
 use crate::paths::OrquestraPaths;
@@ -36,6 +38,9 @@ pub fn save_mcp(server: McpServer) -> Result<(), String> {
         }
     }
 
+    if server.active_anywhere() {
+        install::ensure_official_server(&mut server, &paths)?;
+    }
     catalog.mcps.insert(server.id.clone(), server);
     save_catalog(&paths, &catalog)?;
     deploy_current(&paths)

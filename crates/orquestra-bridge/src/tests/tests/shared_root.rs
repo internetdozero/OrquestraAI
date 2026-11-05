@@ -1,7 +1,5 @@
 //! `~/.agents/skills` ownership: the Codebuff SDK's canonical global root.
 
-use std::fs;
-
 use super::super::super::*;
 use super::{assert_linked, TestHome};
 
@@ -61,23 +59,23 @@ fn shared_agent_root_is_freebuffs_projection() {
 }
 
 #[test]
-fn shared_agent_root_stays_quarantined_without_freebuff() {
+fn shared_agent_root_is_claimed_as_freebuff_without_other_harnesses() {
     let test = TestHome::new("shared-root-unowned");
 
-    // Codex alone is installed, so nobody projects the shared root.
-    test.mkdir(".codex/skills");
+    // `~/.agents` is Freebuff's canonical global root.
     test.skill(".agents/skills", "stray-audit");
 
     let report = deploy_at(&test.home, &test.paths).unwrap();
 
     assert!(report.errors.is_empty(), "errors: {:?}", report.errors);
-    let root = test.home.join(".agents/skills");
-    assert!(root.is_dir(), "the shared root must keep existing");
-    assert!(
-        fs::read_dir(&root).unwrap().next().is_none(),
-        "the unowned shared root still feeds unmanaged skills"
+    assert_linked(
+        &test.home.join(".agents/skills"),
+        &test.paths.projection_dir("freebuff"),
     );
-    assert!(report.quarantined.contains(&".agents/skills".to_string()));
+    assert_linked(
+        &test.paths.projection_dir("freebuff").join("stray-audit"),
+        &test.paths.vault.join("stray-audit"),
+    );
     assert!(test.paths.vault.join("stray-audit/SKILL.md").is_file());
 
     test.cleanup();

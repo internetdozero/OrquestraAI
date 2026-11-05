@@ -189,7 +189,7 @@ mod tests {
         let spec = find("freebuff").expect("freebuff is registered");
         assert_eq!(spec.env_override, None);
         let home = Path::new("/tmp/orquestra-home-that-cannot-exist");
-        assert_eq!(resolve_install_dir(spec, home), home.join(".freebuff"));
+        assert_eq!(resolve_install_dir(spec, home), home.join(".agents"));
     }
 
     #[test]

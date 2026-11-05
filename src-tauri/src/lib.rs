@@ -171,8 +171,8 @@ fn write_master_agents_md(content: String) -> Result<(), String> {
 
 /// Every MCP server in the master catalog, seeded on first launch.
 #[tauri::command]
-fn list_mcps() -> Result<Vec<McpServer>, String> {
-    mcp::list_mcps_masked()
+async fn list_mcps() -> Result<Vec<McpServer>, String> {
+    commands::run_blocking(mcp::list_mcps_masked).await
 }
 
 /// Curated Official Store: designated skills and MCP servers with install
@@ -196,20 +196,24 @@ fn mcp_targets() -> Result<Vec<McpTargetStatus>, String> {
 
 /// Project or un-project one MCP server globally or for a single harness.
 #[tauri::command]
-fn set_mcp_state(id: String, harness_id: Option<String>, enabled: bool) -> Result<(), String> {
-    mcp::set_mcp_state(&id, harness_id.as_deref(), enabled)
+async fn set_mcp_state(
+    id: String,
+    harness_id: Option<String>,
+    enabled: bool,
+) -> Result<(), String> {
+    commands::run_blocking(move || mcp::set_mcp_state(&id, harness_id.as_deref(), enabled)).await
 }
 
 /// Enable or disable every MCP server for one scope in a single atomic write.
 #[tauri::command]
-fn batch_set_mcp_all(harness_id: Option<String>, enabled: bool) -> Result<(), String> {
-    mcp::batch_set_mcp_all(harness_id.as_deref(), enabled)
+async fn batch_set_mcp_all(harness_id: Option<String>, enabled: bool) -> Result<(), String> {
+    commands::run_blocking(move || mcp::batch_set_mcp_all(harness_id.as_deref(), enabled)).await
 }
 
 /// Create or replace one MCP server, then re-compile every harness config.
 #[tauri::command]
-fn save_mcp(mcp_server: McpServer) -> Result<(), String> {
-    mcp::save_mcp(mcp_server)
+async fn save_mcp(mcp_server: McpServer) -> Result<(), String> {
+    commands::run_blocking(move || mcp::save_mcp(mcp_server)).await
 }
 
 /// Remove one MCP server from the catalog and from every harness config.
@@ -220,8 +224,8 @@ fn delete_mcp(id: String) -> Result<(), String> {
 
 /// Re-compile the catalog into every installed harness config.
 #[tauri::command]
-fn deploy_mcps() -> Result<Vec<String>, String> {
-    mcp::deploy_mcps_reporting()
+async fn deploy_mcps() -> Result<Vec<String>, String> {
+    commands::run_blocking(mcp::deploy_mcps_reporting).await
 }
 
 /// Every built-in and custom mission preset, with the applied one flagged.
@@ -232,8 +236,8 @@ fn list_presets() -> Result<Vec<presets::Preset>, String> {
 
 /// Apply one preset to the skill projections and the MCP catalog.
 #[tauri::command]
-fn apply_preset(id: String) -> Result<presets::PresetReport, String> {
-    presets::apply_preset(id)
+async fn apply_preset(id: String) -> Result<presets::PresetReport, String> {
+    commands::run_blocking(move || presets::apply_preset(id)).await
 }
 
 /// Save the current live skill and MCP combination as a named custom preset.

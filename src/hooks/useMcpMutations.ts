@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useI18n } from "./useI18n";
 import {
   batchSetMcpAll,
@@ -47,6 +47,8 @@ export function useMcpMutations({
   const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const saveError = useRef<string | null>(null);
+  const getSaveError = useCallback(() => saveError.current, []);
   const [deploying, setDeploying] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
 
@@ -152,6 +154,7 @@ export function useMcpMutations({
   const save = async (server: McpServer): Promise<boolean> => {
     setSaving(true);
     setFormError(null);
+    saveError.current = null;
 
     try {
       await saveMcp(server);
@@ -160,7 +163,8 @@ export function useMcpMutations({
       await load(true);
       return true;
     } catch (cause) {
-      setFormError(toMessage(cause, t.common.unexpected));
+      saveError.current = toMessage(cause, t.common.unexpected);
+      setFormError(saveError.current);
       return false;
     } finally {
       setSaving(false);
@@ -186,6 +190,7 @@ export function useMcpMutations({
     busyIds,
     saving,
     formError,
+    getSaveError,
     setFormError,
     deploying,
     batchPending,

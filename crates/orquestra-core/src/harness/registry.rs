@@ -100,7 +100,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         id: "freebuff",
         label: "Freebuff",
         env_override: None,
-        install_rel: ".freebuff",
+        install_rel: ".agents",
         // `~/.agents/skills` is the Codebuff SDK's canonical global root, so
         // Freebuff reads operator-enabled skills there before its own folders.
         skills_links: &[

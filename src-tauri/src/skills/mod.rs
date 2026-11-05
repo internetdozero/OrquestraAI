@@ -19,7 +19,7 @@ mod subpath;
 mod vault;
 mod vault_cache;
 
-pub(crate) use subpath::refresh_skill_dir;
+pub(crate) use subpath::{clone_shallow, refresh_skill_dir, split_git_url};
 #[cfg(test)]
 mod tests;
 

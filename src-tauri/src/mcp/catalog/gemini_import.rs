@@ -1,4 +1,4 @@
-//! One-time adoption of MCPs already configured for Gemini.
+//! Incremental adoption of MCPs already configured for managed harnesses.
 
 use super::{load_catalog, save_catalog};
 use crate::mcp::McpServer;
@@ -14,13 +14,16 @@ pub(super) fn adopt_existing(
     seed: &Path,
 ) -> Result<(), String> {
     let mut catalog = load_catalog(paths, seed)?;
-    if catalog.gemini_configs_imported {
-        return Ok(());
-    }
+    let previously_managed = catalog.managed_ids.clone();
+    let mut changed = false;
 
-    // Gemini CLI and Antigravity have separate native configs, but share the
-    // Antigravity scope in Orquestra's current harness model.
-    for rel in [".gemini/config/mcp_config.json", ".gemini/settings.json"] {
+    // Read only harness-owned user configs. Workspace `.agents` and
+    // Freebuff account-level MCPs/skills are outside this filesystem catalog.
+    for (rel, scope) in [
+        (".agents/mcp.json", "freebuff"),
+        (".gemini/config/mcp_config.json", "antigravity"),
+        (".gemini/settings.json", "antigravity"),
+    ] {
         let path = home.join(rel);
         if has_symlink_ancestor(home, &path) || is_symlink(&path) {
             continue;
@@ -35,7 +38,10 @@ pub(super) fn adopt_existing(
             continue;
         };
         for (id, definition) in servers {
-            if catalog.mcps.contains_key(id) || !definition.is_object() {
+            if previously_managed.contains(id) {
+                continue;
+            }
+            if !definition.is_object() {
                 continue;
             }
             let command = definition
@@ -48,6 +54,14 @@ pub(super) fn adopt_existing(
                 .find_map(|key| definition.get(*key).and_then(Value::as_str))
                 .map(str::to_string);
             if command.trim().is_empty() && url.is_none() {
+                continue;
+            }
+            if crate::official::is_official_mcp(id)
+                && url.is_none()
+                && super::install::find_command(&command).is_none()
+            {
+                // Keep unavailable curated packages absent so the Store's
+                // Add action installs them rather than importing broken paths.
                 continue;
             }
             let args = definition
@@ -85,6 +99,19 @@ pub(super) fn adopt_existing(
                         .collect::<HashMap<_, _>>()
                 })
                 .unwrap_or_default();
+            if let Some(existing) = catalog.mcps.get_mut(id) {
+                if !existing
+                    .enabled_harnesses
+                    .iter()
+                    .any(|enabled| enabled == scope)
+                {
+                    existing.enabled_harnesses.push(scope.to_string());
+                    existing.enabled_harnesses.sort();
+                    changed = true;
+                }
+                changed |= catalog.managed_ids.insert(id.clone());
+                continue;
+            }
             catalog.managed_ids.insert(id.clone());
             catalog.mcps.insert(
                 id.clone(),
@@ -98,14 +125,17 @@ pub(super) fn adopt_existing(
                     url,
                     headers,
                     global_enabled: false,
-                    enabled_harnesses: vec!["antigravity".to_string()],
+                    enabled_harnesses: vec![scope.to_string()],
                     official: false,
                 },
             );
+            changed = true;
         }
     }
-    catalog.gemini_configs_imported = true;
-    save_catalog(paths, &catalog)
+    if changed {
+        save_catalog(paths, &catalog)?;
+    }
+    Ok(())
 }
 
 fn is_symlink(path: &Path) -> bool {
@@ -138,7 +168,7 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
-    fn adopts_mcp_servers_from_gemini_configs_once() {
+    fn adopts_global_mcp_servers_without_reenabling_removed_scopes() {
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock")
@@ -147,12 +177,18 @@ mod tests {
         let home = base.join("home");
         let root = base.join("orquestra");
         fs::create_dir_all(home.join(".gemini/config")).expect("Gemini config");
+        fs::create_dir_all(home.join(".agents")).expect("Freebuff config");
         let paths = OrquestraPaths {
             vault: root.join("skills-library"),
             active: root.join("active"),
             root,
         };
         paths.ensure_layout().expect("layout");
+        fs::write(
+            home.join(".agents/mcp.json"),
+            r#"{"mcpServers":{"exa":{"url":"https://exa.example/mcp"},"rea":{"command":"/bin/echo","args":[]},"orquestra-idea-vault":{"command":"idea-vault","args":[]}}}"#,
+        )
+        .expect("Freebuff config");
         fs::write(
             home.join(".gemini/config/mcp_config.json"),
             r#"{"mcpServers":{"exa":{"url":"https://exa.example/mcp"}}}"#,
@@ -165,7 +201,7 @@ mod tests {
         .expect("Gemini CLI config");
 
         adopt_existing(&paths, &home, &home.join("missing-seed.json")).expect("adopt");
-        let catalog = load_catalog(&paths, &home.join("missing-seed.json")).expect("reload");
+        let mut catalog = load_catalog(&paths, &home.join("missing-seed.json")).expect("reload");
         assert_eq!(
             catalog.mcps.keys().cloned().collect::<Vec<_>>(),
             ["exa", "rea"]
@@ -174,13 +210,22 @@ mod tests {
             catalog.mcps["exa"].url.as_deref(),
             Some("https://exa.example/mcp")
         );
-        assert_eq!(catalog.mcps["rea"].enabled_harnesses, ["antigravity"]);
+        assert_eq!(
+            catalog.mcps["rea"].enabled_harnesses,
+            ["antigravity", "freebuff"]
+        );
+        assert!(!catalog.mcps.contains_key("orquestra-idea-vault"));
         assert_eq!(
             catalog.managed_ids,
             ["exa", "rea"].into_iter().map(str::to_string).collect()
         );
-        assert!(catalog.gemini_configs_imported);
 
+        let rea = catalog.mcps.get_mut("rea").expect("rea adopted");
+        rea.enabled_harnesses.retain(|scope| scope != "freebuff");
+        save_catalog(&paths, &catalog).expect("save scope change");
+        adopt_existing(&paths, &home, &home.join("missing-seed.json")).expect("second scan");
+        let catalog = load_catalog(&paths, &home.join("missing-seed.json")).expect("reload");
+        assert_eq!(catalog.mcps["rea"].enabled_harnesses, ["antigravity"]);
         let _ = fs::remove_dir_all(base);
     }
 }

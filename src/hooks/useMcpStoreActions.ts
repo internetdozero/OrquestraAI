@@ -8,13 +8,14 @@ interface McpStoreDeps {
   scope: string;
   toggle: (server: McpServer) => Promise<void>;
   save: (server: McpServer) => Promise<boolean>;
+  getSaveError: () => string | null;
   onToast: (message: string) => void;
 }
 
 /** Live status + one-click actions backing the MCP store tab. */
 export function useMcpStoreActions(servers: McpServer[], deps: McpStoreDeps) {
   const { t } = useI18n();
-  const { scope, toggle, save, onToast } = deps;
+  const { scope, toggle, save, getSaveError, onToast } = deps;
 
   const statusOf = useCallback(
     (entry: StoreEntry): StoreStatus => {
@@ -58,13 +59,13 @@ export function useMcpStoreActions(servers: McpServer[], deps: McpStoreDeps) {
               globalEnabled: global,
               enabledHarnesses: global ? [] : [scope],
             });
-            if (!saved) throw new Error(t.store.mcpSaveFailed);
+            if (!saved) throw new Error(getSaveError() ?? t.store.mcpSaveFailed);
           },
         };
       }
       return null;
     },
-    [t, servers, toggle, save, onToast, scope],
+    [t, servers, toggle, save, getSaveError, onToast, scope],
   );
 
   return { statusOf, actionFor };

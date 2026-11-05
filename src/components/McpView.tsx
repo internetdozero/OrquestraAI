@@ -102,19 +102,29 @@ export function McpView({
     [filteredServers, sortMode, scope],
   );
 
-  const { busyIds, saving, formError, setFormError, batchPending, toggle, applyAll, remove, save } =
-    useMcpMutations({
-      scope,
-      scopeLabel,
-      replaceServers,
-      load,
-      setError,
-      onToast,
-      onSaved: () => {
-        setFormOpen(false);
-        setEditing(null);
-      },
-    });
+  const {
+    busyIds,
+    saving,
+    formError,
+    setFormError,
+    getSaveError,
+    batchPending,
+    toggle,
+    applyAll,
+    remove,
+    save,
+  } = useMcpMutations({
+    scope,
+    scopeLabel,
+    replaceServers,
+    load,
+    setError,
+    onToast,
+    onSaved: () => {
+      setFormOpen(false);
+      setEditing(null);
+    },
+  });
 
   // Stable callback identities: McpCard is memoized and compares props by
   // reference, so inline arrows in renderItem would re-render every card
@@ -163,6 +173,7 @@ export function McpView({
     scope,
     toggle,
     save,
+    getSaveError,
     onToast,
   });
 

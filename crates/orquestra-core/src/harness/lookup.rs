@@ -143,4 +143,14 @@ mod tests {
         // A harness-specific link still waits for the harness to provision it.
         assert!(!provisions_parent(".codex/skills"));
     }
+
+    #[test]
+    fn freebuff_is_detected_from_its_global_agents_root() {
+        let home = std::env::temp_dir().join(format!("freebuff-global-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join(".agents")).expect("global agents root");
+        let spec = find("freebuff").expect("Freebuff is registered");
+        assert!(is_installed_with(spec, &home, &|_| None));
+        let _ = std::fs::remove_dir_all(home);
+    }
 }
