@@ -257,3 +257,43 @@ fn freebuff_dedupes_prefix_worktrees_against_desktop_threads() {
         "no ghost card returns for the reclaimed prefix"
     );
 }
+
+#[test]
+fn freebuff_desktop_cloud_session_badges_and_diagnostics() {
+    let home = TestHome::new();
+    let thread = "c100d000-1111-2222-3333-444455556666";
+    let slug = "cloud-project";
+
+    home.database(
+        &format!(".config/freebuff-desktop/projects/{slug}/desktop-v2.db"),
+        &format!(
+            "CREATE TABLE threads (id TEXT PRIMARY KEY, project_id TEXT, project_path TEXT,\
+                                title TEXT, created_at INTEGER, updated_at INTEGER,\
+                                execution_target TEXT, cloud_account_id TEXT);\
+             CREATE TABLE messages (seq INTEGER PRIMARY KEY AUTOINCREMENT, thread_id TEXT,\
+                                role TEXT, parts_json TEXT DEFAULT '[]',\
+                                attachments_json TEXT DEFAULT '[]', ts INTEGER);\
+             INSERT INTO threads VALUES ('{thread}', 'p123', '/work/cloud',\
+               'Cloud prompt', 1792324543519, 1792324942904, 'cloud', 'acc-xyz');"
+        ),
+    );
+
+    let sessions = adapter(&home.0, "freebuff").list_sessions().expect("list");
+    let session = sessions
+        .iter()
+        .find(|s| s.id == format!("desktop:{slug}:{thread}"))
+        .expect("cloud thread found");
+
+    assert_eq!(session.title, "Cloud prompt");
+    assert_eq!(session.turns_count, 0);
+    assert_eq!(session.execution_target.as_deref(), Some("cloud"));
+    assert!(session.is_remote_cloud, "cloud thread with 0 turns must be flagged as is_remote_cloud");
+
+    // Inspect transcript for unsynced cloud session
+    let transcript = adapter(&home.0, "freebuff").read_transcript(&session.id);
+
+    assert_eq!(transcript.len(), 1, "must return 1 diagnostic turn");
+    assert_eq!(transcript[0].role, "assistant");
+    assert!(transcript[0].content.contains("Codebuff Cloud"));
+    assert!(transcript[0].content.contains("Freebuff Desktop"));
+}

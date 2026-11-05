@@ -1,4 +1,4 @@
-import { Eye, FolderGit2, Pin, Trash2 } from "lucide-react";
+import { Cloud, Eye, FolderGit2, Pin, Trash2 } from "lucide-react";
 import { scopeLabel } from "../../lib/harnesses";
 import { useI18n } from "../../hooks/useI18n";
 import type { UnifiedSession } from "../../lib/sessions";
@@ -42,15 +42,26 @@ export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: 
       </span>
 
       <div className="min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={onInspect}
-          title={s.inspectTitle}
-          className="block w-full truncate text-left text-[12.5px] font-medium text-zinc-100 transition hover:text-emerald-200"
-        >
-          {session.isPinned && <span className="mr-1 text-amber-300">📌</span>}
-          {session.title || session.id}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onInspect}
+            title={s.inspectTitle}
+            className="truncate text-left text-[12.5px] font-medium text-zinc-100 transition hover:text-emerald-200"
+          >
+            {session.isPinned && <span className="mr-1 text-amber-300">📌</span>}
+            {session.title || session.id}
+          </button>
+          {session.isRemoteCloud && (
+            <span
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 font-sans text-[9.5px] font-medium text-sky-300"
+              title={s.cloudPendingSyncTooltip}
+            >
+              <Cloud className="size-2.5 shrink-0" />
+              <span>{s.cloudPendingSync}</span>
+            </span>
+          )}
+        </div>
         <p
           className="flex min-w-0 items-center gap-1 truncate font-mono text-[10.5px] text-zinc-500"
           title={session.projectPath ?? session.id}
@@ -68,7 +79,12 @@ export function SessionRow({ session, busy, onTogglePin, onDelete, onInspect }: 
           {formatDateTime(session.updatedAt)}
         </p>
         <p className="text-[10px] text-zinc-500">
-          {relativeAge(session.updatedAt, locale)} · {session.turnsCount} turns
+          {relativeAge(session.updatedAt, locale)} ·{" "}
+          {session.isRemoteCloud ? (
+            <span className="text-sky-400 font-medium">{s.cloudPendingSync}</span>
+          ) : (
+            `${session.turnsCount} turns`
+          )}
         </p>
       </div>
 

@@ -41,6 +41,10 @@ export interface UnifiedSession {
   /** Protected from every purge; stored in ~/.orquestra, never in a harness. */
   isPinned: boolean;
   pinLabel: string | null;
+  /** Execution target from harness (e.g. 'cloud' or 'local'). */
+  executionTarget?: string | null;
+  /** Whether the session was executed in remote cloud and is pending local sync. */
+  isRemoteCloud?: boolean;
 }
 
 /** Which sessions a purge may touch. Mirrors the Rust `PurgeFilter` struct. */

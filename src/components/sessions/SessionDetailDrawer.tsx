@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Check, Copy, Pin, Trash2, X } from "lucide-react";
+import { Check, Cloud, Copy, Pin, Trash2, X } from "lucide-react";
 import { scopeLabel } from "../../lib/harnesses";
 import type { UnifiedSession } from "../../lib/sessions";
 import { absoluteDate, formatBytes, formatDateTime, harnessColor } from "../../lib/sessionFormat";
@@ -82,8 +82,11 @@ export function SessionDetailDrawer({
       value: session.projectPath ?? "—",
       copy: session.projectPath ? { value: session.projectPath, label: s.copyPath } : undefined,
     },
-    { term: s.turns, value: `${session.turnsCount}` },
+    { term: s.turns, value: session.isRemoteCloud ? s.cloudPendingSync : `${session.turnsCount}` },
     { term: s.diskSize, value: formatBytes(session.sizeBytes) },
+    ...(session.executionTarget
+      ? [{ term: s.executionTarget, value: session.executionTarget }]
+      : []),
     {
       term: s.createdAt,
       value: session.createdAt ? formatDateTime(session.createdAt) : "—",
@@ -129,6 +132,15 @@ export function SessionDetailDrawer({
                 <span className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
                   <Pin className="size-2.5 fill-current" />
                   {s.pinned}
+                </span>
+              )}
+              {session.isRemoteCloud && (
+                <span
+                  className="flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-300"
+                  title={s.cloudPendingSyncTooltip}
+                >
+                  <Cloud className="size-2.5" />
+                  {s.cloudPendingSync}
                 </span>
               )}
             </div>

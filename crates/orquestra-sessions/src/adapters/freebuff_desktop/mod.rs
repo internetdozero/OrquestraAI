@@ -15,15 +15,15 @@
 
 use std::path::{Path, PathBuf};
 
-use rusqlite::Connection;
-
 use crate::types::UnifiedSession;
 
 use super::{fsops, utils};
 
+mod query;
 mod transcript;
 mod worktree;
 
+pub use query::query_threads;
 pub use transcript::transcript;
 pub use worktree::{claimed_dir_names, find_worktree};
 
@@ -114,6 +114,8 @@ pub fn list(home: &Path) -> Vec<UnifiedSession> {
                 .map(|ms| utils::iso8601_from_secs(ms.div_euclid(1_000)));
             session.turns_count = row.turns;
             session.size_bytes = row.message_bytes + extra_size(home, &row.id);
+            session.execution_target = row.execution_target.clone();
+            session.is_remote_cloud = row.execution_target.as_deref() == Some("cloud") && row.turns == 0;
 
             sessions.push(session);
         }
@@ -179,140 +181,6 @@ fn desktop_project_path(project: &Path) -> Option<String> {
     let meta = utils::read_json(&project.join("project.json"))?;
     let path = meta.get("projectPath")?.as_str()?.trim();
     (!path.is_empty()).then(|| path.to_string())
-}
-
-struct ThreadRow {
-    id: String,
-    title: Option<String>,
-    project_path: Option<String>,
-    created_ms: Option<i64>,
-    updated_ms: Option<i64>,
-    turns: usize,
-    message_bytes: u64,
-}
-
-/// One grouped query per database; discovered columns keep schema variations compatible.
-fn query_threads(connection: &Connection, database: &Path) -> Result<Vec<ThreadRow>, String> {
-    if !utils::table_exists(connection, "threads")? {
-        return Ok(Vec::new());
-    }
-    let columns = utils::table_columns(connection, "threads");
-    if !columns.contains(&"id".to_string()) {
-        return Err(format!("{} has no `threads.id` column", database.display()));
-    }
-
-    let pick = |name: &str| {
-        if columns.contains(&name.to_string()) {
-            format!("t.{name}")
-        } else {
-            "NULL".to_string()
-        }
-    };
-
-    let message_columns = if utils::table_exists(connection, "messages")? {
-        utils::table_columns(connection, "messages")
-    } else {
-        Vec::new()
-    };
-    let joined = message_columns.contains(&"thread_id".to_string());
-    let count_expr = if joined && message_columns.contains(&"seq".to_string()) {
-        "COUNT(m.seq)".to_string()
-    } else if joined {
-        "COUNT(m.thread_id)".to_string()
-    } else {
-        "0".to_string()
-    };
-    let mut size_terms = Vec::new();
-    for column in ["parts_json", "attachments_json"] {
-        if joined && message_columns.contains(&column.to_string()) {
-            size_terms.push(format!("COALESCE(SUM(LENGTH(m.{column})), 0)"));
-        }
-    }
-    let size_expr = if size_terms.is_empty() {
-        "0".to_string()
-    } else {
-        size_terms.join(" + ")
-    };
-
-    let mut activity_terms = Vec::new();
-    if joined {
-        if let Some(column) = ["ts", "timestamp"]
-            .into_iter()
-            .find(|column| message_columns.contains(&column.to_string()))
-        {
-            activity_terms.push(format!("MAX(m.{column})"));
-        }
-    }
-    for column in [
-        "last_turn_finished_at",
-        "last_prompt_at",
-        "created_at",
-        "updated_at",
-    ] {
-        if columns.contains(&column.to_string()) {
-            activity_terms.push(format!("t.{column}"));
-        }
-    }
-    let activity_expr = match activity_terms.as_slice() {
-        [] => "NULL".to_string(),
-        [only] => only.clone(),
-        _ => format!("COALESCE({})", activity_terms.join(", ")),
-    };
-
-    // Without a `messages` table, threads still list with zero turns.
-    let join = if joined {
-        "LEFT JOIN messages m ON m.thread_id = t.id"
-    } else {
-        ""
-    };
-    // Activity column 5 drives both the displayed session time and ordering.
-    let sql = format!(
-        "SELECT t.id, {}, {}, {}, {activity_expr}, {count_expr}, {size_expr} \
-         FROM threads t {join} \
-         GROUP BY t.id ORDER BY 5 DESC",
-        pick("title"),
-        pick("project_path"),
-        pick("created_at"),
-    );
-
-    let mut statement = connection
-        .prepare(&sql)
-        .map_err(|error| format!("{}: {error}", database.display()))?;
-    let rows = statement
-        .query_map([], |row| {
-            Ok((
-                utils::text_cell(row, 0),
-                utils::text_cell(row, 1),
-                utils::text_cell(row, 2),
-                utils::i64_cell(row, 3),
-                utils::i64_cell(row, 4),
-                utils::i64_cell(row, 5),
-                utils::i64_cell(row, 6),
-            ))
-        })
-        .map_err(|error| format!("{}: {error}", database.display()))?;
-
-    let mut threads = Vec::new();
-    for row in rows.flatten() {
-        let (Some(id), title, project_path, created_ms, updated_ms, turns, message_bytes) = row
-        else {
-            continue;
-        };
-        if id.is_empty() {
-            continue;
-        }
-        threads.push(ThreadRow {
-            id,
-            title,
-            project_path,
-            created_ms,
-            updated_ms,
-            turns: turns.unwrap_or(0).max(0) as usize,
-            message_bytes: message_bytes.unwrap_or(0).max(0) as u64,
-        });
-    }
-
-    Ok(threads)
 }
 
 /// Remove the thread's rows, then its FTS entries. The FTS triggers already

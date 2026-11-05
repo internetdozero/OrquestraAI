@@ -34,16 +34,16 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
         return Vec::new();
     };
     let Ok(true) = utils::table_exists(&connection, "messages") else {
-        return Vec::new();
+        return check_cloud_fallback(&connection, thread);
     };
     let columns = utils::table_columns(&connection, "messages");
     if !columns.iter().any(|name| name == "thread_id") {
-        return Vec::new();
+        return check_cloud_fallback(&connection, thread);
     }
     let role_col = pick_column(&columns, &["role"]);
     let text_col = pick_column(&columns, &["parts_json", "content", "text", "body"]);
     let (Some(role_col), Some(text_col)) = (role_col, text_col) else {
-        return Vec::new();
+        return check_cloud_fallback(&connection, thread);
     };
     let ts_col = pick_column(&columns, &["created_at", "timestamp", "updated_at", "ts"]);
     let order_col = pick_column(&columns, &["seq", "created_at", "rowid"])
@@ -57,7 +57,7 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
         order_col,
     );
     let Ok(mut statement) = connection.prepare(&sql) else {
-        return Vec::new();
+        return check_cloud_fallback(&connection, thread);
     };
     let Ok(rows) = statement.query_map([thread], |row| {
         Ok((
@@ -66,7 +66,7 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
             utils::text_cell(row, 2),
         ))
     }) else {
-        return Vec::new();
+        return check_cloud_fallback(&connection, thread);
     };
 
     let mut turns = Vec::new();
@@ -89,7 +89,23 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
             break;
         }
     }
+    if turns.is_empty() {
+        return check_cloud_fallback(&connection, thread);
+    }
     turns
+}
+
+fn check_cloud_fallback(connection: &rusqlite::Connection, thread: &str) -> Vec<TranscriptTurn> {
+    if let Some(target) = super::query::thread_execution_target(connection, thread) {
+        if target == "cloud" {
+            return vec![TranscriptTurn {
+                role: "assistant".to_string(),
+                content: "⚠️ Sessão remota na nuvem (Codebuff Cloud)\n\nEsta sessão foi processada na nuvem e o histórico de mensagens ainda não foi sincronizado localmente.\n\nPara visualizar e sincronizar todas as mensagens, abra esta conversa no Freebuff Desktop.".to_string(),
+                timestamp: None,
+            }];
+        }
+    }
+    Vec::new()
 }
 
 /// Text inside a `parts_json` payload: a plain string, a JSON string, an
