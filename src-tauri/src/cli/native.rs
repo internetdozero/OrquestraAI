@@ -6,6 +6,7 @@ use serde::Serialize;
 
 mod bridge;
 mod ideas;
+mod mcp;
 mod sessions;
 mod vault;
 
@@ -23,18 +24,19 @@ pub fn dispatch_native_cli(args: &[String]) -> Option<Result<String, CliError>> 
         Some("sessions") => Some(sessions::run(&args[1..])),
         Some("bridge") => Some(bridge::run(&args[1..])),
         Some("vault") => Some(vault::run(&args[1..])),
+        Some("mcp") => Some(mcp::run(&args[1..])),
         _ => None,
     }
 }
 
 #[derive(Default)]
-struct Options {
+pub(super) struct Options {
     values: HashMap<String, Vec<String>>,
     switches: HashSet<String>,
 }
 
 impl Options {
-    fn one(&self, name: &str) -> Result<Option<String>, CliError> {
+    pub(super) fn one(&self, name: &str) -> Result<Option<String>, CliError> {
         match self.values.get(name).map(Vec::as_slice) {
             None => Ok(None),
             Some([value]) => Ok(Some(value.clone())),
@@ -42,22 +44,22 @@ impl Options {
         }
     }
 
-    fn required(&self, name: &str) -> Result<String, CliError> {
+    pub(super) fn required(&self, name: &str) -> Result<String, CliError> {
         self.one(name)?
             .filter(|value| !value.trim().is_empty())
             .ok_or_else(|| usage(format!("missing required {name}")))
     }
 
-    fn has(&self, name: &str) -> bool {
+    pub(super) fn has(&self, name: &str) -> bool {
         self.switches.contains(name)
     }
 
-    fn repeated(&self, name: &str) -> Vec<String> {
+    pub(super) fn repeated(&self, name: &str) -> Vec<String> {
         self.values.get(name).cloned().unwrap_or_default()
     }
 }
 
-fn parse_options(
+pub(super) fn parse_options(
     args: &[String],
     value_options: &[&str],
     switches: &[&str],
@@ -88,11 +90,11 @@ fn parse_options(
     Ok(parsed)
 }
 
-fn usage(message: String) -> CliError {
+pub(super) fn usage(message: String) -> CliError {
     CliError::Usage(message)
 }
 
-fn rendered<T: Serialize>(value: &T, as_json: bool, human: String) -> Result<String, CliError> {
+pub(super) fn rendered<T: Serialize>(value: &T, as_json: bool, human: String) -> Result<String, CliError> {
     if as_json {
         serde_json::to_string_pretty(value)
             .map_err(|error| CliError::Operation(format!("JSON serialization failed: {error}")))
@@ -101,7 +103,7 @@ fn rendered<T: Serialize>(value: &T, as_json: bool, human: String) -> Result<Str
     }
 }
 
-fn parse_u32(options: &Options, name: &str) -> Result<Option<u32>, CliError> {
+pub(super) fn parse_u32(options: &Options, name: &str) -> Result<Option<u32>, CliError> {
     options
         .one(name)?
         .map(|value| {
@@ -112,7 +114,7 @@ fn parse_u32(options: &Options, name: &str) -> Result<Option<u32>, CliError> {
         .transpose()
 }
 
-fn parse_i64(options: &Options, name: &str) -> Result<Option<i64>, CliError> {
+pub(super) fn parse_i64(options: &Options, name: &str) -> Result<Option<i64>, CliError> {
     options
         .one(name)?
         .map(|value| {

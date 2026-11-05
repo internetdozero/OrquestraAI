@@ -32,7 +32,7 @@ pub fn purge_catalog_migration_backup() -> Result<bool, String> {
     crate::at_rest::purge_migration_backup(&paths, &path, crate::at_rest::AAD_MCPS)
 }
 pub use deploy::{deploy_mcps, deploy_mcps_reporting, list_targets};
-pub use secrets::mask_secret;
+pub use secrets::{mask_secret, parse_dotenv};
 
 /// One MCP server as the operator defines it, independent of any harness.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,7 +64,7 @@ pub struct McpServer {
 }
 
 impl McpServer {
-    pub(super) fn resolved(&self, dotenv: &HashMap<String, String>) -> Self {
+    pub fn resolved(&self, dotenv: &HashMap<String, String>) -> Self {
         let mut resolved = self.clone();
         resolved.args = self
             .args
@@ -104,11 +104,11 @@ impl McpServer {
     }
 
     /// Enabled for a specific harness, directly or through the global baseline.
-    pub(super) fn covers(&self, harness: &str) -> bool {
+    pub fn covers(&self, harness: &str) -> bool {
         self.global_enabled || self.enabled_harnesses.iter().any(|id| id == harness)
     }
 
-    pub(super) fn active_anywhere(&self) -> bool {
+    pub fn active_anywhere(&self) -> bool {
         self.global_enabled || !self.enabled_harnesses.is_empty()
     }
 }

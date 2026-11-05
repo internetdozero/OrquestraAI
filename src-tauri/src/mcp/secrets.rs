@@ -135,7 +135,7 @@ pub(super) fn mask_server(server: &mut super::McpServer) {
     }
 }
 
-pub(super) fn parse_dotenv(content: &str) -> HashMap<String, String> {
+pub fn parse_dotenv(content: &str) -> HashMap<String, String> {
     content
         .lines()
         .filter_map(|line| {
