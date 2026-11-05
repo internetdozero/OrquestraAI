@@ -10,7 +10,9 @@ pub(super) fn list(args: &[String]) -> Result<String, CliError> {
         &["--official", "--has-scripts", "--json"],
     )?;
 
-    let scope = options.one("--scope")?.unwrap_or_else(|| "global".to_string());
+    let scope = options
+        .one("--scope")?
+        .unwrap_or_else(|| "global".to_string());
     let filter = options.one("--filter")?.map(|s| s.to_lowercase());
     let official_only = options.has("--official");
     let has_scripts_only = options.has("--has-scripts");
@@ -47,7 +49,10 @@ fn format_skills_table(skills: &[SkillItem], scope: &str) -> String {
         return "No matching skills found.".to_string();
     }
     let mut lines = Vec::with_capacity(skills.len() + 1);
-    lines.push(format!("{:<20} {:<24} {:<15} {:<10} {:<8} {}", "ID", "NAME", "CATEGORY", "SCOPE", "SCRIPTS", "OFFICIAL"));
+    lines.push(format!(
+        "{:<20} {:<24} {:<15} {:<10} {:<8} {}",
+        "ID", "NAME", "CATEGORY", "SCOPE", "SCRIPTS", "OFFICIAL"
+    ));
     for s in skills {
         let scripts_str = if s.has_scripts { "yes" } else { "no" };
         let official_str = if s.official { "yes" } else { "no" };

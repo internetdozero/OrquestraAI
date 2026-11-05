@@ -1,9 +1,9 @@
 //! Session inspect subcommand.
 
-use super::is_session_active;
 use super::super::{parse_options, parse_u32, rendered, CliError};
-use crate::sessions::{get_session_transcript, get_unified_sessions};
+use super::is_session_active;
 use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::sessions::{get_session_transcript, get_unified_sessions};
 
 pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
@@ -58,7 +58,12 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
     rendered(&report, options.has("--json"), human)
 }
 
-fn format_inspect_human(session: &UnifiedSession, active: bool, turns: &[TranscriptTurn], compact: bool) -> String {
+fn format_inspect_human(
+    session: &UnifiedSession,
+    active: bool,
+    turns: &[TranscriptTurn],
+    compact: bool,
+) -> String {
     let mut out = format!(
         "Session:     {}\n\
          Harness:     {}\n\
@@ -89,10 +94,26 @@ fn format_inspect_human(session: &UnifiedSession, active: bool, turns: &[Transcr
         let timestamp = turn.timestamp.as_deref().unwrap_or("");
         if compact {
             let snippet = turn.content.lines().next().unwrap_or("");
-            let clean = if snippet.len() > 60 { format!("{}...", &snippet[..57]) } else { snippet.to_string() };
-            out.push_str(&format!("  [{:>2}] {:<10} {:<20} {}\n", idx + 1, role, timestamp, clean));
+            let clean = if snippet.len() > 60 {
+                format!("{}...", &snippet[..57])
+            } else {
+                snippet.to_string()
+            };
+            out.push_str(&format!(
+                "  [{:>2}] {:<10} {:<20} {}\n",
+                idx + 1,
+                role,
+                timestamp,
+                clean
+            ));
         } else {
-            out.push_str(&format!("--- Turn {} ({}, {}) ---\n{}\n\n", idx + 1, role, timestamp, turn.content.trim()));
+            out.push_str(&format!(
+                "--- Turn {} ({}, {}) ---\n{}\n\n",
+                idx + 1,
+                role,
+                timestamp,
+                turn.content.trim()
+            ));
         }
     }
 

@@ -1,8 +1,8 @@
 //! Mutation subcommands: add, remove, enable, disable, set-state.
 
-use std::collections::HashMap;
 use super::super::{parse_options, rendered, usage, CliError};
 use crate::mcp::{delete_mcp, save_mcp, set_mcp_state, McpServer};
+use std::collections::HashMap;
 
 pub(super) fn add(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
@@ -37,7 +37,9 @@ pub(super) fn add(args: &[String]) -> Result<String, CliError> {
         if let Some((k, v)) = entry.split_once('=') {
             env.insert(k.trim().to_string(), v.to_string());
         } else {
-            return Err(usage(format!("invalid --env format '{entry}', expected KEY=VAL")));
+            return Err(usage(format!(
+                "invalid --env format '{entry}', expected KEY=VAL"
+            )));
         }
     }
 
@@ -48,7 +50,9 @@ pub(super) fn add(args: &[String]) -> Result<String, CliError> {
         } else if let Some((k, v)) = entry.split_once(':') {
             headers.insert(k.trim().to_string(), v.trim().to_string());
         } else {
-            return Err(usage(format!("invalid --header format '{entry}', expected KEY=VAL or KEY:VAL")));
+            return Err(usage(format!(
+                "invalid --header format '{entry}', expected KEY=VAL or KEY:VAL"
+            )));
         }
     }
 
@@ -91,7 +95,8 @@ pub(super) fn remove(args: &[String]) -> Result<String, CliError> {
         "deleted": true,
         "id": id,
     });
-    let human = format!("Removed MCP server '{id}' from catalog and purged from harness configurations.");
+    let human =
+        format!("Removed MCP server '{id}' from catalog and purged from harness configurations.");
     rendered(&confirmation, options.has("--json"), human)
 }
 
@@ -127,7 +132,11 @@ fn toggle(args: &[String], enabled: bool, verb: &str) -> Result<String, CliError
     let id = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage(format!("usage: orquestra mcp {verb} <id> [--global] [--harness <name>] [--json]")))?;
+        .ok_or_else(|| {
+            usage(format!(
+                "usage: orquestra mcp {verb} <id> [--global] [--harness <name>] [--json]"
+            ))
+        })?;
 
     apply_toggle(id, &args[1..], enabled)
 }

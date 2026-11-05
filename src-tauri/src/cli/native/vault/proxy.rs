@@ -1,8 +1,8 @@
 //! Blind HTTP proxy, exec proxy, and connectivity test subcommands.
 
-use std::collections::HashMap;
-use super::{parse_key_number, paths};
 use super::super::{parse_options, rendered, usage, CliError};
+use super::{parse_key_number, paths};
+use std::collections::HashMap;
 
 pub(super) fn http(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
@@ -35,12 +35,11 @@ pub(super) fn http(args: &[String]) -> Result<String, CliError> {
         .map(|value| parse_key_number(&value))
         .transpose()?;
 
-    let result = tauri::async_runtime::block_on(
-        orquestra_vault::vault::proxy::request_with_key_number(
+    let result =
+        tauri::async_runtime::block_on(orquestra_vault::vault::proxy::request_with_key_number(
             service, endpoint, method, headers, body, key_tag, key_number,
-        ),
-    )
-    .map_err(CliError::Operation)?;
+        ))
+        .map_err(CliError::Operation)?;
 
     let pretty = serde_json::to_string_pretty(&result)
         .map_err(|error| CliError::Operation(format!("JSON serialization failed: {error}")))?;
@@ -76,7 +75,8 @@ pub(super) fn exec(args: &[String]) -> Result<String, CliError> {
         ));
     }
 
-    let command = serde_json::to_value(&parts).map_err(|error| CliError::Operation(error.to_string()))?;
+    let command =
+        serde_json::to_value(&parts).map_err(|error| CliError::Operation(error.to_string()))?;
     let result = orquestra_vault::vault::service::execute_with_key_number(
         &paths()?,
         service,
@@ -94,7 +94,9 @@ pub(super) fn test_conn(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra vault test <id> [--key-number <N>] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage("usage: orquestra vault test <id> [--key-number <N>] [--json]".to_string())
+        })?;
 
     let options = parse_options(&args[1..], &["--key-number"], &["--json"])?;
     let key_index = options
@@ -103,9 +105,10 @@ pub(super) fn test_conn(args: &[String]) -> Result<String, CliError> {
         .transpose()?
         .map(|n| n - 1);
 
-    let result = tauri::async_runtime::block_on(
-        orquestra_vault::vault::proxy::test_connection(id.to_string(), key_index),
-    )
+    let result = tauri::async_runtime::block_on(orquestra_vault::vault::proxy::test_connection(
+        id.to_string(),
+        key_index,
+    ))
     .map_err(CliError::Operation)?;
 
     let human = format!(

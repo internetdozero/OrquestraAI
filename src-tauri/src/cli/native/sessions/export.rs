@@ -1,9 +1,9 @@
 //! Session transcript export subcommand.
 
-use std::fs;
 use super::super::{parse_options, rendered, usage, CliError};
-use crate::sessions::{get_session_transcript, get_unified_sessions};
 use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::sessions::{get_session_transcript, get_unified_sessions};
+use std::fs;
 
 pub(super) fn export(args: &[String]) -> Result<String, CliError> {
     let session_id = args
@@ -18,7 +18,10 @@ pub(super) fn export(args: &[String]) -> Result<String, CliError> {
     )?;
 
     let harness_opt = options.one("--harness")?;
-    let format = options.one("--format")?.unwrap_or_else(|| "markdown".to_string()).to_lowercase();
+    let format = options
+        .one("--format")?
+        .unwrap_or_else(|| "markdown".to_string())
+        .to_lowercase();
     let output_path = options.one("--output")?;
 
     let sessions = get_unified_sessions().map_err(CliError::Operation)?;
@@ -30,8 +33,10 @@ pub(super) fn export(args: &[String]) -> Result<String, CliError> {
             .ok_or_else(|| CliError::Operation("no session found to export".to_string()))?,
         _ => sessions
             .into_iter()
-            .find(|s| s.id == *session_id && harness_opt.as_deref().map_or(true, |h| s.harness == h))
-            .ok_or_else(|| CliError::Operation(format!("session '{session_id}' not found")))?
+            .find(|s| {
+                s.id == *session_id && harness_opt.as_deref().map_or(true, |h| s.harness == h)
+            })
+            .ok_or_else(|| CliError::Operation(format!("session '{session_id}' not found")))?,
     };
 
     let turns = get_session_transcript(session.harness.clone(), session.id.clone())
@@ -83,7 +88,13 @@ fn render_markdown(session: &UnifiedSession, turns: &[TranscriptTurn]) -> String
     for (i, turn) in turns.iter().enumerate() {
         let role = &turn.role;
         let ts = turn.timestamp.as_deref().unwrap_or("");
-        out.push_str(&format!("### Turn {} — {} ({})\n\n{}\n\n", i + 1, role, ts, turn.content.trim()));
+        out.push_str(&format!(
+            "### Turn {} — {} ({})\n\n{}\n\n",
+            i + 1,
+            role,
+            ts,
+            turn.content.trim()
+        ));
     }
 
     out

@@ -109,7 +109,10 @@ pub fn clear_notes(
         clauses.push("is_read = 1".to_string());
     }
 
-    let sql = format!("DELETE FROM blackboard_notes WHERE {}", clauses.join(" AND "));
+    let sql = format!(
+        "DELETE FROM blackboard_notes WHERE {}",
+        clauses.join(" AND ")
+    );
     let mut stmt = connection.prepare(&sql).map_err(db_error)?;
     let count = stmt
         .execute(params_from_iter(params.iter()))

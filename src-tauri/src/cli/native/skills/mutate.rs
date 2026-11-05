@@ -7,10 +7,14 @@ pub(super) fn enable(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills enable <id> [--scope <scope>] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage("usage: orquestra skills enable <id> [--scope <scope>] [--json]".to_string())
+        })?;
 
     let options = parse_options(&args[1..], &["--scope"], &["--json"])?;
-    let scope = options.one("--scope")?.unwrap_or_else(|| "global".to_string());
+    let scope = options
+        .one("--scope")?
+        .unwrap_or_else(|| "global".to_string());
 
     set_skill_state(id, &scope, true).map_err(CliError::Operation)?;
 
@@ -27,10 +31,17 @@ pub(super) fn disable(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills disable <id> [--scope <scope>] [--force] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage(
+                "usage: orquestra skills disable <id> [--scope <scope>] [--force] [--json]"
+                    .to_string(),
+            )
+        })?;
 
     let options = parse_options(&args[1..], &["--scope"], &["--force", "--json"])?;
-    let scope = options.one("--scope")?.unwrap_or_else(|| "global".to_string());
+    let scope = options
+        .one("--scope")?
+        .unwrap_or_else(|| "global".to_string());
     let force = options.has("--force");
 
     if scope != "global" && !force {
@@ -59,16 +70,27 @@ pub(super) fn batch(args: &[String]) -> Result<String, CliError> {
     let action = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills batch <enable|disable> [--scope <scope>] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage(
+                "usage: orquestra skills batch <enable|disable> [--scope <scope>] [--json]"
+                    .to_string(),
+            )
+        })?;
 
     let enabled = match action.as_str() {
         "enable" | "on" => true,
         "disable" | "off" => false,
-        other => return Err(usage(format!("expected 'enable' or 'disable', got '{other}'"))),
+        other => {
+            return Err(usage(format!(
+                "expected 'enable' or 'disable', got '{other}'"
+            )))
+        }
     };
 
     let options = parse_options(&args[1..], &["--scope"], &["--json"])?;
-    let scope = options.one("--scope")?.unwrap_or_else(|| "global".to_string());
+    let scope = options
+        .one("--scope")?
+        .unwrap_or_else(|| "global".to_string());
 
     batch_set_all(scope.clone(), enabled).map_err(CliError::Operation)?;
 
@@ -86,7 +108,9 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills delete <id> [--force] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage("usage: orquestra skills delete <id> [--force] [--json]".to_string())
+        })?;
 
     let options = parse_options(&args[1..], &[], &["--force", "-f", "--json"])?;
     delete_skill(id.to_string()).map_err(CliError::Operation)?;

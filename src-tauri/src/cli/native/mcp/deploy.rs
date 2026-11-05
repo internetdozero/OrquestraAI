@@ -33,14 +33,20 @@ pub(super) fn targets(args: &[String]) -> Result<String, CliError> {
     let targets = list_targets().map_err(CliError::Operation)?;
 
     let mut lines = Vec::with_capacity(targets.len() + 1);
-    lines.push(format!("{:<12} {:<15} {}", "TARGET", "STATUS", "CONFIG PATH"));
+    lines.push(format!(
+        "{:<12} {:<15} {}",
+        "TARGET", "STATUS", "CONFIG PATH"
+    ));
     for target in &targets {
         let status = if target.installed {
             "Installed"
         } else {
             "Not Installed"
         };
-        lines.push(format!("{:<12} {:<15} {}", target.id, status, target.config_path));
+        lines.push(format!(
+            "{:<12} {:<15} {}",
+            target.id, status, target.config_path
+        ));
     }
 
     rendered(&targets, options.has("--json"), lines.join("\n"))

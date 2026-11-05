@@ -3,7 +3,10 @@ use super::*;
 #[test]
 fn unknown_subcommands_show_usage() {
     assert!(matches!(run(&[]), Err(CliError::Usage(_))));
-    assert!(matches!(run(&["bogus".to_string()]), Err(CliError::Usage(_))));
+    assert!(matches!(
+        run(&["bogus".to_string()]),
+        Err(CliError::Usage(_))
+    ));
 }
 
 #[test]
@@ -26,14 +29,20 @@ fn set_enabled_rejects_bad_shapes_before_touching_disk() {
             "junk".to_string(),
         ],
     ] {
-        assert!(matches!(mutate::set_enabled(&args), Err(CliError::Usage(_))));
+        assert!(matches!(
+            mutate::set_enabled(&args),
+            Err(CliError::Usage(_))
+        ));
     }
 }
 
 #[test]
 fn exec_rejects_empty_argv_before_touching_disk() {
     assert!(matches!(proxy::exec(&[]), Err(CliError::Usage(_))));
-    assert!(matches!(proxy::exec(&["svc".to_string()]), Err(CliError::Usage(_))));
+    assert!(matches!(
+        proxy::exec(&["svc".to_string()]),
+        Err(CliError::Usage(_))
+    ));
 }
 
 #[test]

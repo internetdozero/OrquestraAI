@@ -96,7 +96,11 @@ pub(super) fn usage(message: String) -> CliError {
     CliError::Usage(message)
 }
 
-pub(super) fn rendered<T: Serialize>(value: &T, as_json: bool, human: String) -> Result<String, CliError> {
+pub(super) fn rendered<T: Serialize>(
+    value: &T,
+    as_json: bool,
+    human: String,
+) -> Result<String, CliError> {
     if as_json {
         serde_json::to_string_pretty(value)
             .map_err(|error| CliError::Operation(format!("JSON serialization failed: {error}")))

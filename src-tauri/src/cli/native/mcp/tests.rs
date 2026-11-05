@@ -14,7 +14,11 @@ fn mcp_cli_rejects_inspect_without_id() {
 
 #[test]
 fn mcp_cli_rejects_set_state_with_invalid_state() {
-    let args = ["set-state".to_string(), "test-server".to_string(), "bad".to_string()];
+    let args = [
+        "set-state".to_string(),
+        "test-server".to_string(),
+        "bad".to_string(),
+    ];
     assert!(matches!(run(&args), Err(CliError::Usage(_))));
 }
 

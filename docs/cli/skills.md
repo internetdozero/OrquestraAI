@@ -32,15 +32,19 @@ In OrquestraAI, **Skills** are autonomous capability packages provided to AI age
 ## 2. Current State vs. Granular CLI Design
 
 ### What Exists Today
+
 Prior to this specification, skill management was primarily exposed via:
+
 1. **Tauri IPC Commands:** `list_skills`, `set_skill_state`, `batch_set_all`, `read_skill_content`, `save_skill_content`, `delete_skill`, `import_skill`, `import_skill_from_git`, `harness_summary`.
 2. **MCP Tools (`orquestra-core`):** `orquestra_list_skills`, `orquestra_enable_skill`, `orquestra_disable_skill`, `orquestra_create_skill`, `orquestra_delete_skill`.
 3. **Native CLI (`dispatch_native_cli`):** Only implemented roots for `ideas`, `sessions`, `bridge`, and `vault`. Headless shell scripts or automated CI had **no** direct `orquestra skills` CLI command and had to rely on manual directory inspections or GUI operations.
 
 ### The Granular CLI Design
+
 The `orquestra skills` command suite brings full native CLI parity to the terminal, scripting pipelines, and autonomous builder agents.
 
 Key capabilities:
+
 - **Zero GUI dependency:** Operates completely headlessly against `~/.orquestra`.
 - **Dual Output Modes:** Clean, aligned human-readable tables/summaries by default, and strict, typed `--json` output for automated tooling.
 - **Deep Validation & Security Scans:** Inspects YAML frontmatter, detects path traversal attempts, and checks executable scripts before or after installation.
@@ -52,37 +56,40 @@ Key capabilities:
 ## 3. Command Matrix & Syntax
 
 Root command:
+
 ```bash
 orquestra skills <subcommand> [arguments] [options]
 ```
 
 ### General Options
+
 - `--json`: Outputs machine-readable JSON to `stdout`. All diagnostics/errors are routed to `stderr` with non-zero exit codes.
 - `-h`, `--help`: Prints command or subcommand help.
 
 ### Summary Table
 
-| Subcommand | Arguments | Options | Description |
-|---|---|---|---|
-| `list` | — | `--scope <id>`, `--filter <str>`, `--official`, `--has-scripts`, `--json` | List vault skills with projection status. |
-| `info` / `inspect` | `<id>` | `--scope <id>`, `--json` | Inspect detailed skill metadata, security walk, and projection matrix. |
-| `enable` | `<id>` | `--scope <id>`, `--json` | Enable (project) a skill into global baseline or a specific harness. |
-| `disable` | `<id>` | `--scope <id>`, `--force`, `--json` | Disable (un-project) a skill from a harness or global baseline. |
-| `batch` | `<enable\|disable>` | `--scope <id>`, `--json` | Enable or disable all skills in a specified scope. |
-| `summary` | — | `--json` | Display active/total skill counts across all scopes. |
-| `validate` | `<path\|id>` | `--json` | Validate a skill's directory structure, `SKILL.md` frontmatter, and security profile. |
-| `create` / `scaffold` | `<id>` | `--name <str>`, `--description <str>`, `--category <cat>`, `--with-scripts`, `--enable`, `--json` | Scaffold a new compliant skill in the vault. |
-| `import` | `<path\|git_url>` | `--subpath <path>`, `--scope <id>`, `--enable`, `--json` | Import a skill from a local folder or remote Git repository. |
-| `export` | `<id>` | `--out <dir>`, `--tar`, `--json` | Export a vault skill to a standalone directory or archive. |
-| `content get` | `<id>` | — | Print raw `SKILL.md` content to stdout. |
-| `content set` | `<id>` | `--file <path>`, `--json` | Atomically replace `SKILL.md` from a file or stdin (`-`). |
-| `delete` | `<id>` | `--force`, `-f`, `--json` | Unlink projections and delete a skill folder permanently from the vault. |
+| Subcommand            | Arguments           | Options                                                                                           | Description                                                                           |
+| --------------------- | ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `list`                | —                   | `--scope <id>`, `--filter <str>`, `--official`, `--has-scripts`, `--json`                         | List vault skills with projection status.                                             |
+| `info` / `inspect`    | `<id>`              | `--scope <id>`, `--json`                                                                          | Inspect detailed skill metadata, security walk, and projection matrix.                |
+| `enable`              | `<id>`              | `--scope <id>`, `--json`                                                                          | Enable (project) a skill into global baseline or a specific harness.                  |
+| `disable`             | `<id>`              | `--scope <id>`, `--force`, `--json`                                                               | Disable (un-project) a skill from a harness or global baseline.                       |
+| `batch`               | `<enable\|disable>` | `--scope <id>`, `--json`                                                                          | Enable or disable all skills in a specified scope.                                    |
+| `summary`             | —                   | `--json`                                                                                          | Display active/total skill counts across all scopes.                                  |
+| `validate`            | `<path\|id>`        | `--json`                                                                                          | Validate a skill's directory structure, `SKILL.md` frontmatter, and security profile. |
+| `create` / `scaffold` | `<id>`              | `--name <str>`, `--description <str>`, `--category <cat>`, `--with-scripts`, `--enable`, `--json` | Scaffold a new compliant skill in the vault.                                          |
+| `import`              | `<path\|git_url>`   | `--subpath <path>`, `--scope <id>`, `--enable`, `--json`                                          | Import a skill from a local folder or remote Git repository.                          |
+| `export`              | `<id>`              | `--out <dir>`, `--tar`, `--json`                                                                  | Export a vault skill to a standalone directory or archive.                            |
+| `content get`         | `<id>`              | —                                                                                                 | Print raw `SKILL.md` content to stdout.                                               |
+| `content set`         | `<id>`              | `--file <path>`, `--json`                                                                         | Atomically replace `SKILL.md` from a file or stdin (`-`).                             |
+| `delete`              | `<id>`              | `--force`, `-f`, `--json`                                                                         | Unlink projections and delete a skill folder permanently from the vault.              |
 
 ---
 
 ## 4. Subcommand Specifications & Practical Examples
 
 ### 4.1. `orquestra skills list`
+
 Lists all skills discovered in the vault, evaluated for a target scope.
 
 - **Options:**
@@ -93,6 +100,7 @@ Lists all skills discovered in the vault, evaluated for a target scope.
   - `--json`: Emit JSON array matching `Vec<SkillItem>`.
 
 **Example:**
+
 ```bash
 # Human readable list for global scope
 orquestra skills list
@@ -110,6 +118,7 @@ orquestra skills list --scope claude --json
 ---
 
 ### 4.2. `orquestra skills info` / `orquestra skills inspect`
+
 Inspects a single skill in depth, including token estimations, detailed frontmatter, detected script files, and projection status across all supported harnesses.
 
 - **Arguments:** `<id>`: The unique identifier (folder name) of the skill.
@@ -117,6 +126,7 @@ Inspects a single skill in depth, including token estimations, detailed frontmat
   - `--json`: Emit full JSON metadata object.
 
 **Example:**
+
 ```bash
 orquestra skills info orquestra-core
 
@@ -141,6 +151,7 @@ orquestra skills info orquestra-core
 ---
 
 ### 4.3. `orquestra skills enable` & `orquestra skills disable`
+
 Controls symlink projection for a skill.
 
 - **Arguments:** `<id>`: Skill ID to toggle.
@@ -150,11 +161,13 @@ Controls symlink projection for a skill.
   - `--json`: Emits mutation status.
 
 **Rules & Edge Cases:**
+
 1. Enabling in `--scope global` creates symlinks in `active/global/` and in all harness folders.
 2. Disabling in `--scope <harness>` when the skill is enabled in `global` returns an error:
    `"Skill '<id>' is inherited from Global; disable it in Global first or use --scope global"`.
 
 **Examples:**
+
 ```bash
 # Enable universally across all agents
 orquestra skills enable hardware-optimization --scope global
@@ -169,10 +182,12 @@ orquestra skills disable research-agent --scope gemini
 ---
 
 ### 4.4. `orquestra skills batch`
+
 Performs bulk projection changes for an entire scope.
 
 - **Syntax:** `orquestra skills batch <enable|disable> [--scope <scope>] [--json]`
 - **Examples:**
+
 ```bash
 # Enable all vault skills for Codex harness
 orquestra skills batch enable --scope codex
@@ -184,9 +199,11 @@ orquestra skills batch disable --scope claude
 ---
 
 ### 4.5. `orquestra skills summary`
+
 Returns a fast overview of active vs total skills per harness and global baseline.
 
 **Example:**
+
 ```bash
 orquestra skills summary
 
@@ -201,6 +218,7 @@ orquestra skills summary
 ---
 
 ### 4.6. `orquestra skills validate`
+
 Performs static analysis on a skill directory (in-vault or arbitrary filesystem path) to verify standard compliance before deployment or distribution.
 
 - **Checks:**
@@ -212,6 +230,7 @@ Performs static analysis on a skill directory (in-vault or arbitrary filesystem 
 - **Exit codes:** `0` if valid, `1` if invalid.
 
 **Example:**
+
 ```bash
 orquestra skills validate ./my-new-skill --json
 ```
@@ -219,6 +238,7 @@ orquestra skills validate ./my-new-skill --json
 ---
 
 ### 4.7. `orquestra skills create` / `orquestra skills scaffold`
+
 Scaffolds a compliant skill directory in `~/.orquestra/skills-library/<id>/`.
 
 - **Arguments:** `<id>`: Unique skill identifier (kebab-case alphanumeric).
@@ -231,6 +251,7 @@ Scaffolds a compliant skill directory in `~/.orquestra/skills-library/<id>/`.
   - `--json`: Emits created `SkillItem`.
 
 **Example:**
+
 ```bash
 orquestra skills create custom-linter \
   --name "Custom Linter" \
@@ -243,6 +264,7 @@ orquestra skills create custom-linter \
 ---
 
 ### 4.8. `orquestra skills import`
+
 Imports an external skill into the master vault.
 
 - **Supports:**
@@ -255,6 +277,7 @@ Imports an external skill into the master vault.
   - `--json`: Emits imported `SkillItem`.
 
 **Example:**
+
 ```bash
 orquestra skills import https://github.com/internetdozero/orquestra-extensions.git#skills/docker-tools --enable
 ```
@@ -262,9 +285,11 @@ orquestra skills import https://github.com/internetdozero/orquestra-extensions.g
 ---
 
 ### 4.9. `orquestra skills export`
+
 Exports a skill from the vault to an external folder or tarball archive.
 
 **Example:**
+
 ```bash
 orquestra skills export hardware-optimization --out /tmp/exported-skills/ --tar
 ```
@@ -272,9 +297,11 @@ orquestra skills export hardware-optimization --out /tmp/exported-skills/ --tar
 ---
 
 ### 4.10. `orquestra skills content get` & `content set`
+
 Read or atomically update the raw `SKILL.md` content.
 
 **Examples:**
+
 ```bash
 # Print raw SKILL.md to stdout
 orquestra skills content get orquestra
@@ -289,6 +316,7 @@ cat new-skill.md | orquestra skills content set orquestra --file -
 ---
 
 ### 4.11. `orquestra skills delete`
+
 Permanently unlinks a skill from all active projections and removes its directory from `~/.orquestra/skills-library/`.
 
 - **Arguments:** `<id>`
@@ -297,6 +325,7 @@ Permanently unlinks a skill from all active projections and removes its director
   - `--json`: Emits deletion confirmation report.
 
 **Example:**
+
 ```bash
 orquestra skills delete obsolete-skill --force
 ```
@@ -308,6 +337,7 @@ orquestra skills delete obsolete-skill --force
 When `--json` is supplied, commands output strict JSON structures matching backend types.
 
 ### `SkillItem` Schema
+
 ```json
 {
   "id": "hardware-optimization",
@@ -317,9 +347,7 @@ When `--json` is supplied, commands output strict JSON structures matching backe
   "tokens": 420,
   "official": true,
   "hasScripts": true,
-  "scriptFiles": [
-    "scripts/profile_cpu.sh"
-  ],
+  "scriptFiles": ["scripts/profile_cpu.sh"],
   "globalEnabled": true,
   "harnessEnabled": true,
   "inheritedFromGlobal": false
@@ -327,6 +355,7 @@ When `--json` is supplied, commands output strict JSON structures matching backe
 ```
 
 ### `HarnessSummary` Schema
+
 ```json
 [
   { "id": "global", "active": 8, "total": 24 },
@@ -337,6 +366,7 @@ When `--json` is supplied, commands output strict JSON structures matching backe
 ```
 
 ### `ValidationReport` Schema
+
 ```json
 {
   "valid": true,
@@ -355,17 +385,18 @@ When `--json` is supplied, commands output strict JSON structures matching backe
 
 ## 6. Exit Codes
 
-| Exit Code | Meaning | Example Cause |
-|---|---|---|
-| `0` | Success | Operation completed normally; JSON or table emitted. |
-| `1` | Operational Failure | Skill ID not found, filesystem write error, git clone failure, path traversal attempt. |
-| `2` | Syntax / Usage Error | Missing required argument, unrecognized option, invalid integer/boolean format. |
+| Exit Code | Meaning              | Example Cause                                                                          |
+| --------- | -------------------- | -------------------------------------------------------------------------------------- |
+| `0`       | Success              | Operation completed normally; JSON or table emitted.                                   |
+| `1`       | Operational Failure  | Skill ID not found, filesystem write error, git clone failure, path traversal attempt. |
+| `2`       | Syntax / Usage Error | Missing required argument, unrecognized option, invalid integer/boolean format.        |
 
 ---
 
 ## 7. Implementation Blueprint for Builder AI
 
 ### Architecture Guidelines (Anti-Monolith & Modular Rust)
+
 1. **Directory Structure:**
    Place the CLI implementation under `src-tauri/src/cli/native/skills/`:
    - `mod.rs`: Dispatching, argument routing, and top-level help (<150 lines).

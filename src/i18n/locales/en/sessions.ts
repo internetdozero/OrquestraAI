@@ -97,6 +97,7 @@ export const sessions: TranslationSchema["sessions"] = {
   matchesCount: (count: number) => `${count} matches`,
   noSearchMatches: "No messages match your search",
   cloudPendingSync: "Cloud (unsynced)",
-  cloudPendingSyncTooltip: "Remote session in Codebuff Cloud. Open in Freebuff Desktop to sync locally.",
+  cloudPendingSyncTooltip:
+    "Remote session in Codebuff Cloud. Open in Freebuff Desktop to sync locally.",
   executionTarget: "Execution target",
 };

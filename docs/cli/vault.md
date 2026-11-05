@@ -9,6 +9,7 @@ The `orquestra vault` subcommand family provides granular command-line managemen
 Modern AI agentic workflows require access to cloud providers, third-party APIs, and deployment infrastructure (e.g., Cloudflare, OpenAI, Anthropic, GitHub, AWS, Stripe). However, passing plaintext API keys directly into an AI agent's prompt or context window poses severe credential leakage risks (accidental transcript persistence, unauthorized exfiltration, prompt injection).
 
 OrquestraAI resolves this with the **Blind Vault** pattern:
+
 - **Zero-Context Secrets:** Secrets are sealed at rest and injected into outgoing HTTP calls or subprocess environments entirely within the native Rust backend. The agent interacts with credentials purely through abstract service IDs and blind proxy endpoints.
 - **Scrubbed Output:** All response bodies, error messages, `stdout`, and `stderr` streams are scrubbed against all registered keys before returning to the caller.
 - **Failover Pools & Cooldowns:** Services support pools of multiple API keys with automatic failover on 401/402/403/429 errors, tagging (`workers`, `d1`, etc.), and health tracking (`healthy`, `degraded`, `cooldown`).
@@ -47,28 +48,29 @@ OrquestraAI resolves this with the **Blind Vault** pattern:
 
 ## 2. Current State vs. Granular CLI Design
 
-| Capability | Current State (`src-tauri/src/cli/native/vault.rs`) | New Granular Design (`orquestra vault <cmd>`) |
-| :--- | :--- | :--- |
-| **List Services** | Basic `vault list [--json]` | `orquestra vault list [--preset <P>] [--enabled-only] [--failing-only] [--search <S>] [--json]` |
-| **Inspect Service** | *None* (requires reading sealed file) | `orquestra vault inspect <id> [--reveal] [--json]` |
-| **Add / Update Service** | *None* (UI modal only) | `orquestra vault set <id> --key <K> [--preset <P>] [--meta <K=V>] [--tag <T>] [--json]` |
-| **Add Key to Pool** | *None* (UI modal only) | `orquestra vault add-key <id> --key <K> [--tag <T>] [--json]` |
-| **Remove Key from Pool** | *None* (UI only) | `orquestra vault remove-key <id> --key-number <N> [--json]` |
-| **Delete Service** | *None* (UI only) | `orquestra vault remove <id> [--yes] [--json]` |
-| **Kill-Switch Toggle** | `vault set-enabled <id> <on\|off> [--json]` | `orquestra vault enable <id>`, `disable <id>`, `toggle <id>`, and `set-enabled` |
-| **Set Primary Key** | *None* (UI only) | `orquestra vault set-primary <id> --key-number <N> [--json]` |
-| **Rotate Key** | *None* | `orquestra vault rotate <id> [--next] [--key-number <N>] [--new-key <K>] [--json]` |
-| **Test Connectivity** | *None* (UI only) | `orquestra vault test <id> [--key-number <N>] [--json]` |
-| **Blind HTTP Proxy** | `vault http --service <S> --endpoint <E> ...` | `orquestra vault proxy-http` (with `http` alias) |
-| **Blind Exec Proxy** | `vault exec <S> [--] <argv...>` | `orquestra vault proxy-exec` (with `exec` alias) |
-| **Preset Catalog** | *None* (UI only) | `orquestra vault presets [--json]` |
-| **Security Audit** | *None* | `orquestra vault audit [--json]` & `audit purge-backups [--confirm]` |
+| Capability               | Current State (`src-tauri/src/cli/native/vault.rs`) | New Granular Design (`orquestra vault <cmd>`)                                                   |
+| :----------------------- | :-------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| **List Services**        | Basic `vault list [--json]`                         | `orquestra vault list [--preset <P>] [--enabled-only] [--failing-only] [--search <S>] [--json]` |
+| **Inspect Service**      | _None_ (requires reading sealed file)               | `orquestra vault inspect <id> [--reveal] [--json]`                                              |
+| **Add / Update Service** | _None_ (UI modal only)                              | `orquestra vault set <id> --key <K> [--preset <P>] [--meta <K=V>] [--tag <T>] [--json]`         |
+| **Add Key to Pool**      | _None_ (UI modal only)                              | `orquestra vault add-key <id> --key <K> [--tag <T>] [--json]`                                   |
+| **Remove Key from Pool** | _None_ (UI only)                                    | `orquestra vault remove-key <id> --key-number <N> [--json]`                                     |
+| **Delete Service**       | _None_ (UI only)                                    | `orquestra vault remove <id> [--yes] [--json]`                                                  |
+| **Kill-Switch Toggle**   | `vault set-enabled <id> <on\|off> [--json]`         | `orquestra vault enable <id>`, `disable <id>`, `toggle <id>`, and `set-enabled`                 |
+| **Set Primary Key**      | _None_ (UI only)                                    | `orquestra vault set-primary <id> --key-number <N> [--json]`                                    |
+| **Rotate Key**           | _None_                                              | `orquestra vault rotate <id> [--next] [--key-number <N>] [--new-key <K>] [--json]`              |
+| **Test Connectivity**    | _None_ (UI only)                                    | `orquestra vault test <id> [--key-number <N>] [--json]`                                         |
+| **Blind HTTP Proxy**     | `vault http --service <S> --endpoint <E> ...`       | `orquestra vault proxy-http` (with `http` alias)                                                |
+| **Blind Exec Proxy**     | `vault exec <S> [--] <argv...>`                     | `orquestra vault proxy-exec` (with `exec` alias)                                                |
+| **Preset Catalog**       | _None_ (UI only)                                    | `orquestra vault presets [--json]`                                                              |
+| **Security Audit**       | _None_                                              | `orquestra vault audit [--json]` & `audit purge-backups [--confirm]`                            |
 
 ---
 
 ## 3. Subcommand Reference
 
 ### 3.1 `orquestra vault list`
+
 Lists all credential services registered in the vault, displaying their active health, key counts, enabled state, and masked keys.
 
 ```bash
@@ -76,6 +78,7 @@ orquestra vault list [OPTIONS]
 ```
 
 **Options:**
+
 - `--preset <name>`: Filter by provider preset (e.g., `openai`, `github`, `cloudflare`, `custom`).
 - `--enabled-only`: Show only enabled services (kill-switch active).
 - `--failing-only`: Show only degraded or cooldown services needing attention.
@@ -83,6 +86,7 @@ orquestra vault list [OPTIONS]
 - `--json`: Output full array of `VaultServicePublic` objects in JSON.
 
 **Human Output Example:**
+
 ```text
 SERVICE ID    LABEL              PRESET      STATUS    HEALTH    KEYS  ACTIVE
 openai        OpenAI Production  openai      enabled   Healthy   3     #1
@@ -94,6 +98,7 @@ github        GitHub Automation  github      disabled  Healthy   1     #1
 ---
 
 ### 3.2 `orquestra vault inspect <id>`
+
 Inspects detailed metadata and key status for a single vault service. Alias: `show`, `info`.
 
 ```bash
@@ -101,11 +106,13 @@ orquestra vault inspect <id> [OPTIONS]
 ```
 
 **Options:**
+
 - `--reveal`: Reveal the cleartext credential secret for the primary key (or keys). Requires an authenticated terminal session.
 - `--key-number <N>`: Target a specific 1-based key number when using `--reveal`.
 - `--json`: Output as structured JSON.
 
 **Human Output Example:**
+
 ```text
 Service:     cloudflare
 Label:       Cloudflare Fleet
@@ -126,6 +133,7 @@ Key Pool (4 keys):
 ---
 
 ### 3.3 `orquestra vault set <id>`
+
 Creates a new credential service or updates an existing one. Alias: `add`, `save`.
 
 ```bash
@@ -133,6 +141,7 @@ orquestra vault set <id> [OPTIONS]
 ```
 
 **Options:**
+
 - `--key <secret>`: Initial API key / secret token. Use `--key -` to read securely from standard input, avoiding shell history leakage.
 - `--key-file <path>`: Read the secret from a local file.
 - `--label <label>`: Human-readable label (defaults to `<id>` if omitted).
@@ -147,6 +156,7 @@ orquestra vault set <id> [OPTIONS]
 - `--json`: Output the resulting service object as JSON.
 
 **Example:**
+
 ```bash
 # Registering a Cloudflare credential with metadata:
 orquestra vault set cloudflare \
@@ -163,6 +173,7 @@ echo -n "sk-ant-api03-xxxx..." | orquestra vault set anthropic --preset anthropi
 ---
 
 ### 3.4 `orquestra vault add-key <id>`
+
 Appends a new credential key into an existing service's pool.
 
 ```bash
@@ -170,11 +181,13 @@ orquestra vault add-key <id> --key <secret> [OPTIONS]
 ```
 
 **Options:**
+
 - `--key <secret>`: Secret key string (or `-` for stdin, or use `--key-file <path>`).
 - `--tag <tag>`: Functional tag identifying this key's purpose (e.g., `read-only`, `d1`, `backup`).
 - `--json`: Output updated service status as JSON.
 
 **Example:**
+
 ```bash
 orquestra vault add-key openai --key "sk-proj-backupkey..." --tag "fallback"
 ```
@@ -182,6 +195,7 @@ orquestra vault add-key openai --key "sk-proj-backupkey..." --tag "fallback"
 ---
 
 ### 3.5 `orquestra vault remove-key <id>`
+
 Removes a specific credential from a service pool by its 1-based key number.
 
 ```bash
@@ -189,6 +203,7 @@ orquestra vault remove-key <id> --key-number <N> [OPTIONS]
 ```
 
 **Options:**
+
 - `--key-number <N>`: 1-based index of the key to remove (required).
 - `--yes` / `-y`: Skip confirmation prompt.
 - `--json`: Output updated service in JSON.
@@ -199,6 +214,7 @@ orquestra vault remove-key <id> --key-number <N> [OPTIONS]
 ---
 
 ### 3.6 `orquestra vault remove <id>`
+
 Removes an entire credential service from the vault. Alias: `delete`.
 
 ```bash
@@ -206,10 +222,12 @@ orquestra vault remove <id> [OPTIONS]
 ```
 
 **Options:**
+
 - `--yes` / `-y`: Skip confirmation prompt.
 - `--json`: Output confirmation as JSON.
 
 **Human Output Example:**
+
 ```text
 Service 'cloudflare' successfully removed from the vault.
 ```
@@ -217,6 +235,7 @@ Service 'cloudflare' successfully removed from the vault.
 ---
 
 ### 3.7 `orquestra vault enable` / `disable` / `toggle` / `set-enabled`
+
 Controls the operator kill-switch for a service. When disabled, the blind proxy immediately refuses any HTTP or exec request directed to that service, failing closed before secrets touch memory or the network.
 
 ```bash
@@ -227,6 +246,7 @@ orquestra vault set-enabled <id> <on|off> [--json]
 ```
 
 **Example:**
+
 ```bash
 orquestra vault disable openai
 # Output: Service 'OpenAI Production' disabled. Blind proxy calls will fail closed.
@@ -235,6 +255,7 @@ orquestra vault disable openai
 ---
 
 ### 3.8 `orquestra vault set-primary <id>`
+
 Designates which key in the pool is the active default (`#1` based index).
 
 ```bash
@@ -242,10 +263,12 @@ orquestra vault set-primary <id> --key-number <N> [OPTIONS]
 ```
 
 **Options:**
+
 - `--key-number <N>`: 1-based index of the key to make primary.
 - `--json`: Output updated service as JSON.
 
 **Example:**
+
 ```bash
 orquestra vault set-primary openai --key-number 2
 # Output: Key #2 is now the primary active key for service 'openai'.
@@ -254,6 +277,7 @@ orquestra vault set-primary openai --key-number 2
 ---
 
 ### 3.9 `orquestra vault rotate <id>`
+
 Advances or replaces credentials within a pool.
 
 ```bash
@@ -261,12 +285,14 @@ orquestra vault rotate <id> [OPTIONS]
 ```
 
 **Options:**
+
 - `--next`: Advances the active primary pointer to the next healthy key in the pool (round-robin).
 - `--key-number <N>`: Target key index to replace.
 - `--new-key <secret>`: New secret string to replace the targeted key (supports `-` for stdin).
 - `--json`: Output result as JSON.
 
 **Example:**
+
 ```bash
 # Advance to the next healthy key in the pool:
 orquestra vault rotate openai --next
@@ -278,6 +304,7 @@ orquestra vault rotate github --key-number 1 --new-key "ghp_freshnewtoken..."
 ---
 
 ### 3.10 `orquestra vault test <id>`
+
 Tests connectivity and credential validity against the provider's canonical health endpoint without exposing secrets. Persists the observed health state (`Healthy` or `Degraded`) into the vault. Alias: `check`, `ping`.
 
 ```bash
@@ -285,10 +312,12 @@ orquestra vault test <id> [OPTIONS]
 ```
 
 **Options:**
+
 - `--key-number <N>`: Test a specific key from the pool instead of the active primary key.
 - `--json`: Output result as JSON.
 
 **Human Output Example:**
+
 ```text
 Testing service 'anthropic' with key #1...
 Outcome:   SUCCESS (HTTP 200)
@@ -300,6 +329,7 @@ Message:   Connection verified successfully.
 ---
 
 ### 3.11 `orquestra vault proxy-http` (Alias: `http`)
+
 Executes a credentialed blind HTTP request. The backend injects authentication headers in memory, protects against SSRF via preset host allowlists, executes failover across keys on rate limits or auth errors, and scrubs all secrets from the response payload.
 
 ```bash
@@ -307,6 +337,7 @@ orquestra vault proxy-http [OPTIONS]
 ```
 
 **Options:**
+
 - `--service <id>`: Target service ID (required).
 - `--endpoint <url>`: Target HTTPS endpoint (required). Host must match the preset's allowlist.
 - `--method <verb>`: HTTP method (`GET`, `POST`, `PUT`, `DELETE`, etc. Default: `GET`).
@@ -317,6 +348,7 @@ orquestra vault proxy-http [OPTIONS]
 - `--json`: Output complete `VaultHttpResult` envelope (`status`, `headers`, `body`, `usedKeyIndex`, `rotated`).
 
 **Example:**
+
 ```bash
 orquestra vault proxy-http \
   --service github \
@@ -327,6 +359,7 @@ orquestra vault proxy-http \
 ---
 
 ### 3.12 `orquestra vault proxy-exec` (Alias: `exec`)
+
 Executes a bare allowlisted binary in a subprocess with secrets injected strictly into environment variables. Shell strings, pipes, redirections, and non-allowlisted binaries are rejected before invocation. Output streams are scrubbed.
 
 ```bash
@@ -337,6 +370,7 @@ orquestra vault proxy-exec <service> [--key-number N] [--] <argv...>
 `aws`, `az`, `doctl`, `echo`, `gcloud`, `gh`, `kubectl`, `printf`, `stripe`, `terraform`.
 
 **Example:**
+
 ```bash
 # Execute gh CLI with vault-injected GITHUB_TOKEN:
 orquestra vault proxy-exec github -- gh issue list --repo myorg/myrepo
@@ -348,6 +382,7 @@ orquestra vault proxy-exec aws -- aws s3 ls
 ---
 
 ### 3.13 `orquestra vault presets`
+
 Lists all built-in provider presets supported by OrquestraAI, including auth header strategies, environment variable mappings, and required metadata fields.
 
 ```bash
@@ -355,9 +390,11 @@ orquestra vault presets [OPTIONS]
 ```
 
 **Options:**
+
 - `--json`: Output full preset specifications in JSON.
 
 **Human Output Example:**
+
 ```text
 PRESET        LABEL            AUTH HEADER      ENV VAR               META FIELDS
 openai        OpenAI           Authorization    OPENAI_API_KEY        -
@@ -373,6 +410,7 @@ custom        Custom Service   (user-defined)   (user-defined)        -
 ---
 
 ### 3.14 `orquestra vault audit`
+
 Performs a comprehensive security assessment of the local Vault subsystem.
 
 ```bash
@@ -380,12 +418,14 @@ orquestra vault audit [OPTIONS]
 ```
 
 **Diagnostics Executed:**
+
 1. **At-Rest Storage Security:** Verifies whether `vault.json` is encrypted via OS Keyring or fallback file; checks file permissions (`0600`).
 2. **Plaintext Migration Backups:** Scans for lingering `vault.json.migrate-bak` or `mcps.json.migrate-bak` files left from pre-alpha.5 migrations.
 3. **Key Pool Health:** Reports total keys, healthy vs degraded keys, and active cooldown countdowns.
 4. **Execution Policy:** Validates allowlisted binaries and SSRF endpoint rules.
 
 **Human Output Example:**
+
 ```text
 Vault Security Audit:
   Storage Encryption:  AES-256-GCM (Linux Secret Service Keyring) [PASS]
@@ -398,9 +438,11 @@ Vault Security Audit:
 ```
 
 #### Purging Migration Backups:
+
 ```bash
 orquestra vault audit purge-backups --confirm [--json]
 ```
+
 Overwrites with zeroes, flushes to disk (`sync`), and unlinks the `.migrate-bak` files after verifying that the active sealed vault opens successfully.
 
 ---
@@ -412,6 +454,7 @@ Overwrites with zeroes, flushes to disk (`sync`), and unlinks the `.migrate-bak`
 - `2`: Usage Error. Missing required flags, invalid subcommand, or syntax error.
 
 ### Scripting with `jq` Example:
+
 ```bash
 # Query health of all enabled services:
 orquestra vault list --enabled-only --json | jq '.[] | {id: .id, health: .health, keys: .totalKeys}'

@@ -19,7 +19,8 @@ fn mcp_list_and_status_isolate_cleanly() {
         assert!(val.is_array());
 
         let status_out = run_mcp(&["status", "--json"]).expect("status json");
-        let status_val: serde_json::Value = serde_json::from_str(&status_out).expect("valid JSON obj");
+        let status_val: serde_json::Value =
+            serde_json::from_str(&status_out).expect("valid JSON obj");
         assert!(status_val.get("totalServers").is_some());
     });
 }
@@ -29,11 +30,16 @@ fn mcp_add_and_remove_lifecycle() {
     common::with_temp_home("cli-mcp-lifecycle", |_| {
         let add_out = run_mcp(&[
             "add",
-            "--id", "test-srv",
-            "--name", "Test Server",
-            "--command", "echo",
-            "--arg", "hello",
-            "--env", "TEST_ENV=123",
+            "--id",
+            "test-srv",
+            "--name",
+            "Test Server",
+            "--command",
+            "echo",
+            "--arg",
+            "hello",
+            "--env",
+            "TEST_ENV=123",
             "--json",
         ])
         .expect("add server");
@@ -41,7 +47,8 @@ fn mcp_add_and_remove_lifecycle() {
         assert_eq!(added_val["id"], "test-srv");
 
         let inspect_out = run_mcp(&["inspect", "test-srv", "--json"]).expect("inspect server");
-        let ins_val: serde_json::Value = serde_json::from_str(&inspect_out).expect("valid JSON obj");
+        let ins_val: serde_json::Value =
+            serde_json::from_str(&inspect_out).expect("valid JSON obj");
         assert_eq!(ins_val["id"], "test-srv");
 
         let rm_out = run_mcp(&["remove", "test-srv", "--json"]).expect("remove server");
@@ -54,7 +61,13 @@ fn mcp_add_and_remove_lifecycle() {
 fn mcp_usage_errors() {
     common::with_temp_home("cli-mcp-usage", |_| {
         assert!(matches!(run_mcp(&["inspect"]), Err(CliError::Usage(_))));
-        assert!(matches!(run_mcp(&["unknown-subcommand"]), Err(CliError::Usage(_))));
-        assert!(matches!(run_mcp(&["add", "--id", "foo"]), Err(CliError::Usage(_))));
+        assert!(matches!(
+            run_mcp(&["unknown-subcommand"]),
+            Err(CliError::Usage(_))
+        ));
+        assert!(matches!(
+            run_mcp(&["add", "--id", "foo"]),
+            Err(CliError::Usage(_))
+        ));
     });
 }

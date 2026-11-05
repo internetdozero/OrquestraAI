@@ -1,14 +1,16 @@
 //! Retention policy inspection and mutation subcommand.
 
 use super::super::{parse_options, parse_u32, rendered, usage, CliError};
-use crate::sessions::{get_retention_policy, save_retention_policy};
 use crate::sessions::types::RetentionPolicy;
+use crate::sessions::{get_retention_policy, save_retention_policy};
 
 pub(super) fn policy(args: &[String]) -> Result<String, CliError> {
     match args.first().map(String::as_str) {
         Some("show") | None => show(&args[args.first().map_or(0, |_| 1)..]),
         Some("set") => set(&args[1..]),
-        _ => Err(usage("usage: orquestra sessions policy <show|set> [options]".to_string())),
+        _ => Err(usage(
+            "usage: orquestra sessions policy <show|set> [options]".to_string(),
+        )),
     }
 }
 
@@ -36,7 +38,11 @@ fn set(args: &[String]) -> Result<String, CliError> {
         current.auto_purge_enabled = match auto.as_str() {
             "on" | "true" | "enable" => true,
             "off" | "false" | "disable" => false,
-            other => return Err(usage(format!("expected on|off for --auto-purge, got '{other}'"))),
+            other => {
+                return Err(usage(format!(
+                    "expected on|off for --auto-purge, got '{other}'"
+                )))
+            }
         };
     }
 
@@ -49,15 +55,22 @@ fn set(args: &[String]) -> Result<String, CliError> {
             let days = days_str
                 .parse::<u32>()
                 .map_err(|_| usage(format!("invalid TTL days in override '{item}'")))?;
-            current.harness_overrides.insert(harness.trim().to_string(), days);
+            current
+                .harness_overrides
+                .insert(harness.trim().to_string(), days);
         } else {
-            return Err(usage(format!("invalid --override format '{item}', expected harness=days")));
+            return Err(usage(format!(
+                "invalid --override format '{item}', expected harness=days"
+            )));
         }
     }
 
     save_retention_policy(current.clone()).map_err(CliError::Operation)?;
 
-    let human = format!("Updated retention policy:\n{}", format_policy_human(&current));
+    let human = format!(
+        "Updated retention policy:\n{}",
+        format_policy_human(&current)
+    );
     rendered(&current, options.has("--json"), human)
 }
 
@@ -79,7 +92,11 @@ fn format_policy_human(policy: &RetentionPolicy) -> String {
          Last Run:          {}\n  \
          Harness Overrides:\n{}",
         policy.default_ttl_days,
-        if policy.auto_purge_enabled { "yes" } else { "no" },
+        if policy.auto_purge_enabled {
+            "yes"
+        } else {
+            "no"
+        },
         policy.auto_purge_interval_hours,
         policy.last_run.as_deref().unwrap_or("never"),
         overrides_lines.join("\n")

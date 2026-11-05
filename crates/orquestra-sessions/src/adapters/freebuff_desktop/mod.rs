@@ -115,7 +115,8 @@ pub fn list(home: &Path) -> Vec<UnifiedSession> {
             session.turns_count = row.turns;
             session.size_bytes = row.message_bytes + extra_size(home, &row.id);
             session.execution_target = row.execution_target.clone();
-            session.is_remote_cloud = row.execution_target.as_deref() == Some("cloud") && row.turns == 0;
+            session.is_remote_cloud =
+                row.execution_target.as_deref() == Some("cloud") && row.turns == 0;
 
             sessions.push(session);
         }

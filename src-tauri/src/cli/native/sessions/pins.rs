@@ -36,7 +36,12 @@ pub(super) fn unpin(args: &[String]) -> Result<String, CliError> {
     let session_id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra sessions unpin <session-id> [--harness <id>] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage(
+                "usage: orquestra sessions unpin <session-id> [--harness <id>] [--json]"
+                    .to_string(),
+            )
+        })?;
 
     let options = parse_options(&args[1..], &["--harness"], &["--json"])?;
     let harness = resolve_harness(session_id, options.one("--harness")?)?;
@@ -64,10 +69,17 @@ fn resolve_harness(session_id: &str, explicit: Option<String>) -> Result<String,
         return Ok(h);
     }
     let sessions = get_unified_sessions().map_err(CliError::Operation)?;
-    let matches: Vec<_> = sessions.into_iter().filter(|s| s.id == session_id).collect();
+    let matches: Vec<_> = sessions
+        .into_iter()
+        .filter(|s| s.id == session_id)
+        .collect();
     match matches.len() {
         1 => Ok(matches[0].harness.clone()),
-        0 => Err(CliError::Operation(format!("session '{session_id}' not found; specify --harness"))),
-        _ => Err(usage(format!("ambiguous session '{session_id}' found in multiple harnesses; specify --harness"))),
+        0 => Err(CliError::Operation(format!(
+            "session '{session_id}' not found; specify --harness"
+        ))),
+        _ => Err(usage(format!(
+            "ambiguous session '{session_id}' found in multiple harnesses; specify --harness"
+        ))),
     }
 }

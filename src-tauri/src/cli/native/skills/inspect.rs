@@ -1,11 +1,11 @@
 //! Skill inspect, info, and validate subcommands.
 
-use std::fs;
-use std::path::{Path, PathBuf};
 use super::super::{parse_options, rendered, usage, CliError};
 use crate::harness::harness_ids;
 use crate::paths::OrquestraPaths;
 use crate::skills::list_skills;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
     let id = args
@@ -23,7 +23,10 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
 
     let mut projection_matrix = Vec::new();
     let global_active = skill.global_enabled;
-    projection_matrix.push(("global".to_string(), if global_active { "ENABLED" } else { "DISABLED" }));
+    projection_matrix.push((
+        "global".to_string(),
+        if global_active { "ENABLED" } else { "DISABLED" },
+    ));
 
     for harness in harness_ids() {
         let scoped_list = list_skills(Some(harness.to_string())).map_err(CliError::Operation)?;
@@ -101,7 +104,10 @@ pub(super) fn validate(args: &[String]) -> Result<String, CliError> {
     let mut errors = Vec::new();
 
     if !path.is_dir() {
-        errors.push(format!("path '{}' is not an existing directory", path.display()));
+        errors.push(format!(
+            "path '{}' is not an existing directory",
+            path.display()
+        ));
     }
 
     let skill_file = path.join("SKILL.md");
@@ -114,9 +120,9 @@ pub(super) fn validate(args: &[String]) -> Result<String, CliError> {
         match fs::read_to_string(&skill_file) {
             Ok(content) => {
                 let trimmed = content.trim_start();
-                if trimmed.starts_with("---") {
-                    if let Some(end) = trimmed[3..].find("---") {
-                        let yaml_block = &trimmed[3..3 + end];
+                if let Some(rest) = trimmed.strip_prefix("---") {
+                    if let Some(end) = rest.find("---") {
+                        let yaml_block = &rest[..end];
                         for line in yaml_block.lines() {
                             if let Some((k, v)) = line.split_once(':') {
                                 let key = k.trim();
@@ -152,7 +158,15 @@ pub(super) fn validate(args: &[String]) -> Result<String, CliError> {
     });
 
     if !is_valid {
-        let err_msg = format!("Validation failed for '{}':\n{}", target, errors.iter().map(|e| format!("  • {e}")).collect::<Vec<_>>().join("\n"));
+        let err_msg = format!(
+            "Validation failed for '{}':\n{}",
+            target,
+            errors
+                .iter()
+                .map(|e| format!("  • {e}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         if options.has("--json") {
             return rendered(&report, true, err_msg);
         }

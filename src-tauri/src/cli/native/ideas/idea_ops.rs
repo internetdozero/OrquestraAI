@@ -1,18 +1,25 @@
 //! Operations on ideas: list, get, add, update, status, delete, search, projects, export-md, metrics.
 
-use std::fs;
-use super::render::{render_idea_detail, render_ideas_table, render_metrics};
 use super::super::{parse_i64, parse_options, parse_u32, rendered, usage, CliError};
+use super::render::{render_idea_detail, render_ideas_table, render_metrics};
 use crate::ideas::types::{CreateIdeaInput, UpdateIdeaInput};
 use crate::ideas::{
     create_idea, delete_idea, export_ideas_markdown, get_idea, get_productivity_metrics,
     list_idea_projects, list_ideas, search_ideas, update_idea, update_idea_status,
 };
+use std::fs;
 
 pub(super) fn list(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
         args,
-        &["--project", "--status", "--category", "--priority", "--limit", "--offset"],
+        &[
+            "--project",
+            "--status",
+            "--category",
+            "--priority",
+            "--limit",
+            "--offset",
+        ],
         &["--json"],
     )?;
 
@@ -55,7 +62,16 @@ pub(super) fn get(args: &[String]) -> Result<String, CliError> {
 pub(super) fn add(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
         args,
-        &["--project", "--title", "--description", "--category", "--priority", "--tags", "--prompt", "--status"],
+        &[
+            "--project",
+            "--title",
+            "--description",
+            "--category",
+            "--priority",
+            "--tags",
+            "--prompt",
+            "--status",
+        ],
         &["--json"],
     )?;
 
@@ -76,7 +92,10 @@ pub(super) fn add(args: &[String]) -> Result<String, CliError> {
         }
     }
 
-    let human = format!("Added #{} [{} / {}] {}: {}", idea.id, idea.priority, idea.status, idea.project, idea.title);
+    let human = format!(
+        "Added #{} [{} / {}] {}: {}",
+        idea.id, idea.priority, idea.status, idea.project, idea.title
+    );
     rendered(&idea, options.has("--json"), human)
 }
 
@@ -92,7 +111,16 @@ pub(super) fn update(args: &[String]) -> Result<String, CliError> {
 
     let options = parse_options(
         &args[1..],
-        &["--title", "--project", "--description", "--category", "--priority", "--tags", "--prompt", "--status"],
+        &[
+            "--title",
+            "--project",
+            "--description",
+            "--category",
+            "--priority",
+            "--tags",
+            "--prompt",
+            "--status",
+        ],
         &["--json"],
     )?;
 
@@ -109,7 +137,10 @@ pub(super) fn update(args: &[String]) -> Result<String, CliError> {
     })
     .map_err(CliError::Operation)?;
 
-    let human = format!("Updated #{} [{} / {}] {}: {}", idea.id, idea.priority, idea.status, idea.project, idea.title);
+    let human = format!(
+        "Updated #{} [{} / {}] {}: {}",
+        idea.id, idea.priority, idea.status, idea.project, idea.title
+    );
     rendered(&idea, options.has("--json"), human)
 }
 
@@ -117,7 +148,11 @@ pub(super) fn status(args: &[String]) -> Result<String, CliError> {
     let (id_str, status_str) = match args {
         [id, status] => (id.as_str(), status.as_str()),
         [id, status, flag] if flag == "--json" => (id.as_str(), status.as_str()),
-        _ => return Err(usage("usage: orquestra idea status <id> <status> [--json]".to_string())),
+        _ => {
+            return Err(usage(
+                "usage: orquestra idea status <id> <status> [--json]".to_string(),
+            ))
+        }
     };
 
     let id = id_str
@@ -152,7 +187,12 @@ pub(super) fn search(args: &[String]) -> Result<String, CliError> {
     let query = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra idea search <query> [--project <p>] [--limit <n>] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage(
+                "usage: orquestra idea search <query> [--project <p>] [--limit <n>] [--json]"
+                    .to_string(),
+            )
+        })?;
 
     let options = parse_options(&args[1..], &["--project", "--limit"], &["--json"])?;
     let project = options.one("--project")?;
@@ -169,7 +209,15 @@ pub(super) fn projects(args: &[String]) -> Result<String, CliError> {
     let human = if projs.is_empty() {
         "No projects found in Idea Vault.".to_string()
     } else {
-        format!("Projects ({}):\n{}", projs.len(), projs.iter().map(|p| format!("  • {p}")).collect::<Vec<_>>().join("\n"))
+        format!(
+            "Projects ({}):\n{}",
+            projs.len(),
+            projs
+                .iter()
+                .map(|p| format!("  • {p}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
     };
     rendered(&projs, options.has("--json"), human)
 }
@@ -180,8 +228,9 @@ pub(super) fn export_md(args: &[String]) -> Result<String, CliError> {
     let md = export_ideas_markdown(&project).map_err(CliError::Operation)?;
 
     if let Some(out_path) = options.one("--out")? {
-        fs::write(&out_path, &md)
-            .map_err(|e| CliError::Operation(format!("failed to write markdown to '{out_path}': {e}")))?;
+        fs::write(&out_path, &md).map_err(|e| {
+            CliError::Operation(format!("failed to write markdown to '{out_path}': {e}"))
+        })?;
         let report = serde_json::json!({ "project": project, "exportedPath": out_path });
         let human = format!("Exported ideas markdown for '{project}' to '{out_path}'.");
         return rendered(&report, options.has("--json"), human);

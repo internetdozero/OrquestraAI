@@ -287,7 +287,10 @@ fn freebuff_desktop_cloud_session_badges_and_diagnostics() {
     assert_eq!(session.title, "Cloud prompt");
     assert_eq!(session.turns_count, 0);
     assert_eq!(session.execution_target.as_deref(), Some("cloud"));
-    assert!(session.is_remote_cloud, "cloud thread with 0 turns must be flagged as is_remote_cloud");
+    assert!(
+        session.is_remote_cloud,
+        "cloud thread with 0 turns must be flagged as is_remote_cloud"
+    );
 
     // Inspect transcript for unsynced cloud session
     let transcript = adapter(&home.0, "freebuff").read_transcript(&session.id);

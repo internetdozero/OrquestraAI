@@ -7,7 +7,9 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra mcp inspect <id> [--reveal] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage("usage: orquestra mcp inspect <id> [--reveal] [--json]".to_string())
+        })?;
 
     let options = parse_options(&args[1..], &[], &["--reveal", "--json"])?;
 
@@ -24,7 +26,10 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
 
     let status_str = if server.active_anywhere() {
         if server.global_enabled && !server.enabled_harnesses.is_empty() {
-            format!("active (global, {} harnesses)", server.enabled_harnesses.len())
+            format!(
+                "active (global, {} harnesses)",
+                server.enabled_harnesses.len()
+            )
         } else if server.global_enabled {
             "active (global)".to_string()
         } else {
@@ -82,7 +87,11 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
          Status:       {}",
         server.id,
         server.name,
-        if server.description.is_empty() { "(none)" } else { &server.description },
+        if server.description.is_empty() {
+            "(none)"
+        } else {
+            &server.description
+        },
         server.official,
         server.command,
         args_str,

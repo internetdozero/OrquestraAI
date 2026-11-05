@@ -1,10 +1,10 @@
 //! Vault security audit and backup purging subcommand.
 
-use std::fs;
-use super::paths;
 use super::super::{parse_options, rendered, usage, CliError};
+use super::paths;
 use crate::vault::vault_purge_migration_backups;
 use orquestra_vault::vault::service::list_services;
+use std::fs;
 
 pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
     if args.first().map(String::as_str) == Some("purge-backups") {
@@ -64,7 +64,11 @@ pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
         }
     });
 
-    let perm_str = if permissions_ok { "[PASS]" } else { "[FAIL - expected 0600]" };
+    let perm_str = if permissions_ok {
+        "[PASS]"
+    } else {
+        "[FAIL - expected 0600]"
+    };
     let bak_str = if lingering_backups {
         "[WARN - run 'orquestra vault audit purge-backups --confirm' to zeroize]"
     } else {
@@ -93,7 +97,9 @@ pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
 fn purge_backups(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(args, &[], &["--confirm", "--json"])?;
     if !options.has("--confirm") {
-        return Err(usage("pass --confirm to execute zeroizing of migration backups".to_string()));
+        return Err(usage(
+            "pass --confirm to execute zeroizing of migration backups".to_string(),
+        ));
     }
 
     let report = vault_purge_migration_backups().map_err(CliError::Operation)?;

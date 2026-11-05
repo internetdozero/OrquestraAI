@@ -1,7 +1,7 @@
 //! Sessions list subcommand.
 
-use super::is_session_active;
 use super::super::{parse_i64, parse_options, rendered, CliError};
+use super::is_session_active;
 use crate::sessions::get_unified_sessions;
 use crate::sessions::types::UnifiedSession;
 
@@ -15,7 +15,9 @@ pub(super) fn list(args: &[String]) -> Result<String, CliError> {
     let harness = options.one("--harness")?;
     let search = options.one("--search")?.map(|s| s.to_lowercase());
     let limit = parse_i64(&options, "--limit")?.map(|l| l.max(0) as usize);
-    let offset = parse_i64(&options, "--offset")?.map(|o| o.max(0) as usize).unwrap_or(0);
+    let offset = parse_i64(&options, "--offset")?
+        .map(|o| o.max(0) as usize)
+        .unwrap_or(0);
 
     let mut sessions = get_unified_sessions().map_err(CliError::Operation)?;
 

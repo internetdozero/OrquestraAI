@@ -1,9 +1,9 @@
 //! Surgical session deletion subcommand.
 
-use super::is_session_active;
 use super::super::{parse_options, rendered, usage, CliError};
-use crate::sessions::{get_unified_sessions, purge_sessions, toggle_pin_session};
+use super::is_session_active;
 use crate::sessions::types::PurgeFilter;
+use crate::sessions::{get_unified_sessions, purge_sessions, toggle_pin_session};
 
 pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let session_id = args
@@ -25,7 +25,11 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let target = sessions
         .into_iter()
         .find(|s| s.id == *session_id && s.harness == harness)
-        .ok_or_else(|| CliError::Operation(format!("session '{session_id}' not found in harness '{harness}'")))?;
+        .ok_or_else(|| {
+            CliError::Operation(format!(
+                "session '{session_id}' not found in harness '{harness}'"
+            ))
+        })?;
 
     if is_session_active(&target.harness, &target.id) {
         return Err(CliError::Operation(format!(

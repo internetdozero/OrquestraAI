@@ -8,7 +8,10 @@ pub(super) fn render_ideas_table(ideas: &[IdeaItem]) -> String {
         return "No matching ideas found.".to_string();
     }
     let mut lines = Vec::with_capacity(ideas.len() + 1);
-    lines.push(format!("{:<6} {:<10} {:<12} {:<16} {}", "ID", "PRIORITY", "STATUS", "PROJECT", "TITLE"));
+    lines.push(format!(
+        "{:<6} {:<10} {:<12} {:<16} {}",
+        "ID", "PRIORITY", "STATUS", "PROJECT", "TITLE"
+    ));
     for idea in ideas {
         lines.push(format!(
             "#{:<5} {:<10} {:<12} {:<16} {}",
@@ -28,7 +31,14 @@ pub(super) fn render_idea_detail(idea: &IdeaItem) -> String {
          Status:      {}\n\
          Created:     {}\n\
          Updated:     {}",
-        idea.id, idea.project, idea.title, idea.category, idea.priority, idea.status, idea.created_at, idea.updated_at
+        idea.id,
+        idea.project,
+        idea.title,
+        idea.category,
+        idea.priority,
+        idea.status,
+        idea.created_at,
+        idea.updated_at
     );
     if let Some(completed) = &idea.completed_at {
         out.push_str(&format!("\nCompleted:   {completed}"));
@@ -50,7 +60,10 @@ pub(super) fn render_notes_table(notes: &[BlackboardNote]) -> String {
         return "No blackboard notes found.".to_string();
     }
     let mut lines = Vec::with_capacity(notes.len() + 1);
-    lines.push(format!("{:<6} {:<12} {:<14} {:<10} {:<6} {}", "ID", "PROJECT", "TOPIC", "SENDER", "READ", "NOTE"));
+    lines.push(format!(
+        "{:<6} {:<12} {:<14} {:<10} {:<6} {}",
+        "ID", "PROJECT", "TOPIC", "SENDER", "READ", "NOTE"
+    ));
     for note in notes {
         let read_str = if note.is_read { "yes" } else { "no" };
         let snippet = if note.note.len() > 50 {
@@ -89,7 +102,11 @@ pub(super) fn render_note_detail(note: &BlackboardNote) -> String {
 
 pub(super) fn render_metrics(metrics: &ProductivityMetrics) -> String {
     let project_str = metrics.project.as_deref().unwrap_or("all projects");
-    let total_in_window: usize = metrics.daily_activity.iter().map(|d| d.ideas_completed).sum();
+    let total_in_window: usize = metrics
+        .daily_activity
+        .iter()
+        .map(|d| d.ideas_completed)
+        .sum();
     let avg_cycle_str = match metrics.avg_cycle_hours {
         Some(hours) => format!("{hours:.1}h"),
         None => "n/a".to_string(),

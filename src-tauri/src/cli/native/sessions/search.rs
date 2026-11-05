@@ -1,10 +1,10 @@
 //! Session history search subcommand.
 
+use super::super::{parse_options, parse_u32, rendered, usage, CliError};
 use super::is_session_active;
 use super::list::format_session;
-use super::super::{parse_options, parse_u32, rendered, usage, CliError};
-use crate::sessions::{get_session_transcript, get_unified_sessions};
 use crate::sessions::types::UnifiedSession;
+use crate::sessions::{get_session_transcript, get_unified_sessions};
 
 pub(super) fn search(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
@@ -35,7 +35,10 @@ pub(super) fn search(args: &[String]) -> Result<String, CliError> {
         }
 
         let meta_hit = session.title.to_lowercase().contains(&needle)
-            || session.project_path.as_deref().is_some_and(|p| p.to_lowercase().contains(&needle));
+            || session
+                .project_path
+                .as_deref()
+                .is_some_and(|p| p.to_lowercase().contains(&needle));
 
         if meta_hit {
             matches.push(session);
@@ -44,7 +47,10 @@ pub(super) fn search(args: &[String]) -> Result<String, CliError> {
 
         if search_content {
             if let Ok(turns) = get_session_transcript(session.harness.clone(), session.id.clone()) {
-                if turns.iter().any(|t| t.content.to_lowercase().contains(&needle)) {
+                if turns
+                    .iter()
+                    .any(|t| t.content.to_lowercase().contains(&needle))
+                {
                     matches.push(session);
                 }
             }
@@ -61,7 +67,11 @@ pub(super) fn search(args: &[String]) -> Result<String, CliError> {
                 format_session(s, active)
             })
             .collect();
-        format!("Search results for '{query_str}' ({} matches):\n{}", matches.len(), lines.join("\n"))
+        format!(
+            "Search results for '{query_str}' ({} matches):\n{}",
+            matches.len(),
+            lines.join("\n")
+        )
     };
 
     rendered(&matches, options.has("--json"), human)

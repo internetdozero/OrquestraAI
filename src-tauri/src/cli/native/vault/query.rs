@@ -1,7 +1,7 @@
 //! Vault query subcommands: list, inspect, presets.
 
-use super::{parse_key_number, paths};
 use super::super::{parse_options, rendered, usage, CliError};
+use super::{parse_key_number, paths};
 use orquestra_vault::vault::presets::list_presets;
 use orquestra_vault::vault::service::{list_services, reveal_key};
 use orquestra_vault::vault::VaultServicePublic;
@@ -41,11 +41,19 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra vault inspect <id> [--reveal] [--key-number <N>] [--json]".to_string()))?;
+        .ok_or_else(|| {
+            usage(
+                "usage: orquestra vault inspect <id> [--reveal] [--key-number <N>] [--json]"
+                    .to_string(),
+            )
+        })?;
 
     let options = parse_options(&args[1..], &["--key-number"], &["--reveal", "--json"])?;
     let reveal = options.has("--reveal");
-    let key_num = options.one("--key-number")?.map(|v| parse_key_number(&v)).transpose()?;
+    let key_num = options
+        .one("--key-number")?
+        .map(|v| parse_key_number(&v))
+        .transpose()?;
 
     let paths = paths()?;
     let services = list_services(&paths).map_err(CliError::Operation)?;
@@ -62,9 +70,9 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
                 revealed_secrets[num - 1] = Some(secret);
             }
         } else {
-            for i in 0..service.total_keys {
+            for (i, secret_slot) in revealed_secrets.iter_mut().enumerate() {
                 if let Ok(sec) = reveal_key(&paths, id, i) {
-                    revealed_secrets[i] = Some(sec);
+                    *secret_slot = Some(sec);
                 }
             }
         }
@@ -92,7 +100,10 @@ fn format_services_table(services: &[VaultServicePublic]) -> String {
         return "No credential services found.".to_string();
     }
     let mut lines = Vec::with_capacity(services.len() + 1);
-    lines.push(format!("{:<14} {:<20} {:<12} {:<10} {:<10} {:<6} {}", "SERVICE ID", "LABEL", "PRESET", "STATUS", "HEALTH", "KEYS", "ACTIVE"));
+    lines.push(format!(
+        "{:<14} {:<20} {:<12} {:<10} {:<10} {:<6} {}",
+        "SERVICE ID", "LABEL", "PRESET", "STATUS", "HEALTH", "KEYS", "ACTIVE"
+    ));
     for s in services {
         let status = if s.enabled { "enabled" } else { "disabled" };
         let active = format!("#{}", s.active_key_index + 1);
@@ -105,7 +116,11 @@ fn format_services_table(services: &[VaultServicePublic]) -> String {
 }
 
 fn format_inspect_human(service: &VaultServicePublic, revealed: &[Option<String>]) -> String {
-    let state = if service.enabled { "Enabled (Kill-switch: OFF)" } else { "Disabled (Kill-switch: ON)" };
+    let state = if service.enabled {
+        "Enabled (Kill-switch: OFF)"
+    } else {
+        "Disabled (Kill-switch: ON)"
+    };
     let mut meta_lines = Vec::new();
     if service.meta.is_empty() {
         meta_lines.push("  (none)".to_string());
@@ -117,15 +132,38 @@ fn format_inspect_human(service: &VaultServicePublic, revealed: &[Option<String>
 
     let mut pool_lines = Vec::new();
     for i in 0..service.total_keys {
-        let tag = service.key_tags.get(i).and_then(|t| t.as_deref()).map_or(String::new(), |t| format!("[{t}] "));
+        let tag = service
+            .key_tags
+            .get(i)
+            .and_then(|t| t.as_deref())
+            .map_or(String::new(), |t| format!("[{t}] "));
         let key_str = if let Some(Some(secret)) = revealed.get(i) {
             secret.clone()
         } else {
-            service.masked_keys.get(i).cloned().unwrap_or_else(|| "••••••••".to_string())
+            service
+                .masked_keys
+                .get(i)
+                .cloned()
+                .unwrap_or_else(|| "••••••••".to_string())
         };
-        let health = service.key_health.get(i).map(|h| format!("{h:?}")).unwrap_or_else(|| "Healthy".to_string());
-        let primary_badge = if i == service.active_key_index { " [PRIMARY]" } else { "" };
-        pool_lines.push(format!("  #{:<2} {}{:<24} ({}){}", i + 1, tag, key_str, health, primary_badge));
+        let health = service
+            .key_health
+            .get(i)
+            .map(|h| format!("{h:?}"))
+            .unwrap_or_else(|| "Healthy".to_string());
+        let primary_badge = if i == service.active_key_index {
+            " [PRIMARY]"
+        } else {
+            ""
+        };
+        pool_lines.push(format!(
+            "  #{:<2} {}{:<24} ({}){}",
+            i + 1,
+            tag,
+            key_str,
+            health,
+            primary_badge
+        ));
     }
 
     format!(
@@ -142,7 +180,11 @@ fn format_inspect_human(service: &VaultServicePublic, revealed: &[Option<String>
         service.preset,
         state,
         service.health,
-        if service.description.is_empty() { "(none)" } else { &service.description },
+        if service.description.is_empty() {
+            "(none)"
+        } else {
+            &service.description
+        },
         meta_lines.join("\n"),
         service.total_keys,
         pool_lines.join("\n")
@@ -151,12 +193,19 @@ fn format_inspect_human(service: &VaultServicePublic, revealed: &[Option<String>
 
 fn format_presets_table(presets: &[orquestra_vault::vault::presets::PresetSpec]) -> String {
     let mut lines = Vec::with_capacity(presets.len() + 1);
-    lines.push(format!("{:<14} {:<16} {:<16} {:<22} {}", "PRESET", "LABEL", "AUTH HEADER", "ENV VAR", "META FIELDS"));
+    lines.push(format!(
+        "{:<14} {:<16} {:<16} {:<22} {}",
+        "PRESET", "LABEL", "AUTH HEADER", "ENV VAR", "META FIELDS"
+    ));
     for p in presets {
         let meta_str = if p.meta_fields.is_empty() {
             "-".to_string()
         } else {
-            p.meta_fields.iter().map(|m| m.key.as_str()).collect::<Vec<_>>().join(", ")
+            p.meta_fields
+                .iter()
+                .map(|m| m.key.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
         };
         lines.push(format!(
             "{:<14} {:<16} {:<16} {:<22} {}",

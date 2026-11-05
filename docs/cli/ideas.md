@@ -9,6 +9,7 @@ It enables headless terminal environments, autonomous agents, and CI/CD pipeline
 ## Architecture & Storage Model
 
 Both the desktop application, the `orquestra-idea-vault` MCP server, and the CLI share the same SQLite database:
+
 - **Default Database Location:** `~/.local/share/idea-vault/ideas.sqlite3`
 - **Overrides:** Honors `IDEA_VAULT_DB_PATH` and `XDG_DATA_HOME` environment variables.
 - **Concurrency & Locking:** SQLite configured with Write-Ahead Logging (`WAL`), `synchronous=NORMAL`, and a 5-second busy timeout. Multiple CLI instances, agents, and the GUI safely read and write concurrently without blocking.
@@ -35,12 +36,15 @@ Both the desktop application, the `orquestra-idea-vault` MCP server, and the CLI
 ## Current State vs Granular Redesign
 
 ### What Exists Today
+
 The existing implementation in `src-tauri/src/cli/native/ideas.rs` only supports 3 basic commands under the `orquestra ideas` root:
+
 - `orquestra ideas add --project <p> --title <t> [...]`
 - `orquestra ideas list [--project <p>] [--status <s>] [--limit <l>] [--offset <o>] [--json]`
 - `orquestra ideas status <id> <status> [--json]`
 
 **Limitations:**
+
 - Does not recognize the canonical singular command `orquestra idea` (only plural `ideas`).
 - Cannot inspect or get a single idea (`get`/`inspect`).
 - Cannot update fields of an existing idea without resetting status or recreating (`update`).
@@ -52,6 +56,7 @@ The existing implementation in `src-tauri/src/cli/native/ideas.rs` only supports
 - Completely lacks Blackboard Note subcommands (`note-post`, `note-list`, `note-get`, `note-read`, `note-clear`).
 
 ### The Granular Redesign
+
 The redesigned CLI introduces comprehensive subcommands grouped under `orquestra idea` (with `orquestra ideas` alias retained for backward compatibility), providing full parity with the `orquestra-idea-vault` MCP and Rust backend capabilities.
 
 ```
@@ -80,6 +85,7 @@ All commands support human-readable standard output by default, and structured J
 ## Command Reference: Ideas & Tasks
 
 ### 1. `list`
+
 List ideas matching specified filters, sorted by priority and recency.
 
 ```bash
@@ -96,6 +102,7 @@ orquestra idea list [options]
   - `--json`: Output as JSON array of `IdeaItem`.
 
 **Examples:**
+
 ```bash
 # List all open ideas for OrquestraAI
 orquestra idea list --project OrquestraAI
@@ -107,6 +114,7 @@ orquestra idea list --status all --priority high --json
 ---
 
 ### 2. `get` (or `inspect`)
+
 Inspect complete details of a single idea, including description, tags, and technical Builder dispatch prompt.
 
 ```bash
@@ -119,6 +127,7 @@ orquestra idea get <id> [--json]
   - `--json`: Output full `IdeaItem` JSON object.
 
 **Examples:**
+
 ```bash
 orquestra idea get 42
 orquestra idea get 42 --json
@@ -127,6 +136,7 @@ orquestra idea get 42 --json
 ---
 
 ### 3. `add` (or `record`)
+
 Record a new idea or task into the vault.
 
 ```bash
@@ -146,6 +156,7 @@ orquestra idea add --project <project> --title <title> [options]
   - `--json`: Output created `IdeaItem` as JSON.
 
 **Example:**
+
 ```bash
 orquestra idea add \
   --project OrquestraAI \
@@ -159,6 +170,7 @@ orquestra idea add \
 ---
 
 ### 4. `update`
+
 Partially update fields of an existing idea without resetting unspecified fields.
 
 ```bash
@@ -179,6 +191,7 @@ orquestra idea update <id> [options]
   - `--json`: Output updated `IdeaItem` as JSON.
 
 **Example:**
+
 ```bash
 orquestra idea update 42 --priority critical --tags "cli,release-blocker"
 ```
@@ -186,6 +199,7 @@ orquestra idea update 42 --priority critical --tags "cli,release-blocker"
 ---
 
 ### 5. `status`
+
 Convenient shortcut to transition an idea's lifecycle status.
 
 ```bash
@@ -201,6 +215,7 @@ orquestra idea status <id> <status> [--json]
   - Transitioning to `archived` preserves existing `completed_at`.
 
 **Example:**
+
 ```bash
 orquestra idea status 42 in_progress
 orquestra idea status 42 completed
@@ -209,6 +224,7 @@ orquestra idea status 42 completed
 ---
 
 ### 6. `delete`
+
 Permanently remove an idea from the vault.
 
 ```bash
@@ -221,6 +237,7 @@ orquestra idea delete <id> [--json]
   - `--json`: Output confirmation object `{"id": 42, "deleted": true}`.
 
 **Example:**
+
 ```bash
 orquestra idea delete 42
 ```
@@ -228,6 +245,7 @@ orquestra idea delete 42
 ---
 
 ### 7. `search`
+
 Search ideas by substring match across `title`, `description`, `tags`, and `prompt`.
 
 ```bash
@@ -242,6 +260,7 @@ orquestra idea search <query> [options]
   - `--json`: Output matching ideas as JSON.
 
 **Example:**
+
 ```bash
 orquestra idea search "granular cli" --project OrquestraAI
 ```
@@ -249,6 +268,7 @@ orquestra idea search "granular cli" --project OrquestraAI
 ---
 
 ### 8. `projects`
+
 List all unique project identifiers currently registered in the Idea Vault.
 
 ```bash
@@ -256,6 +276,7 @@ orquestra idea projects [--json]
 ```
 
 **Example:**
+
 ```bash
 orquestra idea projects
 ```
@@ -263,6 +284,7 @@ orquestra idea projects
 ---
 
 ### 9. `export-md`
+
 Export active ideas (`open` and `in_progress`) for a project formatted as GitHub-style Markdown checklist.
 
 ```bash
@@ -276,6 +298,7 @@ orquestra idea export-md --project <project> [options]
   - `--json`: Output raw object with count and markdown string.
 
 **Example:**
+
 ```bash
 orquestra idea export-md --project OrquestraAI --out /tmp/ideas-board.md
 ```
@@ -283,6 +306,7 @@ orquestra idea export-md --project OrquestraAI --out /tmp/ideas-board.md
 ---
 
 ### 10. `metrics`
+
 Display developer velocity metrics, task completion counts, and heatmaps.
 
 ```bash
@@ -295,6 +319,7 @@ orquestra idea metrics [options]
   - `--json`: Output `ProductivityMetrics` JSON.
 
 **Example:**
+
 ```bash
 orquestra idea metrics --project OrquestraAI --weeks 4
 ```
@@ -306,6 +331,7 @@ orquestra idea metrics --project OrquestraAI --weeks 4
 Blackboard notes provide an asynchronous, multi-agent communication channel stored directly in SQLite. Agents and CLI users post notes, inspect unread messages, and clear completed directives.
 
 ### 1. `note-post`
+
 Post a collaboration note on the blackboard.
 
 ```bash
@@ -322,6 +348,7 @@ orquestra idea note-post --project <project> --topic <topic> --note <text> [opti
   - `--json`: Output created note as JSON.
 
 **Example:**
+
 ```bash
 orquestra idea note-post \
   --project OrquestraAI \
@@ -334,6 +361,7 @@ orquestra idea note-post \
 ---
 
 ### 2. `note-list`
+
 List blackboard notes matching topic or read status.
 
 ```bash
@@ -349,6 +377,7 @@ orquestra idea note-list [options]
   - `--json`: Output as JSON array of `BlackboardNote`.
 
 **Example:**
+
 ```bash
 orquestra idea note-list --project OrquestraAI --unread-only
 ```
@@ -356,6 +385,7 @@ orquestra idea note-list --project OrquestraAI --unread-only
 ---
 
 ### 3. `note-get`
+
 Inspect an individual blackboard note by ID.
 
 ```bash
@@ -365,6 +395,7 @@ orquestra idea note-get <id> [--json]
 ---
 
 ### 4. `note-read`
+
 Mark a blackboard note as read.
 
 ```bash
@@ -372,6 +403,7 @@ orquestra idea note-read <id> [--json]
 ```
 
 **Example:**
+
 ```bash
 orquestra idea note-read 15
 ```
@@ -379,6 +411,7 @@ orquestra idea note-read 15
 ---
 
 ### 5. `note-clear`
+
 Purge handled blackboard notes for a given project.
 
 ```bash
@@ -393,6 +426,7 @@ orquestra idea note-clear --project <project> [options]
   - `--json`: Output clearance summary.
 
 **Example:**
+
 ```bash
 # Clear all read notes for OrquestraAI
 orquestra idea note-clear --project OrquestraAI
@@ -407,7 +441,9 @@ orquestra idea note-clear --project OrquestraAI
 - **`2`**: Usage Error. Missing required arguments, unknown flags, or malformed syntax. Usage summary printed to standard error.
 
 ### Pipe and Scripting Integration
+
 With `--json`, any command output can be parsed directly with `jq` or Python:
+
 ```bash
 # Get the active Builder prompt for Idea #42 and pipe to clipboard or runner
 orquestra idea get 42 --json | jq -r '.prompt'

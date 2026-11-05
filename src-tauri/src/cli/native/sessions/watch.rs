@@ -1,9 +1,9 @@
 //! Tail and watch subcommands.
 
-use super::is_session_active;
 use super::super::{parse_options, parse_u32, rendered, CliError};
-use crate::sessions::{get_session_transcript, get_unified_sessions};
+use super::is_session_active;
 use crate::sessions::types::{TranscriptTurn, UnifiedSession};
+use crate::sessions::{get_session_transcript, get_unified_sessions};
 
 pub(super) fn tail(args: &[String]) -> Result<String, CliError> {
     run_tail_watch(args, false)
@@ -36,7 +36,10 @@ fn run_tail_watch(args: &[String], default_follow: bool) -> Result<String, CliEr
             // Find newest active session or newest session
             sessions
                 .iter()
-                .find(|s| is_session_active(&s.harness, &s.id) && harness_opt.as_deref().map_or(true, |h| s.harness == h))
+                .find(|s| {
+                    is_session_active(&s.harness, &s.id)
+                        && harness_opt.as_deref().map_or(true, |h| s.harness == h)
+                })
                 .or_else(|| {
                     sessions
                         .iter()
@@ -47,8 +50,9 @@ fn run_tail_watch(args: &[String], default_follow: bool) -> Result<String, CliEr
         }
     };
 
-    let mut turns = get_session_transcript(target_session.harness.clone(), target_session.id.clone())
-        .map_err(CliError::Operation)?;
+    let mut turns =
+        get_session_transcript(target_session.harness.clone(), target_session.id.clone())
+            .map_err(CliError::Operation)?;
 
     if turns.len() > limit {
         let skip = turns.len() - limit;
@@ -66,7 +70,10 @@ fn run_tail_watch(args: &[String], default_follow: bool) -> Result<String, CliEr
 }
 
 fn format_tail_human(session: &UnifiedSession, turns: &[TranscriptTurn]) -> String {
-    let mut out = format!("Tailing [{}] {} ({}):\n", session.harness, session.id, session.title);
+    let mut out = format!(
+        "Tailing [{}] {} ({}):\n",
+        session.harness, session.id, session.title
+    );
     if turns.is_empty() {
         out.push_str("  (No transcript turns available)");
         return out;

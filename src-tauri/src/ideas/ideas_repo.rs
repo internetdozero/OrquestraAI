@@ -274,10 +274,15 @@ pub fn export_ideas_markdown(connection: &Connection, project: &str) -> Result<S
         .map_err(db_error)?;
 
     if ideas.is_empty() {
-        return Ok(format!("# Ideas Board: {project}\n\nNo active ideas found.\n"));
+        return Ok(format!(
+            "# Ideas Board: {project}\n\nNo active ideas found.\n"
+        ));
     }
 
-    let mut output = format!("# Ideas Board: {project}\n\nTotal Active: {}\n\n", ideas.len());
+    let mut output = format!(
+        "# Ideas Board: {project}\n\nTotal Active: {}\n\n",
+        ideas.len()
+    );
     for idea in &ideas {
         let tags_str = idea.tags.as_deref().unwrap_or("none");
         let desc = idea.description.as_deref().unwrap_or("No description.");

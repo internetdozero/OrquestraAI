@@ -1,9 +1,9 @@
 //! MCP listing and diagnostic status commands.
 
-use std::collections::BTreeMap;
-use serde::Serialize;
 use super::super::{parse_options, rendered, CliError};
 use crate::mcp::{list_mcps_masked, list_targets, McpServer};
+use serde::Serialize;
+use std::collections::BTreeMap;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,7 +22,12 @@ pub(super) fn list(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
         args,
         &["--harness", "--search"],
-        &["--enabled-only", "--global-only", "--official-only", "--json"],
+        &[
+            "--enabled-only",
+            "--global-only",
+            "--official-only",
+            "--json",
+        ],
     )?;
 
     let mut servers = list_mcps_masked().map_err(CliError::Operation)?;

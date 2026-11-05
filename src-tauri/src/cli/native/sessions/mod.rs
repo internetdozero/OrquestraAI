@@ -18,10 +18,12 @@ mod watch;
 const USAGE: &str = "usage: orquestra sessions <list|inspect|pin|unpin|tail|watch|handoff|search|delete|export|purge|policy> [options]";
 
 pub(super) fn is_session_active(harness: &str, session_id: &str) -> bool {
-    let Ok(home) = crate::sessions::adapters::home() else { return false; };
+    let Ok(home) = crate::sessions::adapters::home() else {
+        return false;
+    };
     crate::sessions::adapters::adapters_by_id(&home)
         .get(harness)
-        .map_or(false, |adapter| adapter.is_session_active(session_id))
+        .is_some_and(|adapter| adapter.is_session_active(session_id))
 }
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
