@@ -14,6 +14,20 @@ export interface ScopeTab {
   dimmed?: boolean;
 }
 
+/** Small trailing count shared by skill and MCP scope selectors. */
+export function ScopeCountBadge({ value, active }: { value: number; active: boolean }) {
+  return (
+    <span
+      className={cn(
+        "rounded px-1 py-px font-mono text-[9px] tabular-nums",
+        active ? "accent-bg-soft accent-text" : "bg-white/[0.05] text-zinc-500",
+      )}
+    >
+      {value}
+    </span>
+  );
+}
+
 /**
  * Inner scope switcher shared by the skills grid and the MCP registry.
  *

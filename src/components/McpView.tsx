@@ -207,7 +207,9 @@ export function McpView({
         {/* The toggle writes to whichever scope is chosen here. */}
         <McpScopeSelector
           scope={scope}
+          servers={servers}
           targets={targets}
+          showCounts={(!loading && !error) || servers.length > 0}
           onSelect={(next) => {
             setScope(next);
             onQueryChange?.("");

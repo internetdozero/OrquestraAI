@@ -67,6 +67,19 @@ read results; mutations re-invoke the list command (or bump a refresh counter)
 so views never serve stale state. There is no invalidation protocol because
 there are no pushed events — freshness comes from re-fetch after write.
 
+## MCP catalog and projection
+
+The MCP scope selector derives its counts from the loaded catalog: Global counts
+only globally enabled servers, while a harness counts those plus its own
+opt-ins. `list_mcps` incrementally adopts definitions from the global
+`~/.agents/mcp.json`, `~/.gemini/config/mcp_config.json`, and
+`~/.gemini/settings.json`; it does not scan workspace `.agents` folders or
+cloud-only account entries. Official servers are installed into a private
+Orquestra environment when activated, then compiled into each enabled harness
+config. Long installs run in a blocking worker so they do not freeze the UI.
+Store actions show progress and surface install errors; blank descriptions get
+a localized UI hint to inspect the server's tools.
+
 ## Bridge harness lifecycle
 
 The bridge makes every supported harness (codex, claude, copilot, …) see the
@@ -85,6 +98,11 @@ same OrquestraAI-managed skills, MCP configs and instructions.
 - **Steady state**: the footer indicator polls `get_bridge_status`; skill/MCP
   mutations recompile projections and configs without re-bridging (vault
   folders refresh in place so symlinks stay live).
+- **Freebuff**: `~/.agents/skills` is its canonical global root. Existing skills
+  are kept in Orquestra's vault and exposed back through symlinks; optional
+  legacy roots are linked only when their parent exists. Replaced originals
+  remain recoverable from the bridge backup. Project-local `.agents` folders
+  are outside this global bridge.
 
 ## Sessions pipeline
 

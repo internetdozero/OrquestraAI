@@ -53,6 +53,7 @@ export const mcps: TranslationSchema["mcps"] = {
   onElsewhere: "on elsewhere",
   noDescription:
     "This server does not provide a description. Check its available tools in the harness for instructions and capabilities.",
+  activeMcpCount: (count: number) => `${count} active MCP${count === 1 ? "" : "s"}`,
   inspect: "Command, args & env",
   deleteConfirm: (name: string) => `Delete “${name}” from every harness config?`,
   deleteAria: (name: string) => `Delete ${name}`,

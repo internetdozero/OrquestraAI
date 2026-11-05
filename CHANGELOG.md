@@ -13,12 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Installer automatically detects package manager and auto-installs missing Linux runtime dependencies (WebKitGTK, GTK3, libsoup, libayatana-appindicator) using sudo/root, with `--no-auto-deps` opt-out.
 - Localized guidance for MCP servers that do not provide a description, directing users to inspect the server's tools and capabilities.
+- Active MCP counts in the Global and harness scope tabs; harness counts include servers inherited from Global.
+- Store installation feedback for skills and MCPs, with immediate loading state and readable clone/install failures.
 
 ### Fixed
 
 - Freebuff bridge detection now uses its global `~/.agents` root and ignores optional skill or instruction paths whose parent directories are absent.
 - Existing MCPs are adopted from the global Freebuff and Gemini configuration files, including URL-based servers such as Exa and command-based servers such as REA. Activating an official MCP installs it into Orquestra's private environment, and the install work no longer blocks the UI.
 - MCP Store errors now surface the installation failure details instead of leaving a server inactive without explanation.
+- Harness bridge deployment keeps skill originals in Orquestra's vault, backs up replaced native files, and leaves harness discovery paths linked to the managed projection. Gemini built-in skill paths are archived so they cannot bypass that projection.
 
 ## [0.1.0-alpha.6] - 2026-11-04
 

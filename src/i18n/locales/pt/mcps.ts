@@ -57,6 +57,7 @@ export const mcps = {
   onElsewhere: "ativo em outro lugar",
   noDescription:
     "Este servidor não fornece uma descrição. Consulte as ferramentas disponíveis no harness para ver suas instruções e capacidades.",
+  activeMcpCount: (count: number) => `${count} MCP${count === 1 ? " ativo" : "s ativos"}`,
   inspect: "Comando, argumentos e ambiente",
   deleteConfirm: (name: string) => `Excluir “${name}” de todos os arquivos de configuração?`,
   deleteAria: (name: string) => `Excluir ${name}`,

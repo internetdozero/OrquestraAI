@@ -80,7 +80,10 @@ locais, ficam fora deste catálogo baseado em arquivos.
 Ao ativar um MCP oficial, o Orquestra o instala em um ambiente privado em
 `~/.orquestra/mcp-servers/` e publica o comando resolvido nos harnesses ativos.
 MCPs sem descrição exibem uma orientação localizada para consultar as
-ferramentas expostas pelo servidor.
+ferramentas expostas pelo servidor. O seletor de escopo MCP mostra contagens de
+servidores ativos no Global e em cada harness; a contagem do harness inclui os
+MCPs herdados do Global. Instalações pela Store mostram o progresso durante o
+clone ou instalação e exibem falhas na interface.
 
 ---
 

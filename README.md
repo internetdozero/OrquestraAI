@@ -80,7 +80,10 @@ are outside this filesystem catalog.
 When an official MCP is activated, Orquestra installs it into a private
 environment under `~/.orquestra/mcp-servers/` and deploys its resolved command
 to enabled harnesses. MCPs without a description show localized guidance to
-inspect the tools exposed by the server.
+inspect the tools exposed by the server. The MCP scope selector shows active
+counts for Global and each harness; harness counts include MCPs inherited from
+Global. Store installs show progress while cloning or installing and report
+failures in the interface.
 
 ---
 
