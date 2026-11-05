@@ -10,15 +10,19 @@ use std::path::{Path, PathBuf};
 
 use super::status::{
     ancestor_is_symlink, is_link, is_linked_to, parent_is_dir, path_present, skill_folders,
-    statuses_at, Walk, PRIMARY_WALK, SECONDARY_WALK,
+    statuses_at, PRIMARY_WALK, SECONDARY_WALK,
 };
 use super::BridgeReport;
 use orquestra_core::agents::{read_agents, write_agents, DEFAULT_AGENTS};
 use orquestra_core::harness::{self, HarnessSpec, SecondaryAction};
-use orquestra_core::paths::{copy_dir_all, OrquestraPaths};
+use orquestra_core::paths::OrquestraPaths;
 use orquestra_core::skills::SKILL_FILE;
 
+mod adopt;
+mod backup;
 mod fuse_io;
+use adopt::adopt_missing_skills;
+use backup::{finalize_backup, next_backup_path};
 pub use fuse_io::timestamp_label;
 use fuse_io::{
     backup_move, backup_slot, create_dir_all, ensure_config, ensure_symlink, link_instructions,
@@ -26,8 +30,6 @@ use fuse_io::{
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(super) use fuse_io::{format_timestamp, merge_skills_path};
-
-const BACKUP_PREFIX: &str = "pre-fusion";
 
 pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeReport, String> {
     paths.ensure_layout()?;
@@ -49,11 +51,7 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
     let mut backup_dir: Option<PathBuf> = None;
 
     if needs_work {
-        let backup = paths
-            .root
-            .join("backups")
-            .join(format!("{BACKUP_PREFIX}-{}", timestamp_label()));
-        create_dir_all(&backup)?;
+        let backup = next_backup_path(paths);
         backup_dir = Some(backup.clone());
 
         for spec in harness::HARNESSES {
@@ -80,6 +78,10 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
                 errors.push(format!("AGENTS.md import: {error}"));
             }
         }
+
+        // The run may only need to create missing links. Allocate no backup
+        // directory unless an operation actually preserved something.
+        backup_dir = backup_dir.map(finalize_backup).transpose()?.flatten();
     }
 
     let harnesses = statuses_at(home, paths);
@@ -185,27 +187,6 @@ fn link_skills(
     }
 
     ensure_symlink(source, projection)
-}
-
-/// Copy skill folders that exist only inside a harness into the master vault so
-/// nothing becomes invisible after the directory is replaced by a symlink.
-fn adopt_missing_skills(
-    source: &Path,
-    vault: &Path,
-    adopted: &mut Vec<String>,
-    walk: Walk,
-) -> Result<(), String> {
-    for (name, path) in skill_folders(source, walk)? {
-        let destination = vault.join(&name);
-        if destination.exists() {
-            continue;
-        }
-
-        copy_dir_all(&path, &destination)?;
-        adopted.push(name);
-    }
-
-    Ok(())
 }
 
 /// Keep the harness's current skill set visible after the swap: everything it

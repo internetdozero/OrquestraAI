@@ -51,15 +51,12 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
                 .collect();
             // Config-only harnesses carry no skills directory, so their link
             // state is satisfied by the config path registered below.
-            let skills_linked = spec
-                .skills_links
-                .iter()
-                .all(|rel| {
-                    let source = home.join(rel);
-                    ancestor_is_symlink(home, &source)
-                        || (!path_present(&source) && !parent_is_dir(&source))
-                        || is_linked_to(&source, &projection)
-                });
+            let skills_linked = spec.skills_links.iter().all(|rel| {
+                let source = home.join(rel);
+                ancestor_is_symlink(home, &source)
+                    || (!path_present(&source) && !parent_is_dir(&source))
+                    || is_linked_to(&source, &projection)
+            });
 
             // The primary instruction path stays the first entry so the IPC
             // shape is unchanged; the linked gate covers every location.

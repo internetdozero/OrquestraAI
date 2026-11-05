@@ -43,6 +43,26 @@ fn freebuff_links_install_root_instructions() {
     test.cleanup();
 }
 
+/// Missing optional XDG locations do not trigger a false unlinked status or
+/// leave an empty pre-fusion backup behind.
+#[test]
+fn freebuff_without_manicode_directory_needs_no_backup() {
+    let test = TestHome::new("freebuff-no-manicode");
+    test.mkdir(".freebuff");
+
+    let report = deploy_at(&test.home, &test.paths).unwrap();
+    assert!(report.errors.is_empty(), "errors: {:?}", report.errors);
+    assert!(report.backup_dir.is_none());
+    assert!(!test.paths.root.join("backups").exists());
+    assert!(freebuff_status(&report).bridged);
+    assert_linked(
+        &test.home.join(".freebuff/skills"),
+        &test.paths.projection_dir("freebuff"),
+    );
+
+    test.cleanup();
+}
+
 /// XDG variant: `~/.config/freebuff/AGENTS.md` links when that platform's
 /// directory exists.
 #[test]

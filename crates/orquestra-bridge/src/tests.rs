@@ -185,6 +185,9 @@ mod tests {
             fs::write(directory.join("SKILL.md"), "seed\n").unwrap();
         }
 
+        let original_alpha =
+            fs::read_to_string(test.home.join(".gemini/config/skills/alpha/SKILL.md")).unwrap();
+
         let report = deploy_at(&test.home, &test.paths).unwrap();
 
         let backup = PathBuf::from(report.backup_dir.clone().unwrap());
@@ -287,6 +290,11 @@ mod tests {
         assert_eq!(adopted, vec!["epsilon".to_string(), "nested".to_string()]);
         assert!(test.paths.vault.join("epsilon/SKILL.md").is_file());
         assert!(test.paths.vault.join("nested/SKILL.md").is_file());
+        assert_eq!(
+            fs::read_to_string(test.paths.vault.join("alpha/SKILL.md")).unwrap(),
+            original_alpha,
+            "the harness's original skill replaces an older same-name vault copy"
+        );
         assert_linked(
             &test.paths.projection_dir("hermes").join("nested"),
             &test.paths.vault.join("nested"),
