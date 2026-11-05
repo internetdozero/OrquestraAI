@@ -61,11 +61,15 @@ export function useSkillStoreActions(skills: SkillItem[], deps: SkillStoreDeps) 
             try {
               imported = await importSkillFromGit(urls[0]);
             } catch (primary) {
-              if (!urls[1]) throw new Error(t.store.cloneFailed(String(primary)));
+              if (!urls[1]) {
+                throw new Error(t.store.cloneFailed(String(primary)), { cause: primary });
+              }
               try {
                 imported = await importSkillFromGit(urls[1]);
               } catch (fallback) {
-                throw new Error(t.store.cloneFailed(`${String(primary)}; ${String(fallback)}`));
+                throw new Error(t.store.cloneFailed(`${String(primary)}; ${String(fallback)}`), {
+                  cause: fallback,
+                });
               }
             }
             try {
