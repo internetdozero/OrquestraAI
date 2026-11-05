@@ -26,12 +26,18 @@ pub const HARNESSES: &[HarnessSpec] = &[
             format: McpFormat::JsonMcpServers,
             entry_type: None,
         }),
-        secondary: &[SecondarySpec {
-            rel: ".gemini/antigravity/builtin/skills",
-            action: SecondaryAction::AdoptOnly,
-            rationale: "Vendor built-ins ship with the app; archived in the vault so \
-                        ~/.gemini/config/skills stays the only user source",
-        }],
+        secondary: &[
+            SecondarySpec {
+                rel: ".gemini/antigravity/builtin/skills",
+                action: SecondaryAction::Quarantine,
+                rationale: "Legacy Gemini built-ins are archived; remove this unmanaged discovery path",
+            },
+            SecondarySpec {
+                rel: ".gemini/antigravity-cli/builtin/skills",
+                action: SecondaryAction::Quarantine,
+                rationale: "Gemini CLI built-ins are archived; user skills load through the managed config path",
+            },
+        ],
         note: None,
     },
     HarnessSpec {

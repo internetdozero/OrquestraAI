@@ -57,8 +57,15 @@ fn fusion_neutralises_secondary_discovery_paths() {
         "threat-model",
     );
 
-    // Antigravity: vendor built-ins are archived but stay installable.
-    test.skill(".gemini/antigravity/builtin/skills", "antigravity_guide");
+    // Antigravity: both native built-in paths are emptied and archived.
+    test.skill(
+        ".gemini/antigravity-cli/builtin/skills",
+        "antigravity_guide",
+    );
+    test.skill(
+        ".gemini/antigravity/builtin/skills",
+        "legacy-antigravity-guide",
+    );
 
     // The vault already owns the one skill Antigravity exposes, so the
     // adopted list below only covers secondary locations.
@@ -81,6 +88,7 @@ fn fusion_neutralises_secondary_discovery_paths() {
             "docx",
             "feature-dev",
             "latex-compile",
+            "legacy-antigravity-guide",
             "orca-cli",
             "ponytail-audit",
             "ponytail-debt",
@@ -172,11 +180,27 @@ fn fusion_neutralises_secondary_discovery_paths() {
         .join("grok/.grok__bundled__skills/docx/SKILL.md")
         .is_file());
 
-    // Antigravity keeps its vendor built-ins usable; they are only
-    // archived so ~/.gemini/config/skills stays the single user source.
+    let gemini_cli_skills = test.home.join(".gemini/antigravity-cli/builtin/skills");
+    assert!(gemini_cli_skills.is_dir());
+    assert!(fs::read_dir(&gemini_cli_skills).unwrap().next().is_none());
+    assert!(backup
+        .join("antigravity/.gemini__antigravity-cli__builtin__skills/antigravity_guide/SKILL.md")
+        .is_file());
+    assert!(backup
+        .join("antigravity/.gemini__antigravity__builtin__skills/legacy-antigravity-guide/SKILL.md")
+        .is_file());
+    let legacy_skills = test.home.join(".gemini/antigravity/builtin/skills");
+    assert!(legacy_skills.is_dir());
+    assert!(fs::read_dir(legacy_skills).unwrap().next().is_none());
     assert!(test
-        .home
-        .join(".gemini/antigravity/builtin/skills/antigravity_guide/SKILL.md")
+        .paths
+        .vault
+        .join("antigravity_guide/SKILL.md")
+        .is_file());
+    assert!(test
+        .paths
+        .vault
+        .join("legacy-antigravity-guide/SKILL.md")
         .is_file());
     assert_linked(
         &test.home.join(".gemini/config/skills"),
@@ -243,14 +267,14 @@ fn fusion_does_not_adopt_through_a_builtin_directory_symlink() {
     let root = base.join("orquestra");
     let outside = base.join("outside");
     fs::create_dir_all(home.join(".gemini/config")).unwrap();
-    fs::create_dir_all(home.join(".gemini/antigravity")).unwrap();
+    fs::create_dir_all(home.join(".gemini/antigravity-cli")).unwrap();
     fs::create_dir_all(outside.join("skills/stolen")).unwrap();
     fs::write(
         outside.join("skills/stolen/SKILL.md"),
         "---\nname: stolen\ndescription: stolen skill.\n---\n\nssh-private\n",
     )
     .unwrap();
-    std::os::unix::fs::symlink(&outside, home.join(".gemini/antigravity/builtin")).unwrap();
+    std::os::unix::fs::symlink(&outside, home.join(".gemini/antigravity-cli/builtin")).unwrap();
 
     let paths = OrquestraPaths {
         vault: root.join("skills-library"),
