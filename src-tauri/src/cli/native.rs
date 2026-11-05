@@ -20,7 +20,7 @@ pub enum CliError {
 /// to the existing desktop launcher and legacy flags.
 pub fn dispatch_native_cli(args: &[String]) -> Option<Result<String, CliError>> {
     match args.first().map(String::as_str) {
-        Some("ideas") => Some(ideas::run(&args[1..])),
+        Some("ideas" | "idea") => Some(ideas::run(&args[1..])),
         Some("sessions") => Some(sessions::run(&args[1..])),
         Some("bridge") => Some(bridge::run(&args[1..])),
         Some("vault") => Some(vault::run(&args[1..])),

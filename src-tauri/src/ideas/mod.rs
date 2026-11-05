@@ -106,3 +106,41 @@ pub fn mark_note_read(id: i64) -> Result<(), String> {
     let connection = store::connect()?;
     notes_repo::mark_note_read(&connection, id)
 }
+
+/// Retrieve a single idea by ID.
+pub fn get_idea(id: i64) -> Result<IdeaItem, String> {
+    let connection = store::connect()?;
+    store::get_idea(&connection, id)
+}
+
+/// Retrieve a single blackboard note by ID.
+pub fn get_note(id: i64) -> Result<BlackboardNote, String> {
+    let connection = store::connect()?;
+    store::get_note(&connection, id)
+}
+
+/// Search ideas matching a query substring across title, description, tags, or prompt.
+pub fn search_ideas(
+    query: &str,
+    project: Option<String>,
+    limit: Option<i64>,
+) -> Result<Vec<IdeaItem>, String> {
+    let connection = store::connect()?;
+    ideas_repo::search_ideas(&connection, query, project.as_deref(), limit)
+}
+
+/// Export active ideas for a project formatted as Markdown.
+pub fn export_ideas_markdown(project: &str) -> Result<String, String> {
+    let connection = store::connect()?;
+    ideas_repo::export_ideas_markdown(&connection, project)
+}
+
+/// Purge handled blackboard notes for a project.
+pub fn clear_blackboard_notes(
+    project: &str,
+    topic: Option<String>,
+    include_unread: bool,
+) -> Result<usize, String> {
+    let connection = store::connect()?;
+    notes_repo::clear_notes(&connection, project, topic.as_deref(), include_unread)
+}

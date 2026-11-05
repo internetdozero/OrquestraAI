@@ -213,3 +213,79 @@ pub fn delete_idea(connection: &Connection, id: i64) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Search ideas matching a query substring across title, description, tags, or prompt.
+pub fn search_ideas(
+    connection: &Connection,
+    query: &str,
+    project: Option<&str>,
+    limit: Option<i64>,
+) -> Result<Vec<IdeaItem>, String> {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+    let pattern = format!("%{trimmed}%");
+    let (capped, _) = clamp_page(limit, None);
+
+    let (sql, params): (String, Vec<rusqlite::types::Value>) = match project {
+        Some(p) if !p.trim().is_empty() => (
+            format!(
+                "SELECT * FROM ideas \
+                 WHERE project = ?1 AND (title LIKE ?2 OR description LIKE ?2 OR tags LIKE ?2 OR prompt LIKE ?2) \
+                 ORDER BY {PRIORITY_RANK}, created_at DESC, id DESC LIMIT {capped}"
+            ),
+            vec![
+                rusqlite::types::Value::Text(p.trim().to_string()),
+                rusqlite::types::Value::Text(pattern),
+            ],
+        ),
+        _ => (
+            format!(
+                "SELECT * FROM ideas \
+                 WHERE (title LIKE ?1 OR description LIKE ?1 OR tags LIKE ?1 OR prompt LIKE ?1) \
+                 ORDER BY {PRIORITY_RANK}, created_at DESC, id DESC LIMIT {capped}"
+            ),
+            vec![rusqlite::types::Value::Text(pattern)],
+        ),
+    };
+
+    let mut statement = connection.prepare(&sql).map_err(db_error)?;
+    let ideas = statement
+        .query_map(params_from_iter(params.iter()), idea_from_row)
+        .map_err(db_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(db_error)?;
+    Ok(ideas)
+}
+
+/// Export active ideas (open and in_progress) formatted as GitHub-style Markdown.
+pub fn export_ideas_markdown(connection: &Connection, project: &str) -> Result<String, String> {
+    let project = require_text(project, "project")?;
+    let sql = format!(
+        "SELECT * FROM ideas WHERE project = ?1 AND status IN ('open', 'in_progress') \
+         ORDER BY {PRIORITY_RANK}, created_at DESC, id DESC"
+    );
+    let mut statement = connection.prepare(&sql).map_err(db_error)?;
+    let ideas = statement
+        .query_map([&project], idea_from_row)
+        .map_err(db_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(db_error)?;
+
+    if ideas.is_empty() {
+        return Ok(format!("# Ideas Board: {project}\n\nNo active ideas found.\n"));
+    }
+
+    let mut output = format!("# Ideas Board: {project}\n\nTotal Active: {}\n\n", ideas.len());
+    for idea in &ideas {
+        let tags_str = idea.tags.as_deref().unwrap_or("none");
+        let desc = idea.description.as_deref().unwrap_or("No description.");
+        output.push_str(&format!(
+            "- [ ] **#{}** [{}] {}\n  {}\n  *Category:* {} | *Status:* {} | *Tags:* {}\n\n",
+            idea.id, idea.priority, idea.title, desc, idea.category, idea.status, tags_str
+        ));
+    }
+
+    Ok(output)
+}

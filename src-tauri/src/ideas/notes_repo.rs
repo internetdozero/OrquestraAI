@@ -85,3 +85,34 @@ pub fn mark_note_read(connection: &Connection, id: i64) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Purge handled blackboard notes for a project, optionally filtering by topic.
+pub fn clear_notes(
+    connection: &Connection,
+    project: &str,
+    topic: Option<&str>,
+    include_unread: bool,
+) -> Result<usize, String> {
+    let project = require_text(project, "project")?;
+    let mut clauses = vec!["project = ?1".to_string()];
+    let mut params: Vec<String> = vec![project];
+
+    if let Some(t) = topic {
+        let trimmed = t.trim().to_lowercase();
+        if !trimmed.is_empty() {
+            clauses.push(format!("topic = ?{}", params.len() + 1));
+            params.push(trimmed);
+        }
+    }
+
+    if !include_unread {
+        clauses.push("is_read = 1".to_string());
+    }
+
+    let sql = format!("DELETE FROM blackboard_notes WHERE {}", clauses.join(" AND "));
+    let mut stmt = connection.prepare(&sql).map_err(db_error)?;
+    let count = stmt
+        .execute(params_from_iter(params.iter()))
+        .map_err(db_error)?;
+    Ok(count)
+}
