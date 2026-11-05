@@ -86,10 +86,7 @@ fn install_repository(
     let virtual_env = install_dir.join(".venv");
     let python = python_command();
     run(
-        Command::new(&python)
-            .arg("-m")
-            .arg("venv")
-            .arg(&virtual_env),
+        Command::new(python).arg("-m").arg("venv").arg(&virtual_env),
         "create the MCP's private Python environment",
     )?;
 
