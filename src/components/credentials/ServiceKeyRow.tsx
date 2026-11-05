@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Crown, Loader2, Pencil, PlugZap, RefreshCw, Trash2, X } from "lucide-react";
+import { Check, Copy, Crown, Loader2, Pencil, PlugZap, RefreshCw, Trash2, X } from "lucide-react";
 import type { VaultKeyHealth, VaultTestResult } from "../../lib/vault.ts";
 import { cn } from "../../lib/utils.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
@@ -32,6 +32,7 @@ interface ServiceKeyRowProps {
   onTest: () => Promise<VaultTestResult>;
   onSaveTag: (tag: string | null) => Promise<void>;
   onReplaceKey: (secret: string) => Promise<void>;
+  onCopyKey: () => Promise<void>;
 }
 
 export function ServiceKeyRow({
@@ -47,6 +48,7 @@ export function ServiceKeyRow({
   onTest,
   onSaveTag,
   onReplaceKey,
+  onCopyKey,
 }: ServiceKeyRowProps) {
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<VaultTestResult | null>(null);
@@ -55,10 +57,20 @@ export function ServiceKeyRow({
   const [tagDraft, setTagDraft] = useState(tag ?? "");
   const [replacing, setReplacing] = useState(false);
   const [secretDraft, setSecretDraft] = useState("");
+  const [copying, setCopying] = useState(false);
   const { t } = useI18n();
   const s = t.credentials;
   const cooldown = formatCooldownWith(cooldownUntilMs, s.cooldownMinutes, s.cooldownHours);
   const locked = testing || busy;
+
+  async function copyKey(): Promise<void> {
+    setCopying(true);
+    try {
+      await onCopyKey();
+    } finally {
+      setCopying(false);
+    }
+  }
 
   async function runGuarded(action: () => Promise<void>): Promise<void> {
     setBusy(true);
@@ -195,6 +207,16 @@ export function ServiceKeyRow({
           </span>
         )}
         <StatusDot health={keyHealth} label={s.healthName(keyHealth)} size="sm" />
+        <button
+          type="button"
+          onClick={() => void copyKey()}
+          disabled={locked || copying || replacing}
+          title={s.copyKeyTitle}
+          aria-label={s.copyKey}
+          className="shrink-0 rounded p-1 text-zinc-500 transition hover:bg-white/[0.06] hover:text-emerald-300 disabled:opacity-50"
+        >
+          {copying ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />}
+        </button>
         <button
           type="button"
           onClick={() => {

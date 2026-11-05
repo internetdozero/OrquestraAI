@@ -24,6 +24,20 @@ pub fn list_services(paths: &OrquestraPaths) -> Result<Vec<VaultServicePublic>, 
     Ok(vault.services.values().map(to_public).collect())
 }
 
+/// Reveal one raw credential only after an explicit operator action.
+pub fn reveal_key(paths: &OrquestraPaths, id: &str, index: usize) -> Result<String, String> {
+    let vault = load_vault(paths)?;
+    let service = vault
+        .services
+        .get(id)
+        .ok_or_else(|| format!("unknown vault service: {id}"))?;
+    service
+        .keys
+        .get(index)
+        .map(|key| key.secret.clone())
+        .ok_or_else(|| format!("key index {index} out of range for {id}"))
+}
+
 /// Import a plaintext or locally encrypted vault JSON, merging services by
 /// id. The active vault is only written after the complete import validates.
 pub fn import_services(

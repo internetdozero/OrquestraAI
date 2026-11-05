@@ -21,6 +21,7 @@ interface ServiceDetailModalProps {
   onTest: (index: number) => Promise<VaultTestResult>;
   onSaveTag: (index: number, tag: string | null) => Promise<void>;
   onReplaceKey: (index: number, secret: string) => Promise<void>;
+  onCopyKey: (index: number) => Promise<void>;
   onSaveService: (input: ServiceEditInput) => Promise<void>;
   presets: VaultPreset[];
 }
@@ -39,6 +40,7 @@ export function ServiceDetailModal({
   onTest,
   onSaveTag,
   onReplaceKey,
+  onCopyKey,
   onSaveService,
   presets,
 }: ServiceDetailModalProps) {
@@ -204,6 +206,7 @@ export function ServiceDetailModal({
               onTest={() => onTest(index)}
               onSaveTag={(tag) => onSaveTag(index, tag)}
               onReplaceKey={(secret) => onReplaceKey(index, secret)}
+              onCopyKey={() => onCopyKey(index)}
             />
           ))}
         </div>

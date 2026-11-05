@@ -46,6 +46,13 @@ pub fn vault_import_services(content: String) -> Result<Vec<VaultServicePublic>,
     service::import_services(&paths, &content)
 }
 
+/// Return one raw credential only for explicit copying by the operator.
+#[tauri::command]
+pub fn vault_reveal_key(id: String, index: usize) -> Result<String, String> {
+    let paths = OrquestraPaths::resolve()?;
+    service::reveal_key(&paths, &id, index)
+}
+
 /// Register or replace a service with 1+ keys. Masked placeholders for
 /// existing keys are preserved so the drawer can round-trip safely.
 #[tauri::command]

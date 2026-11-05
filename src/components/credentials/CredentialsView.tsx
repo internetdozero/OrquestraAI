@@ -5,6 +5,7 @@ import {
   presetTypeGroup,
   vaultDeleteService,
   vaultImportServices,
+  vaultRevealKey,
   vaultRemoveKey,
   vaultSaveService,
   vaultSetPrimary,
@@ -15,6 +16,7 @@ import {
   type VaultTestResult,
 } from "../../lib/vault.ts";
 import { useI18n } from "../../hooks/useI18n.ts";
+import { useTimedClipboard } from "../../hooks/useTimedClipboard.ts";
 import { ensureVaultCatalog, readVaultCache, refreshVaultCatalog } from "../../lib/vaultCache.ts";
 import { AddCredentialModal } from "../vault/AddCredentialModal.tsx";
 import {
@@ -57,6 +59,7 @@ export function CredentialsView({
   // so the dashboard stays reviewable outside the desktop app, like McpView.
   const [mockMode] = useState(devMockMode);
   const { t } = useI18n();
+  const { copy: copyToClipboard } = useTimedClipboard();
   const s = t.credentials;
 
   // Silent refresh: a warm mount repaints from cache and only the cold
@@ -256,6 +259,16 @@ export function CredentialsView({
             }),
           s.toastRotated(index, service.label),
         ),
+      onCopyKey: async (index: number) => {
+        try {
+          if (!isTauri) throw new Error(s.needDesktopBody);
+          const secret = await vaultRevealKey(service.id, index);
+          if (!(await copyToClipboard(secret))) throw new Error(s.clipboardWriteFailed);
+          onToast(s.toastKeyCopied);
+        } catch (err) {
+          onError(s.copyKeyFailed(err instanceof Error ? err.message : String(err)));
+        }
+      },
       onSaveService: (input: {
         label: string;
         preset: string;

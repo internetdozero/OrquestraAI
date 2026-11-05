@@ -21,6 +21,7 @@ interface ServiceListRowProps {
   onTest: (index: number) => Promise<VaultTestResult>;
   onSaveTag: (index: number, tag: string | null) => Promise<void>;
   onReplaceKey: (index: number, secret: string) => Promise<void>;
+  onCopyKey: (index: number) => Promise<void>;
   onSaveService: (input: ServiceEditInput) => Promise<void>;
   onToggleEnabled: () => Promise<void>;
 }
@@ -38,6 +39,7 @@ export function ServiceListRow({
   onTest,
   onSaveTag,
   onReplaceKey,
+  onCopyKey,
   onSaveService,
   onToggleEnabled,
 }: ServiceListRowProps) {
@@ -178,6 +180,7 @@ export function ServiceListRow({
         onTest={onTest}
         onSaveTag={onSaveTag}
         onReplaceKey={onReplaceKey}
+        onCopyKey={onCopyKey}
         onSaveService={onSaveService}
       />
     </>

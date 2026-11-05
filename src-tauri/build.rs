@@ -120,6 +120,7 @@ fn main() {
             "list_vault_presets",
             "vault_list_services",
             "vault_import_services",
+            "vault_reveal_key",
             "vault_save_service",
             "vault_delete_service",
             "vault_set_service_enabled",

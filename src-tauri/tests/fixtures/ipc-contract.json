@@ -64,6 +64,7 @@
     "vault_import_services",
     "vault_list_services",
     "vault_purge_migration_backups",
+    "vault_reveal_key",
     "vault_remove_key",
     "vault_save_service",
     "vault_set_primary",
@@ -121,6 +122,7 @@
       "vault_test_connection",
       "vault_remove_key",
       "vault_purge_migration_backups",
+      "vault_reveal_key",
       "reveal_mcp_secret"
     ],
     "vault-blind-ops": ["vault_http_request", "vault_exec"],

@@ -33,9 +33,7 @@ pub mod update_sig;
 mod updater;
 pub mod vault;
 
-// Logging lives in `orquestra-core` so every crate emits the same line format;
-// re-exported here so each `crate::log_warn!` / `log_error!` / `log_info!`
-// call site keeps working unchanged.
+// Shared structured logging macros re-exported from `orquestra-core`.
 pub use orquestra_core::{log_error, log_info, log_warn};
 
 use crate::paths::OrquestraPaths;
@@ -63,7 +61,8 @@ pub use updater::apply_app_update;
 use vault::{
     list_vault_presets, vault_delete_service, vault_exec, vault_http_request,
     vault_import_services, vault_list_services, vault_purge_migration_backups, vault_remove_key,
-    vault_save_service, vault_set_primary, vault_set_service_enabled, vault_test_connection,
+    vault_reveal_key, vault_save_service, vault_set_primary, vault_set_service_enabled,
+    vault_test_connection,
 };
 
 /// Runtime identity of the native core, surfaced in the UI footer so the
@@ -383,6 +382,7 @@ pub fn run() {
             list_vault_presets,
             vault_list_services,
             vault_import_services,
+            vault_reveal_key,
             vault_save_service,
             vault_delete_service,
             vault_set_service_enabled,

@@ -217,6 +217,11 @@ export function vaultImportServices(content: string): Promise<VaultService[]> {
   return invoke<VaultService[]>("vault_import_services", { content });
 }
 
+/** Reveal a stored key only after an explicit request to copy it. */
+export function vaultRevealKey(id: string, index: number): Promise<string> {
+  return invoke<string>("vault_reveal_key", { id, index });
+}
+
 export function vaultSaveService(input: {
   id: string;
   label: string;
