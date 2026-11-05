@@ -11,13 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Freebuff Cloud Sessions Handling & Badging:** Detects Freebuff Desktop sessions processed remotely in Codebuff Cloud (`execution_target = 'cloud'`). Sessions pending local sync display an informative cloud badge (`Nuvem (não sincronizada)` / `Cloud (unsynced)`) and tooltip in the UI, and inspecting their transcript returns clear diagnostic guidance directing the user to open them in Freebuff Desktop to sync messages.
+- **Granular Native CLI Subcommands:** Comprehensive CLI families matching the full desktop and agent capabilities:
+  - `orquestra mcp`: `list`, `status`, `inspect`, `add`, `remove`, `enable`, `disable`, `deploy`, `targets`, `test-connection`, `tools-list`, and dynamic `call-tool` execution with table, wide, and JSON outputs.
+  - `orquestra ideas` & `board`: Granular task lifecycle, status transitions, search, metrics, and blackboard noticeboard operations.
+  - `orquestra sessions`: `list`, `inspect`, `export` (full Markdown/JSON transcripts), `pin`/`unpin`, `purge` (with dry-run estimations), `delete`, `policy`, and live activity `watch`.
+  - `orquestra skills`: `list`, `info`, `enable`, `disable`, `batch` toggles, `summary`, `validate`, `create`, `import` (local folders and git URLs with `#subpath`), `export`, `content`, and safe `delete`.
+  - `orquestra vault`: Granular blind credential operations, multi-key pool management (`add-key`, `remove-key`, `set-primary`), pointer rotation (`rotate`), provider verification (`test`), presets discovery (`presets`), and security auditing (`audit`).
+- **Blind Vault Key Pinning & Selection:** Support selecting specific key numbers or tags when dispatching blind HTTP and exec requests, preserving active default key pointers.
+- **Credentials Vault Import:** Direct import and resealing of vault credentials from JSON files with AES-256-GCM encryption.
+- **Timed Clipboard Clearing:** Automatic timed clipboard clearing (60s) when revealing and copying credential keys in the UI.
+- **RTK Usage Skill & Integration:** Official RTK integration skill recommending token-condensing wrappers for agent CLI interactions, with automatic binary detection in the store.
 - Installer automatically detects package manager and auto-installs missing Linux runtime dependencies (WebKitGTK, GTK3, libsoup, libayatana-appindicator) using sudo/root, with `--no-auto-deps` opt-out.
 - Localized guidance for MCP servers that do not provide a description, directing users to inspect the server's tools and capabilities.
 - Active MCP counts in the Global and harness scope tabs; harness counts include servers inherited from Global.
 - Store installation feedback for skills and MCPs, with immediate loading state and readable clone/install failures.
 
+### Changed
+
+- Reorganized Freebuff Desktop session adapter into a dedicated `query.rs` module adhering to the anti-monolith file size cap.
+
 ### Fixed
 
+- Kept scoped ElevenLabs keys active on 401 response during credential verification.
+- Corrected provider connection checks and latency measurements for blind vault credentials.
 - Freebuff bridge detection now uses its global `~/.agents` root and ignores optional skill or instruction paths whose parent directories are absent.
 - Existing MCPs are adopted from the global Freebuff and Gemini configuration files, including URL-based servers such as Exa and command-based servers such as REA. Activating an official MCP installs it into Orquestra's private environment, and the install work no longer blocks the UI.
 - MCP Store errors now surface the installation failure details instead of leaving a server inactive without explanation.
