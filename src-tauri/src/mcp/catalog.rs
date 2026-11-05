@@ -18,8 +18,11 @@ use crate::harness::{self, GLOBAL_SCOPE};
 use crate::official::is_official_mcp;
 use crate::paths::OrquestraPaths;
 
+mod gemini_import;
 mod mutate;
+mod seed;
 pub use mutate::{delete_mcp, save_mcp};
+use seed::SeedEntry;
 
 /// Optional one-time dataset used to seed the catalog on first launch.
 ///
@@ -50,38 +53,18 @@ pub(super) struct Catalog {
     /// in here.
     #[serde(default)]
     pub(super) managed_ids: BTreeSet<String>,
+    /// Whether existing Gemini CLI MCPs have been adopted into the catalog.
+    #[serde(default)]
+    pub(super) gemini_configs_imported: bool,
 }
-
-/// Shape of one entry in the audited machine dataset.
-#[derive(Debug, Deserialize)]
-pub(super) struct SeedEntry {
-    #[serde(default)]
-    id: String,
-    name: String,
-    #[serde(default)]
-    description: String,
-    command: String,
-    #[serde(default)]
-    args: Vec<String>,
-    #[serde(default)]
-    env: HashMap<String, String>,
-    #[serde(default)]
-    url: Option<String>,
-    #[serde(default)]
-    headers: HashMap<String, String>,
-    #[serde(default)]
-    enabled: bool,
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 /// Every server in the master catalog, seed included on first launch. The
 /// official flag is stamped here so catalogs written before the tier
 /// existed still report correctly.
 pub fn list_mcps() -> Result<Vec<McpServer>, String> {
     let paths = OrquestraPaths::resolve()?;
+    let home = crate::bridge::home_dir()?;
+    gemini_import::adopt_existing(&paths, &home, &seed_catalog_path(&paths.root))?;
     let catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     Ok(catalog
         .mcps

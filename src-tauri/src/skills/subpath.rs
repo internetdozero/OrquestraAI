@@ -125,15 +125,63 @@ pub(crate) fn locate_skill_dir(staging: &Path, subpath: Option<&str>) -> Option<
 /// Shallow-clone `url` into `destination` (which must not exist yet).
 /// The caller strips any `#subpath` fragment first.
 pub(crate) fn clone_shallow(url: &str, destination: &Path) -> Result<(), String> {
-    let output = std::process::Command::new("git")
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    const TIMEOUT: Duration = Duration::from_secs(120);
+    let stderr_path = destination
+        .parent()
+        .unwrap_or(destination)
+        .join("git-clone.stderr");
+    let stderr_file = std::fs::File::create(&stderr_path)
+        .map_err(|error| format!("failed to capture git clone output: {error}"))?;
+    let mut child = Command::new("git")
+        .args([
+            "-c",
+            "http.lowSpeedLimit=1000",
+            "-c",
+            "http.lowSpeedTime=30",
+        ])
         .args(["clone", "--depth", "1", url])
         .arg(destination)
-        .output()
-        .map_err(|error| format!("git is not available: {error}"))?;
-    if output.status.success() {
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::from(stderr_file))
+        .spawn()
+        .map_err(|error| {
+            let _ = std::fs::remove_file(&stderr_path);
+            format!("git is not available: {error}")
+        })?;
+
+    let started = Instant::now();
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Some(status),
+            Ok(None) if started.elapsed() < TIMEOUT => {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = std::fs::remove_file(&stderr_path);
+                return Err("git clone timed out after 120 seconds".to_string());
+            }
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = std::fs::remove_file(&stderr_path);
+                return Err(format!("failed while waiting for git clone: {error}"));
+            }
+        }
+    };
+    let detail = std::fs::read_to_string(&stderr_path)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    let _ = std::fs::remove_file(&stderr_path);
+    if status.is_some_and(|status| status.success()) {
         return Ok(());
     }
-    let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
     Err(if detail.is_empty() {
         format!("git clone failed for {url:?}")
     } else {

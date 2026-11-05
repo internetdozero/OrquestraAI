@@ -163,7 +163,6 @@ export function McpView({
     scope,
     toggle,
     save,
-    reload: load,
     onToast,
   });
 

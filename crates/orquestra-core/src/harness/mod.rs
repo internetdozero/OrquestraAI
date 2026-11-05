@@ -69,6 +69,8 @@ pub enum McpFormat {
 pub struct McpSpec {
     /// Config path relative to `$HOME`.
     pub rel: &'static str,
+    /// Additional native config files read by this harness family.
+    pub additional_rel: Option<&'static str>,
     pub format: McpFormat,
     /// Extra per-entry key some harnesses require (`type = "stdio"`).
     pub entry_type: Option<&'static str>,

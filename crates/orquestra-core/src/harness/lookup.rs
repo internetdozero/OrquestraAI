@@ -76,7 +76,18 @@ pub fn is_installed_with(
     home: &Path,
     lookup: &dyn Fn(&str) -> Option<String>,
 ) -> bool {
-    resolve_install_dir_with(spec, home, lookup).exists()
+    let override_path = spec
+        .env_override
+        .and_then(lookup)
+        .filter(|value| !value.trim().is_empty());
+    if let Some(path) = override_path {
+        return PathBuf::from(path).exists();
+    }
+    home.join(spec.install_rel).exists()
+        || spec
+            .mcp
+            .and_then(|mcp| mcp.additional_rel)
+            .is_some_and(|rel| home.join(rel).exists())
 }
 
 /// True when the harness has an MCP adapter, so a scope can be targeted.

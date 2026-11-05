@@ -157,7 +157,7 @@ export function useMcpMutations({
       await saveMcp(server);
       onSaved();
       onToast(t.mcps.savedDeployed(server.name));
-      await load();
+      await load(true);
       return true;
     } catch (cause) {
       setFormError(toMessage(cause, t.common.unexpected));

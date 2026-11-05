@@ -23,6 +23,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".gemini/config/mcp_config.json",
+            additional_rel: Some(".gemini/settings.json"),
             format: McpFormat::JsonMcpServers,
             entry_type: None,
         }),
@@ -50,6 +51,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".codex/config.toml",
+            additional_rel: None,
             format: McpFormat::CodexToml,
             entry_type: None,
         }),
@@ -83,6 +85,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".claude.json",
+            additional_rel: None,
             format: McpFormat::JsonMcpServers,
             entry_type: None,
         }),
@@ -116,6 +119,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".agents/mcp.json",
+            additional_rel: None,
             format: McpFormat::JsonMcpServers,
             entry_type: None,
         }),
@@ -132,6 +136,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: Some(".config/opencode/opencode.jsonc"),
         mcp: Some(McpSpec {
             rel: ".config/opencode/opencode.jsonc",
+            additional_rel: None,
             format: McpFormat::JsoncMcpBlock,
             entry_type: None,
         }),
@@ -148,6 +153,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: Some(".config/kilo/kilo.jsonc"),
         mcp: Some(McpSpec {
             rel: ".config/kilo/kilo.jsonc",
+            additional_rel: None,
             format: McpFormat::JsoncMcpBlock,
             entry_type: None,
         }),
@@ -164,6 +170,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".copilot/mcp-config.json",
+            additional_rel: None,
             format: McpFormat::JsonMcpServers,
             entry_type: Some("stdio"),
         }),
@@ -196,6 +203,7 @@ pub const HARNESSES: &[HarnessSpec] = &[
         config_rel: None,
         mcp: Some(McpSpec {
             rel: ".grok/config.toml",
+            additional_rel: None,
             format: McpFormat::CodexToml,
             entry_type: None,
         }),

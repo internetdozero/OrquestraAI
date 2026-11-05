@@ -30,7 +30,11 @@ pub fn list_targets() -> Result<Vec<McpTargetStatus>, String> {
             Ok(McpTargetStatus {
                 id: spec.id.to_string(),
                 label: spec.label.to_string(),
-                config_path: home.join(mcp.rel).to_string_lossy().into_owned(),
+                config_path: std::iter::once(mcp.rel)
+                    .chain(mcp.additional_rel)
+                    .map(|rel| home.join(rel).to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+                    .join("; "),
                 installed: harness::is_installed(spec, &home),
             })
         })
@@ -95,92 +99,95 @@ pub(super) fn deploy_at(
             continue;
         };
 
-        let path = home.join(mcp.rel);
-        // `read_to_string` follows, including a real file reached through a
-        // directory symlink. Either case would merge the outside config and
-        // write it back through the link.
-        if ancestor_is_symlink(home, &path)
-            || fs::symlink_metadata(&path)
-                .ok()
-                .is_some_and(|meta| meta.file_type().is_symlink())
-        {
-            continue;
-        }
-        let existing = match fs::read_to_string(&path) {
-            Ok(content) => content,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => String::new(),
-            Err(error) => {
-                failed.push(format!("{}: {error}", spec.label));
+        for rel in std::iter::once(mcp.rel).chain(mcp.additional_rel) {
+            let path = home.join(rel);
+            // `read_to_string` follows, including a real file reached through a
+            // directory symlink. Either case would merge the outside config and
+            // write it back through the link.
+            if ancestor_is_symlink(home, &path)
+                || fs::symlink_metadata(&path)
+                    .ok()
+                    .is_some_and(|meta| meta.file_type().is_symlink())
+            {
                 continue;
             }
-        };
-
-        let active: Vec<McpServer> = catalog
-            .mcps
-            .values()
-            .filter(|server| server.covers(spec.id))
-            .map(|server| server.resolved(&dotenv))
-            .collect();
-        let stale: BTreeSet<String> = catalog
-            .managed_ids
-            .iter()
-            .filter(|id| !active.iter().any(|server| &server.id == *id))
-            .cloned()
-            .collect();
-
-        // Nothing wanted and nothing of ours to clean up: leave the file be.
-        if active.is_empty() && stale.is_empty() {
-            continue;
-        }
-
-        let servers: Vec<HarnessServer> = active.iter().map(McpServer::to_harness_server).collect();
-        let rendered =
-            harness::render_mcp_config(mcp.format, &existing, &servers, &stale, mcp.entry_type);
-
-        let rendered = match rendered {
-            Ok(rendered) => rendered,
-            Err(error) => {
-                failed.push(format!("{}: {error}", spec.label));
-                continue;
-            }
-        };
-
-        // Already in sync: no write, no backup, no timestamp churn.
-        if rendered.trim() == existing.trim() {
-            continue;
-        }
-
-        let secret = active.iter().any(|server| {
-            !server.env.is_empty() || !server.headers.is_empty() || server.url.is_some()
-        });
-
-        let result = if existing.trim().is_empty() {
-            Ok(())
-        } else {
-            // One backup folder per deploy run, for every file it touches.
-            if backup_dir.is_none() {
-                backup_dir = Some(backup_run_dir(paths)?);
-            }
-
-            backup_config(
-                &path,
-                backup_dir.as_deref().unwrap_or(paths.root.as_path()),
-                spec.id,
-                mcp.rel,
-                &existing,
-            )
-        }
-        .and_then(|()| write_config(&path, &rendered, secret));
-
-        match result {
-            Ok(tightened) => {
-                let mut label = path.to_string_lossy().into_owned();
-                if tightened {
-                    label.push_str(" (mode tightened to 0600)");
+            let existing = match fs::read_to_string(&path) {
+                Ok(content) => content,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => String::new(),
+                Err(error) => {
+                    failed.push(format!("{}: {error}", spec.label));
+                    continue;
                 }
-                changed.push(label);
+            };
+
+            let active: Vec<McpServer> = catalog
+                .mcps
+                .values()
+                .filter(|server| server.covers(spec.id))
+                .map(|server| server.resolved(&dotenv))
+                .collect();
+            let stale: BTreeSet<String> = catalog
+                .managed_ids
+                .iter()
+                .filter(|id| !active.iter().any(|server| &server.id == *id))
+                .cloned()
+                .collect();
+
+            // Nothing wanted and nothing of ours to clean up: leave the file be.
+            if active.is_empty() && stale.is_empty() {
+                continue;
             }
-            Err(error) => failed.push(format!("{}: {error}", spec.label)),
+
+            let servers: Vec<HarnessServer> =
+                active.iter().map(McpServer::to_harness_server).collect();
+            let rendered =
+                harness::render_mcp_config(mcp.format, &existing, &servers, &stale, mcp.entry_type);
+
+            let rendered = match rendered {
+                Ok(rendered) => rendered,
+                Err(error) => {
+                    failed.push(format!("{}: {error}", spec.label));
+                    continue;
+                }
+            };
+
+            // Already in sync: no write, no backup, no timestamp churn.
+            if rendered.trim() == existing.trim() {
+                continue;
+            }
+
+            let secret = active.iter().any(|server| {
+                !server.env.is_empty() || !server.headers.is_empty() || server.url.is_some()
+            });
+
+            let result = if existing.trim().is_empty() {
+                Ok(())
+            } else {
+                // One backup folder per deploy run, for every file it touches.
+                if backup_dir.is_none() {
+                    backup_dir = Some(backup_run_dir(paths)?);
+                }
+
+                backup_config(
+                    &path,
+                    backup_dir.as_deref().unwrap_or(paths.root.as_path()),
+                    spec.id,
+                    rel,
+                    &existing,
+                )
+            }
+            .and_then(|()| write_config(&path, &rendered, secret));
+
+            match result {
+                Ok(tightened) => {
+                    let mut label = path.to_string_lossy().into_owned();
+                    if tightened {
+                        label.push_str(" (mode tightened to 0600)");
+                    }
+                    changed.push(label);
+                }
+                Err(error) => failed.push(format!("{}: {error}", spec.label)),
+            }
         }
     }
 

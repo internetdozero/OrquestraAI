@@ -6,6 +6,7 @@
 mod at_rest;
 pub mod bridge;
 mod cli;
+mod commands;
 mod community;
 mod desktop;
 mod desktop_backup;
@@ -39,6 +40,7 @@ pub use orquestra_core::{log_error, log_info, log_warn};
 
 use crate::paths::OrquestraPaths;
 use bridge::{BridgeReport, HarnessStatus};
+use commands::import_skill_from_git;
 use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
 use ideas::{
     create_idea, delete_idea, get_productivity_metrics, list_blackboard_notes, list_idea_projects,
@@ -141,12 +143,6 @@ fn delete_skill(id: String) -> Result<(), String> {
 #[tauri::command]
 fn import_skill(source_path: String) -> Result<SkillItem, String> {
     skills::import_skill(source_path)
-}
-
-/// Shallow-clone a git URL and import the skill it holds.
-#[tauri::command]
-fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
-    skills::import_skill_from_git(url)
 }
 
 /// Open a native OS folder picker; `None` means the user cancelled.
