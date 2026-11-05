@@ -183,8 +183,13 @@ fn list_official_store() -> OfficialStore {
 
 /// Install the recommended third-party RTK binary after checksum verification.
 #[tauri::command]
-fn install_rtk() -> Result<String, String> {
-    rtk_install::install()
+async fn install_rtk() -> Result<String, String> {
+    commands::run_blocking(rtk_install::install).await
+}
+
+#[tauri::command]
+async fn rtk_status() -> Result<Option<String>, String> {
+    commands::run_blocking(|| Ok(rtk_install::status())).await
 }
 
 /// Reveal one stored MCP environment/header value after an explicit UI action.
@@ -354,6 +359,7 @@ pub fn run() {
             list_mcps,
             list_official_store,
             install_rtk,
+            rtk_status,
             reveal_mcp_secret,
             mcp_targets,
             set_mcp_state,

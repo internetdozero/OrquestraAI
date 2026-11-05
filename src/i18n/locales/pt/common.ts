@@ -156,11 +156,14 @@ export const store = {
     `${count} script${count === 1 ? "" : "s"} executável${count === 1 ? "" : "es"} — revise antes de instalar`,
   communitySubtitle: "Curadoria da comunidade com auditoria de scripts e projeção em um clique.",
   rtkName: "RTK",
-  rtkDescription: "CLI que reduz o consumo de tokens ao resumir saídas comuns de comandos de desenvolvimento.",
+  rtkDescription:
+    "CLI que reduz o consumo de tokens ao resumir saídas comuns de comandos de desenvolvimento.",
   recommendedUnofficial: "Recomendado • Não oficial",
   installRtk: "Instalar RTK",
   installingRtk: "Instalando RTK…",
   rtkInstallStarted: "Baixando e verificando o RTK…",
+  rtkInstalled: (version: string) => `RTK instalado: ${version}`,
+  rtkChecking: "Verificando…",
 };
 
 export const tokens = {

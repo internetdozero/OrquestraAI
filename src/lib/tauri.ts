@@ -145,6 +145,11 @@ export function installRtk(): Promise<string> {
   return invoke<string>("install_rtk");
 }
 
+/** Installed RTK version and executable path, or null when absent. */
+export function rtkStatus(): Promise<string | null> {
+  return invoke<string | null>("rtk_status");
+}
+
 /** Result of pulling upstream into installed official skills & MCPs. */
 export interface ExtensionSyncResult {
   updatedSkills: string[];

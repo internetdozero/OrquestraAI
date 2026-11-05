@@ -3,7 +3,7 @@
 Wire protocol between the React shell (`src/`) and the Rust core (`src-tauri/src/`),
 spoken through Tauri `invoke("<command>", args)`.
 
-- **67 commands**, all registered in one `tauri::generate_handler![…]` list in
+- **68 commands**, all registered in one `tauri::generate_handler![…]` list in
   `src-tauri/src/lib.rs`. The frozen list lives in
   `src-tauri/tests/fixtures/ipc-contract.json` (`commands`); `cargo test`
   fails if a command is added, renamed or removed without updating the fixture.
@@ -64,6 +64,7 @@ truth; enabling a skill symlinks it into each harness projection folder.
 | `import_skill`           | `source_path: string`                                  | `SkillItem`                                  | Copies an external skill folder into the vault. Reads via the folder picker or a pasted path.                      |
 | `import_skill_from_git`  | `url: string`                                          | `SkillItem`                                  | Shallow-clones a git URL and imports the skill it holds.                                                           |
 | `install_rtk`           | —                                                       | `string`                                     | Downloads the RTK release for the current platform, verifies its SHA-256 checksum, and installs it in `~/.local/bin`. |
+| `rtk_status`            | —                                                       | `string \| null`                            | Finds an executable RTK on `PATH` or in `~/.local/bin` and returns its version and path. |
 | `harness_summary`        | —                                                      | `HarnessSummary[]` (`{ id, active, total }`) | Active-skill counters for Global and every harness tab. Pure.                                                      |
 | `read_master_agents_md`  | —                                                      | `string`                                     | Reads `~/.orquestra/AGENTS.md`, creating a template on first use.                                                  |
 | `write_master_agents_md` | `content: string`                                      | `null`                                       | Atomically replaces the master `AGENTS.md`.                                                                        |

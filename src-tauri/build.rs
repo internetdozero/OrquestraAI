@@ -85,6 +85,7 @@ fn main() {
             "list_mcps",
             "list_official_store",
             "install_rtk",
+            "rtk_status",
             "reveal_mcp_secret",
             "mcp_targets",
             "set_mcp_state",

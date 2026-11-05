@@ -158,6 +158,8 @@ export const store: TranslationSchema["store"] = {
   installRtk: "Install RTK",
   installingRtk: "Installing RTK…",
   rtkInstallStarted: "Downloading and verifying RTK…",
+  rtkInstalled: (version: string) => `RTK installed: ${version}`,
+  rtkChecking: "Checking…",
 };
 
 export const tokens: TranslationSchema["tokens"] = {

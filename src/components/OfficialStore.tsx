@@ -6,7 +6,7 @@ import { useI18n } from "../hooks/useI18n";
 import { StoreCard } from "./StoreCard";
 import { StoreFilters, type StoreTierFilter } from "./StoreFilters";
 import { Download, ExternalLink } from "lucide-react";
-import { installRtk, openExternalUrl } from "../lib/tauri";
+import { installRtk, openExternalUrl, rtkStatus } from "../lib/tauri";
 
 export type StoreStatus = "active" | "idle" | "missing";
 export type StoreActionKind = "install" | "enable" | "add";
@@ -41,7 +41,13 @@ function toMessage(cause: unknown, fallback: string): string {
  * Row spinners live here; the parent refreshes catalog data inside each
  * action so `statusOf` re-evaluates on the next render.
  */
-export function OfficialStore({ kind, statusOf, actionFor, projectScope, onToast }: OfficialStoreProps) {
+export function OfficialStore({
+  kind,
+  statusOf,
+  actionFor,
+  projectScope,
+  onToast,
+}: OfficialStoreProps) {
   const { t } = useI18n();
   const s = t.store;
   // A warm cache paints immediately; the store unmounts on every tab toggle,
@@ -57,7 +63,22 @@ export function OfficialStore({ kind, statusOf, actionFor, projectScope, onToast
   const [tier, setTier] = useState<StoreTierFilter>("all");
   const [category, setCategory] = useState<string>("All");
   const [rtkBusy, setRtkBusy] = useState(false);
+  const [rtkInstalled, setRtkInstalled] = useState<string | null | undefined>(undefined);
   const [rtkMessage, setRtkMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    rtkStatus()
+      .then((status) => {
+        if (!cancelled) setRtkInstalled(status);
+      })
+      .catch(() => {
+        if (!cancelled) setRtkInstalled(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,26 +187,76 @@ export function OfficialStore({ kind, statusOf, actionFor, projectScope, onToast
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-[12px] font-medium text-zinc-100">
               <span>{s.rtkName}</span>
-              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-px text-[10px] text-sky-300">{s.recommendedUnofficial}</span>
+              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-px text-[10px] text-sky-300">
+                {s.recommendedUnofficial}
+              </span>
             </div>
             <p className="mt-0.5 text-[11px] text-zinc-400">{s.rtkDescription}</p>
-            <button type="button" onClick={() => void openExternalUrl("https://github.com/rtk-ai/rtk")} className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300">
+            <button
+              type="button"
+              onClick={() => void openExternalUrl("https://github.com/rtk-ai/rtk")}
+              className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300"
+            >
               <ExternalLink className="size-2.5" /> {s.viewRepo}
             </button>
-            {rtkMessage && <p role="status" className="mt-1 text-[10px] text-emerald-300">{rtkMessage}</p>}
+            {rtkBusy ? (
+              <div role="status" className="mt-2 flex items-center gap-2 text-[11px] text-sky-200">
+                <Loader2 className="size-3 animate-spin" />
+                <span>{s.rtkInstallStarted}</span>
+                <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <span className="block h-full w-1/3 animate-pulse rounded-full bg-sky-400" />
+                </span>
+              </div>
+            ) : rtkInstalled ? (
+              <p role="status" className="mt-1 text-[10px] text-emerald-300">
+                {s.rtkInstalled(rtkInstalled)}
+              </p>
+            ) : rtkMessage ? (
+              <p role="status" className="mt-1 text-[10px] text-emerald-300">
+                {rtkMessage}
+              </p>
+            ) : null}
           </div>
-          <button type="button" disabled={rtkBusy || busyId !== null} onClick={async () => {
-            setRtkBusy(true);
-            setRtkMessage(s.rtkInstallStarted);
-            onToast?.(s.rtkInstallStarted);
-            setActionError(null);
-            try { setRtkMessage(await installRtk()); onToast?.(s.rtkName + " instalado."); }
-            catch (cause: unknown) { setRtkMessage(null); setActionError(s.actionFailed(toMessage(cause, t.common.unexpected))); }
-            finally { setRtkBusy(false); }
-          }} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-medium text-sky-200 transition disabled:cursor-wait disabled:opacity-60">
-            {rtkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-            {rtkBusy ? s.installingRtk : s.installRtk}
-          </button>
+          {rtkInstalled ? (
+            <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-200">
+              <ShieldCheck className="size-3.5" /> {s.installed}
+            </span>
+          ) : (
+            <button
+              type="button"
+              disabled={rtkBusy || rtkInstalled === undefined || busyId !== null}
+              onClick={async () => {
+                setRtkBusy(true);
+                setRtkMessage(s.rtkInstallStarted);
+                onToast?.(s.rtkInstallStarted);
+                setActionError(null);
+                try {
+                  const result = await installRtk();
+                  const status = await rtkStatus();
+                  setRtkInstalled(status ?? result);
+                  setRtkMessage(result);
+                  onToast?.(s.rtkName + " instalado.");
+                } catch (cause: unknown) {
+                  setRtkMessage(null);
+                  setActionError(s.actionFailed(toMessage(cause, t.common.unexpected)));
+                } finally {
+                  setRtkBusy(false);
+                }
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-medium text-sky-200 transition disabled:cursor-wait disabled:opacity-60"
+            >
+              {rtkBusy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Download className="size-3.5" />
+              )}
+              {rtkBusy
+                ? s.installingRtk
+                : rtkInstalled === undefined
+                  ? s.rtkChecking
+                  : s.installRtk}
+            </button>
+          )}
         </section>
       )}
 

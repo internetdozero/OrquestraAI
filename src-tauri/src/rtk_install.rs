@@ -1,9 +1,46 @@
 use flate2::read::GzDecoder;
 use sha2::Digest;
-use std::{fs, io::Read};
+use std::{fs, io::Read, process::Command};
 
 const REPO: &str = "https://github.com/rtk-ai/rtk";
 const MAX_DOWNLOAD: usize = 64 * 1024 * 1024;
+
+pub fn status() -> Option<String> {
+    let candidates = std::env::var_os("PATH")
+        .into_iter()
+        .flat_map(|paths| std::env::split_paths(&paths).collect::<Vec<_>>())
+        .map(|dir| dir.join(binary_name()))
+        .chain(
+            crate::paths::require_home("locate RTK")
+                .ok()
+                .map(|home| home.join(".local/bin").join(binary_name())),
+        );
+
+    for path in candidates {
+        if !path.is_file() {
+            continue;
+        }
+        if let Ok(output) = Command::new(&path).arg("--version").output() {
+            if output.status.success() {
+                let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                return Some(if version.is_empty() {
+                    path.display().to_string()
+                } else {
+                    format!("{version} — {}", path.display())
+                });
+            }
+        }
+    }
+    None
+}
+
+fn binary_name() -> &'static str {
+    if cfg!(windows) {
+        "rtk.exe"
+    } else {
+        "rtk"
+    }
+}
 
 pub fn install() -> Result<String, String> {
     let target = target_triple()?;
@@ -78,7 +115,7 @@ pub fn install() -> Result<String, String> {
     let dir = home.join(".local/bin");
     fs::create_dir_all(&dir)
         .map_err(|e| format!("Não foi possível criar {}: {e}", dir.display()))?;
-    let path = dir.join("rtk");
+    let path = dir.join(binary_name());
     let temp = dir.join(format!(
         ".rtk-install-{}",
         crate::paths::unique_tmp_suffix()

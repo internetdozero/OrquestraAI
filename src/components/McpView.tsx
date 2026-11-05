@@ -298,7 +298,12 @@ export function McpView({
           ))}
 
         {showStore && (
-          <OfficialStore kind="mcp" statusOf={storeStatusOf} actionFor={storeActionFor} onToast={onToast} />
+          <OfficialStore
+            kind="mcp"
+            statusOf={storeStatusOf}
+            actionFor={storeActionFor}
+            onToast={onToast}
+          />
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[10.5px] text-zinc-600">

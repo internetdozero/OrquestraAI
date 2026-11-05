@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-rtk-status"
+description = "Enables the rtk_status command without any pre-configured scope."
+commands.allow = ["rtk_status"]
+
+[[permission]]
+identifier = "deny-rtk-status"
+description = "Denies the rtk_status command without any pre-configured scope."
+commands.deny = ["rtk_status"]

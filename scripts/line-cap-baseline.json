@@ -3,6 +3,6 @@
   "crates/orquestra-vault/src/vault/proxy.rs": 422,
   "crates/orquestra-vault/src/vault/store.rs": 562,
   "crates/orquestra-vault/src/vault/tests.rs": 1339,
-  "src-tauri/src/lib.rs": 408,
+  "src-tauri/src/lib.rs": 414,
   "src-tauri/src/updater.rs": 524
 }
