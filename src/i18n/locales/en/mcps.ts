@@ -51,7 +51,8 @@ export const mcps: TranslationSchema["mcps"] = {
   notInstalledMark: "(not installed)",
   inactive: "Inactive",
   onElsewhere: "on elsewhere",
-  noDescription: "No description",
+  noDescription:
+    "This server does not provide a description. Check its available tools in the harness for instructions and capabilities.",
   inspect: "Command, args & env",
   deleteConfirm: (name: string) => `Delete “${name}” from every harness config?`,
   deleteAria: (name: string) => `Delete ${name}`,

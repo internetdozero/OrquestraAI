@@ -256,9 +256,11 @@ export function McpDetailDrawer({ server, scopeLabel, onClose, onEdit }: McpDeta
             </div>
           </section>
 
-          {server.description && (
-            <p className="text-[12px] leading-relaxed text-zinc-400">{server.description}</p>
-          )}
+          <p className="text-[12px] leading-relaxed text-zinc-400">
+            {server.description || (
+              <span className="text-zinc-500 italic">{t.mcps.noDescription}</span>
+            )}
+          </p>
         </div>
 
         <footer className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3">

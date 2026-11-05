@@ -55,7 +55,8 @@ export const mcps = {
   notInstalledMark: "(não instalado)",
   inactive: "Inativo",
   onElsewhere: "ativo em outro lugar",
-  noDescription: "Sem descrição",
+  noDescription:
+    "Este servidor não fornece uma descrição. Consulte as ferramentas disponíveis no harness para ver suas instruções e capacidades.",
   inspect: "Comando, argumentos e ambiente",
   deleteConfirm: (name: string) => `Excluir “${name}” de todos os arquivos de configuração?`,
   deleteAria: (name: string) => `Excluir ${name}`,
