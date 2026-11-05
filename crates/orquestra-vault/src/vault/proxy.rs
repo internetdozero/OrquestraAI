@@ -11,8 +11,8 @@ use super::atomic::update_vault;
 use super::http;
 use super::presets;
 use super::store::{
-    first_key_index_in, health_for_status, load_vault, next_key_index_in, normalize_tag,
-    record_result_in, service_health, StatusOutcome,
+    first_key_index_in, load_vault, next_key_index_in, normalize_tag, record_result_for_preset_in,
+    service_health, StatusOutcome,
 };
 
 /// Methods that are safe to replay after a transport failure: repeating them
@@ -184,7 +184,14 @@ pub async fn request(
                         .or((used < live.keys.len()).then_some(used));
                     if let Some(index) = resolved {
                         used = index;
-                        record_result_in(live, index, status, &scrubbed, tag.as_deref());
+                        record_result_for_preset_in(
+                            live,
+                            index,
+                            status,
+                            &scrubbed,
+                            tag.as_deref(),
+                            &current.preset,
+                        );
                         Ok(live.active)
                     } else {
                         Ok(used)
@@ -196,7 +203,7 @@ pub async fn request(
                 // failover stays active for every method: the server rejected
                 // the request before acting on it, so no replay hazard.
                 if matches!(
-                    health_for_status(status, &scrubbed),
+                    super::store::health_for_preset(&current.preset, status, &scrubbed),
                     StatusOutcome::Fault(_)
                 ) && new_active != used
                 {
@@ -260,6 +267,7 @@ pub async fn request(
 #[serde(rename_all = "camelCase")]
 pub struct VaultTestResult {
     pub success: bool,
+    pub inconclusive: bool,
     pub latency_ms: u64,
     pub message: String,
     pub health: String,
@@ -347,16 +355,26 @@ pub async fn test_connection(
                     .position(|key| key.secret == secret)
                     .or((used < stored.keys.len()).then_some(used));
                 if let Some(index) = resolved {
-                    record_result_in(stored, index, status, &scrubbed, None);
+                    record_result_for_preset_in(
+                        stored,
+                        index,
+                        status,
+                        &scrubbed,
+                        None,
+                        &live.preset,
+                    );
                 }
                 Ok(service_health(stored))
             })?;
             let hint: String = scrubbed.chars().take(160).collect();
             Ok(VaultTestResult {
                 success: ok,
+                inconclusive: live.preset == "elevenlabs" && status == 401,
                 latency_ms,
                 message: if ok {
                     format!("HTTP {status} in {latency_ms}ms")
+                } else if live.preset == "elevenlabs" && status == 401 {
+                    "HTTP 401: verification endpoint denied access.".to_string()
                 } else {
                     format!("HTTP {status} in {latency_ms}ms: {hint}")
                 },
@@ -365,6 +383,7 @@ pub async fn test_connection(
         }
         Err(error) => Ok(VaultTestResult {
             success: false,
+            inconclusive: false,
             latency_ms,
             message: error.message,
             health: service_health(&live),

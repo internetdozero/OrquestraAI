@@ -83,7 +83,13 @@ export function ServiceDetailModal({
     setTestingPrimary(true);
     try {
       const result = await onTest(service.activeKeyIndex);
-      setTestNote(result.success ? `✓ ${result.message}` : `✗ ${result.message}`);
+      setTestNote(
+        result.inconclusive
+          ? `⚠ ${s.testPermissionInconclusive} ${result.message}`
+          : result.success
+            ? `✓ ${result.message}`
+            : `✗ ${result.message}`,
+      );
     } catch (err) {
       setTestNote(`✗ ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -95,15 +101,17 @@ export function ServiceDetailModal({
     setTestingAll(true);
     try {
       let ok = 0;
+      let inconclusive = 0;
       for (let index = 0; index < service.totalKeys; index += 1) {
         try {
           const result = await onTest(index);
           if (result.success) ok += 1;
+          else if (result.inconclusive) inconclusive += 1;
         } catch {
           // Counted as a failure below; keep probing the rest.
         }
       }
-      setTestNote(s.testAllSummary(ok, service.totalKeys));
+      setTestNote(s.testAllSummary(ok, service.totalKeys, inconclusive));
     } finally {
       setTestingAll(false);
     }

@@ -446,6 +446,17 @@ pub fn health_for_status(status: u16, body: &str) -> StatusOutcome {
     }
 }
 
+/// ElevenLabs can reject a key that authenticates but lacks access to the
+/// models listing endpoint. Treat that probe as inconclusive and leave the
+/// key usable; callers can still use the key for endpoints it is scoped for.
+pub fn health_for_preset(preset: &str, status: u16, body: &str) -> StatusOutcome {
+    if preset == "elevenlabs" && status == 401 {
+        StatusOutcome::Neutral
+    } else {
+        health_for_status(status, body)
+    }
+}
+
 /// Record one request outcome: cooldown the failing key, fail over.
 /// Untagged shorthand over [`record_result_in`]; only unit tests call this
 /// directly now (production paths are tag-scoped). Kept — not deleted — so
@@ -465,8 +476,19 @@ pub(super) fn record_result_in(
     body: &str,
     tag: Option<&str>,
 ) {
+    record_result_for_preset_in(service, used, status, body, tag, "")
+}
+
+pub(super) fn record_result_for_preset_in(
+    service: &mut VaultService,
+    used: usize,
+    status: u16,
+    body: &str,
+    tag: Option<&str>,
+    preset: &str,
+) {
     // Healthy and neutral outcomes need no work after their match arms.
-    match health_for_status(status, body) {
+    match health_for_preset(preset, status, body) {
         StatusOutcome::Healthy => {
             if let Some(key) = service.keys.get_mut(used) {
                 key.health = KeyHealth::Healthy;
@@ -474,7 +496,18 @@ pub(super) fn record_result_in(
                 key.cooldown_until_ms = 0;
             }
         }
-        StatusOutcome::Neutral => (),
+        StatusOutcome::Neutral => {
+            // A previous generic 401 classification may already have marked
+            // this key invalid. For ElevenLabs, the models probe cannot prove
+            // that: clear that false negative without rotating the key.
+            if preset == "elevenlabs" && status == 401 {
+                if let Some(key) = service.keys.get_mut(used) {
+                    key.health = KeyHealth::Healthy;
+                    key.failures = 0;
+                    key.cooldown_until_ms = 0;
+                }
+            }
+        }
         StatusOutcome::Fault(fault) => {
             let now = now_ms();
             // Only the serving key is ever touched: healthy reserves are

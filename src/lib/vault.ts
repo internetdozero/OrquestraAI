@@ -272,6 +272,8 @@ export function vaultSetServiceEnabled(id: string, enabled: boolean): Promise<Va
 /** Result of a live `vault_test_connection` ping. */
 export interface VaultTestResult {
   success: boolean;
+  /** The probe was denied, but does not prove the credential itself is invalid. */
+  inconclusive: boolean;
   latencyMs: number;
   message: string;
   health: string;

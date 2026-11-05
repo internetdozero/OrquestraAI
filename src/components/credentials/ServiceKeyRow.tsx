@@ -116,6 +116,7 @@ export function ServiceKeyRow({
     } catch (err) {
       setResult({
         success: false,
+        inconclusive: false,
         latencyMs: 0,
         message: err instanceof Error ? err.message : String(err),
         health: keyHealth,

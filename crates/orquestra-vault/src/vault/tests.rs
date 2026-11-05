@@ -402,6 +402,31 @@ fn invalid_key_cooldown_and_recovery() {
 }
 
 #[test]
+fn elevenlabs_401_does_not_mark_a_permission_scoped_key_invalid() {
+    use super::store::{health_for_preset, record_result_for_preset_in, StatusOutcome};
+
+    assert_eq!(
+        health_for_preset("elevenlabs", 401, "unauthorized"),
+        StatusOutcome::Neutral
+    );
+    assert_eq!(
+        health_for_preset("openai", 401, "unauthorized"),
+        StatusOutcome::Fault(KeyHealth::InvalidKey)
+    );
+
+    let mut service = test_service("elevenlabs", &["xi-valid-limited"]);
+    service.keys[0].health = KeyHealth::InvalidKey;
+    service.keys[0].cooldown_until_ms = u64::MAX;
+    service.keys[0].failures = 2;
+    record_result_for_preset_in(&mut service, 0, 401, "unauthorized", None, "elevenlabs");
+
+    assert_eq!(service.keys[0].health, KeyHealth::Healthy);
+    assert_eq!(service.keys[0].cooldown_until_ms, 0);
+    assert_eq!(service.keys[0].failures, 0);
+    assert_eq!(service.active, 0);
+}
+
+#[test]
 fn preset_links_mirrors_and_meta_fields() {
     use super::presets::{build_headers, get_preset};
     assert_eq!(super::presets::list_presets().len(), 30);

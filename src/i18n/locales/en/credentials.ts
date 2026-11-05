@@ -48,7 +48,10 @@ export const credentials: TranslationSchema["credentials"] = {
   testPrimaryTitle: "Ping the verify endpoint with the primary key",
   testAll: "Test all",
   testAllTitle: "Ping the verify endpoint with every key in this pool",
-  testAllSummary: (ok: number, total: number) => `✓ ${ok}/${total} keys healthy`,
+  testAllSummary: (ok: number, total: number, inconclusive: number) =>
+    `✓ ${ok}/${total} keys healthy${inconclusive ? ` · ⚠ ${inconclusive} inconclusive (permissions)` : ""}`,
+  testPermissionInconclusive:
+    "The key may be valid but lack permission to list models. Check its scopes:",
   delete: "Delete",
   deleteTitle: "Delete service",
   confirmShort: "Confirm?",

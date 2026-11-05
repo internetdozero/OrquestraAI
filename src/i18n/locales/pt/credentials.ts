@@ -47,7 +47,10 @@ export const credentials = {
   testPrimaryTitle: "Testa o endpoint de verificação com a chave primária",
   testAll: "Testar todas",
   testAllTitle: "Testa o endpoint de verificação com cada chave do pool",
-  testAllSummary: (ok: number, total: number) => `✓ ${ok}/${total} chaves saudáveis`,
+  testAllSummary: (ok: number, total: number, inconclusive: number) =>
+    `✓ ${ok}/${total} chaves saudáveis${inconclusive ? ` · ⚠ ${inconclusive} inconclusiva${inconclusive === 1 ? "" : "s"} (permissões)` : ""}`,
+  testPermissionInconclusive:
+    "A chave pode ser válida, mas não ter permissão para listar modelos. Confira os escopos:",
   delete: "Excluir",
   deleteTitle: "Excluir serviço",
   confirmShort: "Confirmar?",
