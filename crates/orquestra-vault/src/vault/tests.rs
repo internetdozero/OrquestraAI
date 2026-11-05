@@ -427,6 +427,29 @@ fn elevenlabs_401_does_not_mark_a_permission_scoped_key_invalid() {
 }
 
 #[test]
+fn explicit_key_number_is_one_based_and_does_not_rotate_the_default() {
+    use super::store::{record_result_for_preset_in_with_rotation, resolve_key_number};
+
+    assert_eq!(resolve_key_number(Some(5), 5, 0).unwrap(), 4);
+    assert_eq!(resolve_key_number(None, 5, 2).unwrap(), 2);
+    assert!(resolve_key_number(Some(0), 5, 0).is_err());
+    assert!(resolve_key_number(Some(6), 5, 0).is_err());
+
+    let mut service = test_service("openai", &["sk-primary", "sk-reserve"]);
+    record_result_for_preset_in_with_rotation(
+        &mut service,
+        1,
+        401,
+        "unauthorized",
+        None,
+        "openai",
+        false,
+    );
+    assert_eq!(service.keys[1].health, KeyHealth::InvalidKey);
+    assert_eq!(service.active, 0);
+}
+
+#[test]
 fn preset_links_mirrors_and_meta_fields() {
     use super::presets::{build_headers, get_preset};
     assert_eq!(super::presets::list_presets().len(), 30);

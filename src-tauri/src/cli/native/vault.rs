@@ -97,6 +97,7 @@ fn http(args: &[String]) -> Result<String, CliError> {
             "--headers",
             "--body",
             "--key-tag",
+            "--key-number",
         ],
         &["--json"],
     )?;
@@ -112,10 +113,15 @@ fn http(args: &[String]) -> Result<String, CliError> {
         .transpose()?;
     let body = options.one("--body")?;
     let key_tag = options.one("--key-tag")?;
-    let result = tauri::async_runtime::block_on(orquestra_vault::vault::proxy::request(
-        service, endpoint, method, headers, body, key_tag,
-    ))
-    .map_err(CliError::Operation)?;
+    let key_number = options
+        .one("--key-number")?
+        .map(|value| parse_key_number(&value))
+        .transpose()?;
+    let result =
+        tauri::async_runtime::block_on(orquestra_vault::vault::proxy::request_with_key_number(
+            service, endpoint, method, headers, body, key_tag, key_number,
+        ))
+        .map_err(CliError::Operation)?;
     let pretty = serde_json::to_string_pretty(&result)
         .map_err(|error| CliError::Operation(format!("JSON serialization failed: {error}")))?;
     rendered(&result, options.has("--json"), pretty)
@@ -123,8 +129,7 @@ fn http(args: &[String]) -> Result<String, CliError> {
 
 /// Blind exec: `argv[0]` must be an allowlisted bare binary, no shell.
 fn exec(args: &[String]) -> Result<String, CliError> {
-    // `vault exec <service> [--] <argv…>`; `--` is accepted and skipped so
-    // generated callsites can separate flags from the child command.
+    // `vault exec <service> [--key-number N] [--] <argv…>`.
     let mut parts: Vec<&str> = args.iter().map(String::as_str).collect();
     let Some(service) = parts.first().copied() else {
         return Err(usage(
@@ -132,21 +137,46 @@ fn exec(args: &[String]) -> Result<String, CliError> {
         ));
     };
     parts.remove(0);
+    let key_number = if parts.first() == Some(&"--key-number") {
+        if parts.len() < 2 {
+            return Err(usage("--key-number requires a number".to_string()));
+        }
+        let value = parts[1];
+        parts.drain(..2);
+        Some(parse_key_number(value)?)
+    } else {
+        None
+    };
     if parts.first() == Some(&"--") {
         parts.remove(0);
     }
     if service.starts_with('-') || parts.is_empty() {
         return Err(usage(
-            "usage: orquestra vault exec <service> [--] <argv…>".to_string(),
+            "usage: orquestra vault exec <service> [--key-number N] [--] <argv…>".to_string(),
         ));
     }
     let command =
         serde_json::to_value(&parts).map_err(|error| CliError::Operation(error.to_string()))?;
-    let result = orquestra_vault::vault::service::execute(&paths()?, service, &command)
-        .map_err(CliError::Operation)?;
+    let result = orquestra_vault::vault::service::execute_with_key_number(
+        &paths()?,
+        service,
+        &command,
+        key_number,
+    )
+    .map_err(CliError::Operation)?;
     let pretty = serde_json::to_string_pretty(&result)
         .map_err(|error| CliError::Operation(format!("JSON serialization failed: {error}")))?;
     rendered(&result, true, pretty)
+}
+
+fn parse_key_number(value: &str) -> Result<usize, CliError> {
+    let number = value
+        .parse::<usize>()
+        .map_err(|_| usage("--key-number must be a positive integer".to_string()))?;
+    if number == 0 {
+        return Err(usage("--key-number must be at least 1".to_string()));
+    }
+    Ok(number)
 }
 
 #[cfg(test)]
@@ -160,6 +190,13 @@ mod tests {
             run(&["bogus".to_string()]),
             Err(CliError::Usage(_))
         ));
+    }
+
+    #[test]
+    fn key_number_is_one_based_and_positive() {
+        assert_eq!(parse_key_number("5").unwrap(), 5);
+        assert!(matches!(parse_key_number("0"), Err(CliError::Usage(_))));
+        assert!(matches!(parse_key_number("abc"), Err(CliError::Usage(_))));
     }
 
     #[test]

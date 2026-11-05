@@ -152,6 +152,12 @@ export const store: TranslationSchema["store"] = {
   scriptsWarning: (count: number) =>
     `${count} executable script${count === 1 ? "" : "s"} — review before installing`,
   communitySubtitle: "Community curation with script audit and one-click projection.",
+  rtkName: "RTK",
+  rtkDescription: "A CLI that reduces token use by summarizing common development command output.",
+  recommendedUnofficial: "Recommended • Unofficial",
+  installRtk: "Install RTK",
+  installingRtk: "Installing RTK…",
+  rtkInstallStarted: "Downloading and verifying RTK…",
 };
 
 export const tokens: TranslationSchema["tokens"] = {

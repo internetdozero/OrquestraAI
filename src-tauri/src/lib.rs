@@ -25,6 +25,7 @@ mod official;
 mod official_mcps;
 pub mod paths;
 pub mod presets;
+mod rtk_install;
 pub mod sessions;
 pub mod single_instance;
 mod skills;
@@ -178,6 +179,12 @@ async fn list_mcps() -> Result<Vec<McpServer>, String> {
 #[tauri::command]
 fn list_official_store() -> OfficialStore {
     official::official_store()
+}
+
+/// Install the recommended third-party RTK binary after checksum verification.
+#[tauri::command]
+fn install_rtk() -> Result<String, String> {
+    rtk_install::install()
 }
 
 /// Reveal one stored MCP environment/header value after an explicit UI action.
@@ -346,6 +353,7 @@ pub fn run() {
             deploy_harness_bridge,
             list_mcps,
             list_official_store,
+            install_rtk,
             reveal_mcp_secret,
             mcp_targets,
             set_mcp_state,

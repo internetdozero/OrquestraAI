@@ -13,6 +13,7 @@ permissions = [
   "allow-delete-skill",
   "allow-import-skill",
   "allow-import-skill-from-git",
+  "allow-install-rtk",
   "allow-write-master-agents-md",
   "allow-deploy-harness-bridge",
   "allow-set-mcp-state",

@@ -12,7 +12,7 @@ use super::http;
 use super::presets;
 use super::store::{
     first_key_index_in, load_vault, next_key_index_in, normalize_tag, record_result_for_preset_in,
-    service_health, StatusOutcome,
+    record_result_for_preset_in_with_rotation, resolve_key_number, service_health, StatusOutcome,
 };
 
 /// Methods that are safe to replay after a transport failure: repeating them
@@ -67,12 +67,29 @@ pub async fn request(
     body: Option<String>,
     key_tag: Option<String>,
 ) -> Result<VaultHttpResult, String> {
+    request_with_key_number(service, endpoint, method, headers, body, key_tag, None).await
+}
+
+/// Same blind request, optionally pinned to a one-based vault key number.
+/// Explicit selection never fails over or changes the service's active key.
+pub async fn request_with_key_number(
+    service: String,
+    endpoint: String,
+    method: Option<String>,
+    headers: Option<HashMap<String, String>>,
+    body: Option<String>,
+    key_tag: Option<String>,
+    key_number: Option<usize>,
+) -> Result<VaultHttpResult, String> {
     if endpoint.trim().is_empty() {
         return Err("vault http needs an endpoint URL".to_string());
     }
     let verb = method.unwrap_or_else(|| "GET".to_string());
     let extra = headers.unwrap_or_default();
     let tag = key_tag.as_deref().and_then(normalize_tag);
+    if tag.is_some() && key_number.is_some() {
+        return Err("choose either key_number or key_tag, not both".to_string());
+    }
     let paths = orquestra_core::paths::OrquestraPaths::resolve()?;
     // Short-lived snapshot for validation only — never held across `.await`.
     // Every mutation below reloads fresh under the vault lock, so a
@@ -116,20 +133,25 @@ pub async fn request(
             ));
         }
     }
-    let scoped_len = match tag.as_deref() {
-        None => snapshot.keys.len(),
-        Some(wanted) => snapshot
-            .keys
-            .iter()
-            .filter(|key| {
-                key.tag
-                    .as_deref()
-                    .map(|raw| raw.trim().to_lowercase())
-                    .as_deref()
-                    == Some(wanted)
-            })
-            .count()
-            .max(1),
+    let selected = resolve_key_number(key_number, snapshot.keys.len(), snapshot.active)?;
+    let scoped_len = if key_number.is_some() {
+        1
+    } else {
+        match tag.as_deref() {
+            None => snapshot.keys.len(),
+            Some(wanted) => snapshot
+                .keys
+                .iter()
+                .filter(|key| {
+                    key.tag
+                        .as_deref()
+                        .map(|raw| raw.trim().to_lowercase())
+                        .as_deref()
+                        == Some(wanted)
+                })
+                .count()
+                .max(1),
+        }
     };
     let attempts = scoped_len.max(1);
     let now_ms = || {
@@ -138,9 +160,12 @@ pub async fn request(
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0)
     };
-    let start = snapshot.active.min(snapshot.keys.len().saturating_sub(1));
-    let mut used =
-        first_key_index_in(&snapshot.keys, start, now_ms(), tag.as_deref()).unwrap_or(start);
+    let start = selected;
+    let mut used = if key_number.is_some() {
+        selected
+    } else {
+        first_key_index_in(&snapshot.keys, start, now_ms(), tag.as_deref()).unwrap_or(start)
+    };
     let mut first_used = used;
     let mut last_error = String::new();
     for _ in 0..attempts {
@@ -184,13 +209,14 @@ pub async fn request(
                         .or((used < live.keys.len()).then_some(used));
                     if let Some(index) = resolved {
                         used = index;
-                        record_result_for_preset_in(
+                        record_result_for_preset_in_with_rotation(
                             live,
                             index,
                             status,
                             &scrubbed,
                             tag.as_deref(),
                             &current.preset,
+                            key_number.is_none(),
                         );
                         Ok(live.active)
                     } else {
@@ -202,10 +228,12 @@ pub async fn request(
                 // disk read is needed to observe our own write. Status-based
                 // failover stays active for every method: the server rejected
                 // the request before acting on it, so no replay hazard.
-                if matches!(
-                    super::store::health_for_preset(&current.preset, status, &scrubbed),
-                    StatusOutcome::Fault(_)
-                ) && new_active != used
+                if key_number.is_none()
+                    && matches!(
+                        super::store::health_for_preset(&current.preset, status, &scrubbed),
+                        StatusOutcome::Fault(_)
+                    )
+                    && new_active != used
                 {
                     used = new_active;
                     first_used = first_used.min(used);
@@ -226,7 +254,9 @@ pub async fn request(
                 // idempotency key. Anything else returns the error with no
                 // key rotation and no health change — replaying a `POST` or
                 // `PATCH` after a read timeout could double-charge.
-                if !should_retry_transport(&verb, &extra, error.safe_to_retry) {
+                if key_number.is_some()
+                    || !should_retry_transport(&verb, &extra, error.safe_to_retry)
+                {
                     return Err(error.message);
                 }
                 last_error = error.message;

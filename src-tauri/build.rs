@@ -84,6 +84,7 @@ fn main() {
             "deploy_harness_bridge",
             "list_mcps",
             "list_official_store",
+            "install_rtk",
             "reveal_mcp_secret",
             "mcp_targets",
             "set_mcp_state",

@@ -343,6 +343,7 @@ export function SkillsView({
           statusOf={storeStatusOf}
           actionFor={storeActionFor}
           projectScope={scope}
+          onToast={onToast}
         />
       )}
 

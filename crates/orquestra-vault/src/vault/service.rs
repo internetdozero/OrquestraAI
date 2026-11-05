@@ -12,8 +12,9 @@ use serde::Serialize;
 use super::atomic::update_vault;
 use super::exec;
 use super::store::{
-    load_vault, mask_key, purge_migration_backup as purge_store_backup, resolve_saved_tag,
-    to_public, validate_id, KeyHealth, VaultFile, VaultKey, VaultService, VaultServicePublic,
+    load_vault, mask_key, purge_migration_backup as purge_store_backup, resolve_key_number,
+    resolve_saved_tag, to_public, validate_id, KeyHealth, VaultFile, VaultKey, VaultService,
+    VaultServicePublic,
 };
 
 const MAX_IMPORT_BYTES: usize = 16 * 1024 * 1024;
@@ -287,6 +288,16 @@ pub fn execute(
     service: &str,
     command: &serde_json::Value,
 ) -> Result<VaultExecResult, String> {
+    execute_with_key_number(paths, service, command, None)
+}
+
+/// Execute a blind command with the active key or one explicitly selected key.
+pub fn execute_with_key_number(
+    paths: &OrquestraPaths,
+    service: &str,
+    command: &serde_json::Value,
+    key_number: Option<usize>,
+) -> Result<VaultExecResult, String> {
     let vault = load_vault(paths)?;
     let current = vault
         .services
@@ -298,7 +309,7 @@ pub fn execute(
     if !current.enabled {
         return Err(format!("vault service {service} is disabled"));
     }
-    let used = current.active.min(current.keys.len().saturating_sub(1));
+    let used = resolve_key_number(key_number, current.keys.len(), current.active)?;
     let secret = current
         .keys
         .get(used)

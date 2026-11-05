@@ -5,6 +5,8 @@ import { ensureStoreCatalog, readStoreCache } from "../lib/storeCache";
 import { useI18n } from "../hooks/useI18n";
 import { StoreCard } from "./StoreCard";
 import { StoreFilters, type StoreTierFilter } from "./StoreFilters";
+import { Download, ExternalLink } from "lucide-react";
+import { installRtk, openExternalUrl } from "../lib/tauri";
 
 export type StoreStatus = "active" | "idle" | "missing";
 export type StoreActionKind = "install" | "enable" | "add";
@@ -23,6 +25,7 @@ interface OfficialStoreProps {
   actionFor: (entry: StoreEntry, status: StoreStatus) => StoreRowAction | null;
   /** Current scope label for the install-and-project hint. */
   projectScope?: string;
+  onToast?: (message: string) => void;
 }
 
 function toMessage(cause: unknown, fallback: string): string {
@@ -38,7 +41,7 @@ function toMessage(cause: unknown, fallback: string): string {
  * Row spinners live here; the parent refreshes catalog data inside each
  * action so `statusOf` re-evaluates on the next render.
  */
-export function OfficialStore({ kind, statusOf, actionFor, projectScope }: OfficialStoreProps) {
+export function OfficialStore({ kind, statusOf, actionFor, projectScope, onToast }: OfficialStoreProps) {
   const { t } = useI18n();
   const s = t.store;
   // A warm cache paints immediately; the store unmounts on every tab toggle,
@@ -53,6 +56,8 @@ export function OfficialStore({ kind, statusOf, actionFor, projectScope }: Offic
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tier, setTier] = useState<StoreTierFilter>("all");
   const [category, setCategory] = useState<string>("All");
+  const [rtkBusy, setRtkBusy] = useState(false);
+  const [rtkMessage, setRtkMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +159,34 @@ export function OfficialStore({ kind, statusOf, actionFor, projectScope }: Offic
             <X className="size-3.5" />
           </button>
         </div>
+      )}
+
+      {kind === "skill" && (
+        <section className="mx-4 my-3 flex items-center gap-3 rounded-lg border border-sky-500/20 bg-sky-500/[0.04] p-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 text-[12px] font-medium text-zinc-100">
+              <span>{s.rtkName}</span>
+              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-px text-[10px] text-sky-300">{s.recommendedUnofficial}</span>
+            </div>
+            <p className="mt-0.5 text-[11px] text-zinc-400">{s.rtkDescription}</p>
+            <button type="button" onClick={() => void openExternalUrl("https://github.com/rtk-ai/rtk")} className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300">
+              <ExternalLink className="size-2.5" /> {s.viewRepo}
+            </button>
+            {rtkMessage && <p role="status" className="mt-1 text-[10px] text-emerald-300">{rtkMessage}</p>}
+          </div>
+          <button type="button" disabled={rtkBusy || busyId !== null} onClick={async () => {
+            setRtkBusy(true);
+            setRtkMessage(s.rtkInstallStarted);
+            onToast?.(s.rtkInstallStarted);
+            setActionError(null);
+            try { setRtkMessage(await installRtk()); onToast?.(s.rtkName + " instalado."); }
+            catch (cause: unknown) { setRtkMessage(null); setActionError(s.actionFailed(toMessage(cause, t.common.unexpected))); }
+            finally { setRtkBusy(false); }
+          }} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-medium text-sky-200 transition disabled:cursor-wait disabled:opacity-60">
+            {rtkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+            {rtkBusy ? s.installingRtk : s.installRtk}
+          </button>
+        </section>
       )}
 
       <ol className="divide-y divide-white/[0.04]">

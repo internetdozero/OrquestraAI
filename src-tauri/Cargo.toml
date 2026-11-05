@@ -58,6 +58,8 @@ minisign-verify = "0.3.0"
 # updater (prerelease ordering: `alpha.5 < alpha.10`).
 semver = "1"
 sha2 = "0.10.9"
+flate2 = "1"
+tar = "0.4"
 
 [dev-dependencies]
 # Integration tests simulate a live peer by holding the lockfile `flock`.

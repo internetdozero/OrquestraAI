@@ -140,6 +140,11 @@ export function listOfficialStore(): Promise<OfficialStore> {
   return invoke<OfficialStore>("list_official_store");
 }
 
+/** Download, verify and install the recommended RTK CLI. */
+export function installRtk(): Promise<string> {
+  return invoke<string>("install_rtk");
+}
+
 /** Result of pulling upstream into installed official skills & MCPs. */
 export interface ExtensionSyncResult {
   updatedSkills: string[];

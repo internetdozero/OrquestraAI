@@ -3,7 +3,7 @@
 Wire protocol between the React shell (`src/`) and the Rust core (`src-tauri/src/`),
 spoken through Tauri `invoke("<command>", args)`.
 
-- **66 commands**, all registered in one `tauri::generate_handler![…]` list in
+- **67 commands**, all registered in one `tauri::generate_handler![…]` list in
   `src-tauri/src/lib.rs`. The frozen list lives in
   `src-tauri/tests/fixtures/ipc-contract.json` (`commands`); `cargo test`
   fails if a command is added, renamed or removed without updating the fixture.
@@ -34,7 +34,7 @@ by `src-tauri/capabilities/*.json`. Destructive commands must never move into
 | `vault-blind-ops` | secret-_using_ calls, withheld from every window until a confirmed UI caller exists | `vault_http_request`, `vault_exec`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `update-ops`      | self-update, restart                                                                | `apply_app_update`, `sync_official_extensions`, `restart_app`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `session-ops`     | pins, retention, purge                                                              | `purge_sessions`, `save_retention_policy`, `toggle_pin_session`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `admin-ops`       | everything that writes projections, catalogs, ideas, notes                          | `sweep_system_caches`, `set_skill_state`, `batch_set_all`, `save_skill_content`, `delete_skill`, `import_skill`, `import_skill_from_git`, `write_master_agents_md`, `deploy_harness_bridge`, `set_mcp_state`, `batch_set_mcp_all`, `save_mcp`, `delete_mcp`, `deploy_mcps`, `apply_preset`, `save_preset`, `delete_preset`, `update_preset`, `reset_preset`, `create_idea`, `update_idea`, `update_idea_status`, `delete_idea`, `post_blackboard_note`, `mark_note_read`                                                                                            |
+| `admin-ops`       | everything that writes projections, catalogs, ideas, notes, or installs tools       | `sweep_system_caches`, `set_skill_state`, `batch_set_all`, `save_skill_content`, `delete_skill`, `import_skill`, `import_skill_from_git`, `install_rtk`, `write_master_agents_md`, `deploy_harness_bridge`, `set_mcp_state`, `batch_set_mcp_all`, `save_mcp`, `delete_mcp`, `deploy_mcps`, `apply_preset`, `save_preset`, `delete_preset`, `update_preset`, `reset_preset`, `create_idea`, `update_idea`, `update_idea_status`, `delete_idea`, `post_blackboard_note`, `mark_note_read`                                                                                            |
 
 ## Core & shell
 
@@ -63,6 +63,7 @@ truth; enabling a skill symlinks it into each harness projection folder.
 | `delete_skill`           | `id: string`                                           | `null`                                       | Unlinks the skill from every scope and removes its vault folder.                                                   |
 | `import_skill`           | `source_path: string`                                  | `SkillItem`                                  | Copies an external skill folder into the vault. Reads via the folder picker or a pasted path.                      |
 | `import_skill_from_git`  | `url: string`                                          | `SkillItem`                                  | Shallow-clones a git URL and imports the skill it holds.                                                           |
+| `install_rtk`           | —                                                       | `string`                                     | Downloads the RTK release for the current platform, verifies its SHA-256 checksum, and installs it in `~/.local/bin`. |
 | `harness_summary`        | —                                                      | `HarnessSummary[]` (`{ id, active, total }`) | Active-skill counters for Global and every harness tab. Pure.                                                      |
 | `read_master_agents_md`  | —                                                      | `string`                                     | Reads `~/.orquestra/AGENTS.md`, creating a template on first use.                                                  |
 | `write_master_agents_md` | `content: string`                                      | `null`                                       | Atomically replaces the master `AGENTS.md`.                                                                        |
@@ -268,6 +269,10 @@ Failure (unknown service) rejects the promise with a plain string:
 ```
 "unknown vault service: openai"
 ```
+
+`vault_import_services` imports supported provider definitions from a backup
+file. `vault_reveal_key` reveals one explicitly selected key after a user
+action in the credential UI; it is not used by the blind MCP tools.
 
 ### `vault_exec` (blind, allowlisted binary)
 

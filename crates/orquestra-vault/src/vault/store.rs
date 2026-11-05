@@ -457,6 +457,23 @@ pub fn health_for_preset(preset: &str, status: u16, body: &str) -> StatusOutcome
     }
 }
 
+/// Resolve the public one-based key number, defaulting to the active key.
+pub(super) fn resolve_key_number(
+    key_number: Option<usize>,
+    key_count: usize,
+    active: usize,
+) -> Result<usize, String> {
+    let Some(number) = key_number else {
+        return Ok(active.min(key_count.saturating_sub(1)));
+    };
+    if number == 0 || number > key_count {
+        return Err(format!(
+            "key number {number} is out of range (choose 1 through {key_count})"
+        ));
+    }
+    Ok(number - 1)
+}
+
 /// Record one request outcome: cooldown the failing key, fail over.
 /// Untagged shorthand over [`record_result_in`]; only unit tests call this
 /// directly now (production paths are tag-scoped). Kept — not deleted — so
@@ -486,6 +503,18 @@ pub(super) fn record_result_for_preset_in(
     body: &str,
     tag: Option<&str>,
     preset: &str,
+) {
+    record_result_for_preset_in_with_rotation(service, used, status, body, tag, preset, true);
+}
+
+pub(super) fn record_result_for_preset_in_with_rotation(
+    service: &mut VaultService,
+    used: usize,
+    status: u16,
+    body: &str,
+    tag: Option<&str>,
+    preset: &str,
+    allow_rotation: bool,
 ) {
     // Healthy and neutral outcomes need no work after their match arms.
     match health_for_preset(preset, status, body) {
@@ -522,8 +551,10 @@ pub(super) fn record_result_for_preset_in(
                 };
                 key.cooldown_until_ms = now.saturating_add(window.saturating_mul(1000));
             }
-            if let Some(next) = next_key_index_in(&service.keys, used, now, tag) {
-                service.active = next;
+            if allow_rotation {
+                if let Some(next) = next_key_index_in(&service.keys, used, now, tag) {
+                    service.active = next;
+                }
             }
             service.updated_at_ms = now;
         }
