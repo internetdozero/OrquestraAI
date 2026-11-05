@@ -33,6 +33,14 @@ fn community_skill(
 pub(crate) fn community_skills() -> Vec<OfficialSkillEntry> {
     vec![
         community_skill(
+            "rtk",
+            "Optimize shell-command output with the RTK CLI, choosing supported wrappers and using raw output when full detail is needed.",
+            "AI & Agents",
+            Some("https://github.com/nano-step/skill-manager.git#skills/rtk"),
+            &["rtk", "cli", "token-saving"],
+            false,
+        ),
+        community_skill(
             "docker-helper",
             "Community Docker helper: container, compose and image workflows with safe cleanup commands.",
             "Infra",
@@ -84,6 +92,13 @@ mod tests {
     fn community_hub_has_tags_and_tiers() {
         let picks = community_skills();
         assert!(picks.len() >= 4, "community picks must be present");
+        let rtk = picks.iter().find(|skill| skill.id == "rtk");
+        assert!(rtk.is_some_and(|skill| {
+            !skill.official
+                && skill.tier == "community"
+                && skill.repo_url.as_deref()
+                    == Some("https://github.com/nano-step/skill-manager.git#skills/rtk")
+        }));
         assert!(picks.iter().any(|skill| skill.has_scripts));
         assert!(picks.iter().any(|skill| skill.repo_url.is_none()));
         for skill in &picks {

@@ -164,6 +164,11 @@ export const store = {
   rtkInstallStarted: "Baixando e verificando o RTK…",
   rtkInstalled: (version: string) => `RTK instalado: ${version}`,
   rtkChecking: "Verificando…",
+  installRtkSkill: "Instalar skill RTK",
+  installingRtkSkill: "Instalando skill RTK…",
+  rtkSkillInstallStarted: "Baixando e ativando a skill RTK…",
+  rtkSkillInstalled: "Skill RTK instalada e ativada no escopo selecionado.",
+  rtkSkillUnavailable: "A skill RTK não está disponível no catálogo da Store.",
 };
 
 export const tokens = {

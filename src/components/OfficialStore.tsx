@@ -63,6 +63,7 @@ export function OfficialStore({
   const [tier, setTier] = useState<StoreTierFilter>("all");
   const [category, setCategory] = useState<string>("All");
   const [rtkBusy, setRtkBusy] = useState(false);
+  const [rtkStep, setRtkStep] = useState<"binary" | "skill">("binary");
   const [rtkInstalled, setRtkInstalled] = useState<string | null | undefined>(undefined);
   const [rtkMessage, setRtkMessage] = useState<string | null>(null);
 
@@ -113,6 +114,13 @@ export function OfficialStore({
       return true;
     });
   }, [entries, kind, tier, category]);
+
+  const rtkSkillEntry =
+    kind === "skill"
+      ? (entries?.find((entry) => entry.id === "rtk" && !("command" in entry)) as
+          OfficialSkillEntry | undefined)
+      : undefined;
+  const rtkSkillStatus = rtkSkillEntry ? statusOf(rtkSkillEntry) : null;
 
   if (loadError) {
     return (
@@ -202,7 +210,7 @@ export function OfficialStore({
             {rtkBusy ? (
               <div role="status" className="mt-2 flex items-center gap-2 text-[11px] text-sky-200">
                 <Loader2 className="size-3 animate-spin" />
-                <span>{s.rtkInstallStarted}</span>
+                <span>{rtkStep === "skill" ? s.rtkSkillInstallStarted : s.rtkInstallStarted}</span>
                 <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
                   <span className="block h-full w-1/3 animate-pulse rounded-full bg-sky-400" />
                 </span>
@@ -217,7 +225,7 @@ export function OfficialStore({
               </p>
             ) : null}
           </div>
-          {rtkInstalled ? (
+          {rtkInstalled && rtkSkillStatus !== "missing" ? (
             <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-200">
               <ShieldCheck className="size-3.5" /> {s.installed}
             </span>
@@ -226,18 +234,31 @@ export function OfficialStore({
               type="button"
               disabled={rtkBusy || rtkInstalled === undefined || busyId !== null}
               onClick={async () => {
+                const installBinary = !rtkInstalled;
                 setRtkBusy(true);
-                setRtkMessage(s.rtkInstallStarted);
-                onToast?.(s.rtkInstallStarted);
+                setRtkStep(installBinary ? "binary" : "skill");
+                setRtkMessage(installBinary ? s.rtkInstallStarted : s.rtkSkillInstallStarted);
+                onToast?.(installBinary ? s.rtkInstallStarted : s.rtkSkillInstallStarted);
                 setActionError(null);
                 try {
-                  const result = await installRtk();
-                  const status = await rtkStatus();
-                  setRtkInstalled(status ?? result);
-                  setRtkMessage(result);
-                  onToast?.(s.rtkName + " instalado.");
+                  if (!rtkInstalled) {
+                    const result = await installRtk();
+                    const status = await rtkStatus();
+                    setRtkInstalled(status ?? result);
+                    setRtkMessage(result);
+                  }
+                  if (rtkSkillEntry && rtkSkillStatus === "missing") {
+                    setRtkStep("skill");
+                    setRtkMessage(s.rtkSkillInstallStarted);
+                    const skillAction = actionFor(rtkSkillEntry, "missing");
+                    if (!skillAction) throw new Error(s.rtkSkillUnavailable);
+                    await skillAction.run();
+                    onToast?.(s.rtkSkillInstalled);
+                  } else {
+                    onToast?.(s.rtkName + " instalado.");
+                  }
                 } catch (cause: unknown) {
-                  setRtkMessage(null);
+                  if (!rtkInstalled) setRtkMessage(null);
                   setActionError(s.actionFailed(toMessage(cause, t.common.unexpected)));
                 } finally {
                   setRtkBusy(false);
@@ -251,10 +272,14 @@ export function OfficialStore({
                 <Download className="size-3.5" />
               )}
               {rtkBusy
-                ? s.installingRtk
+                ? rtkStep === "skill"
+                  ? s.installingRtkSkill
+                  : s.installingRtk
                 : rtkInstalled === undefined
                   ? s.rtkChecking
-                  : s.installRtk}
+                  : rtkInstalled && rtkSkillStatus === "missing"
+                    ? s.installRtkSkill
+                    : s.installRtk}
             </button>
           )}
         </section>

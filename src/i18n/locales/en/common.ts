@@ -160,6 +160,11 @@ export const store: TranslationSchema["store"] = {
   rtkInstallStarted: "Downloading and verifying RTK…",
   rtkInstalled: (version: string) => `RTK installed: ${version}`,
   rtkChecking: "Checking…",
+  installRtkSkill: "Install RTK skill",
+  installingRtkSkill: "Installing RTK skill…",
+  rtkSkillInstallStarted: "Downloading and enabling the RTK skill…",
+  rtkSkillInstalled: "RTK skill installed and enabled in the selected scope.",
+  rtkSkillUnavailable: "The RTK skill is not available in the Store catalog.",
 };
 
 export const tokens: TranslationSchema["tokens"] = {
