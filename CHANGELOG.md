@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Installer automatically detects package manager and auto-installs missing Linux runtime dependencies (WebKitGTK, GTK3, libsoup, libayatana-appindicator) using sudo/root, with `--no-auto-deps` opt-out.
+
 ## [0.1.0-alpha.6] - 2026-11-04
 
 ### Added

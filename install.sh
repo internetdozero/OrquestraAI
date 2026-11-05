@@ -25,20 +25,66 @@ ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
 # 0. CLI Flags
 ALLOW_UNSIGNED_LEGACY=0
 CHECK_DEPS_ONLY=0
+AUTO_INSTALL_DEPS=1
 for arg in "$@"; do
     case "$arg" in
         --require-sig) ALLOW_UNSIGNED_LEGACY=0 ;;
         --allow-unsigned-legacy) ALLOW_UNSIGNED_LEGACY=1 ;;
         --check-deps) CHECK_DEPS_ONLY=1 ;;
+        --no-auto-deps) AUTO_INSTALL_DEPS=0 ;;
         -h|--help)
-            echo "Usage: install.sh [--require-sig | --allow-unsigned-legacy | --check-deps]"
+            echo "Usage: install.sh [--require-sig | --allow-unsigned-legacy | --check-deps | --no-auto-deps]"
             echo "  --require-sig             Require a verifiable release signature (default)"
             echo "  --allow-unsigned-legacy   Allow checksum-only verification for old unsigned releases"
             echo "  --check-deps              Check runtime libraries of the installed Linux binary without reinstalling"
+            echo "  --no-auto-deps            Do not auto-install missing system dependencies"
             exit 0 ;;
-        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig, --allow-unsigned-legacy, --check-deps)." >&2; exit 1 ;;
+        *) echo "❌ Error: unknown option '$arg' (supported: --require-sig, --allow-unsigned-legacy, --check-deps, --no-auto-deps)." >&2; exit 1 ;;
     esac
 done
+
+try_install_linux_deps() {
+    missing_libs=$1; pkgs=""; mgr=""; cmd=""
+    if command -v pacman >/dev/null 2>&1; then
+        mgr="pacman"; cmd="pacman -S --needed --noconfirm"
+        p_wk="webkit2gtk-4.1"; p_gtk="gtk3"; p_soup="libsoup3"; p_app="libayatana-appindicator"; p_rsvg="librsvg"
+    elif command -v apt-get >/dev/null 2>&1; then
+        mgr="apt-get"; cmd="apt-get install -y"
+        p_wk="libwebkit2gtk-4.1-0"; p_gtk="libgtk-3-0"; p_soup="libsoup-3.0-0"; p_app="libayatana-appindicator3-1"; p_rsvg="librsvg2-2"
+    elif command -v dnf >/dev/null 2>&1; then
+        mgr="dnf"; cmd="dnf install -y"
+        p_wk="webkit2gtk4.1"; p_gtk="gtk3"; p_soup="libsoup3"; p_app="libayatana-appindicator-gtk3"; p_rsvg="librsvg2"
+    elif command -v zypper >/dev/null 2>&1; then
+        mgr="zypper"; cmd="zypper --non-interactive install"
+        p_wk="libwebkit2gtk-4_1-0"; p_gtk="libgtk-3-0"; p_soup="libsoup-3_0-0"; p_app=""; p_rsvg=""
+    elif command -v apk >/dev/null 2>&1; then
+        mgr="apk"; cmd="apk add"
+        p_wk="webkit2gtk-4.1"; p_gtk="gtk+3.0"; p_soup="libsoup3"; p_app=""; p_rsvg=""
+    else
+        return 1
+    fi
+    for lib in $missing_libs; do
+        case "$lib" in
+            *webkit2gtk-4.1*|*javascriptcoregtk-4.1*) [ -n "$p_wk" ] && pkgs="$pkgs $p_wk" ;;
+            *gtk-3*) [ -n "$p_gtk" ] && pkgs="$pkgs $p_gtk" ;;
+            *soup-3*) [ -n "$p_soup" ] && pkgs="$pkgs $p_soup" ;;
+            *appindicator*) [ -n "$p_app" ] && pkgs="$pkgs $p_app" ;;
+            *rsvg*) [ -n "$p_rsvg" ] && pkgs="$pkgs $p_rsvg" ;;
+        esac
+    done
+    dedup_pkgs=$(printf '%s\n' $pkgs | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/^ *//;s/ *$//')
+    [ -z "$dedup_pkgs" ] && return 1
+    SUDO=""
+    if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; else return 1; fi
+    fi
+    echo "📦 Auto-installing missing system dependencies using ${mgr}: ${dedup_pkgs}"
+    if [ "$mgr" = "apt-get" ]; then
+        $SUDO apt-get update && $SUDO apt-get install -y $dedup_pkgs
+    else
+        $SUDO $cmd $dedup_pkgs
+    fi
+}
 
 check_linux_runtime_deps() {
     binary_path=$1
@@ -54,6 +100,13 @@ check_linux_runtime_deps() {
         return 2
     fi
     missing_libraries=$(printf '%s\n' "$ldd_output" | awk '/=> not found/ { print $1 }')
+    if [ -n "$missing_libraries" ] && [ "$AUTO_INSTALL_DEPS" = "1" ]; then
+        if try_install_linux_deps "$missing_libraries"; then
+            if ldd_output=$(ldd "$binary_path" 2>&1); then
+                missing_libraries=$(printf '%s\n' "$ldd_output" | awk '/=> not found/ { print $1 }')
+            fi
+        fi
+    fi
     if [ -n "$missing_libraries" ]; then
         echo "❌ Missing runtime libraries for ${binary_path}:" >&2
         printf '%s\n' "$missing_libraries" | sed 's/^/  /' >&2
@@ -67,40 +120,19 @@ check_linux_runtime_deps() {
 }
 
 if [ "$CHECK_DEPS_ONLY" = "1" ]; then
-    if [ "$(uname -s)" != "Linux" ]; then
-        echo "❌ Runtime dependency diagnostics currently support Linux only." >&2
-        exit 2
-    fi
-    if [ ! -x "$TARGET_BIN" ]; then
-        echo "❌ Installed OrquestraAI binary not found at ${TARGET_BIN}." >&2
-        exit 1
-    fi
-    if check_linux_runtime_deps "$TARGET_BIN"; then
-        exit 0
-    else
-        exit "$?"
-    fi
+    [ "$(uname -s)" = "Linux" ] || { echo "❌ Runtime dependency diagnostics currently support Linux only." >&2; exit 2; }
+    [ -x "$TARGET_BIN" ] || { echo "❌ Installed OrquestraAI binary not found at ${TARGET_BIN}." >&2; exit 1; }
+    check_linux_runtime_deps "$TARGET_BIN" && exit 0 || exit "$?"
 fi
 
 # 1. Dependency Checks
-command -v curl >/dev/null 2>&1 || {
-    echo "❌ Error: 'curl' is required but not installed." >&2
-    exit 1
-}
-
-command -v mktemp >/dev/null 2>&1 || {
-    echo "❌ Error: 'mktemp' is required but not installed." >&2
-    exit 1
-}
+command -v curl >/dev/null 2>&1 || { echo "❌ Error: 'curl' is required but not installed." >&2; exit 1; }
+command -v mktemp >/dev/null 2>&1 || { echo "❌ Error: 'mktemp' is required but not installed." >&2; exit 1; }
 
 # Determine available SHA-256 verification tool
-if command -v sha256sum >/dev/null 2>&1; then
-    HASH_CMD="sha256sum"
-elif command -v shasum >/dev/null 2>&1; then
-    HASH_CMD="shasum -a 256"
-else
-    echo "❌ Error: Neither 'sha256sum' nor 'shasum' is available for checksum verification." >&2
-    exit 1
+if command -v sha256sum >/dev/null 2>&1; then HASH_CMD="sha256sum"
+elif command -v shasum >/dev/null 2>&1; then HASH_CMD="shasum -a 256"
+else echo "❌ Error: Neither 'sha256sum' nor 'shasum' is available for checksum verification." >&2; exit 1
 fi
 
 # 2. Secure Temporary Workspace & Cleanup Trap
@@ -130,21 +162,11 @@ trap 'exit 143' TERM
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 ASSET_CANDIDATES=""
-case "$OS" in
-    Linux)
-        case "$ARCH" in
-            x86_64) ASSET_CANDIDATES="orquestra-linux-x86_64 orquestra-ai" ;;
-            *) echo "❌ Error: unsupported architecture '$ARCH' on Linux (only x86_64 has release binaries)." >&2; exit 1 ;;
-        esac
-        ;;
-    Darwin)
-        case "$ARCH" in
-            arm64|aarch64) ASSET_CANDIDATES="orquestra-macos-arm64" ;;
-            x86_64) ASSET_CANDIDATES="orquestra-macos-x86_64" ;;
-            *) echo "❌ Error: unsupported architecture '$ARCH' on macOS (only arm64 and x86_64 have release binaries)." >&2; exit 1 ;;
-        esac
-        ;;
-    *) echo "❌ Error: unsupported operating system '$OS' (only Linux and macOS are supported)." >&2; exit 1 ;;
+case "${OS}-${ARCH}" in
+    Linux-x86_64) ASSET_CANDIDATES="orquestra-linux-x86_64 orquestra-ai" ;;
+    Darwin-arm64|Darwin-aarch64) ASSET_CANDIDATES="orquestra-macos-arm64" ;;
+    Darwin-x86_64) ASSET_CANDIDATES="orquestra-macos-x86_64" ;;
+    *) echo "❌ Error: unsupported platform ${OS}/${ARCH}." >&2; exit 1 ;;
 esac
 
 echo "🔒 Downloading OrquestraAI release & SHA-256 checksum..."
@@ -321,20 +343,14 @@ STAGING_BIN=""
 # and the app bundle carries its own icon, so this section is skipped there)
 if [ "$OS" = "Linux" ]; then
     mkdir -p "$APP_DIR" "$ICON_DIR" "${HOME}/.local/share/icons"
+    rm -f "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra.png" \
+          "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra-ai.png" 2>/dev/null || true
 
-    # Clean up legacy 1024x1024 icons from early alpha builds that override theme colors
-    rm -f "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra.png" 2>/dev/null || true
-    rm -f "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra-ai.png" 2>/dev/null || true
-
-    # Pinned icon: reuse the tag whose checksums and binary were verified,
-    # never the moving `main` branch or a second latest-release lookup. A
-    # miss is non-fatal: the app installs its bundled icons on first launch.
     ICON_TMP="${TMP_DIR}/icon.png"
     if curl -fsSL "https://raw.githubusercontent.com/${REPO}/${RELEASE_TAG}/src-tauri/icons/icon.png" -o "$ICON_TMP" 2>/dev/null && [ -s "$ICON_TMP" ]; then
-        cp "$ICON_TMP" "${ICON_DIR}/orquestra.png"
-        cp "$ICON_TMP" "${ICON_DIR}/orquestra-ai.png"
-        cp "$ICON_TMP" "${HOME}/.local/share/icons/orquestra.png" 2>/dev/null || true
-        cp "$ICON_TMP" "${HOME}/.local/share/icons/orquestra-ai.png" 2>/dev/null || true
+        for dst in "${ICON_DIR}/orquestra.png" "${ICON_DIR}/orquestra-ai.png" "${HOME}/.local/share/icons/orquestra.png" "${HOME}/.local/share/icons/orquestra-ai.png"; do
+            cp "$ICON_TMP" "$dst" 2>/dev/null || true
+        done
     else
         echo "ℹ️  Notice: Could not download application icon; existing icons preserved."
     fi
@@ -355,26 +371,15 @@ Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;
 EOF
     chmod 644 "${APP_DIR}/orquestra.desktop"
 
-    # Alias entries stay hidden: without NoDisplay, GNOME/KDE/XFCE menus
-    # show two or three duplicate OrquestraAI icons.
     for alias in orquestra-ai.desktop ai.orquestra.desktop.desktop; do
         cp "${APP_DIR}/orquestra.desktop" "${APP_DIR}/${alias}" 2>/dev/null || true
         chmod 644 "${APP_DIR}/${alias}" 2>/dev/null || true
-        grep -qx 'NoDisplay=true' "${APP_DIR}/${alias}" 2>/dev/null || \
-            printf 'NoDisplay=true\n' >> "${APP_DIR}/${alias}"
+        grep -qx 'NoDisplay=true' "${APP_DIR}/${alias}" 2>/dev/null || printf 'NoDisplay=true\n' >> "${APP_DIR}/${alias}"
     done
 
-    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-        gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
-    fi
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$APP_DIR" 2>/dev/null || true
-    fi
-    if command -v kbuildsycoca6 >/dev/null 2>&1; then
-        kbuildsycoca6 --noincremental 2>/dev/null || true
-    elif command -v kbuildsycoca5 >/dev/null 2>&1; then
-        kbuildsycoca5 --noincremental 2>/dev/null || true
-    fi
+    command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+    command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$APP_DIR" 2>/dev/null || true
+    command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 --noincremental 2>/dev/null || command -v kbuildsycoca5 >/dev/null 2>&1 && kbuildsycoca5 --noincremental 2>/dev/null || true
 fi
 
 echo "========================================================"

@@ -70,12 +70,38 @@ writeFileSync(
   `#!/bin/sh
 if [ "$LDD_MODE" = "missing" ]; then
   printf '%s\\n' 'libwebkit2gtk-4.1.so.0 => not found' 'libgtk-3.so.0 => not found'
+elif [ "$LDD_MODE" = "auto-install" ]; then
+  if [ -f "$FIXTURE_DIR/deps-installed" ]; then
+    printf '%s\\n' 'libc.so.6 => /lib/libc.so.6 (0x00000000)'
+  else
+    printf '%s\\n' 'libwebkit2gtk-4.1.so.0 => not found' 'libgtk-3.so.0 => not found'
+  fi
 else
   printf '%s\\n' 'libc.so.6 => /lib/libc.so.6 (0x00000000)'
 fi
 `,
 );
 chmodSync(join(binDir, "ldd"), 0o755);
+
+writeFileSync(
+  join(binDir, "pacman"),
+  `#!/bin/sh
+if [ "$1" = "-S" ] || [ "$2" = "-S" ]; then
+  touch "$FIXTURE_DIR/deps-installed"
+  exit 0
+fi
+exit 0
+`,
+);
+chmodSync(join(binDir, "pacman"), 0o755);
+
+writeFileSync(
+  join(binDir, "sudo"),
+  `#!/bin/sh
+"$@"
+`,
+);
+chmodSync(join(binDir, "sudo"), 0o755);
 
 function runInstaller(args = [], extraEnv = {}) {
   return spawnSync("sh", [installerPath, ...args], {
@@ -145,6 +171,23 @@ test("installer refuses to replace the current binary when runtime libraries are
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Installation stopped before replacing/);
   assert.equal(readFileSync(installedBinary, "utf8"), "existing installation\n");
+});
+
+test("installer automatically installs missing runtime libraries when supported package manager is available", () => {
+  rmSync(join(fixtureDir, "deps-installed"), { force: true });
+  writeFileSync(
+    signaturePath,
+    "untrusted comment: test\nAAAA\ntrusted comment: timestamp=123\tfile=SHA256SUMS.txt\tversion=1.2.3\nAAAA\n",
+  );
+  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  writeFileSync(installedBinary, "old binary\n");
+  chmodSync(installedBinary, 0o755);
+
+  const result = runInstaller([], { LDD_MODE: "auto-install" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Auto-installing missing system dependencies/);
+  assert.match(result.stdout, /webkit2gtk-4\.1/);
+  assert.equal(readFileSync(installedBinary, "utf8"), "fixture binary\n");
 });
 
 after(() => {
