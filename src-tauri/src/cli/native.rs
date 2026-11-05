@@ -8,6 +8,7 @@ mod bridge;
 mod ideas;
 mod mcp;
 mod sessions;
+mod skills;
 mod vault;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -25,6 +26,7 @@ pub fn dispatch_native_cli(args: &[String]) -> Option<Result<String, CliError>> 
         Some("bridge") => Some(bridge::run(&args[1..])),
         Some("vault") => Some(vault::run(&args[1..])),
         Some("mcp") => Some(mcp::run(&args[1..])),
+        Some("skills" | "skill") => Some(skills::run(&args[1..])),
         _ => None,
     }
 }
