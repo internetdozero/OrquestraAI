@@ -135,6 +135,11 @@ export const store: TranslationSchema["store"] = {
   loadFailed: (detail: string) => `Could not load the official store: ${detail}`,
   viewRepo: "View repository",
   actionFailed: (detail: string) => `The store action failed: ${detail}`,
+  installing: (name: string) => `Installing ${name}…`,
+  installingShort: "Installing…",
+  cloneFailed: (detail: string) =>
+    `Could not clone the skill repository (clone or timeout): ${detail}`,
+  mcpSaveFailed: "Could not save or activate the MCP server in the selected scope.",
   filterAll: "All",
   filterOfficial: "Official",
   filterCommunity: "Community",

@@ -55,13 +55,18 @@ export function useSkillStoreActions(skills: SkillItem[], deps: SkillStoreDeps) 
           // live instead of dormant. Summary counters refresh via the same
           // path as a manual toggle.
           run: async () => {
+            onToast?.(t.store.installing(entry.name));
             // Monorepo anchor first; individual repo when it is unpublished.
             let imported;
             try {
               imported = await importSkillFromGit(urls[0]);
             } catch (primary) {
-              if (!urls[1]) throw primary;
-              imported = await importSkillFromGit(urls[1]);
+              if (!urls[1]) throw new Error(t.store.cloneFailed(String(primary)));
+              try {
+                imported = await importSkillFromGit(urls[1]);
+              } catch (fallback) {
+                throw new Error(t.store.cloneFailed(`${String(primary)}; ${String(fallback)}`));
+              }
             }
             try {
               await setSkillState(imported.id, scope, true);

@@ -25,6 +25,8 @@ interface StoreCardProps {
   status: StoreStatus;
   action: StoreRowAction | null;
   busy: boolean;
+  busyText: string;
+  actionsDisabled: boolean;
   onRun: () => Promise<void>;
   scopeHint?: string;
 }
@@ -35,7 +37,17 @@ function tierOf(entry: OfficialSkillEntry): "official" | "community" {
 }
 
 /** One hub row: security badge, description, tags, repo link and action. */
-export function StoreCard({ entry, meta, status, action, busy, onRun, scopeHint }: StoreCardProps) {
+export function StoreCard({
+  entry,
+  meta,
+  status,
+  action,
+  busy,
+  busyText,
+  actionsDisabled,
+  onRun,
+  scopeHint,
+}: StoreCardProps) {
   const { t } = useI18n();
   const s = t.store;
   const ActionIcon = action ? ACTION_ICON[action.kind] : null;
@@ -113,7 +125,7 @@ export function StoreCard({ entry, meta, status, action, busy, onRun, scopeHint 
       {action && ActionIcon && (
         <button
           type="button"
-          disabled={busy}
+          disabled={actionsDisabled}
           onClick={() => void onRun()}
           title={action.kind === "install" ? scopeHint : undefined}
           className={cn(
@@ -128,11 +140,13 @@ export function StoreCard({ entry, meta, status, action, busy, onRun, scopeHint 
           ) : (
             <ActionIcon className="size-3.5" />
           )}
-          {action.kind === "install"
-            ? s.installAndProject
-            : action.kind === "enable"
-              ? s.enable
-              : s.add}
+          {busy
+            ? busyText
+            : action.kind === "install"
+              ? s.installAndProject
+              : action.kind === "enable"
+                ? s.enable
+                : s.add}
         </button>
       )}
     </li>

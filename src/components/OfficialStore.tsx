@@ -174,6 +174,8 @@ export function OfficialStore({ kind, statusOf, actionFor, projectScope }: Offic
               status={status}
               action={action}
               busy={busyId === entry.id}
+              busyText={s.installingShort}
+              actionsDisabled={busyId !== null}
               scopeHint={scopeHint}
               onRun={async () => {
                 if (!action) return;

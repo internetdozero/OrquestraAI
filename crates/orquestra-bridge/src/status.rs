@@ -54,7 +54,12 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
             let skills_linked = spec
                 .skills_links
                 .iter()
-                .all(|rel| is_linked_to(&home.join(rel), &projection));
+                .all(|rel| {
+                    let source = home.join(rel);
+                    ancestor_is_symlink(home, &source)
+                        || (!path_present(&source) && !parent_is_dir(&source))
+                        || is_linked_to(&source, &projection)
+                });
 
             // The primary instruction path stays the first entry so the IPC
             // shape is unchanged; the linked gate covers every location.

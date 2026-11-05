@@ -149,7 +149,7 @@ export function useMcpMutations({
     [replaceServers, setError, onToast, t],
   );
 
-  const save = async (server: McpServer) => {
+  const save = async (server: McpServer): Promise<boolean> => {
     setSaving(true);
     setFormError(null);
 
@@ -158,8 +158,10 @@ export function useMcpMutations({
       onSaved();
       onToast(t.mcps.savedDeployed(server.name));
       await load();
+      return true;
     } catch (cause) {
       setFormError(toMessage(cause, t.common.unexpected));
+      return false;
     } finally {
       setSaving(false);
     }

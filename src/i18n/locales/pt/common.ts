@@ -138,6 +138,11 @@ export const store = {
   loadFailed: (detail: string) => `Não foi possível carregar a loja oficial: ${detail}`,
   viewRepo: "Ver repositório",
   actionFailed: (detail: string) => `A ação da loja falhou: ${detail}`,
+  installing: (name: string) => `Instalando ${name}…`,
+  installingShort: "Instalando…",
+  cloneFailed: (detail: string) =>
+    `Falha ao baixar o repositório da skill (clone ou timeout): ${detail}`,
+  mcpSaveFailed: "Não foi possível salvar ou ativar o servidor MCP no escopo selecionado.",
   filterAll: "Todas",
   filterOfficial: "Oficiais",
   filterCommunity: "Comunidade",

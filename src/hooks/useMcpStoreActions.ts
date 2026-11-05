@@ -7,7 +7,7 @@ import type { StoreEntry, StoreRowAction, StoreStatus } from "../components/Offi
 interface McpStoreDeps {
   scope: string;
   toggle: (server: McpServer) => Promise<void>;
-  save: (server: McpServer) => Promise<void>;
+  save: (server: McpServer) => Promise<boolean>;
   reload: () => Promise<void>;
   onToast: (message: string) => void;
 }
@@ -41,24 +41,25 @@ export function useMcpStoreActions(servers: McpServer[], deps: McpStoreDeps) {
         if (!found) return null;
         return { kind: "enable", run: () => toggle(found) };
       }
-      // A missing official server is added disabled: the operator installs
-      // the package, then enables it. Inactive servers never reach the
-      // harness configs, so a not-yet-installed binary cannot break them.
+      // Saving it enabled compiles the server into the selected scope.
       if (status === "missing" && "command" in entry) {
         const template = entry;
         return {
           kind: "add",
           run: async () => {
-            await save({
+            onToast(t.store.installing(template.name));
+            const global = scope === "global";
+            const saved = await save({
               id: template.id,
               name: template.name,
               description: template.description,
               command: template.command,
               args: [...template.args],
               env: {},
-              globalEnabled: false,
-              enabledHarnesses: [],
+              globalEnabled: global,
+              enabledHarnesses: global ? [] : [scope],
             });
+            if (!saved) throw new Error(t.store.mcpSaveFailed);
             onToast(t.mcps.savedDeployed(template.name));
             await reload();
           },
@@ -66,7 +67,7 @@ export function useMcpStoreActions(servers: McpServer[], deps: McpStoreDeps) {
       }
       return null;
     },
-    [t, servers, toggle, save, reload, onToast],
+    [t, servers, toggle, save, reload, onToast, scope],
   );
 
   return { statusOf, actionFor };
