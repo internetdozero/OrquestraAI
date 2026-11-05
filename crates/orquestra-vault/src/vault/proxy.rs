@@ -282,13 +282,18 @@ pub async fn test_connection(
             .services
             .get(&service)
             .ok_or_else(|| format!("unknown vault service: {service}"))?;
-        let raw = presets::verify_endpoint(&current.preset).ok_or_else(|| {
+        let request = presets::verify_request(&current.preset).ok_or_else(|| {
             format!(
                 "no canonical verify endpoint for the {} preset",
                 current.preset
             )
         })?;
-        super::endpoints::validate_endpoint_for_service(&current.preset, raw, Some(current))?
+        let endpoint = super::endpoints::validate_endpoint_for_service(
+            &current.preset,
+            request.endpoint,
+            Some(current),
+        )?;
+        (request.method, endpoint)
     };
     let paths = orquestra_core::paths::OrquestraPaths::resolve()?;
     // Snapshot released before the network call; health is applied to the
@@ -318,7 +323,7 @@ pub async fn test_connection(
     };
     let outgoing = http::effective_headers(&live, &secret, &HashMap::new());
     let start = std::time::Instant::now();
-    let outcome = http::execute_once("GET", &endpoint, &outgoing, None).await;
+    let outcome = http::execute_once(endpoint.0, &endpoint.1, &outgoing, None).await;
     let latency_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     match outcome {
         Ok((status, _, text)) => {

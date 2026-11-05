@@ -147,35 +147,50 @@ pub fn build_exec_env(
     vec![(name, secret.to_string())]
 }
 
-/// Canonical lightweight endpoint proving a key is valid. `None` means the
+/// Canonical lightweight request proving a key is valid. `None` means the
 /// preset has no safe universal ping: `custom` (unknown shape), `aws`
 /// (SigV4 signing, no bearer check), `supabase`/`tavily` (per-project URLs
-/// or POST-only APIs), `jules`/`pix`/`pixabay`/`exa`/`bluesky` (per-account
-/// URLs, query-key auth, or session flows). Those keys stay CLI/env-usable
-/// with manual health.
+/// or POST-only APIs), `perplexity` (its public API has no documented,
+/// read-only key validation route), `jules`/`pix`/`pixabay`/`exa`/`bluesky`
+/// (per-account URLs, query-key auth, or session flows). Those keys stay
+/// CLI/env-usable with manual health.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VerifyRequest {
+    pub method: &'static str,
+    pub endpoint: &'static str,
+}
+
+pub fn verify_request(preset_id: &str) -> Option<VerifyRequest> {
+    let endpoint = match preset_id {
+        "github" => "https://api.github.com/user",
+        "gitlab" => "https://gitlab.com/api/v4/user",
+        "cloudflare" => "https://api.cloudflare.com/client/v4/user/tokens/verify",
+        "openrouter" => "https://openrouter.ai/api/v1/key",
+        "openai" => "https://api.openai.com/v1/models",
+        "groq" => "https://api.groq.com/openai/v1/models",
+        "mistral" => "https://api.mistral.ai/v1/models",
+        "deepseek" => "https://api.deepseek.com/models",
+        "together" => "https://api.together.xyz/v1/models",
+        "cohere" => "https://api.cohere.com/v1/models",
+        "elevenlabs" => "https://api.elevenlabs.io/v1/models",
+        "anthropic" => "https://api.anthropic.com/v1/models",
+        "gemini" => "https://generativelanguage.googleapis.com/v1beta/models",
+        "vercel" => "https://api.vercel.com/v2/user",
+        "neon" => "https://console.neon.tech/api/v2/projects",
+        "stripe" => "https://api.stripe.com/v1/balance",
+        "resend" => "https://api.resend.com/api-keys",
+        "deepgram" => "https://api.deepgram.com/v1/projects",
+        "unsplash" => "https://api.unsplash.com/me",
+        "pexels" => "https://api.pexels.com/v1/curated?per_page=1",
+        _ => return None,
+    };
+    Some(VerifyRequest {
+        method: "GET",
+        endpoint,
+    })
+}
+
+/// Backwards-compatible endpoint accessor for callers and contract tests.
 pub fn verify_endpoint(preset_id: &str) -> Option<&'static str> {
-    match preset_id {
-        "github" => Some("https://api.github.com/user"),
-        "gitlab" => Some("https://gitlab.com/api/v4/user"),
-        "cloudflare" => Some("https://api.cloudflare.com/client/v4/user/tokens/verify"),
-        "openrouter" => Some("https://openrouter.ai/api/v1/auth/key"),
-        "openai" => Some("https://api.openai.com/v1/models"),
-        "groq" => Some("https://api.groq.com/openai/v1/models"),
-        "mistral" => Some("https://api.mistral.ai/v1/models"),
-        "deepseek" => Some("https://api.deepseek.com/v1/models"),
-        "perplexity" => Some("https://api.perplexity.ai/models"),
-        "together" => Some("https://api.together.xyz/v1/models"),
-        "cohere" => Some("https://api.cohere.com/v1/models"),
-        "elevenlabs" => Some("https://api.elevenlabs.com/v1/models"),
-        "anthropic" => Some("https://api.anthropic.com/v1/models"),
-        "gemini" => Some("https://generativelanguage.googleapis.com/v1beta/models"),
-        "vercel" => Some("https://api.vercel.com/v2/user"),
-        "neon" => Some("https://console.neon.tech/api/v2/projects"),
-        "stripe" => Some("https://api.stripe.com/v1/balance"),
-        "resend" => Some("https://api.resend.com/api-keys"),
-        "deepgram" => Some("https://api.deepgram.com/v1/projects"),
-        "unsplash" => Some("https://api.unsplash.com/me"),
-        "pexels" => Some("https://api.pexels.com/v1/curated?per_page=1"),
-        _ => None,
-    }
+    verify_request(preset_id).map(|request| request.endpoint)
 }

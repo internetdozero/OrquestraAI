@@ -300,6 +300,7 @@ fn verify_endpoints_cover_every_non_custom_preset() {
                 | "aws"
                 | "supabase"
                 | "tavily"
+                | "perplexity"
                 | "jules"
                 | "pix"
                 | "pixabay"
@@ -308,12 +309,18 @@ fn verify_endpoints_cover_every_non_custom_preset() {
         ) {
             assert_eq!(verify_endpoint(&preset.id), None);
         } else {
-            let endpoint = verify_endpoint(&preset.id)
+            let request = super::presets::verify_request(&preset.id)
                 .unwrap_or_else(|| panic!("{} needs a verify endpoint", preset.id));
-            assert!(endpoint.starts_with("https://"), "{endpoint} must be https");
+            assert_eq!(request.method, "GET", "{} method", preset.id);
+            assert!(
+                request.endpoint.starts_with("https://"),
+                "{} must be https",
+                request.endpoint
+            );
         }
     }
     assert_eq!(verify_endpoint("unknown-preset"), None);
+    assert_eq!(super::presets::verify_request("perplexity"), None);
 }
 
 #[test]
