@@ -53,7 +53,7 @@ mod keyring_backend {
         SERIAL
             .get_or_init(|| Mutex::new(()))
             .lock()
-            .expect("test keyring serial lock poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     pub(super) fn get(account: &str) -> Result<Option<String>, String> {

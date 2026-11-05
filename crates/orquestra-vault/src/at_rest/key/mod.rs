@@ -55,8 +55,19 @@ thread_local! {
 }
 
 #[cfg(test)]
-pub(crate) fn test_keyring_force_usable(force: bool) {
-    TEST_FORCE_KEYRING.with(|flag| flag.set(force));
+pub(crate) struct ForcedKeyringUsable;
+
+#[cfg(test)]
+pub(crate) fn force_keyring_usable_for_test() -> ForcedKeyringUsable {
+    TEST_FORCE_KEYRING.with(|flag| flag.set(true));
+    ForcedKeyringUsable
+}
+
+#[cfg(test)]
+impl Drop for ForcedKeyringUsable {
+    fn drop(&mut self) {
+        TEST_FORCE_KEYRING.with(|flag| flag.set(false));
+    }
 }
 
 #[cfg(test)]

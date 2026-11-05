@@ -66,7 +66,7 @@ fn fallback_key_promotes_into_an_empty_keyring() {
 fn failed_keyring_creation_uses_the_private_file_fallback() {
     let _serial = test_keyring_lock();
     test_keyring_clear();
-    test_keyring_force_usable(true);
+    let _forced_keyring = force_keyring_usable_for_test();
     let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
         "orquestra-keyring-fallback-{}-{}",
         std::process::id(),
@@ -85,7 +85,6 @@ fn failed_keyring_creation_uses_the_private_file_fallback() {
     test_keyring_fail_key_writes(true);
     let result = file_key(&paths);
     test_keyring_fail_key_writes(false);
-    test_keyring_force_usable(false);
     let key = result.expect("keyring failure should use the fallback file");
 
     assert_eq!(read_fallback_key(&root).expect("fallback read"), Some(key));

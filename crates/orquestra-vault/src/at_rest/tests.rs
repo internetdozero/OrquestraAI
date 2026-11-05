@@ -220,6 +220,7 @@ fn fallback_key_migrates_to_keyring_on_unseal() {
     use base64::prelude::*;
     let _serial = key::test_keyring_lock();
     key::test_keyring_clear();
+    let _forced_keyring = key::force_keyring_usable_for_test();
     // A non-temp root takes the keyring path (temp roots stay pinned to
     // the fallback file so suites never touch a shared key namespace).
     let nanos = std::time::SystemTime::now()
@@ -298,7 +299,7 @@ fn fallback_unseal_survives_a_keyring_promotion_failure() {
         vault: root.clone(),
         active: root.clone(),
     };
-    key::test_keyring_force_usable(true);
+    let _forced_keyring = key::force_keyring_usable_for_test();
     assert!(key::keyring_usable(&root));
 
     let fallback: [u8; 32] = aes_gcm::Aes256Gcm::generate_key(&mut aes_gcm::aead::OsRng).into();
@@ -315,7 +316,6 @@ fn fallback_unseal_survives_a_keyring_promotion_failure() {
     key::test_keyring_fail_key_writes(true);
     let result = open_stored(&paths, &target, &sealed, AAD_VAULT);
     key::test_keyring_fail_key_writes(false);
-    key::test_keyring_force_usable(false);
     let (text, was_legacy) = result.expect("fallback key already opened the data");
 
     assert_eq!(text, legacy);
