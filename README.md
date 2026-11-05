@@ -59,12 +59,28 @@ However, each tool maintains its own isolated skill definitions, separate MCP se
 | **Antigravity (AGY)**   | `~/.gemini/config/skills`                                             | `~/.gemini/config/AGENTS.md`   | Session logs (`.system_generated/logs/transcript.jsonl`) |
 | **OpenAI Codex**        | `~/.codex/skills`                                                     | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite` + multi-file rollouts          |
 | **Claude Code**         | `~/.claude/skills`                                                    | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`                                |
-| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + project chat logs + worktrees          |
+| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` (also `~/.freebuff/AGENTS.md` or `~/.config/freebuff/AGENTS.md`) | `~/.agents/mcp.json` + `desktop-v2.db` + project chat logs + worktrees |
 | **OpenCode**            | `skills.paths` config injection                                       | Native instructions            | `~/.config/opencode/opencode.jsonc` + `opencode.db`      |
 | **Kilo Code**           | `skills.paths` config injection                                       | Native instructions            | `~/.config/kilo/kilo.jsonc` + `kilo.db`                  |
 | **GitHub Copilot CLI**  | `~/.copilot/skills`                                                   | Native instructions            | `session-store.db` (turns schema)                        |
 | **Hermes Agent**        | `~/.hermes/skills`                                                    | Native instructions            | `state.db` (messages schema)                             |
 | **xAI Grok**            | `~/.grok/skills`                                                      | Native instructions            | `chat_history.jsonl` + session index SQLite              |
+
+### Freebuff and MCP configuration
+
+Freebuff's global skills and MCP configuration live under `~/.agents`:
+Orquestra projects managed skills through `~/.agents/skills` and adopts
+existing MCP definitions from `~/.agents/mcp.json`. Gemini/Antigravity MCPs
+are adopted from `~/.gemini/config/mcp_config.json` and
+`~/.gemini/settings.json`. These user-level files are reconciled through the
+Orquestra catalog; workspace `.agents` folders are not scanned or imported.
+Skills and MCPs managed only by a Freebuff cloud account, without local files,
+are outside this filesystem catalog.
+
+When an official MCP is activated, Orquestra installs it into a private
+environment under `~/.orquestra/mcp-servers/` and deploys its resolved command
+to enabled harnesses. MCPs without a description show localized guidance to
+inspect the tools exposed by the server.
 
 ---
 

@@ -59,12 +59,28 @@ O **OrquestraAI** resolve essa fragmentação através de uma aplicação deskto
 | **Antigravity (AGY)**   | `~/.gemini/config/skills`                                             | `~/.gemini/config/AGENTS.md`   | Logs de sessão (`.system_generated/logs/transcript.jsonl`) |
 | **OpenAI Codex**        | `~/.codex/skills`                                                     | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite` + rollouts multi-arquivos        |
 | **Claude Code**         | `~/.claude/skills`                                                    | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`                                  |
-| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` | `desktop-v2.db` + histórico Manicode + worktrees           |
+| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` (também `~/.freebuff/AGENTS.md` ou `~/.config/freebuff/AGENTS.md`) | `~/.agents/mcp.json` + `desktop-v2.db` + histórico Manicode + worktrees |
 | **OpenCode**            | Injeção via `skills.paths`                                            | Instruções nativas             | `~/.config/opencode/opencode.jsonc` + `opencode.db`        |
 | **Kilo Code**           | Injeção via `skills.paths`                                            | Instruções nativas             | `~/.config/kilo/kilo.jsonc` + `kilo.db`                    |
 | **GitHub Copilot CLI**  | `~/.copilot/skills`                                                   | Instruções nativas             | `session-store.db` (tabela de turns)                       |
 | **Hermes Agent**        | `~/.hermes/skills`                                                    | Instruções nativas             | `state.db` (tabela de messages)                            |
 | **xAI Grok**            | `~/.grok/skills`                                                      | Instruções nativas             | `chat_history.jsonl` + índice SQLite                       |
+
+### Configuração de Freebuff e MCPs
+
+As skills globais e a configuração MCP do Freebuff ficam em `~/.agents`:
+o Orquestra projeta as skills gerenciadas por `~/.agents/skills` e importa
+definições MCP existentes de `~/.agents/mcp.json`. MCPs do Gemini/Antigravity
+são importados de `~/.gemini/config/mcp_config.json` e
+`~/.gemini/settings.json`. Esses arquivos globais do usuário são reconciliados
+com o catálogo do Orquestra; pastas `.agents` de projetos não são varridas nem
+importadas. Skills e MCPs gerenciados somente pela conta Freebuff, sem arquivos
+locais, ficam fora deste catálogo baseado em arquivos.
+
+Ao ativar um MCP oficial, o Orquestra o instala em um ambiente privado em
+`~/.orquestra/mcp-servers/` e publica o comando resolvido nos harnesses ativos.
+MCPs sem descrição exibem uma orientação localizada para consultar as
+ferramentas expostas pelo servidor.
 
 ---
 
