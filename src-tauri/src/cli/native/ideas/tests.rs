@@ -1,5 +1,16 @@
 use super::*;
 
+fn ideas_cli_lock() -> std::sync::MutexGuard<'static, ()> {
+    // Lifecycle tests share ~/.local/share/idea-vault/ideas.sqlite3. Cargo runs
+    // lib tests on several threads, so concurrent WAL enable races as
+    // "database is locked". Serialize the DB-touching CLI suites.
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+
 #[test]
 fn ideas_cli_usage_errors() {
     assert!(matches!(
@@ -40,6 +51,7 @@ fn ideas_cli_usage_errors() {
 
 #[test]
 fn ideas_cli_full_lifecycle() {
+    let _guard = ideas_cli_lock();
     let unique_proj = format!(
         "proj-{}",
         std::time::SystemTime::now()
@@ -128,6 +140,7 @@ fn ideas_cli_full_lifecycle() {
 
 #[test]
 fn blackboard_notes_cli_lifecycle() {
+    let _guard = ideas_cli_lock();
     let unique_proj = format!(
         "notes-proj-{}",
         std::time::SystemTime::now()
