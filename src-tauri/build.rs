@@ -29,7 +29,15 @@ fn main() {
         let dist_index = Path::new("../dist/index.html");
         if !dist_index.exists() {
             println!("cargo:warning=dist/index.html is missing! Triggering 'npm run build' automatically...");
-            let status = Command::new("npm")
+            let npm_bin = resolve_npm_command().unwrap_or_else(|| {
+                panic!(
+                    "\n\n❌ [OrquestraAI Guardrail]\n\
+                    Frontend assets are required for release builds, but 'npm' was not found in PATH!\n\
+                    Please install Node.js/npm or build the frontend manually ('npm run build').\n"
+                );
+            });
+
+            let status = Command::new(&npm_bin)
                 .args(["run", "build"])
                 .current_dir("..")
                 .status();
@@ -135,4 +143,41 @@ fn main() {
         ]),
     ))
     .expect("tauri build failed");
+}
+
+fn resolve_npm_command() -> Option<std::path::PathBuf> {
+    let path = Path::new("npm");
+    if is_executable(path) {
+        return Some(path.to_path_buf());
+    }
+    let search = std::env::var_os("PATH")?;
+    for directory in std::env::split_paths(&search) {
+        let candidate = directory.join("npm");
+        if is_executable(&candidate) {
+            return Some(candidate);
+        }
+        #[cfg(windows)]
+        for suffix in [".cmd", ".bat", ".exe"] {
+            let candidate = directory.join(format!("npm{suffix}"));
+            if is_executable(&candidate) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+#[cfg(unix)]
+fn is_executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(path)
+        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable(path: &Path) -> bool {
+    std::fs::metadata(path)
+        .map(|m| m.is_file())
+        .unwrap_or(false)
 }
