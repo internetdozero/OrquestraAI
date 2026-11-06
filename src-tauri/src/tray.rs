@@ -29,15 +29,31 @@ pub const TRAY_ID: &str = "orquestra-tray";
 /// Window-close behavior synced from the frontend's `minimizeToTray` setting.
 /// Defaults to hidden-to-tray so the retention daemon survives a close;
 /// the frontend pushes its stored preference on every startup and toggle.
+///
+/// `tray_available` records whether `setup_tray` succeeded. On desktops
+/// where the StatusNotifierItem / AppIndicator host is absent (GNOME 45+
+/// without the extension) the tray icon never appears, so hiding the window
+/// would leave the process headless with no way to re-show it. When the
+/// tray is unavailable, close always exits.
 pub struct AppConfigState {
     minimize_to_tray: AtomicBool,
+    tray_available: AtomicBool,
 }
 
 impl Default for AppConfigState {
     fn default() -> Self {
         Self {
             minimize_to_tray: AtomicBool::new(true),
+            tray_available: AtomicBool::new(false),
         }
+    }
+}
+
+impl AppConfigState {
+    /// Mark the tray as successfully created. Called once from the setup hook
+    /// after `setup_tray` returns `Ok`.
+    pub fn set_tray_available(&self) {
+        self.tray_available.store(true, Ordering::SeqCst);
     }
 }
 
@@ -48,16 +64,23 @@ pub fn set_minimize_to_tray(state: tauri::State<'_, AppConfigState>, enabled: bo
     state.minimize_to_tray.store(enabled, Ordering::SeqCst);
 }
 
-/// Close-request routing: hide to the tray when the operator asked for it,
-/// otherwise clean up and exit as before. The tray menu's Show/Hide entry
-/// brings a hidden window back.
+/// Close-request routing: hide to the tray when the operator asked for it
+/// **and** the tray icon actually exists; otherwise clean up and exit.
+/// On GNOME 45+ without AppIndicator the tray setup fails silently,
+/// so `tray_available` is the only reliable guard.
 pub fn on_close_requested<R: Runtime>(window: &tauri::Window<R>, api: &tauri::CloseRequestApi) {
-    let hide = window
+    let (wants_tray, has_tray) = window
         .app_handle()
         .try_state::<AppConfigState>()
-        .map(|state| state.minimize_to_tray.load(Ordering::SeqCst))
-        .unwrap_or(true);
-    if hide {
+        .map(|state| {
+            (
+                state.minimize_to_tray.load(Ordering::SeqCst),
+                state.tray_available.load(Ordering::SeqCst),
+            )
+        })
+        .unwrap_or((false, false));
+
+    if wants_tray && has_tray {
         api.prevent_close();
         let _ = window.hide();
     } else {
@@ -223,5 +246,39 @@ mod tests {
         );
         // An uninstalled harness that reports bridged still reads as blocked.
         assert_eq!(harness_line("Grok", false, true), "Grok — not installed");
+    }
+
+    /// The close-request decision matrix — unit-testable without a real
+    /// Tauri window because `AppConfigState` is just atomic booleans.
+    ///
+    /// | minimize_to_tray | tray_available | expected |
+    /// |------------------|----------------|----------|
+    /// | true             | true           | hide     |
+    /// | true             | false          | exit     |
+    /// | false            | true           | exit     |
+    /// | false            | false          | exit     |
+    #[test]
+    fn close_decision_requires_both_flags() {
+        // Helper: returns true when the close should be prevented (hide).
+        let should_hide = |wants_tray: bool, has_tray: bool| -> bool {
+            let state = AppConfigState::default();
+            state.minimize_to_tray.store(wants_tray, Ordering::SeqCst);
+            if has_tray {
+                state.set_tray_available();
+            }
+            state.minimize_to_tray.load(Ordering::SeqCst)
+                && state.tray_available.load(Ordering::SeqCst)
+        };
+
+        assert!(should_hide(true, true), "both true → hide to tray");
+        assert!(!should_hide(true, false), "no tray → must exit");
+        assert!(!should_hide(false, true), "minimize off → must exit");
+        assert!(!should_hide(false, false), "both false → must exit");
+    }
+
+    #[test]
+    fn tray_available_defaults_to_false() {
+        let state = AppConfigState::default();
+        assert!(!state.tray_available.load(Ordering::SeqCst));
     }
 }

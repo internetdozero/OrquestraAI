@@ -307,10 +307,22 @@ pub fn run() {
             // Desktop entry and icon integration for Linux application launchers and docks.
             desktop::ensure_desktop_integration();
 
+            // Close behavior the settings UI keeps in sync (`minimizeToTray`).
+            // Managed before setup_tray so the state is available during build.
+            app.manage(tray::AppConfigState::default());
+
             // Panel presence. A host without a tray must still get a window,
-            // so a failure here is reported and the app carries on.
-            if let Err(error) = tray::setup_tray(app.handle()) {
-                crate::log_warn!("system tray unavailable: {error}");
+            // so a failure here is reported and the app carries on. The
+            // tray_available flag controls whether close-to-tray is safe.
+            match tray::setup_tray(app.handle()) {
+                Ok(()) => {
+                    if let Some(state) = app.try_state::<tray::AppConfigState>() {
+                        state.set_tray_available();
+                    }
+                }
+                Err(error) => {
+                    crate::log_warn!("system tray unavailable: {error}");
+                }
             }
 
             // Single instance listener: ensures subsequent launches focus this window
@@ -322,9 +334,6 @@ pub fn run() {
             // Retention daemon. It enforces nothing unless the operator enabled
             // auto-purge, and it never touches a pinned or open session.
             sessions::start_scheduler();
-
-            // Close behavior the settings UI keeps in sync (`minimizeToTray`).
-            app.manage(tray::AppConfigState::default());
 
             Ok(())
         })
