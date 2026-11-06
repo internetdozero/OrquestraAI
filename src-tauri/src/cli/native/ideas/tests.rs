@@ -193,3 +193,101 @@ fn blackboard_notes_cli_lifecycle() {
     let clear_val: serde_json::Value = serde_json::from_str(&clear_out).expect("json report");
     assert_eq!(clear_val["cleared"], 1);
 }
+
+#[test]
+fn ideas_cli_usage_matches_dispatch() {
+    let empty_err = run(&[]).unwrap_err();
+    let help_err = run(&["help".to_string()]).unwrap_err();
+
+    for err in [empty_err, help_err] {
+        match err {
+            CliError::Usage(msg) => {
+                assert!(msg.starts_with("usage: orquestra idea"));
+                for sub in [
+                    "list", "get", "add", "update", "status", "delete", "search", "projects",
+                    "export-md", "metrics", "note-post", "note-list", "note-get", "note-read",
+                    "note-clear",
+                ] {
+                    assert!(msg.contains(sub), "usage should list {sub}");
+                }
+            }
+            _ => panic!("expected CliError::Usage"),
+        }
+    }
+}
+
+#[test]
+fn ideas_cli_list_status_filter_default_and_all() {
+    let unique_proj = format!(
+        "list-filter-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+    );
+
+    // 1. Add idea and move to completed
+    let add_args = vec![
+        "add".to_string(),
+        "--project".to_string(),
+        unique_proj.clone(),
+        "--title".to_string(),
+        "Filter test task".to_string(),
+        "--status".to_string(),
+        "completed".to_string(),
+        "--json".to_string(),
+    ];
+    let add_out = run(&add_args).expect("add completed idea");
+    let added: serde_json::Value = serde_json::from_str(&add_out).expect("json idea");
+    let id = added["id"].as_i64().expect("idea id");
+    assert_eq!(added["status"], "completed");
+
+    // 2. List without --status: should NOT return completed idea (default is open)
+    let list_default_args = vec![
+        "list".to_string(),
+        "--project".to_string(),
+        unique_proj.clone(),
+        "--json".to_string(),
+    ];
+    let list_default_out = run(&list_default_args).expect("list with default status");
+    let list_default_val: serde_json::Value =
+        serde_json::from_str(&list_default_out).expect("json array");
+    let arr = list_default_val.as_array().expect("array");
+    assert!(
+        arr.is_empty(),
+        "default list must exclude completed ideas, found: {arr:?}"
+    );
+
+    // 3. List with --status all: MUST include the completed idea
+    let list_all_args = vec![
+        "list".to_string(),
+        "--project".to_string(),
+        unique_proj.clone(),
+        "--status".to_string(),
+        "all".to_string(),
+        "--json".to_string(),
+    ];
+    let list_all_out = run(&list_all_args).expect("list with status all");
+    let list_all_val: serde_json::Value = serde_json::from_str(&list_all_out).expect("json array");
+    let arr_all = list_all_val.as_array().expect("array");
+    assert_eq!(
+        arr_all.len(),
+        1,
+        "--status all must include completed ideas"
+    );
+    assert_eq!(arr_all[0]["id"], id);
+
+    // 4. List with --help: must describe default open and --status all
+    let help_res = run(&["list".to_string(), "--help".to_string()]);
+    match help_res {
+        Err(CliError::Usage(msg)) => {
+            assert!(msg.contains("default is 'open'"));
+            assert!(msg.contains("--status all"));
+        }
+        _ => panic!("expected CliError::Usage from list --help"),
+    }
+
+    // 5. Cleanup
+    let del_args = vec!["delete".to_string(), id.to_string(), "--json".to_string()];
+    run(&del_args).expect("delete idea");
+}

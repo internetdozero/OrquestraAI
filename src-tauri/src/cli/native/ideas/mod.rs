@@ -12,6 +12,7 @@ const USAGE: &str = "usage: orquestra idea <list|get|add|update|status|delete|se
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     match args.first().map(String::as_str) {
+        Some("help" | "--help" | "-h") => Err(usage(USAGE.to_string())),
         Some("list") => idea_ops::list(&args[1..]),
         Some("get" | "inspect") => idea_ops::get(&args[1..]),
         Some("add" | "record") => idea_ops::add(&args[1..]),

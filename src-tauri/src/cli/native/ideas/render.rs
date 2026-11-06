@@ -5,7 +5,7 @@ use crate::ideas::types::{BlackboardNote, IdeaItem};
 
 pub(super) fn render_ideas_table(ideas: &[IdeaItem]) -> String {
     if ideas.is_empty() {
-        return "No matching ideas found.".to_string();
+        return "No matching ideas found (note: status defaults to 'open'; use --status all to see all).".to_string();
     }
     let mut lines = Vec::with_capacity(ideas.len() + 1);
     lines.push(format!(
