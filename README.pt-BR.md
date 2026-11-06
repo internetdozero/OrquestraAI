@@ -1,146 +1,117 @@
 # OrquestraAI
 
-<div align="center">
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)](CHANGELOG.md)
+[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS-emerald.svg)](https://github.com/internetdozero/OrquestraAI/releases/latest)
 
-**Painel e Plano de Controle Universal para IA e Harnesses de Código**
+[Read in English](README.md)
 
-[![License: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-blue.svg)](LICENSE)
-[![Status: Alpha](<https://img.shields.io/badge/Status-Alpha%20(Desenvolvimento%20Ativo)-orange.svg>)](https://github.com/internetdozero/OrquestraAI)
-[![Platform](https://img.shields.io/badge/Plataforma-Linux%20%7C%20Tauri%20v2-emerald.svg)](https://github.com/internetdozero/OrquestraAI)
-
-[**Read in English / Ler em Inglês (README.md)**](README.md)
-
-</div>
-
----
+O OrquestraAI é um app desktop e uma CLI para gerenciar vários agentes de código com IA num lugar só. Ele mantém skills, servidores MCP, arquivos de instruções, sessões e credenciais consistentes entre Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), Freebuff, GitHub Copilot CLI, Hermes Agent, OpenCode e Kilo Code.
 
 > [!WARNING]
-> **Software em Alpha — espere mudanças incompatíveis.** O OrquestraAI está em Alpha ativo: esquemas, comandos IPC e formatos de configuração podem mudar entre revisões alpha, então fixe automações em uma release marcada com tag. Os módulos centrais (ponte de harnesses, cofre de skills, telemetria de sessões, gestão de MCPs) têm cobertura de testes automatizados (unidade, contrato e integração) e são adequados para fluxos locais diários.
+> **Software em Alpha.** Formatos de configuração, comandos IPC e a saída da CLI podem mudar entre releases. Fixe automações numa release com tag.
 
----
+## Recursos
 
-## ⚡ Instalação Rápida
+- **Cofre de skills:** uma biblioteca em `~/.orquestra/skills-library`, projetada em cada harness por symlinks ou entradas nativas de configuração.
+- **Registro de MCPs:** ative servidores MCP globalmente ou por harness. Definições já existentes do Freebuff (`~/.agents/mcp.json`) e do Gemini/Antigravity são adotadas, e os servidores oficiais são instalados num ambiente privado em `~/.orquestra/mcp-servers/`.
+- **Instruções unificadas:** um `AGENTS.md` mestre ligado ao caminho de instruções de cada harness.
+- **Sessões:** navegue, busque, exporte, fixe e limpe históricos de conversa de todos os harnesses suportados.
+- **Cofre de credenciais:** chaves de API cifradas em repouso com AES-256-GCM. A chave de cifragem fica no keyring do sistema. Agentes podem usar as chaves por um proxy cego de HTTP/exec sem vê-las, e chaves copiadas na interface saem do clipboard após 20 segundos.
+- **Idea Vault e blackboard:** lista de tarefas e notas compartilhadas para coordenar agentes.
+- **Janitor:** monitora memória e arquivos temporários e limpa processos de agentes órfãos.
+- **Atualizações assinadas:** o atualizador do app e o instalador só aceitam releases cujos checksums foram assinados para aquela versão exata.
+
+## Instalação
+
+Binários publicados: **Linux x86_64**, **macOS Apple Silicon** e **macOS Intel**. O Windows é compilado no CI, mas ainda não é distribuído.
 
 ```bash
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
 ```
 
-Se uma versão Linux instalada não abrir, confira as bibliotecas necessárias sem reinstalar:
+O instalador:
+
+1. Resolve a release mais recente do GitHub e baixa o binário, o `SHA256SUMS.txt` e o `SHA256SUMS.txt.minisig`.
+2. Verifica a assinatura minisign com a chave de release embutida **antes** de confiar em qualquer checksum. Isso exige o [`minisign`](https://jedisct1.github.io/minisign/) ou Python 3 com PyNaCl (`python3-nacl` no Debian/Ubuntu). A instalação para se nenhum dos dois estiver disponível ou se a assinatura for inválida.
+3. Confere o SHA-256 do binário e instala em `~/.local/bin/orquestra`.
+4. No Linux, verifica as bibliotecas WebKitGTK/libsoup e instala as que faltarem pelo gerenciador de pacotes usando `sudo`. Use `--no-auto-deps` para pular essa etapa e instalar as bibliotecas você mesmo.
+
+Para diagnosticar uma instalação Linux existente sem baixar de novo:
 
 ```bash
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps
 ```
 
----
+Binários e notas de versão ficam na [página de Releases](https://github.com/internetdozero/OrquestraAI/releases). As mudanças estão no [CHANGELOG](CHANGELOG.md).
 
-## 🌟 O que é o OrquestraAI?
+## CLI
 
-A rotina de engenharia com agentes de IA modernos costuma envolver múltiplos assistentes e CLIs simultaneamente: **Claude Code**, **OpenAI Codex**, **xAI Grok**, **Antigravity (AGY)**, **Freebuff / Manicode**, **GitHub Copilot CLI**, **Hermes Agent**, **OpenCode** e **Kilo Code**.
-
-No entanto, cada ferramenta isola suas próprias pastas de skills, configurações de servidores MCP, instruções de sistema (`AGENTS.md` vs `CLAUDE.md`) e históricos de conversa.
-
-O **OrquestraAI** resolve essa fragmentação através de uma aplicação desktop em **Tauri v2 + Rust + React** e CLI headless de alto desempenho:
-
-1. **Cofre Universal de Skills e Projeções:** Mantenha um repositório central (`~/.orquestra/skills-library`) e projete skills dinamicamente (via symlinks atômicos ou injeção em configurações JSONC) em qualquer harness sem duplicar arquivos no disco.
-2. **Hub Oficial de Extensões e Comunidade:** Descoberta e instalação em 1 clique de skills e servidores MCP oficiais servidos a partir do monorepo [`internetdozero/orquestra-extensions`](https://github.com/internetdozero/orquestra-extensions), com auditoria estática automatizada de scripts executáveis.
-3. **Catálogo de Servidores MCP Global e por Harness:** Ative, desative e configure servidores do Model Context Protocol (MCP) globalmente ou por agente individual.
-4. **Protocolo Master `AGENTS.md`:** Mantenha suas regras e instruções comportamentais unificadas entre todas as ferramentas sem precisar copiar e colar arquivos manualmente.
-5. **Telemetria de Sessões e Leitor de Transcripts Cross-Harness:** Acompanhe espaço em disco, contagem de turnos e feeds de conversa de todas as 9 IAs, com sanitização (limpeza de tags de raciocínio interno e extração limpa dos prompts do usuário).
-6. **Janitor (Guarda de Sistema e Memória):** Evita travamentos por falta de memória RAM (OOM Killer), varre processos órfãos de agentes e faz a limpeza segura de caches transitórios.
-7. **Idea Vault e Quadro de Produtividade Inter-Agentes:** Bloco de notas persistente, ordenação estilo Notion, geração de prompt em 1 clique para agentes de IA e métricas de atividade.
-8. **Auto-Atualizador Integrado:** Detector de releases em background e fluxo de atualização com 1 clique nas Configurações.
-
----
-
-## 🛠️ Harnesses Suportados (Os 9 Agentes Principais)
-
-| Harness                 | Caminho de Projeção de Skills                                         | Arquivo de Instruções                                                                             | Integração de Configuração / Banco de Dados                             |
-| :---------------------- | :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------- |
-| **Antigravity (AGY)**   | `~/.gemini/config/skills`                                             | `~/.gemini/config/AGENTS.md`                                                                      | Logs de sessão (`.system_generated/logs/transcript.jsonl`)              |
-| **OpenAI Codex**        | `~/.codex/skills`                                                     | `~/.codex/AGENTS.md`                                                                              | `thread_history_1.sqlite` + rollouts multi-arquivos                     |
-| **Claude Code**         | `~/.claude/skills`                                                    | `~/.claude/CLAUDE.md`                                                                             | `projects/<slug>/*.jsonl`                                               |
-| **Freebuff / Manicode** | `~/.agents/skills`, `~/.freebuff/skills`, `~/.config/manicode/skills` | `~/.config/manicode/AGENTS.md` (também `~/.freebuff/AGENTS.md` ou `~/.config/freebuff/AGENTS.md`) | `~/.agents/mcp.json` + `desktop-v2.db` + histórico Manicode + worktrees |
-| **OpenCode**            | Injeção via `skills.paths`                                            | Instruções nativas                                                                                | `~/.config/opencode/opencode.jsonc` + `opencode.db`                     |
-| **Kilo Code**           | Injeção via `skills.paths`                                            | Instruções nativas                                                                                | `~/.config/kilo/kilo.jsonc` + `kilo.db`                                 |
-| **GitHub Copilot CLI**  | `~/.copilot/skills`                                                   | Instruções nativas                                                                                | `session-store.db` (tabela de turns)                                    |
-| **Hermes Agent**        | `~/.hermes/skills`                                                    | Instruções nativas                                                                                | `state.db` (tabela de messages)                                         |
-| **xAI Grok**            | `~/.grok/skills`                                                      | Instruções nativas                                                                                | `chat_history.jsonl` + índice SQLite                                    |
-
-### Configuração de Freebuff e MCPs
-
-As skills globais e a configuração MCP do Freebuff ficam em `~/.agents`:
-o Orquestra projeta as skills gerenciadas por `~/.agents/skills` e importa
-definições MCP existentes de `~/.agents/mcp.json`. MCPs do Gemini/Antigravity
-são importados de `~/.gemini/config/mcp_config.json` e
-`~/.gemini/settings.json`. Esses arquivos globais do usuário são reconciliados
-com o catálogo do Orquestra; pastas `.agents` de projetos não são varridas nem
-importadas. Skills e MCPs gerenciados somente pela conta Freebuff, sem arquivos
-locais, ficam fora deste catálogo baseado em arquivos.
-
-Ao ativar um MCP oficial, o Orquestra o instala em um ambiente privado em
-`~/.orquestra/mcp-servers/` e publica o comando resolvido nos harnesses ativos.
-MCPs sem descrição exibem uma orientação localizada para consultar as
-ferramentas expostas pelo servidor. O seletor de escopo MCP mostra contagens de
-servidores ativos no Global e em cada harness; a contagem do harness inclui os
-MCPs herdados do Global. Instalações pela Store mostram o progresso durante o
-clone ou instalação e exibem falhas na interface.
-
----
-
-## 🏗️ Arquitetura e Tecnologias
-
-- **Shell / Núcleo Nativo:** [Tauri v2](https://v2.tauri.app/) (Rust 2021, GTK/WebKit nativo no Linux)
-- **Frontend:** React 19 + TypeScript + Vite 8
-- **Estilização:** Tailwind CSS v4 (Paleta escura personalizada Zinc/Slate com temas dinâmicos)
-- **Concorrência e Estado:** Backend Rust multithread com conexões SQLite somente-leitura não-bloqueantes (`sqlite3` embutido estaticamente)
-- **Otimização de Linkagem e Cache:** Linker `mold` de alta performance + `sccache` + unidades de codegen otimizadas
-
----
-
-## 🚀 Como Executar
-
-### Pré-requisitos
-
-- **Node.js:** v22+ (utiliza recursos nativos de globbing em `node:fs`)
-- **Rust:** Toolchain estável (`rustc`, `cargo`)
-- **Dependências Linux (Debian/Ubuntu):**
-  ```bash
-  sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
-    libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-  ```
-
-### Desenvolvimento Local
+O mesmo binário roda subcomandos sem interface. Adicione `--json` para saída legível por máquina.
 
 ```bash
-# Clone o repositório
+orquestra sessions list --harness claude
+orquestra skills list --scope claude
+orquestra mcp status
+orquestra vault list
+orquestra idea list --project MeuProjeto
+```
+
+| Comando              | Cobre                                                                                  | Guia                                         |
+| :------------------- | :------------------------------------------------------------------------------------- | :------------------------------------------- |
+| `orquestra sessions` | listar, inspecionar, buscar, exportar, fixar, limpar, política de retenção, acompanhar | [docs/cli/sessions.md](docs/cli/sessions.md) |
+| `orquestra skills`   | listar, info, ativar/desativar, criar, importar (local ou git), exportar, validar      | [docs/cli/skills.md](docs/cli/skills.md)     |
+| `orquestra mcp`      | listar, status, adicionar/remover, ativar/desativar, deploy, listar e chamar tools     | [docs/cli/mcp.md](docs/cli/mcp.md)           |
+| `orquestra vault`    | credenciais, pools de chaves, rotação, testes de provedor, proxy cego, auditoria       | [docs/cli/vault.md](docs/cli/vault.md)       |
+| `orquestra idea`     | ciclo de ideias, busca, métricas, notas do blackboard                                  | [docs/cli/ideas.md](docs/cli/ideas.md)       |
+
+`orquestra --help` lista os atalhos de bridge e MCP (`--bridge-status`, `--bridge-deploy`, `--mcp-status`, `--mcp-set`, `--mcp-deploy`, `--preset`).
+
+## Harnesses suportados
+
+| Harness            | Skills                    | Instruções                     | Sessões / config                      |
+| :----------------- | :------------------------ | :----------------------------- | :------------------------------------ |
+| Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md`   | logs de transcript, `mcp_config.json` |
+| OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite`, rollouts   |
+| Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`             |
+| Freebuff           | `~/.agents/skills`        | `~/.config/manicode/AGENTS.md` | `~/.agents/mcp.json`, `desktop-v2.db` |
+| OpenCode           | `skills.paths` na config  | nativo                         | `opencode.jsonc`, `opencode.db`       |
+| Kilo Code          | `skills.paths` na config  | nativo                         | `kilo.jsonc`, `kilo.db`               |
+| GitHub Copilot CLI | `~/.copilot/skills`       | nativo                         | `session-store.db`                    |
+| Hermes Agent       | `~/.hermes/skills`        | nativo                         | `state.db`                            |
+| xAI Grok           | `~/.grok/skills`          | nativo                         | `chat_history.jsonl`                  |
+
+Só arquivos de nível de usuário são gerenciados. Pastas `.agents` de workspace e skills/MCPs que existem só na conta de nuvem do Freebuff não são importados. Sessões do Freebuff que ainda estão na nuvem aparecem com o selo "Nuvem (não sincronizada)" até sincronizarem localmente.
+
+## Desenvolvimento
+
+Requisitos: Node.js 22+, Rust estável e, no Debian/Ubuntu:
+
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+```
+
+```bash
 git clone https://github.com/internetdozero/OrquestraAI.git
 cd OrquestraAI
-
-# Instale as dependências do frontend
 npm install
-
-# Inicie o frontend em modo dev
-npm run dev
-
-# Inicie o aplicativo desktop completo em modo dev
-npm run dev:tauri
-
-# Compilação rápida de desenvolvimento (com protocolo customizado embutido)
-npm run build:fast
+npm run dev:tauri        # app desktop em modo de desenvolvimento
 ```
 
-### Executando Testes
+Verificações que o CI roda:
 
 ```bash
-# Executa toda a suite de testes unitários e contratos
-npm run test:all
-
-# Executa os testes do core Rust diretamente
-cargo test --lib
+npm test                 # testes unitários e de contrato em Node
+npm run lint && npm run format:check
+cargo fmt --all -- --check
+cargo test --workspace
 ```
 
----
+Stack: Tauri v2 e um workspace Rust (`crates/`: core, harness, vault, bridge, sessions) com frontend React 19 + TypeScript + Vite estilizado com Tailwind CSS v4. Veja [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/IPC_API.md](docs/IPC_API.md), [docs/vault.md](docs/vault.md) e [docs/security.md](docs/security.md).
 
-## 📄 Licença
+As skills e servidores MCP oficiais ficam em [internetdozero/orquestra-extensions](https://github.com/internetdozero/orquestra-extensions).
 
-Este projeto está sob a [Licença MIT](LICENSE) — consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+## Licença
+
+[MIT](LICENSE)
