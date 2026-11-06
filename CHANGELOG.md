@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7] - 2026-11-06
+
 ### Added
 
 - **Freebuff Cloud Sessions Handling & Badging:** Detects Freebuff Desktop sessions processed remotely in Codebuff Cloud (`execution_target = 'cloud'`). Sessions pending local sync display an informative cloud badge (`Nuvem (não sincronizada)` / `Cloud (unsynced)`) and tooltip in the UI, and inspecting their transcript returns clear diagnostic guidance directing the user to open them in Freebuff Desktop to sync messages.
