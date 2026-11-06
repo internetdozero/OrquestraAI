@@ -125,25 +125,40 @@ fn main() {
         Some("--help" | "-h") => {
             println!(
                 "OrquestraAI — universal AI harness control plane\n\n\
-                 Usage: orquestra [legacy flags] | ideas <add|list|status> |\n\
-                                   sessions <list|purge> | bridge status\n\n\
+                 Usage: orquestra [legacy flags] | idea <sub> | sessions <sub> |\n\
+                                   bridge <sub> | vault <sub> | mcp <sub> | skills <sub>\n\n\
                  \x20 (no flag)        Launch the desktop control plane\n\
                  \x20 --bridge-status   Print harness link state as JSON\n\
                  \x20 --bridge-deploy   Back up and link every installed harness (JSON report)\n\
                  \x20 --mcp-status      Print the master MCP catalog as JSON\n\
                  \x20 --mcp-deploy      Compile active MCPs into every harness config (JSON report)\n\
                  \x20 --mcp-set         Toggle one server: --mcp-set <id> <global|harness> <on|off>\n\
-                 \x20 --preset          Apply a mission preset: --preset <id> (JSON report)\n\
-                 \x20 ideas add         ideas add --project <name> --title <text> [--json]\n\
-                 \x20 ideas list/status ideas list [--status all]; ideas status <id> <status>\n\
+                 \x20 --preset          Apply a mission preset: --preset <id> (JSON report)\n\n\
+                 \x20 idea list         Lists OPEN ideas only; --status all includes the rest\n\
+                 \x20 idea add          idea add --project <name> --title <text> [--json]\n\
+                 \x20 idea              get|update|status|delete|search|projects|export-md|metrics\n\
+                 \x20 idea note-*       note-post|note-list|note-get|note-read|note-clear\n\
                  \x20 sessions list     sessions list [--harness <id>] [--search <text>] [--json]\n\
-                 \x20 sessions purge   Dry run by default; --yes requires a filter\n\
-                 \x20 vault            Blind vault for scripts: vault <list|set-enabled|http|exec>\n\
-                 \x20 bridge status     Show bridge health; add --json to any new command"
+                 \x20 sessions purge    Dry run by default; --yes requires a filter\n\
+                 \x20 vault             Blind vault for scripts: vault <list|set-enabled|http|exec>\n\
+                 \x20 mcp               mcp <list|status|add|remove|inspect> [--json]\n\
+                 \x20 skills            skills <command> [options]\n\
+                 \x20 bridge status     Show bridge health; add --json to any subcommand"
             );
             return;
         }
         _ => {}
+    }
+
+    // A mistyped subcommand used to fall through to the desktop launcher, which
+    // on a running instance activates it and exits 0 with no output at all — a
+    // typo in a script looked like success. Reject unknown words instead; flags
+    // and existing paths keep the launcher behavior.
+    if let Some(word) = args.get(1) {
+        if !word.starts_with('-') && !word.contains('/') && !std::path::Path::new(word).exists() {
+            crate::log_error!("unknown command '{word}' (see --help)");
+            std::process::exit(2);
+        }
     }
 
     if let Ok(true) = orquestra_ai_lib::single_instance::try_activate_existing() {
