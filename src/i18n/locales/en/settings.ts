@@ -51,8 +51,8 @@ export const settings: TranslationSchema["settings"] = {
     soonBadge: "Soon",
     ramTitle: "RAM alert threshold (%)",
     ramHint: "The Janitor chip turns amber above this level.",
-    tmpTitle: "Watch /tmp",
-    tmpHint: "Warns when scratch files show up in /tmp.",
+    tmpTitle: "Watch temp storage",
+    tmpHint: "Warns when scratch files show up in temporary storage.",
   },
   about: {
     version: "Version",

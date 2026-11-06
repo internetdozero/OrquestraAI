@@ -49,8 +49,8 @@ export const settings = {
     soonBadge: "Em breve",
     ramTitle: "Alerta de memória RAM (%)",
     ramHint: "O chip do Janitor acende em âmbar acima deste limite.",
-    tmpTitle: "Vigilante de /tmp",
-    tmpHint: "Alerta quando arquivos scratch aparecem no /tmp.",
+    tmpTitle: "Vigilante de temporários",
+    tmpHint: "Alerta quando arquivos scratch aparecem no armazenamento temporário.",
   },
   about: {
     version: "Versão",

@@ -61,14 +61,40 @@ export function deployHarnessBridge(): Promise<BridgeReport> {
   return invoke<BridgeReport>("deploy_harness_bridge");
 }
 
-/** `~`-shortened path for compact UI copy. */
-export function shortenPath(path: string): string {
-  const home = "/home/";
-  if (path.startsWith(home)) {
-    const rest = path.slice(home.length);
-    const slash = rest.indexOf("/");
-    return slash === -1 ? `~/${rest}` : `~/${rest.slice(slash + 1)}`;
+/** `~`-shortened path for compact UI copy across Linux, macOS and Windows. */
+export function shortenPath(path: string, homePrefix?: string): string {
+  if (homePrefix) {
+    const normalizedPrefix = homePrefix.replace(/\\/g, "/").replace(/\/$/, "");
+    const normalizedPath = path.replace(/\\/g, "/");
+    if (normalizedPath === normalizedPrefix) {
+      return "~";
+    }
+    if (normalizedPath.startsWith(`${normalizedPrefix}/`)) {
+      return `~/${normalizedPath.slice(normalizedPrefix.length + 1)}`;
+    }
   }
+
+  // Linux home: /home/<user>/...
+  if (path.startsWith("/home/")) {
+    const rest = path.slice("/home/".length);
+    const slash = rest.indexOf("/");
+    return slash === -1 ? "~" : `~/${rest.slice(slash + 1)}`;
+  }
+
+  // macOS home: /Users/<user>/...
+  if (path.startsWith("/Users/")) {
+    const rest = path.slice("/Users/".length);
+    const slash = rest.indexOf("/");
+    return slash === -1 ? "~" : `~/${rest.slice(slash + 1)}`;
+  }
+
+  // Windows home: C:\Users\<user>\... or C:/Users/<user>/...
+  const winMatch = path.match(/^[a-zA-Z]:[/\\]Users[/\\]([^/\\]+)([/\\](.*))?$/i);
+  if (winMatch) {
+    const subpath = winMatch[3];
+    return subpath ? `~/${subpath.replace(/\\/g, "/")}` : "~";
+  }
+
   return path;
 }
 
