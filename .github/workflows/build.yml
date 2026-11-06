@@ -29,7 +29,8 @@ jobs:
             bin_name: orquestra-linux-x86_64
             is_linux: true
           - name: macOS Apple Silicon (arm64)
-            os: macos-14
+            # macos-14 retired 2026-11-02; arm64 builds stay on macos-15.
+            os: macos-15
             artifact: orquestra-macos-arm64
             bin_name: orquestra-macos-arm64
             is_linux: false

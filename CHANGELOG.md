@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cleartext session-id logging:** CLI human and error messages for session delete/pin/unpin/export/inspect/handoff/watch no longer interpolate raw session identifiers into stdout/stderr (CodeQL `rust/cleartext-logging` alerts #12 and #13). Structured `--json` payloads still return `sessionId` for operators who requested that session.
+- **Release runner:** macOS Apple Silicon builds move from retired `macos-14` to `macos-15` after GitHub's 2026-11-02 image retirement.
+- **minimatch:** force development transitive `minimatch` to `11.0.1` via npm `overrides` to close Dependabot alert #4 (globparts amplification DoS); production runtime is unaffected.
 - Kept scoped ElevenLabs keys active on 401 response during credential verification.
 - Corrected provider connection checks and latency measurements for blind vault credentials.
 - Freebuff bridge detection now uses its global `~/.agents` root and ignores optional skill or instruction paths whose parent directories are absent.

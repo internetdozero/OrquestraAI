@@ -31,7 +31,7 @@ fn run_tail_watch(args: &[String], default_follow: bool) -> Result<String, CliEr
         Some(id) => sessions
             .into_iter()
             .find(|s| s.id == id && harness_opt.as_deref().map_or(true, |h| s.harness == h))
-            .ok_or_else(|| CliError::Operation(format!("session '{id}' not found")))?,
+            .ok_or_else(|| CliError::Operation("session not found".to_string()))?,
         None => {
             // Find newest active session or newest session
             sessions

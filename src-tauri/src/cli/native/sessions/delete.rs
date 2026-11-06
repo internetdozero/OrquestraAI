@@ -25,23 +25,19 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let target = sessions
         .into_iter()
         .find(|s| s.id == *session_id && s.harness == harness)
-        .ok_or_else(|| {
-            CliError::Operation(format!(
-                "session '{session_id}' not found in harness '{harness}'"
-            ))
-        })?;
+        .ok_or_else(|| CliError::Operation(format!("session not found in harness '{harness}'")))?;
 
     if is_session_active(&target.harness, &target.id) {
-        return Err(CliError::Operation(format!(
-            "refusing to delete active session '{session_id}' currently held open by running agent"
-        )));
+        return Err(CliError::Operation(
+            "refusing to delete an active session currently held open by running agent".to_string(),
+        ));
     }
 
     if target.is_pinned {
         if !force {
-            return Err(CliError::Operation(format!(
-                "refusing to delete pinned session '{session_id}'; unpin first or specify --force"
-            )));
+            return Err(CliError::Operation(
+                "refusing to delete a pinned session; unpin first or specify --force".to_string(),
+            ));
         }
         // Force unpin before deletion
         let _ = toggle_pin_session(harness.clone(), session_id.to_string(), None);
@@ -64,7 +60,7 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     });
 
     let human = format!(
-        "Deleted session '{session_id}' [{harness}], reclaimed {} bytes.",
+        "Deleted session [{harness}], reclaimed {} bytes.",
         report.reclaimed_bytes
     );
 
