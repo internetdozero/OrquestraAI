@@ -10,7 +10,6 @@ fn ideas_cli_lock() -> std::sync::MutexGuard<'static, ()> {
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-
 #[test]
 fn ideas_cli_usage_errors() {
     assert!(matches!(
