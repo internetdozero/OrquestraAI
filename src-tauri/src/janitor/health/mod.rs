@@ -13,6 +13,8 @@ mod linux;
 mod macos;
 #[cfg(test)]
 mod tests;
+#[cfg(any(target_os = "windows", test))]
+mod windows;
 
 use serde::Serialize;
 #[cfg(any(target_os = "linux", test))]
@@ -68,8 +70,10 @@ pub struct SystemHealth {
 
 /// Collect live memory, swap, scratch-volume, load and process metrics.
 ///
-/// Linux reads `/proc`, macOS asks sysctl and `host_statistics64`. Other
-/// platforms report an explicit error rather than fabricated numbers.
+/// Linux reads `/proc`, macOS asks sysctl and `host_statistics64`, and Windows
+/// uses `GlobalMemoryStatusEx`, `GetSystemTimes` and the process working sets.
+/// Any other platform reports an explicit error rather than fabricated
+/// numbers.
 #[cfg(target_os = "linux")]
 pub(super) fn snapshot() -> Result<SystemHealth, String> {
     linux::snapshot()
@@ -80,9 +84,14 @@ pub(super) fn snapshot() -> Result<SystemHealth, String> {
     macos::snapshot()
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(target_os = "windows")]
 pub(super) fn snapshot() -> Result<SystemHealth, String> {
-    Err("system health snapshots are supported on Linux and macOS".to_string())
+    windows::snapshot()
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+pub(super) fn snapshot() -> Result<SystemHealth, String> {
+    Err("system health snapshots are supported on Linux, macOS and Windows".to_string())
 }
 
 pub(super) fn should_alert(ram_percent: f64, tmp_percent: f64) -> bool {

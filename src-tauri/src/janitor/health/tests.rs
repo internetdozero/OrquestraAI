@@ -162,3 +162,56 @@ fn ranking_keeps_the_heaviest_and_breaks_ties_by_pid() {
         "a limit above the input keeps all of it"
     );
 }
+
+/// Windows' page file covers RAM plus swap, so the API's "commit limit" is
+/// larger than the actual swap. Reporting it raw would tell the operator they
+/// have gigabytes of swap they do not have.
+#[test]
+fn windows_swap_is_the_page_file_minus_physical_memory() {
+    let total_phys = 16 * 1024 * 1024 * 1024u64;
+    let total_page_file = total_phys + 4 * 1024 * 1024 * 1024;
+    let avail_phys = 8 * 1024 * 1024 * 1024u64;
+    let avail_page_file = avail_phys + 3 * 1024 * 1024 * 1024;
+
+    let (total_kb, free_kb) =
+        windows::swap_stats(total_phys, avail_phys, total_page_file, avail_page_file);
+    assert_eq!(total_kb, 4 * 1024 * 1024, "4 GiB of swap");
+    assert_eq!(free_kb, 3 * 1024 * 1024, "3 GiB free");
+
+    // A page file smaller than RAM reports negative swap: clamp to zero
+    // rather than wrapping into petabytes.
+    let (total_kb, free_kb) =
+        windows::swap_stats(total_phys, avail_phys, total_phys / 2, avail_phys);
+    assert_eq!((total_kb, free_kb), (0, 0));
+}
+
+/// Windows counts idle time inside kernel time; forgetting that would make a
+/// completely idle machine look 50% busy.
+#[test]
+fn windows_cpu_utilization_excludes_idle_from_busy_time() {
+    assert_eq!(windows::cpu_utilization(0, 0, 0), 0.0);
+    // Totally idle: kernel == idle, no user time.
+    assert_eq!(windows::cpu_utilization(1_000, 1_000, 0), 0.0);
+    // Half of the total time was busy.
+    assert_eq!(windows::cpu_utilization(500, 1_000, 0), 50.0);
+    // Kernel 100 (of which 40 idle) and 100 user: 160 busy of 200 total.
+    assert_eq!(windows::cpu_utilization(40, 100, 100), 80.0);
+    // Idle larger than the total cannot happen on a real machine; it must not
+    // produce a negative percentage if it does.
+    assert_eq!(windows::cpu_utilization(500, 100, 100), 0.0);
+}
+
+#[test]
+fn windows_process_names_drop_the_directory_and_exe_suffix() {
+    assert_eq!(
+        windows::process_name_from_path(r"C:\Program Files\Google\chrome.exe"),
+        "chrome"
+    );
+    assert_eq!(windows::process_name_from_path(r"C:\tools\git.EXE"), "git");
+    assert_eq!(windows::process_name_from_path("notepad.exe"), "notepad");
+    assert_eq!(
+        windows::process_name_from_path(r"D:\dir\no-extension"),
+        "no-extension"
+    );
+    assert_eq!(windows::process_name_from_path(""), "");
+}
