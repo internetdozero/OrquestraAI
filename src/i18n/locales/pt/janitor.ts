@@ -12,6 +12,8 @@ export const janitor = {
   mb: "MB",
   topProcesses: "Maiores processos por RAM",
   tmpPath: (path: string, isTmpfs: boolean) => `${path}${isTmpfs ? " · tmpfs" : ""}`,
+  tmpMetric: (isTmpfs: boolean): string =>
+    isTmpfs ? "Armazenamento temporário" : "Capacidade do volume",
   noProcesses: "Nenhum processo visível.",
   loading: "Lendo métricas do sistema…",
   unavailable: "Métricas indisponíveis.",

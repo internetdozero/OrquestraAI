@@ -14,6 +14,7 @@ export const janitor: TranslationSchema["janitor"] = {
   mb: "MB",
   topProcesses: "Top processes by RAM",
   tmpPath: (path: string, isTmpfs: boolean) => `${path}${isTmpfs ? " · tmpfs" : ""}`,
+  tmpMetric: (isTmpfs: boolean) => (isTmpfs ? "Temp storage" : "Volume capacity"),
   noProcesses: "No visible processes.",
   loading: "Reading system metrics…",
   unavailable: "Metrics unavailable.",

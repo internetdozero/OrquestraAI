@@ -154,7 +154,7 @@ export function JanitorModal({
                   warning={ramWarning}
                 />
                 <Gauge
-                  label={health.tmp.path || t.janitor.tmp}
+                  label={t.janitor.tmpMetric(health.tmp.isTmpfs)}
                   used={health.tmp.usedMb}
                   total={health.tmp.totalMb}
                   percent={health.tmp.usedPercent}
