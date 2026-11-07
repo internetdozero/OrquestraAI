@@ -1,11 +1,14 @@
 //! Startup capability probe for the external programs the app shells out to,
 //! plus the crash report that replaces a swallowed panic.
 //!
-//! `git` powers skill import and official-extension sync; `tar` powers the
-//! portable backup and restore. Both used to be assumed present, so a machine
-//! without them answered with a generic error — and on macOS calling a missing
-//! `git` raises the Xcode Command Line Tools dialog instead. The probe names
-//! the tool, says which feature it disables, and the UI shows it.
+//! `git` powers skill import and official-extension sync. It used to be
+//! assumed present, so a machine without it answered with a generic error —
+//! and on macOS calling a missing `git` raises the Xcode Command Line Tools
+//! dialog instead. The probe names the tool, says which feature it disables,
+//! and the UI shows it.
+//!
+//! `tar` is deliberately absent: the backup archives in-process with the `tar`
+//! and `flate2` crates, so no external archiver is required anywhere.
 //!
 //! The panic hook matters because a release build has no visible stderr: on
 //! Windows the process is a GUI subsystem binary, and on macOS it is normally
@@ -49,10 +52,7 @@ pub struct ToolReport {
 }
 
 /// Tools the app shells out to, paired with the features they unlock.
-const REQUIRED_TOOLS: [(&str, &[&str]); 2] = [
-    ("git", &["skill_sync", "skill_import"]),
-    ("tar", &["backup_archive"]),
-];
+const REQUIRED_TOOLS: [(&str, &[&str]); 1] = [("git", &["skill_sync", "skill_import"])];
 
 /// Probe every tool in [`REQUIRED_TOOLS`]. Never fails: a missing binary is a
 /// reported capability, not an error.
@@ -244,7 +244,7 @@ mod tests {
     fn probe_names_every_required_tool() {
         let report = report();
         let ids: Vec<&str> = report.tools.iter().map(|tool| tool.id.as_str()).collect();
-        assert_eq!(ids, ["git", "tar"]);
+        assert_eq!(ids, ["git"]);
         assert_eq!(
             report.missing.len(),
             report.tools.iter().filter(|tool| !tool.present).count()

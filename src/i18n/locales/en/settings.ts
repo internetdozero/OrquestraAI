@@ -91,7 +91,6 @@ export const settings: TranslationSchema["settings"] = {
         ({
           skill_sync: "Official extension sync",
           skill_import: "Skill import from Git",
-          backup_archive: "Backup archive",
         }) as Record<string, string>
       )[feature] ?? feature,
   },

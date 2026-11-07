@@ -80,3 +80,28 @@ EOF
 Both accept only stock Minisign prehashed-mode signatures — the same gate
 the auto-updater applies in `src-tauri/src/update_sig.rs` before it trusts
 any downloaded checksum.
+
+## Backup archive privacy
+
+`~/.orquestra/backups/*.tar.gz` embeds `vault.json` with cleartext service
+keys, so the archive is treated as a secret at rest:
+
+- The file is created with mode `0600` **before** the first byte is written,
+  and the mode is re-applied after closing. Without that, the inherited umask
+  (`0644` on most systems) leaves the archive readable by every local user for
+  as long as it takes to fill it.
+- `~/.orquestra/backups/` is tightened to `0700`, so the names inside are not
+  listable either.
+- Archiving happens in-process (`tar` + `flate2`), never through an external
+  `tar` binary, so no child process can be selected from `PATH` and no
+  platform flag dialect is involved.
+- Symlinks are stored as links, matching the previous `tar` invocation: the
+  projections do not duplicate the vault into the archive.
+
+On Windows there are no POSIX mode bits. The archive is created inside the
+operator's profile (`%USERPROFILE%\.orquestra\backups`), which inherits the
+profile ACL: the owning account, `SYSTEM` and the local `Administrators` group
+— no ordinary local user. That is the guarantee the code relies on; it is not
+a per-file DACL, so a profile directory whose ACL was widened by hand widens
+the backups with it. Deployments that need a stronger guarantee should point
+`USERPROFILE` at a directory with a restrictive ACL.

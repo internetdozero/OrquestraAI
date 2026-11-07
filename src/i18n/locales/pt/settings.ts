@@ -90,7 +90,6 @@ export const settings = {
         ({
           skill_sync: "Sincronização de extensões oficiais",
           skill_import: "Importação de skill via Git",
-          backup_archive: "Arquivo de backup",
         }) as Record<string, string>
       )[feature] ?? feature,
   },
