@@ -7,12 +7,15 @@ use orquestra_core::paths::OrquestraPaths;
 
 use crate::at_rest::envelope;
 
-use super::fallback::{create_fallback_key, read_fallback_key};
+use super::fallback::{create_fallback_key, fallback_exists, read_fallback_key};
 use super::ring::{
     create_keyring_key, keyring_usable, migrated_flag, read_keyring_key, set_migrated_flag,
     store_keyring_key,
 };
-use super::{cache_get, cache_insert, warn_once};
+use super::{
+    cache_get, cache_insert, observe_file_key, observe_keyring, observed_status, warn_once,
+    KeyStatus,
+};
 
 const MIGRATED_FILE: &str = ".at-rest-migrated";
 
@@ -46,16 +49,29 @@ pub(crate) fn file_key(paths: &OrquestraPaths) -> Result<[u8; 32], String> {
         match read_keyring_key() {
             Ok(Some(key)) => {
                 cache_insert(&paths.root, key);
+                observe_keyring(&paths.root);
                 return Ok(key);
             }
             Ok(None) => {}
-            Err(error) => warn_once(format!(
-                "OS keyring unreachable ({error}); using a 0600 key file — \
-                 theft-of-disk protection is degraded until a keyring is available"
-            )),
+            Err(error) => {
+                warn_once(format!(
+                    "OS keyring unreachable ({error}); using a 0600 key file — \
+                     theft-of-disk protection is degraded until a keyring is available"
+                ));
+                observe_file_key(
+                    &paths.root,
+                    &format!("the OS keyring is unreachable ({error})"),
+                );
+            }
         }
         if let Some(key) = read_fallback_key(&paths.root)? {
             cache_insert(&paths.root, key);
+            // The keyring is reachable but empty: this write still seals under
+            // the key file until the unseal path promotes it.
+            observe_file_key(
+                &paths.root,
+                "the OS keyring holds no key yet, so this key is a 0600 file until it is promoted",
+            );
             return Ok(key);
         }
         if any_sealed_file_exists(&paths.root) {
@@ -65,11 +81,18 @@ pub(crate) fn file_key(paths: &OrquestraPaths) -> Result<[u8; 32], String> {
             );
         }
         let key = match create_keyring_key() {
-            Ok(key) => key,
+            Ok(key) => {
+                observe_keyring(&paths.root);
+                key
+            }
             Err(error) => {
                 warn_once(format!(
                     "OS keyring could not create a file key ({error}); using a 0600 key file — theft-of-disk protection is degraded until a keyring is available"
                 ));
+                observe_file_key(
+                    &paths.root,
+                    &format!("the OS keyring refused to store the key ({error})"),
+                );
                 create_fallback_key(&paths.root)?
             }
         };
@@ -78,6 +101,7 @@ pub(crate) fn file_key(paths: &OrquestraPaths) -> Result<[u8; 32], String> {
     }
     if let Some(key) = read_fallback_key(&paths.root)? {
         cache_insert(&paths.root, key);
+        observe_file_key(&paths.root, NO_KEYRING_REASON);
         return Ok(key);
     }
     if any_sealed_file_exists(&paths.root) {
@@ -87,7 +111,38 @@ pub(crate) fn file_key(paths: &OrquestraPaths) -> Result<[u8; 32], String> {
     }
     let key = create_fallback_key(&paths.root)?;
     cache_insert(&paths.root, key);
+    observe_file_key(&paths.root, NO_KEYRING_REASON);
     Ok(key)
+}
+
+/// Why the file fallback is in use when the keyring is simply unavailable:
+/// no session bus on a headless host, a locked keychain, or a scratch root.
+const NO_KEYRING_REASON: &str =
+    "no OS keyring is available on this host, so the key is a 0600 file beside the secrets";
+
+/// Backend protecting `paths` right now, without creating key material.
+///
+/// A decision this process already made wins: it is the backend the running
+/// app actually uses. Otherwise the answer is derived the same way
+/// [`file_key`] would decide, minus the creation step. Never fails: an
+/// unreadable status is the degraded one, which is the safe news to surface.
+pub fn key_status(paths: &OrquestraPaths) -> KeyStatus {
+    if let Some(status) = observed_status(&paths.root) {
+        return status;
+    }
+    if !keyring_usable(&paths.root) {
+        return KeyStatus::file_key(NO_KEYRING_REASON);
+    }
+    match read_keyring_key() {
+        Ok(Some(_)) => KeyStatus::keyring(),
+        // No keyring entry yet: an existing fallback file is the degraded
+        // case, while a fresh root will seal under the keyring next time.
+        Ok(None) if fallback_exists(&paths.root) => KeyStatus::file_key(
+            "the OS keyring has no entry yet, so the key is a 0600 file beside the secrets",
+        ),
+        Ok(None) => KeyStatus::keyring(),
+        Err(error) => KeyStatus::file_key(format!("the OS keyring is unreachable ({error})")),
+    }
 }
 
 /// Promote the fallback key into the keyring after it opened a sealed file:

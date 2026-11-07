@@ -143,6 +143,32 @@ pub fn vault_exec(service: String, command: serde_json::Value) -> Result<VaultEx
     orquestra_vault::vault::service::execute(&paths, &service, &command)
 }
 
+/// Which backend protects the at-rest key, for the operator-facing badge.
+/// Names only: no key material and no paths leave the core.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultKeyStatus {
+    /// `"keyring"` or `"file-key"`.
+    pub backend: String,
+    /// `true` when the key lives in a file beside the ciphertext.
+    pub degraded: bool,
+    /// Why it degraded; `None` for the keyring.
+    pub reason: Option<String>,
+}
+
+/// Report the at-rest key backend without creating key material. Never fails
+/// on a missing keyring: a degraded backend is the answer, not an error.
+#[tauri::command]
+pub fn vault_key_status() -> Result<VaultKeyStatus, String> {
+    let paths = OrquestraPaths::resolve()?;
+    let status = orquestra_vault::at_rest::key_status(&paths);
+    Ok(VaultKeyStatus {
+        backend: status.backend.as_str().to_string(),
+        degraded: status.is_degraded(),
+        reason: status.reason,
+    })
+}
+
 /// Per-file outcome of a migration-backup purge: both secret-bearing files
 /// (`vault.json`, `mcps.json`) may keep a `.migrate-bak` plaintext backup.
 #[derive(Debug, serde::Serialize)]

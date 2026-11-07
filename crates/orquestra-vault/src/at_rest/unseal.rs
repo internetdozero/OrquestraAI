@@ -177,6 +177,9 @@ pub fn open_stored(
                     match migration {
                         Ok(active) => {
                             key::cache_insert(&paths.root, active);
+                            // The fallback key now lives in the keyring: the
+                            // reported backend must stop saying "degraded".
+                            key::observe_keyring(&paths.root);
                             let _ = maybe_remove_fallback(paths);
                             if let Err(error) = key::mark_migrated(&paths.root) {
                                 key::warn_once(format!(

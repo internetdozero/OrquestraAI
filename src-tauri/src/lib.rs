@@ -66,9 +66,9 @@ use updater::{restart_app, sync_official_extensions};
 pub use updater::apply_app_update;
 use vault::{
     list_vault_presets, vault_delete_service, vault_exec, vault_http_request,
-    vault_import_services, vault_list_services, vault_purge_migration_backups, vault_remove_key,
-    vault_reveal_key, vault_save_service, vault_set_primary, vault_set_service_enabled,
-    vault_test_connection,
+    vault_import_services, vault_key_status, vault_list_services, vault_purge_migration_backups,
+    vault_remove_key, vault_reveal_key, vault_save_service, vault_set_primary,
+    vault_set_service_enabled, vault_test_connection,
 };
 
 /// Runtime identity of the native core, surfaced in the UI footer so the
@@ -435,6 +435,7 @@ pub fn run() {
             vault_exec,
             vault_test_connection,
             vault_remove_key,
+            vault_key_status,
             vault_purge_migration_backups
         ])
         .run(tauri::generate_context!())

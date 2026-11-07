@@ -207,6 +207,23 @@ export function listVaultPresets(): Promise<VaultPreset[]> {
   return invoke<VaultPreset[]>("list_vault_presets");
 }
 
+/** Backend protecting the at-rest key; `degraded` means a file key. */
+export interface VaultKeyStatus {
+  backend: "keyring" | "file-key";
+  degraded: boolean;
+  /** Why it degraded; null while the OS keyring is in use. */
+  reason: string | null;
+}
+
+/**
+ * Report which backend holds the vault key. A missing keyring is a reported
+ * downgrade, not an error: the vault keeps working with a 0600 key file.
+ */
+export function vaultKeyStatus(): Promise<VaultKeyStatus> {
+  if (devMockMode()) return Promise.resolve({ backend: "keyring", degraded: false, reason: null });
+  return invoke<VaultKeyStatus>("vault_key_status");
+}
+
 export function vaultListServices(): Promise<VaultService[]> {
   if (devMockMode()) return Promise.resolve(mockServices);
   return invoke<VaultService[]>("vault_list_services");

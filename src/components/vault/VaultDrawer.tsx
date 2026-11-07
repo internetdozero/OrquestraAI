@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import {
   listVaultPresets,
   vaultDeleteService,
+  vaultKeyStatus,
   vaultListServices,
   vaultSaveService,
   vaultSetPrimary,
+  type VaultKeyStatus,
   type VaultPreset,
   type VaultService,
 } from "../../lib/vault.ts";
@@ -42,6 +44,7 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
   const [keysText, setKeysText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<VaultKeyStatus | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -51,6 +54,9 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
     vaultListServices()
       .then(setServices)
       .catch(() => setServices([]));
+    vaultKeyStatus()
+      .then(setKeyStatus)
+      .catch(() => setKeyStatus(null));
   }, [open]);
 
   if (!open) return null;
@@ -98,10 +104,34 @@ export default function VaultDrawer({ open, onClose }: VaultDrawerProps) {
           Close
         </button>
       </div>
-      <p className="mb-4 text-xs text-zinc-400">
+      <p className="mb-3 text-xs text-zinc-400">
         Agents never see raw keys. The backend injects the active key in memory for HTTP and exec
         calls.
       </p>
+
+      {keyStatus ? (
+        <div
+          role={keyStatus.degraded ? "status" : undefined}
+          className={`mb-4 rounded border px-2.5 py-2 text-[11px] ${
+            keyStatus.degraded
+              ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+              : "border-white/10 bg-zinc-900/60 text-zinc-400"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span>Key storage</span>
+            <span className="rounded border border-current/30 px-1.5 py-0.5 font-medium">
+              {keyStatus.backend === "keyring" ? "OS keyring" : "0600 file"}
+            </span>
+          </div>
+          {keyStatus.degraded ? (
+            <p className="mt-1">
+              Protection degraded: the encryption key sits in a file next to the secrets, so anyone
+              who copies both can read them. {keyStatus.reason}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <span className="mb-1 block text-xs text-zinc-400">Preset</span>
       <CustomDropdown

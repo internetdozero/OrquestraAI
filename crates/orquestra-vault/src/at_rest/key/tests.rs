@@ -21,6 +21,50 @@ fn test_paths(name: &str) -> OrquestraPaths {
     }
 }
 
+/// A scratch root never gets the operator's real keyring, so it is the exact
+/// degraded shape the desktop app can hit on a headless host — and it must
+/// say so with a reason, not just a boolean.
+#[test]
+fn degraded_backend_is_reported_for_a_scratch_root() {
+    let paths = test_paths("status-degraded");
+    std::fs::create_dir_all(&paths.root).expect("scratch");
+    forget_observed(&paths.root);
+
+    let status = key_status(&paths);
+    assert_eq!(status.backend, KeyBackend::FileKey);
+    assert!(status.is_degraded());
+    let reason = status
+        .reason
+        .clone()
+        .expect("a degraded status carries a reason");
+    assert!(reason.contains("0600"), "unexpected reason: {reason}");
+
+    // Sealing uses exactly the backend the status promised.
+    let _key = file_key(&paths).expect("key");
+    assert_eq!(key_status(&paths), status);
+    let _ = std::fs::remove_dir_all(&paths.root);
+}
+
+/// The reported status follows the newest decision: once the fallback key is
+/// promoted into the keyring, the app must stop claiming it is degraded.
+#[test]
+fn the_latest_decision_wins_over_the_derived_answer() {
+    let _serial = test_keyring_lock();
+    let paths = test_paths("status-promoted");
+    std::fs::create_dir_all(&paths.root).expect("scratch");
+    forget_observed(&paths.root);
+    assert_eq!(key_status(&paths).backend, KeyBackend::FileKey);
+
+    observe_keyring(&paths.root);
+
+    let status = key_status(&paths);
+    assert_eq!(status.backend, KeyBackend::Keyring);
+    assert!(!status.is_degraded());
+    assert!(status.reason.is_none(), "keyring needs no excuse");
+    forget_observed(&paths.root);
+    let _ = std::fs::remove_dir_all(&paths.root);
+}
+
 #[test]
 fn fallback_key_is_stable_per_root_and_unique_across_roots() {
     let first = test_paths("stable-a");

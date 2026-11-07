@@ -28,6 +28,7 @@ permissions = [
   "allow-get-retention-policy",
   "allow-list-vault-presets",
   "allow-vault-list-services",
+  "allow-vault-key-status",
   "allow-estimate-purge",
   "allow-pick-folder",
   "allow-open-url",

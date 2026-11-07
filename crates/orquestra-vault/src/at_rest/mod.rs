@@ -41,6 +41,7 @@ mod unseal;
 
 pub use backup::purge_migration_backup;
 pub use envelope::{AAD_MCPS, AAD_VAULT};
+pub use key::{key_status, KeyBackend, KeyStatus};
 pub use seal::seal_text;
 pub use unseal::open_stored;
 
