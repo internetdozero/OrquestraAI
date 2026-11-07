@@ -19,7 +19,26 @@ fn prefer_native_wayland_backend() {
     std::env::set_var("GDK_BACKEND", "wayland");
 }
 
+/// Release builds use the GUI subsystem on Windows, so the process starts
+/// without a console and every `println!` from the headless flags goes
+/// nowhere. Attaching the parent console restores stdout/stderr when the
+/// binary is launched from `cmd.exe` or PowerShell; a double-click has no
+/// parent console and the call simply fails, which is harmless.
+#[cfg(windows)]
+fn attach_parent_console() {
+    use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+    // SAFETY: one documented constant, no pointers, no lifetime concerns.
+    unsafe {
+        AttachConsole(ATTACH_PARENT_PROCESS);
+    }
+}
+
+#[cfg(not(windows))]
+fn attach_parent_console() {}
+
 fn main() {
+    attach_parent_console();
+
     #[cfg(target_os = "linux")]
     prefer_native_wayland_backend();
 

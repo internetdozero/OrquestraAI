@@ -16,7 +16,10 @@ In OrquestraAI, **Skills** are autonomous capability packages provided to AI age
   - Metadata: Parsed from YAML frontmatter (`name`, `description`, `category`) and body markdown.
 - **Scope-based Projections:**
   - Path: `~/.orquestra/active/<scope>/<skill-id>` (resolved via `OrquestraPaths::projection_dir`).
-  - Active skills exist as symlinks targeting the vault directory.
+  - Active skills exist as directory links targeting the vault directory: a
+    symlink on Linux and macOS, an NTFS junction on Windows (creating a
+    Windows symlink needs elevation or Developer Mode). See
+    `docs/decisions/windows-projections.md`.
   - **Global Scope (`global`):** Universal baseline. When a skill is enabled in `global`, it is automatically projected into `active/global/` and propagated to all harness active directories (`active/<harness_id>/`). A globally enabled skill is inherited across all harnesses and cannot be disabled in an isolated harness without first disabling it in `global`.
   - **Harness Scopes (e.g. `claude`, `gemini`, `codex`, `copilot`, `cursor`):** Isolated projections. Enabling a skill here symlinks it only into that specific harness scope without touching others.
 - **Static Security Auditing:**
