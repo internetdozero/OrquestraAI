@@ -13,3 +13,7 @@ orquestra-core = { path = "../orquestra-core" }
 json5.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+# Test fixtures share one scratch root (`orquestra_core::test_support`).
+orquestra-core = { path = "../orquestra-core", features = ["test-support"] }

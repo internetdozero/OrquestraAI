@@ -16,3 +16,7 @@ serde_json.workspace = true
 # Every harness keeps its chat history in SQLite; sessions are opened
 # read-only so a running agent keeps its locks.
 rusqlite.workspace = true
+
+[dev-dependencies]
+# Test fixtures share one scratch root (`orquestra_core::test_support`).
+orquestra-core = { path = "../orquestra-core", features = ["test-support"] }

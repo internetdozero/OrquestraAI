@@ -111,7 +111,7 @@ fn failed_keyring_creation_uses_the_private_file_fallback() {
     let _serial = test_keyring_lock();
     test_keyring_clear();
     let _forced_keyring = force_keyring_usable_for_test();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-keyring-fallback-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()

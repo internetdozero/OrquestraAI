@@ -3,7 +3,7 @@
 
 //! Adapter discovery tests: the fixture harness and nothing else.
 //!
-//! Every fixture lives under `/var/tmp/testing` and mimics the real store
+//! Every fixture lives under [`orquestra_core::test_support::root`] and mimics the real store
 //! layout — including the columns the adapters actually query, so a schema
 //! drift in these files means the query drifted too. The cases themselves
 //! live in the sibling modules:
@@ -39,11 +39,12 @@ impl TestHome {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = PathBuf::from("/var/tmp/testing").join(format!(
+        let path = orquestra_core::test_support::root().join(format!(
             "orquestra-sessions-adapters-{}-{unique}",
             std::process::id()
         ));
-        fs::create_dir_all(&path).expect("create the adapter test home under /var/tmp/testing");
+        fs::create_dir_all(&path)
+            .expect("create the adapter test home under the test scratch root");
         Self(path)
     }
 

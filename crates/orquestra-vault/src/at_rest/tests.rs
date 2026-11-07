@@ -285,7 +285,7 @@ fn fallback_unseal_survives_a_keyring_promotion_failure() {
 
     let _serial = key::test_keyring_lock();
     key::test_keyring_clear();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-promotion-failure-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()

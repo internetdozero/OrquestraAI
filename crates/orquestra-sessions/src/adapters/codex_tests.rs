@@ -9,7 +9,7 @@ fn sessions_symlink_is_not_listed_or_deleted() {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
         .unwrap_or(0);
-    let root = PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-codex-link-{}-{unique}",
         std::process::id()
     ));
@@ -44,7 +44,7 @@ fn maintenance_lock_symlink_does_not_block_delete() {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
         .unwrap_or(0);
-    let root = PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-codex-lock-{}-{unique}",
         std::process::id()
     ));

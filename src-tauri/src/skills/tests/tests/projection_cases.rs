@@ -64,7 +64,7 @@ fn monorepo_skill_discovery_finds_nested_layouts() {
     use super::subpath::locate_skill_dir;
     use std::path::PathBuf;
 
-    let root = PathBuf::from("/var/tmp/testing")
+    let root = orquestra_core::test_support::root()
         .join(format!("orquestra-tests-mono-{}", std::process::id()));
     if root.exists() {
         fs::remove_dir_all(&root).unwrap();
@@ -174,7 +174,7 @@ fn a_symlinked_skill_file_is_not_listed_or_read() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-skill-link-{}-{unique}",
         std::process::id()
     ));
@@ -236,7 +236,7 @@ fn read_agents_does_not_follow_a_symlink() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-agents-link-{}-{unique}",
         std::process::id()
     ));
@@ -275,7 +275,7 @@ fn projection_symlink_is_not_a_directory_to_delete() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-projection-link-{}-{unique}",
         std::process::id()
     ));

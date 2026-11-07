@@ -118,7 +118,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let scratch = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        let scratch = orquestra_core::test_support::root().join(format!(
             "orquestra-dir-size-{}-{unique}",
             std::process::id()
         ));

@@ -3,7 +3,7 @@
 
 //! Destruction tests, split by what each case is protecting.
 //!
-//! Every fixture is built under `/var/tmp/testing` on the real store layout, so
+//! Every fixture is built under [`orquestra_core::test_support::root`] on the real store layout, so
 //! a deletion is proven against the same paths, columns and lock files the
 //! harnesses use. The two properties that matter most — a pinned session is
 //! never deleted by accident, and nothing outside the harness store is touched
@@ -41,10 +41,10 @@ impl Fixture {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let home = PathBuf::from("/var/tmp/testing")
+        let home = orquestra_core::test_support::root()
             .join(format!("orquestra-purge-{}-{unique}", std::process::id()));
         let root = home.join(".orquestra");
-        fs::create_dir_all(&root).expect("create the purge fixture under /var/tmp/testing");
+        fs::create_dir_all(&root).expect("create the purge fixture under the test scratch root");
 
         Self { home, root }
     }

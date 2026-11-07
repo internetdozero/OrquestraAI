@@ -317,17 +317,18 @@ fn blackboard_posts_lists_unread_and_marks_read() {
 #[test]
 fn database_paths_honor_env_and_xdg() {
     // Env override wins verbatim, without touching the filesystem.
-    std::env::set_var("IDEA_VAULT_DB_PATH", "/var/tmp/testing/vault.sqlite3");
+    let scratch = orquestra_core::test_support::root();
+    std::env::set_var("IDEA_VAULT_DB_PATH", scratch.join("vault.sqlite3"));
     assert_eq!(
         store::resolve_db_path().expect("override"),
-        Path::new("/var/tmp/testing/vault.sqlite3")
+        scratch.join("vault.sqlite3")
     );
     std::env::remove_var("IDEA_VAULT_DB_PATH");
 
-    std::env::set_var("XDG_DATA_HOME", "/var/tmp/testing/xdg");
+    std::env::set_var("XDG_DATA_HOME", scratch.join("xdg"));
     assert_eq!(
         store::resolve_db_path().expect("xdg"),
-        Path::new("/var/tmp/testing/xdg/idea-vault/ideas.sqlite3")
+        scratch.join("xdg/idea-vault/ideas.sqlite3")
     );
     std::env::remove_var("XDG_DATA_HOME");
 }

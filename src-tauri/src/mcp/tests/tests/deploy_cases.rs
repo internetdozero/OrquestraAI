@@ -114,7 +114,7 @@ fn deploy_does_not_read_a_symlinked_harness_config() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = PathBuf::from("/var/tmp/testing").join(format!(
+    let base = orquestra_core::test_support::root().join(format!(
         "orquestra-mcp-config-link-{}-{unique}",
         std::process::id()
     ));
@@ -170,7 +170,7 @@ fn catalog_does_not_read_a_symlinked_mcps_file() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = PathBuf::from("/var/tmp/testing").join(format!(
+    let base = orquestra_core::test_support::root().join(format!(
         "orquestra-mcp-catalog-link-{}-{unique}",
         std::process::id()
     ));
@@ -218,7 +218,7 @@ fn seed_catalog_refuses_a_symlinked_seed_file() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = PathBuf::from("/var/tmp/testing").join(format!(
+    let base = orquestra_core::test_support::root().join(format!(
         "orquestra-mcp-seed-link-{}-{unique}",
         std::process::id()
     ));

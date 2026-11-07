@@ -262,7 +262,7 @@ fn fusion_does_not_adopt_through_a_builtin_directory_symlink() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = PathBuf::from("/var/tmp/testing").join(format!(
+    let base = orquestra_core::test_support::root().join(format!(
         "orquestra-bridge-builtin-link-{}-{unique}",
         std::process::id()
     ));
@@ -306,7 +306,7 @@ fn fusion_does_not_read_a_symlinked_opencode_config() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = PathBuf::from("/var/tmp/testing").join(format!(
+    let base = orquestra_core::test_support::root().join(format!(
         "orquestra-bridge-config-link-{}-{unique}",
         std::process::id()
     ));

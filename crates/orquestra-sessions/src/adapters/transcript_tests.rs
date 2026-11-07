@@ -24,11 +24,12 @@ impl TestHome {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = PathBuf::from("/var/tmp/testing").join(format!(
+        let path = orquestra_core::test_support::root().join(format!(
             "orquestra-transcripts-{name}-{}-{unique}",
             std::process::id()
         ));
-        fs::create_dir_all(&path).expect("create the transcript test home under /var/tmp/testing");
+        fs::create_dir_all(&path)
+            .expect("create the transcript test home under the test scratch root");
         Self(path)
     }
 

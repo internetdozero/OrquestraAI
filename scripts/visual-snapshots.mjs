@@ -13,6 +13,7 @@
  */
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { connectPage, launchChrome } from "./visual/cdp.mjs";
@@ -22,7 +23,7 @@ const PORT = 1422;
 const APP_URL = `http://127.0.0.1:${PORT}/?fixtures=1`;
 const GOLDEN =
   process.env.SNAPSHOT_FILE || join(ROOT, "scripts/__snapshots__/transcript-drawers.json");
-const TMP = process.env.ORQUESTRA_VISUAL_TMP || "/var/tmp/testing";
+const TMP = process.env.ORQUESTRA_VISUAL_TMP || os.tmpdir();
 const HARNESSES = [
   "antigravity",
   "grok",

@@ -1,7 +1,7 @@
 use super::*;
 
 fn scratch(label: &str) -> PathBuf {
-    let root = PathBuf::from("/var/tmp/testing")
+    let root = orquestra_core::test_support::root()
         .join(format!("orquestra-subpath-{label}-{}", std::process::id()));
     if root.exists() {
         let _ = fs::remove_dir_all(&root);

@@ -12,7 +12,7 @@ fn desktop_install_does_not_write_through_a_symlink() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-desktop-link-{}-{unique}",
         std::process::id()
     ));
@@ -45,7 +45,7 @@ fn desktop_install_does_not_write_into_a_symlinked_applications_dir() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-desktop-dir-link-{}-{unique}",
         std::process::id()
     ));
@@ -78,7 +78,7 @@ fn desktop_install_reports_change_only_once() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let data = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let data = orquestra_core::test_support::root().join(format!(
         "orquestra-desktop-idem-{}-{unique}",
         std::process::id()
     ));
@@ -109,7 +109,7 @@ fn desktop_alias_entries_stay_hidden_from_menus() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let data = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let data = orquestra_core::test_support::root().join(format!(
         "orquestra-desktop-nodisplay-{}-{unique}",
         std::process::id()
     ));

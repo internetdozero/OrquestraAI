@@ -20,6 +20,10 @@ pub mod skills;
 // every env-mutating test in the crate serializes on one lock.
 #[cfg(test)]
 mod testenv;
+// Where test fixtures live. Compiled for this crate's tests, and for the
+// crates whose tests build the same on-disk layouts (`test-support`).
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
 
 pub use agents::{read_agents, write_agents, DEFAULT_AGENTS};
 pub use error::{CoreError, CoreResult};

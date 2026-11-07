@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { after, test } from "node:test";
 import { createHash } from "node:crypto";
 
-const scratchRoot = "/var/tmp/testing";
+const scratchRoot = process.env.ORQUESTRA_TEST_TMP || os.tmpdir();
 mkdirSync(scratchRoot, { recursive: true });
 const fixtureRoot = mkdtempSync(join(scratchRoot, "orquestra-installer-signature-"));
 const fixtureDir = join(fixtureRoot, "fixtures");

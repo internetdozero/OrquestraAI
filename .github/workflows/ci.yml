@@ -104,8 +104,9 @@ jobs:
   windows-check:
     # The desktop shell still contains Unix-only code; the libraries below are
     # portable and must stay that way. `orquestra-bridge` joined the list with
-    # the junction projection model (docs/decisions/windows-projections.md)
-    # and is cross-checked for this target on every push.
+    # the junction projection model (docs/decisions/windows-projections.md).
+    # The portable crates whose test targets build here also run their suites on
+    # this runner, so Windows behavior is executed instead of only compiled.
     name: Windows check
     runs-on: windows-latest
     permissions:
@@ -135,15 +136,33 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Cargo check (portable crates)
-        run: cargo check -p orquestra-core -p orquestra-vault -p orquestra-harness -p orquestra-sessions -p orquestra-bridge
+      # `--all-targets` so the test modules of these crates compile here too,
+      # not just the libraries the Linux runner already checks.
+      - name: Cargo check (portable crates, test targets included)
+        run: cargo check --all-targets -p orquestra-core -p orquestra-harness -p orquestra-bridge
+
+      # Real Windows execution, not a compile-only check. Only these three
+      # crates are listed: their test targets build for Windows (each unix-only
+      # fixture is behind `#[cfg(unix)]`). `orquestra-sessions` and
+      # `orquestra-vault` still fail to compile their tests for Windows — the
+      # session fixtures rely on `std::os::unix` — so they stay compile-only
+      # below until that is fixed, and `orquestra-ai` (the Tauri shell) does not
+      # build for Windows at all yet.
+      - name: Run cargo tests (portable crates)
+        run: cargo test --all-targets -p orquestra-core -p orquestra-harness -p orquestra-bridge
+
+      # Library-only: these two keep their compile coverage on Windows while
+      # their test targets remain unix-only.
+      - name: Cargo check (sessions and vault)
+        run: cargo check -p orquestra-vault -p orquestra-sessions
 
   macos-check:
     # The Darwin half of the janitor health collector only exists behind
-    # `#[cfg(target_os = "macos")]`, so nothing on the Linux runner ever parses
+    # `#[cfg(target_os = "macos")]`, so nothing on the Linux runner ever runs
     # it: `src-tauri/src/janitor/health/macos/native.rs` (sysctl,
     # `host_statistics64`, libproc) could break without a single job noticing.
-    # This job compiles it so Darwin-only code is checked on every pull request.
+    # This job runs the workspace suite on Darwin so that code is exercised,
+    # not just compiled, on every pull request.
     name: macOS check
     runs-on: macos-latest
     permissions:
@@ -173,10 +192,11 @@ jobs:
         with:
           workspaces: src-tauri
 
-      # `--all-targets` so the Darwin-gated test modules compile too, not just
-      # the library the app links.
-      - name: Cargo check (workspace)
-        run: cargo check --workspace --all-targets
+      # Tests, not a compile-only check: the whole workspace is Unix, so the
+      # Darwin-gated modules (`janitor/health/macos`, the updater's bundle
+      # handling, the tray) are executed here instead of merely parsed.
+      - name: Run workspace tests
+        run: cargo test --workspace
 
   node-tests:
     # Node test job: runs frontend unit tests and the TS typecheck.

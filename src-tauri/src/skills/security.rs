@@ -101,7 +101,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_nanos())
             .unwrap_or(0);
-        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+        let root = orquestra_core::test_support::root().join(format!(
             "orquestra-security-{label}-{}-{unique}",
             std::process::id()
         ));

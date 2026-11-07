@@ -25,9 +25,10 @@ impl TestRoot {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = PathBuf::from("/var/tmp/testing")
+        let path = orquestra_core::test_support::root()
             .join(format!("orquestra-janitor-{}-{unique}", std::process::id()));
-        fs::create_dir_all(&path).expect("create Janitor test workspace under /var/tmp/testing");
+        fs::create_dir_all(&path)
+            .expect("create Janitor test workspace under the test scratch root");
         Self(path)
     }
 }

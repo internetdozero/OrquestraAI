@@ -13,7 +13,7 @@ fn deploy_does_not_follow_a_config_directory_symlink() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = PathBuf::from("/var/tmp/testing").join(format!(
+    let base = orquestra_core::test_support::root().join(format!(
         "orquestra-mcp-dir-link-{}-{unique}",
         std::process::id()
     ));

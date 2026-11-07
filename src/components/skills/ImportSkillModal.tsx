@@ -22,7 +22,7 @@ function toMessage(cause: unknown): string {
 /**
  * Two stacked import paths: a local folder (path input + drag & drop that
  * picks up a dropped folder path) and a GitHub URL (shallow-cloned by the
- * core into /var/tmp/testing, never /tmp).
+ * core into its own scratch directory, never /tmp).
  */
 export function ImportSkillModal({ isTauri, onClose, onImported, onError }: ImportSkillModalProps) {
   const { t } = useI18n();

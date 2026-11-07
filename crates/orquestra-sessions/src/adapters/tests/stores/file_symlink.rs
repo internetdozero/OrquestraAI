@@ -12,7 +12,7 @@ fn a_symlinked_session_file_is_not_sized_or_loaded() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let scratch = std::path::PathBuf::from("/var/tmp/testing").join(format!(
+    let scratch = orquestra_core::test_support::root().join(format!(
         "orquestra-file-size-{}-{unique}",
         std::process::id()
     ));

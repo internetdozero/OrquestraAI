@@ -81,6 +81,8 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [dev-dependencies]
+# Test fixtures share one scratch root (`orquestra_core::test_support`).
+orquestra-core = { path = "../crates/orquestra-core", features = ["test-support"] }
 # Integration tests simulate a live peer by holding the lockfile `flock`.
 libc.workspace = true
 # Format-preserving TOML editing moved to `orquestra-harness`; the app only

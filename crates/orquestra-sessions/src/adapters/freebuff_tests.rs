@@ -8,7 +8,7 @@ fn scratch() -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
         .unwrap_or(0);
-    let root = PathBuf::from("/var/tmp/testing").join(format!(
+    let root = orquestra_core::test_support::root().join(format!(
         "orquestra-freebuff-link-{}-{unique}",
         std::process::id()
     ));

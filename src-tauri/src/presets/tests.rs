@@ -357,7 +357,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let root = PathBuf::from("/var/tmp/testing").join(format!(
+        let root = orquestra_core::test_support::root().join(format!(
             "orquestra-presets-link-{}-{unique}",
             std::process::id()
         ));

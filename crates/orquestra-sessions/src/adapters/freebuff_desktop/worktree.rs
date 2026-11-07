@@ -83,7 +83,7 @@ mod tests {
     use std::fs;
 
     fn scratch(label: &str) -> PathBuf {
-        let root = PathBuf::from("/var/tmp/testing").join(format!(
+        let root = orquestra_core::test_support::root().join(format!(
             "orquestra-worktree-{}-{}",
             label,
             std::process::id()
