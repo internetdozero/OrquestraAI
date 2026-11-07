@@ -1,0 +1,23 @@
+[workspace]
+
+[package]
+name = "windows-typecheck"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+# Kept identical to the `cfg(windows)` block in `src-tauri/Cargo.toml`: a
+# feature missing here would hide a `use windows_sys::…` from the check instead
+# of failing it.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+] }

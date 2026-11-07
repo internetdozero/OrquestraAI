@@ -70,6 +70,37 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --workspace -- -D warnings
 
+  windows-cross-check:
+    # `orquestra-ai` cannot be cross-built for Windows from a Linux runner:
+    # `ring`'s build script and `rusqlite`'s bundled SQLite need a Windows C
+    # toolchain, and both stop the build before this repository's code is
+    # parsed. Its `#[cfg(windows)]` modules therefore compile through the
+    # staging crate in `tools/windows-typecheck` (real files, `#[path]`-
+    # included), while the portable crates are cross-compiled for real.
+    name: Windows cross-check
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            tools/windows-typecheck
+
+      # No `npm ci`: nothing here builds the frontend or the Tauri shell.
+      - name: Cross-check Windows code
+        run: ./scripts/windows-typecheck.sh
+
   windows-check:
     # The desktop shell still contains Unix-only code; the libraries below are
     # portable and must stay that way. `orquestra-bridge` joined the list with

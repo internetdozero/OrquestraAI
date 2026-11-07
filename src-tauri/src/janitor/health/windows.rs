@@ -6,7 +6,12 @@
 //! Windows: `GlobalMemoryStatusEx`, `EnumProcesses` and `GetSystemTimes` never
 //! leak into a Linux build.
 
+// Explicit path on purpose: this same file is compiled through
+// `tools/windows-typecheck` with `#[path]`, and there a bare `mod native;`
+// resolves next to the file instead of into `windows/`. Both spellings name
+// `health/windows/native.rs`, so the check compiles exactly what ships.
 #[cfg(target_os = "windows")]
+#[path = "windows/native.rs"]
 mod native;
 #[cfg(target_os = "windows")]
 use super::{should_alert, CpuStats, SystemHealth, TmpStats, TopProcess};

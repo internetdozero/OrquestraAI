@@ -13,6 +13,7 @@ dist-ssr/
 /target/
 src-tauri/target/
 src-tauri/gen/schemas/
+/tools/windows-typecheck/target/
 
 # Agent scratch state (scratch files, session logs) — never source. Only the
 # scratch subfolders: `.freebuff/evidence/` and `project-id` are tracked on
