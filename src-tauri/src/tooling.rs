@@ -62,10 +62,19 @@ pub fn probe_external_tools() -> ToolReport {
 }
 
 fn report() -> ToolReport {
+    report_with(None)
+}
+
+/// The probe, with an optional `PATH` override for the child process.
+///
+/// Overriding the child's environment instead of the test process's keeps the
+/// "missing tool" case testable without mutating global state that other tests
+/// (and other threads) read at the same time.
+fn report_with(search_path: Option<&std::ffi::OsStr>) -> ToolReport {
     let tools: Vec<ToolProbe> = REQUIRED_TOOLS
         .iter()
         .map(|(id, disables)| {
-            let version = tool_banner(id);
+            let version = tool_banner(id, search_path);
             ToolProbe {
                 id: (*id).to_string(),
                 present: version.is_some(),
@@ -86,8 +95,12 @@ fn report() -> ToolReport {
 }
 
 /// First version line if the binary answers `--version`, else `None`.
-fn tool_banner(id: &str) -> Option<String> {
-    let output = command(id).arg("--version").output().ok()?;
+fn tool_banner(id: &str, search_path: Option<&std::ffi::OsStr>) -> Option<String> {
+    let mut command = command(id);
+    if let Some(path) = search_path {
+        command.env("PATH", path);
+    }
+    let output = command.arg("--version").output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -253,6 +266,29 @@ mod tests {
             assert_eq!(tool.present, tool.version.is_some());
             assert!(!tool.disables.is_empty(), "{} disables nothing", tool.id);
         }
+    }
+
+    /// A machine without `git` must get a structured "feature disabled"
+    /// report, not a panic and not an empty one: the UI needs the tool name to
+    /// explain itself. The child's `PATH` points at a directory that does not
+    /// exist, so the lookup fails exactly as it would on a machine where the
+    /// tool was never installed.
+    #[test]
+    fn missing_tool_is_reported_as_a_disabled_capability() {
+        let empty_path = std::env::temp_dir().join("orquestra-probe-no-bin");
+        assert!(!empty_path.exists(), "the fixture path must not exist");
+
+        let report = report_with(Some(empty_path.as_os_str()));
+
+        assert_eq!(report.missing, ["git"]);
+        let git = report
+            .tools
+            .iter()
+            .find(|tool| tool.id == "git")
+            .expect("git is still probed");
+        assert!(!git.present);
+        assert!(git.version.is_none());
+        assert_eq!(git.disables, ["skill_sync", "skill_import"]);
     }
 
     #[test]
