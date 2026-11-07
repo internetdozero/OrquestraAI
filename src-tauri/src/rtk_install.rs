@@ -13,7 +13,7 @@ pub fn status() -> Option<String> {
         .chain(
             crate::paths::require_home("locate RTK")
                 .ok()
-                .map(|home| home.join(".local/bin").join(binary_name())),
+                .map(|home| install_dir(&home).join(binary_name())),
         );
 
     for path in candidates {
@@ -112,7 +112,7 @@ pub fn install() -> Result<String, String> {
     }
     let binary = binary.ok_or("O pacote baixado não contém o binário RTK")?;
     let home = crate::paths::require_home("instalar RTK")?;
-    let dir = home.join(".local/bin");
+    let dir = install_dir(&home);
     fs::create_dir_all(&dir)
         .map_err(|e| format!("Não foi possível criar {}: {e}", dir.display()))?;
     let path = dir.join(binary_name());
@@ -131,7 +131,98 @@ pub fn install() -> Result<String, String> {
         let _ = fs::remove_file(&temp);
         format!("Não foi possível instalar o RTK em {}: {e}", path.display())
     })?;
-    Ok(format!("RTK {tag} instalado em {}", path.display()))
+
+    // A tool the app shells out to is useless if the operator's shell cannot
+    // find it: `~/.local/bin` is not on PATH by default in zsh (macOS) and is
+    // never on it in Windows, so the message says what to add instead of
+    // claiming an install that cannot be used.
+    let dirs = std::env::var_os("PATH")
+        .map(|paths| std::env::split_paths(&paths).collect::<Vec<_>>())
+        .unwrap_or_default();
+    let mut message = format!("RTK {tag} instalado em {}", path.display());
+    if !on_path(&dir, &dirs) {
+        message.push_str(&format!(
+            " — este diretório não está no PATH; para usar o RTK adicione:\n  {}",
+            path_hint(&dir)
+        ));
+    }
+    Ok(message)
+}
+
+/// Where RTK is installed.
+///
+/// `~/.local/bin` is the XDG convention on Linux and works on macOS too;
+/// Windows has no such folder, so the app keeps its tools under
+/// `%LOCALAPPDATA%` instead of littering the profile root.
+fn install_dir(home: &std::path::Path) -> std::path::PathBuf {
+    if cfg!(windows) {
+        home.join("AppData/Local/OrquestraAI/bin")
+    } else {
+        home.join(".local/bin")
+    }
+}
+
+/// Is `dir` one of the entries a shell would search?
+fn on_path(dir: &std::path::Path, entries: &[std::path::PathBuf]) -> bool {
+    entries.iter().any(|entry| entry == dir)
+}
+
+/// The exact line the operator has to add, in their shell's syntax.
+fn path_hint(dir: &std::path::Path) -> String {
+    let shown = dir.display();
+    if cfg!(windows) {
+        format!("setx PATH \"%PATH%;{shown}\"")
+    } else {
+        // One line that works in bash, zsh, sh and fish's POSIX mode; the
+        // persistent form belongs in the shell's rc file, which only the
+        // operator knows.
+        format!("export PATH=\"{shown}:$PATH\"  # add to ~/.profile or ~/.zshrc")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_directory_on_path_is_recognized_byte_for_byte() {
+        let dir = std::path::PathBuf::from("/home/dev/.local/bin");
+        assert!(on_path(
+            &dir,
+            &[std::path::PathBuf::from("/usr/bin"), dir.clone()]
+        ));
+        assert!(!on_path(&dir, &[std::path::PathBuf::from("/usr/bin")]));
+        // A trailing separator is the same directory: `Path` comparison
+        // ignores it, and so should this.
+        assert!(on_path(
+            &dir,
+            &[std::path::PathBuf::from("/home/dev/.local/bin/")]
+        ));
+        // A different directory that merely shares the suffix is not a match.
+        assert!(!on_path(&dir, &[std::path::PathBuf::from("/opt/bin")]));
+    }
+
+    #[test]
+    fn the_hint_names_the_install_directory() {
+        let dir = install_dir(std::path::Path::new("/home/dev"));
+        let hint = path_hint(&dir);
+        assert!(hint.contains(&dir.display().to_string()), "{hint}");
+        if cfg!(windows) {
+            assert!(hint.starts_with("setx PATH"), "{hint}");
+        } else {
+            assert!(hint.starts_with("export PATH="), "{hint}");
+        }
+    }
+
+    #[test]
+    fn the_install_directory_follows_the_platform_convention() {
+        let dir = install_dir(std::path::Path::new("/home/dev"));
+        if cfg!(windows) {
+            assert!(dir.ends_with("OrquestraAI/bin"), "{}", dir.display());
+        } else {
+            assert_eq!(dir, std::path::PathBuf::from("/home/dev/.local/bin"));
+        }
+    }
 }
 
 fn download(client: &reqwest::blocking::Client, url: &str) -> Result<Vec<u8>, String> {

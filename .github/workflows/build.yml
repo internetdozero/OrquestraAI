@@ -116,6 +116,11 @@ jobs:
             # One build produces both shapes: the bundle (what macOS users
             # open) and the Mach-O inside it (what the updater replaces).
             npx tauri build --bundles app,dmg
+          elif [ "${{ matrix.platform.is_linux }}" = "true" ]; then
+            # The Debian package is the native channel for Linux; the binary
+            # is still copied out below, because that is what the updater and
+            # install.sh use.
+            npx tauri build --bundles deb
           else
             npx tauri build --no-bundle
           fi
@@ -123,6 +128,10 @@ jobs:
           cp target/release/orquestra-ai bin-out/${{ matrix.platform.bin_name }}
           if [ "${{ matrix.platform.legacy_alias }}" = "true" ]; then
             cp target/release/orquestra-ai bin-out/orquestra-ai
+          fi
+          if [ "${{ matrix.platform.is_linux }}" = "true" ]; then
+            # `--bundles deb` writes the package, not the binary: publish both.
+            find target/release/bundle/deb -name '*.deb' -exec cp {} bin-out/ ';' 2>/dev/null || true
           fi
           if [ "${{ matrix.platform.is_macos }}" = "true" ]; then
             APP="target/release/bundle/macos/OrquestraAI.app"
@@ -139,7 +148,6 @@ jobs:
               echo "::warning::no app bundle was produced; only the bare binary is published"
             fi
           fi
-          chmod +x bin-out/*.app.zip 2>/dev/null || true
           chmod +x bin-out/*
           cd bin-out
           # The bundle is a zip: `chmod +x` must not have touched it, but the

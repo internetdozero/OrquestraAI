@@ -188,6 +188,33 @@ elif command -v shasum >/dev/null 2>&1; then HASH_CMD="shasum -a 256"
 else echo "❌ Error: Neither 'sha256sum' nor 'shasum' is available for checksum verification." >&2; exit 1
 fi
 
+# Signature tool preflight. Both are optional at this point (the release may
+# predate signing, and the verification step below reports precisely what is
+# missing), but telling the operator which tool was found — and how to install
+# one when none was — turns "install minisign or PyNaCl" into an actionable
+# command instead of a dead end after the download.
+SIG_TOOL=""
+if command -v minisign >/dev/null 2>&1; then
+    SIG_TOOL="minisign"
+elif command -v python3 >/dev/null 2>&1 && python3 -c 'import nacl.signing' >/dev/null 2>&1; then
+    SIG_TOOL="python3 (PyNaCl)"
+fi
+if [ -n "$SIG_TOOL" ]; then
+    echo "ℹ️  Release signature will be verified with ${SIG_TOOL}."
+else
+    echo "⚠️  No signature verifier found: release signatures need 'minisign' or python3 with PyNaCl." >&2
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "   Debian/Ubuntu: sudo apt-get install minisign   (or: python3-nacl)" >&2
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "   Fedora/RHEL:   sudo dnf install minisign   (or: python3-pynacl)" >&2
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "   Arch:          sudo pacman -S minisign   (or: python-pynacl)" >&2
+    elif command -v brew >/dev/null 2>&1; then
+        echo "   macOS:         brew install minisign" >&2
+    fi
+    echo "   The installer stops rather than skip signature verification." >&2
+fi
+
 # 2. Secure Temporary Workspace & Cleanup Trap
 mkdir -p "$BIN_DIR"
 BASE_TMP="${TMPDIR:-/tmp}"

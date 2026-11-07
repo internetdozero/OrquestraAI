@@ -9,6 +9,24 @@ signature over the release checksums before it trusts anything (see
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh
 ```
 
+## Native package (Debian/Ubuntu)
+
+The Linux release also publishes a `.deb`, built from the same bundle metadata
+as the installer path. It is the discoverable channel: `dpkg -i` puts the
+binary in `/usr/bin`, registers the launcher and lets the package manager
+record what is installed. It does not change the runtime requirements below —
+the package links the same glibc and WebKitGTK.
+
+```sh
+curl -fLO https://github.com/internetdozero/OrquestraAI/releases/latest/download/<name>.deb
+sudo dpkg -i <name>.deb
+```
+
+In-app updates replace the executable the app is running from. For a
+package-managed install that is `/usr/bin/orquestra`, which needs write access;
+the updater reports the permission error instead of failing silently, and
+reinstalling the newer `.deb` is the intended path there.
+
 ## Linux distributions
 
 The release is built on Ubuntu 22.04, which means the binary is linked against
@@ -76,6 +94,20 @@ xattr -dr com.apple.quarantine ~/Applications/OrquestraAI.app
 The bundle is built with the hardened runtime plus the JIT entitlement the
 WebView needs (`src-tauri/entitlements.plist`); a hardened bundle without it
 renders an empty window.
+
+## RTK (optional tool)
+
+The app can install [RTK](https://github.com/rtk-ai/rtk) for you, into
+`~/.local/bin` on Linux and macOS. That directory is on `PATH` on most Linux
+desktops, but not in zsh on macOS, so the success message names the exact line
+to add when the directory is missing from `PATH`:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"  # add to ~/.zshrc or ~/.profile
+```
+
+On Windows the tool goes to `%LOCALAPPDATA%\OrquestraAI\bin`, and the message
+prints the `setx PATH` command that adds it permanently.
 
 ## Windows
 
