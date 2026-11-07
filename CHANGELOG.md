@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multiplatform Path Shortening:** `shortenPath` supports both Windows (`C:\Users\...`) and Unix (`/home/...`) paths seamlessly in the frontend UI and Janitor modals, backed by unit tests.
+- **Ideas CLI Filter Discovery:** Explicit `--status all` documentation and test coverage for `orquestra idea list`, surfacing the default `open` filter behavior.
+
+### Fixed
+
+- **Release Build Portability on Windows:** `build.rs` resolves `npm` via `PATHEXT` to avoid failed builds when `npm` is invoked as `npm.cmd` on Windows.
+- **Tray Fallback Window Close:** App exits gracefully on window close when the desktop environment or OS lacks system tray support.
+- **Ideas CLI Unknown Subcommand Handling:** Fails with a clear usage error on unknown subcommands instead of silent non-zero termination, keeping `--help` and dispatch in sync.
+- **SQLite Test Concurrency:** Added shared mutex lock helper to CLI idea status filter tests, preventing SQLite database locks during multi-threaded test runs.
+
 ## [0.1.0-alpha.7] - 2026-11-06
 
 ### Added

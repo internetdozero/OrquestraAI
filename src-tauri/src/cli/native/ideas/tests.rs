@@ -216,8 +216,20 @@ fn ideas_cli_usage_matches_dispatch() {
             CliError::Usage(msg) => {
                 assert!(msg.starts_with("usage: orquestra idea"));
                 for sub in [
-                    "list", "get", "add", "update", "status", "delete", "search", "projects",
-                    "export-md", "metrics", "note-post", "note-list", "note-get", "note-read",
+                    "list",
+                    "get",
+                    "add",
+                    "update",
+                    "status",
+                    "delete",
+                    "search",
+                    "projects",
+                    "export-md",
+                    "metrics",
+                    "note-post",
+                    "note-list",
+                    "note-get",
+                    "note-read",
                     "note-clear",
                 ] {
                     assert!(msg.contains(sub), "usage should list {sub}");

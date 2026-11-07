@@ -26,14 +26,8 @@ test("shortenPath on macOS paths", () => {
 });
 
 test("shortenPath on Windows paths", () => {
-  assert.equal(
-    shortenPath("C:\\Users\\admin\\.agents\\mcp.json"),
-    "~/.agents/mcp.json",
-  );
-  assert.equal(
-    shortenPath("C:/Users/admin/.agents/mcp.json"),
-    "~/.agents/mcp.json",
-  );
+  assert.equal(shortenPath("C:\\Users\\admin\\.agents\\mcp.json"), "~/.agents/mcp.json");
+  assert.equal(shortenPath("C:/Users/admin/.agents/mcp.json"), "~/.agents/mcp.json");
   assert.equal(shortenPath("D:\\Users\\developer"), "~");
   assert.equal(
     shortenPath("E:\\Users\\alice\\AppData\\Local\\Orquestra\\state.json"),
@@ -46,14 +40,8 @@ test("shortenPath with backend-supplied homePrefix", () => {
     shortenPath("/mnt/storage/custom-user/.config/test.json", "/mnt/storage/custom-user"),
     "~/.config/test.json",
   );
-  assert.equal(
-    shortenPath("D:\\Profile\\user\\app.cfg", "D:\\Profile\\user"),
-    "~/app.cfg",
-  );
-  assert.equal(
-    shortenPath("/mnt/storage/custom-user", "/mnt/storage/custom-user"),
-    "~",
-  );
+  assert.equal(shortenPath("D:\\Profile\\user\\app.cfg", "D:\\Profile\\user"), "~/app.cfg");
+  assert.equal(shortenPath("/mnt/storage/custom-user", "/mnt/storage/custom-user"), "~");
 });
 
 test("shortenPath preserves non-home paths", () => {

@@ -12,7 +12,10 @@ use std::fs;
 pub const LIST_USAGE: &str = "usage: orquestra idea list [--project <p>] [--status <status>] [--category <c>] [--priority <p>] [--limit <n>] [--offset <n>] [--json]\n  status: default is 'open'; use '--status all' to include completed and archived ideas";
 
 pub(super) fn list(args: &[String]) -> Result<String, CliError> {
-    if args.iter().any(|arg| arg == "--help" || arg == "-h" || arg == "help") {
+    if args
+        .iter()
+        .any(|arg| arg == "--help" || arg == "-h" || arg == "help")
+    {
         return Err(usage(LIST_USAGE.to_string()));
     }
 
