@@ -19,6 +19,7 @@
 pub mod desktop_shortcut;
 pub mod health;
 pub mod single_instance;
+pub mod windows_shell;
 
 /// Stand-in for the shell's `crate::paths`: these modules only need the storage
 /// root (health sizes its volume, the instance mutex hashes it).
@@ -49,6 +50,7 @@ pub mod paths {
 /// `-D warnings` would fail on every item instead of checking it.
 pub fn build_graph() {
     desktop_shortcut::create();
+    windows_shell::identity();
     let _ = health::snapshot();
     let _ = single_instance::acquire();
     single_instance::release();

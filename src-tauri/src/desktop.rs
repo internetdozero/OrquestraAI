@@ -17,19 +17,30 @@ fn orquestra_root() -> Result<PathBuf, String> {
 /// Open an external HTTP(S) URL in the default system browser.
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
-    let (program, args) = browser_launch(std::env::consts::OS, &url)?;
-    std::process::Command::new(program)
-        .args(&args)
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("Failed to open browser: {error}"))
+    let url = validate_url(&url)?;
+    #[cfg(windows)]
+    {
+        // `ShellExecuteW` is an API call, not a process: there is no argv for a
+        // shell to re-split, and it reports its own error code.
+        return crate::windows_shell::open_url(&url);
+    }
+    #[cfg(not(windows))]
+    {
+        let (program, args) = browser_launch(std::env::consts::OS, &url)?;
+        std::process::Command::new(program)
+            .args(&args)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| format!("Failed to open browser: {error}"))
+    }
 }
 
-/// Launcher for one http(s) URL. The URL is a single argv entry.
+/// Reject anything that is not an http(s) URL without control characters.
 ///
-/// Windows must not use `cmd /C start`: cmd re-parses the command line, so a
-/// query string (`?a=1&b=2`) is split on `&` and the tail runs as a command.
-fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), String> {
+/// The check is separate from the launcher because Windows no longer builds an
+/// argv: `ShellExecuteW` would launch a `.exe` or hand the string to a
+/// registered protocol handler just as readily as it opens a page.
+fn validate_url(url: &str) -> Result<String, String> {
     let trimmed = url.trim();
     if !trimmed.starts_with("https://") && !trimmed.starts_with("http://") {
         return Err("Only http/https URLs are permitted".to_string());
@@ -37,15 +48,23 @@ fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), St
     if trimmed.chars().any(|ch| ch.is_control()) {
         return Err("URL contains control characters".to_string());
     }
-    let owned = trimmed.to_string();
+    Ok(trimmed.to_string())
+}
+
+/// Launcher for one http(s) URL on the platforms that spawn a program.
+///
+/// The URL is a single argv entry, so nothing re-parses it. Windows is absent
+/// on purpose: it uses `ShellExecuteW` in [`crate::windows_shell`], because
+/// `cmd /C start` re-splits the command line on `&` and `rundll32` is a loader
+/// Microsoft documents as not-for-direct-use.
+fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), String> {
+    let owned = validate_url(url)?;
     match os {
         "linux" => Ok(("xdg-open", vec![owned])),
         "macos" => Ok(("open", vec![owned])),
-        "windows" => Ok((
-            "rundll32",
-            vec!["url.dll,FileProtocolHandler".to_string(), owned],
+        other => Err(format!(
+            "Opening URLs is not supported on {other}; this build needs the platform shell API"
         )),
-        _ => Err("Opening URLs is not supported on this platform".to_string()),
     }
 }
 
@@ -174,19 +193,19 @@ mod icon_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{browser_launch, file_manager_launch};
+    use super::{browser_launch, file_manager_launch, validate_url};
     use std::path::Path;
 
     #[test]
     fn windows_launch_keeps_the_query_string_out_of_cmd() {
-        let (program, args) =
-            browser_launch("windows", "https://example.com/a?x=1&y=2").expect("https");
-        assert_eq!(program, "rundll32");
-        assert_eq!(args[0], "url.dll,FileProtocolHandler");
-        assert_eq!(args[1], "https://example.com/a?x=1&y=2");
-        assert!(args
-            .iter()
-            .all(|arg| arg != "/C" && arg != "cmd" && arg != "start"));
+        // Windows does not build a command line at all: the URL goes to
+        // `ShellExecuteW`, which cannot re-split a query string.
+        assert!(browser_launch("windows", "https://example.com/a?x=1").is_err());
+        // Validation is shared, so a rejected URL never reaches the shell API.
+        assert_eq!(
+            validate_url("  https://example.com/a?x=1&y=2  ").expect("valid"),
+            "https://example.com/a?x=1&y=2"
+        );
 
         let (program, args) = browser_launch("linux", "  http://example.com/docs  ").expect("http");
         assert_eq!(program, "xdg-open");

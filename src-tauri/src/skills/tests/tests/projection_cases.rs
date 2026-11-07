@@ -62,7 +62,6 @@ fn monorepo_url_fragments_extract_and_sanitize() {
 #[test]
 fn monorepo_skill_discovery_finds_nested_layouts() {
     use super::subpath::locate_skill_dir;
-    use std::path::PathBuf;
 
     let root = orquestra_core::test_support::root()
         .join(format!("orquestra-tests-mono-{}", std::process::id()));

@@ -1,7 +1,6 @@
 //! Symlink cases for MCP deploy that do not fit in `deploy_cases.rs`.
 
 use std::fs;
-use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::super::deploy::deploy_at;

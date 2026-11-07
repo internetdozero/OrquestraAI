@@ -24,7 +24,7 @@ fn desktop_install_does_not_write_through_a_symlink() {
     let link = data.join("applications/orquestra.desktop");
     std::os::unix::fs::symlink(&outside, &link).unwrap();
 
-    crate::desktop_icons::install_linux_assets(&data);
+    desktop_icons::install_linux_assets(&data);
 
     assert!(
         std::fs::symlink_metadata(&link)
@@ -56,7 +56,7 @@ fn desktop_install_does_not_write_into_a_symlinked_applications_dir() {
     let link = data.join("applications");
     std::os::unix::fs::symlink(&outside, &link).unwrap();
 
-    crate::desktop_icons::install_linux_assets(&data);
+    desktop_icons::install_linux_assets(&data);
 
     assert!(
         !outside.join("orquestra.desktop").exists(),
@@ -84,15 +84,15 @@ fn desktop_install_reports_change_only_once() {
     ));
 
     assert!(
-        crate::desktop_icons::install_linux_assets(&data),
+        desktop_icons::install_linux_assets(&data),
         "first install writes launcher and icons"
     );
     assert_eq!(
         std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap(),
-        crate::desktop_icons::DESKTOP_ENTRY,
+        desktop_icons::DESKTOP_ENTRY,
     );
     assert!(
-        !crate::desktop_icons::install_linux_assets(&data),
+        !desktop_icons::install_linux_assets(&data),
         "nothing changed, so no cache refresh is warranted"
     );
 
@@ -114,7 +114,7 @@ fn desktop_alias_entries_stay_hidden_from_menus() {
         std::process::id()
     ));
 
-    assert!(crate::desktop_icons::install_linux_assets(&data));
+    assert!(desktop_icons::install_linux_assets(&data));
     let canonical = std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap();
     assert!(!canonical.contains("NoDisplay"), "canonical stays visible");
     for alias in ["orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
@@ -130,18 +130,18 @@ fn desktop_alias_entries_stay_hidden_from_menus() {
     // converges it to hidden, then the install is steady again.
     std::fs::write(
         data.join("applications/orquestra-ai.desktop"),
-        crate::desktop_icons::DESKTOP_ENTRY,
+        desktop_icons::DESKTOP_ENTRY,
     )
     .unwrap();
     assert!(
-        crate::desktop_icons::install_linux_assets(&data),
+        desktop_icons::install_linux_assets(&data),
         "pre-dedup alias must converge to hidden"
     );
     let converged =
         std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
     assert!(converged.lines().any(|line| line == "NoDisplay=true"));
     assert!(
-        !crate::desktop_icons::install_linux_assets(&data),
+        !desktop_icons::install_linux_assets(&data),
         "steady state must not rewrite"
     );
 
@@ -154,7 +154,7 @@ fn desktop_alias_entries_stay_hidden_from_menus() {
 fn data_home_honours_xdg_and_ignores_relative_values() {
     let home = Some(std::path::PathBuf::from("/home/dev"));
     let data_home = |value: Option<&str>| {
-        crate::desktop_icons::data_home_with(
+        desktop_icons::data_home_with(
             |name| {
                 assert_eq!(name, "XDG_DATA_HOME");
                 value.map(std::ffi::OsString::from)
@@ -178,7 +178,7 @@ fn data_home_honours_xdg_and_ignores_relative_values() {
         Some(std::path::PathBuf::from("/home/dev/.local/share"))
     );
     assert_eq!(
-        crate::desktop_icons::data_home_with(|_| None, None),
+        desktop_icons::data_home_with(|_| None, None),
         None,
         "no home directory means no place to register"
     );

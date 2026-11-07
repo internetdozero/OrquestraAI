@@ -38,6 +38,8 @@ mod tray;
 pub mod update_sig;
 mod updater;
 pub mod vault;
+#[cfg(any(windows, test))]
+mod windows_shell;
 
 // Shared structured logging macros re-exported from `orquestra-core`.
 pub use orquestra_core::{log_error, log_info, log_warn};
@@ -265,6 +267,8 @@ pub fn run() {
     // A release build has no visible stderr, so a panic used to be a silent
     // exit; every panic now leaves a report in `<store root>/logs`.
     tooling::install_panic_hook();
+    #[cfg(windows)]
+    windows_shell::declare_app_identity();
 
     if let Err(error) = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
