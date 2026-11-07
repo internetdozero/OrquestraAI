@@ -12,14 +12,14 @@ mod common;
 use std::os::unix::net::UnixListener;
 
 use orquestra_ai_lib::paths::OrquestraPaths;
-use orquestra_ai_lib::single_instance::try_activate_existing;
+use orquestra_ai_lib::single_instance::{socket_path, try_activate_existing};
 
 fn store_root() -> std::path::PathBuf {
     OrquestraPaths::resolve().expect("resolve paths").root
 }
 
-fn socket_path() -> std::path::PathBuf {
-    store_root().join("orquestra.sock")
+fn socket() -> std::path::PathBuf {
+    socket_path().expect("socket path")
 }
 
 fn lock_path() -> std::path::PathBuf {
@@ -36,7 +36,7 @@ fn primary_instance_detected_without_socket() {
 #[test]
 fn stale_regular_file_is_reclaimed() {
     common::with_temp_home("single-stale", |_| {
-        let socket = socket_path();
+        let socket = socket();
         std::fs::create_dir_all(socket.parent().expect("parent")).expect("parent dir");
         // A crashed process leaves a regular file behind (or a dead socket):
         // not connectable, so it is removed and we become primary.
@@ -53,9 +53,10 @@ fn crashed_primary_orphan_is_reclaimed() {
     // The next launch must prove staleness (no handshake + free lock) and
     // reclaim both names.
     common::with_temp_home("single-crash", |_| {
-        let socket = socket_path();
+        let socket = socket();
         let lock = lock_path();
         std::fs::create_dir_all(store_root()).expect("store dir");
+        std::fs::create_dir_all(socket.parent().expect("parent")).expect("socket dir");
         {
             let _listener = UnixListener::bind(&socket).expect("bind");
             // Far above any real PID: `kill(pid, 0)` reports it dead.
@@ -92,7 +93,7 @@ fn live_lock_holder_is_reported_not_unlinked() {
     // create or remove nothing.
     common::with_temp_home("single-livelock", |_| {
         use std::os::unix::io::AsRawFd;
-        let socket = socket_path();
+        let socket = socket();
         let lock = lock_path();
         std::fs::create_dir_all(store_root()).expect("store dir");
         std::fs::write(&lock, "424242").expect("pid fixture");
@@ -116,7 +117,7 @@ fn live_lock_holder_is_reported_not_unlinked() {
 #[test]
 fn live_listener_claims_secondary() {
     common::with_temp_home("single-live", |_| {
-        let socket = socket_path();
+        let socket = socket();
         std::fs::create_dir_all(socket.parent().expect("parent")).expect("parent dir");
         let listener = UnixListener::bind(&socket).expect("bind listener");
         assert!(try_activate_existing().expect("check"));

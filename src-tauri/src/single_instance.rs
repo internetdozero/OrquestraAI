@@ -74,10 +74,29 @@ fn release_foreign_lock(lock: &Path) {
 /// 104 on macOS); `~/.orquestra/orquestra.sock` overflows it as soon as the
 /// home directory is long, and the bind then fails with `ENAMETOOLONG`. The
 /// runtime root is short, per-uid and already verified `0700`, so only this
-/// process's own user can connect. The lockfile stays next to the configs:
-/// regular files have no such limit.
-fn socket_path() -> Result<PathBuf, String> {
-    Ok(crate::paths::ensure_scratch_root()?.join(SOCKET_NAME))
+/// process's own user can connect.
+///
+/// The name still carries a hash of the store root: two homes on one machine
+/// (tests, or two profiles) must not hand each other their windows. The
+/// lockfile stays next to the configs — regular files have no length limit.
+pub fn socket_path() -> Result<PathBuf, String> {
+    let paths = OrquestraPaths::resolve()?;
+    let key = short_key(paths.root.to_string_lossy().as_ref());
+    Ok(crate::paths::ensure_scratch_root()?.join(format!("{key}-{SOCKET_NAME}")))
+}
+
+/// Stable 64-bit FNV-1a of the store root rendered as 16 lowercase hex digits.
+///
+/// Deliberately not a cryptographic hash: this only separates profiles, and a
+/// collision means two homes share a socket path, which the lockfile still
+/// resolves (the peer simply reports "starting" and steps aside).
+fn short_key(input: &str) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in input.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
 }
 
 fn lock_path() -> Result<PathBuf, String> {
