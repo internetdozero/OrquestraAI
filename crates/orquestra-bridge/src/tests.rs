@@ -7,7 +7,7 @@ use super::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use orquestra_core::paths::OrquestraPaths;
+use orquestra_core::paths::{rebase, OrquestraPaths};
 
 #[cfg(test)]
 mod tests {
@@ -44,21 +44,28 @@ mod tests {
             }
         }
 
+        /// Fixture path for a registry-style relative path, resolved exactly
+        /// like production (`paths::rebase`), so the suite tests the platform
+        /// layout instead of the Linux literal on every runner.
+        fn path(&self, rel: &str) -> PathBuf {
+            rebase(&self.home, rel)
+        }
+
         fn write(&self, rel: &str, content: &str) -> PathBuf {
-            let path = self.home.join(rel);
+            let path = self.path(rel);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(&path, content).unwrap();
             path
         }
 
         fn mkdir(&self, rel: &str) -> PathBuf {
-            let path = self.home.join(rel);
+            let path = self.path(rel);
             fs::create_dir_all(&path).unwrap();
             path
         }
 
         fn skill(&self, rel: &str, name: &str) -> PathBuf {
-            let directory = self.home.join(rel).join(name);
+            let directory = self.path(rel).join(name);
             fs::create_dir_all(&directory).unwrap();
             fs::write(
                 directory.join("SKILL.md"),

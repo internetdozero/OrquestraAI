@@ -43,7 +43,13 @@ use rusqlite::{Connection, Row};
 
 use super::types::{BlackboardNote, IdeaItem};
 
-/// Database path, honoring `IDEA_VAULT_DB_PATH` and `XDG_DATA_HOME`.
+/// Database path, honoring `IDEA_VAULT_DB_PATH` and the platform data root.
+///
+/// The root comes from [`orquestra_core::paths::data_dir`], the same resolver
+/// every other store uses: `XDG_DATA_HOME` on Linux, `~/Library/Application
+/// Support` on macOS and `%LOCALAPPDATA%` on Windows. An empty override is
+/// ignored, so a shell that exports `IDEA_VAULT_DB_PATH=` still gets the
+/// default location.
 pub fn resolve_db_path() -> Result<PathBuf, String> {
     let trimmed = std::env::var("IDEA_VAULT_DB_PATH")
         .map(|raw| raw.trim().to_string())
@@ -52,15 +58,9 @@ pub fn resolve_db_path() -> Result<PathBuf, String> {
         return Ok(PathBuf::from(trimmed));
     }
 
-    let data_home = std::env::var("XDG_DATA_HOME")
-        .map(|raw| raw.trim().to_string())
-        .unwrap_or_default();
-    if !data_home.is_empty() {
-        return Ok(PathBuf::from(data_home).join("idea-vault/ideas.sqlite3"));
-    }
-
-    Ok(crate::paths::require_home("locate the idea vault")?
-        .join(".local/share/idea-vault/ideas.sqlite3"))
+    let data_dir = orquestra_core::paths::data_dir()
+        .ok_or_else(|| "cannot locate the home directory for the idea vault".to_string())?;
+    Ok(data_dir.join("idea-vault/ideas.sqlite3"))
 }
 
 /// Open the vault: create parents, wait on writers, enable WAL, ensure schema.
