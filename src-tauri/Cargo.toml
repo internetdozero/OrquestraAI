@@ -61,6 +61,14 @@ sha2 = "0.10.9"
 flate2 = "1"
 tar = "0.4"
 
+# Single-instance guard on Windows: `CreateMutexW` is the only kernel-tracked
+# lock available there (`flock` and Unix sockets do not exist).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+] }
+
 [dev-dependencies]
 # Integration tests simulate a live peer by holding the lockfile `flock`.
 libc.workspace = true
