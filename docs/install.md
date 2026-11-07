@@ -111,6 +111,45 @@ prints the `setx PATH` command that adds it permanently.
 
 ## Windows
 
-Not published yet: the Tauri shell still contains Unix-only code, so there is
-no MSI or NSIS installer to install. Task #20 tracks that work, and until it
-lands `install.sh` refuses Windows (it has no PowerShell counterpart yet).
+The Windows build is published as an NSIS setup (`OrquestraAI_<version>_x64-setup.exe`)
+and, next to it, the bare `orquestra-windows-x86_64.exe` that in-app updates
+replace in place. The setup installs for the current user only, into
+`%LOCALAPPDATA%\OrquestraAI`, so it needs no administrator rights and the
+updater can overwrite the executable it is running from.
+
+```powershell
+$release = 'https://github.com/internetdozero/OrquestraAI/releases/latest/download'
+Start-Process "$release/OrquestraAI_<version>_x64-setup.exe"
+```
+
+The script channel is `install.ps1`, the counterpart of `install.sh`, with the
+same trust model: the detached signature over `SHA256SUMS.txt` is verified
+before any checksum is trusted, and the downloaded executable must match its
+signed SHA-256 entry.
+
+```powershell
+irm https://orquestra.internetdozero.com.br/install.ps1 | iex
+```
+
+It installs `orquestra.exe` (the same command name the Unix installer uses)
+into `%LOCALAPPDATA%\Programs\OrquestraAI` and adds that directory to the user
+`PATH`; `-InstallDir` changes the destination and `-NoPathUpdate` skips the
+`PATH` edit. Unlike the setup, the script keeps its own directory, so the two
+channels never share files.
+
+Signature verification needs the reference `minisign` tool:
+
+```powershell
+winget install jedisct1.minisign
+```
+
+There is deliberately no second verification path: the installer stops with an
+explanation instead of skipping the check when `minisign` is missing.
+`install.ps1 -CheckDeps` smoke-tests an existing install without downloading
+anything, and `scripts/Test-Install.ps1` covers the parsing rules offline (CI
+runs it on `windows-latest`).
+
+Windows ARM64 is not published; `install.ps1` refuses it instead of installing
+an x64 build that would run under emulation.
+
+`install.sh` still refuses Windows: run the setup or `install.ps1` there.

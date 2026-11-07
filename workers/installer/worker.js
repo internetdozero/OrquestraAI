@@ -1,12 +1,13 @@
 /**
  * orquestra installer edge worker.
  *
- * Serves `/install.sh` byte-identical to the canonical release tag instead
- * of a stale hardcoded copy: every request resolves the latest GitHub
- * release tag, fetches `install.sh` at that tag from raw.githubusercontent,
- * and answers with a SHA-256 `ETag` plus bounded caching. A new release
- * invalidates within minutes (short edge TTL plus instant invalidation when
- * the resolved tag no longer matches the cached entry's tag).
+ * Serves `/install.sh` and `/install.ps1` byte-identical to the canonical
+ * release tag instead of a stale hardcoded copy: every request resolves the
+ * latest GitHub release tag, fetches that installer at the tag from
+ * raw.githubusercontent, and answers with a SHA-256 `ETag` plus bounded
+ * caching. A new release invalidates within minutes (short edge TTL plus
+ * instant invalidation when the resolved tag no longer matches the cached
+ * entry's tag).
  *
  * Non-GET/HEAD methods are refused; every other path 404s except `/`
  * (repo redirect) and `/healthz`.
@@ -14,8 +15,19 @@
 
 const REPO = "internetdozero/OrquestraAI";
 const LATEST_RELEASE = `https://github.com/${REPO}/releases/latest`;
-const RAW_AT = (tag) => `https://raw.githubusercontent.com/${REPO}/${tag}/install.sh`;
+const RAW_AT = (tag, asset) => `https://raw.githubusercontent.com/${REPO}/${tag}/${asset}`;
 const UA = "orquestra-installer-worker";
+
+/** The installers this worker mirrors, keyed by request path. */
+const INSTALLERS = new Map([
+  ["/install.sh", { asset: "install.sh", contentType: "text/x-shellscript; charset=utf-8" }],
+  [
+    "/install.ps1",
+    // Plain text keeps a browser from downloading it as a file and keeps
+    // `irm | iex` (which only reads the body) working either way.
+    { asset: "install.ps1", contentType: "text/plain; charset=utf-8" },
+  ],
+]);
 /** How long a resolved tag is trusted before re-querying the API. */
 const TAG_TTL_MS = 5 * 60 * 1000;
 
@@ -59,7 +71,7 @@ function etagMatches(request, etag) {
     .includes(etag);
 }
 
-async function serveInstaller(request, ctx) {
+async function serveInstaller(request, ctx, installer) {
   const tag = await latestTag();
   const cache = caches.default;
   const cached = request.method === "GET" ? await cache.match(request) : null;
@@ -78,14 +90,14 @@ async function serveInstaller(request, ctx) {
     });
   }
 
-  const upstream = await fetch(RAW_AT(tag), { headers: { "user-agent": UA } });
+  const upstream = await fetch(RAW_AT(tag, installer.asset), { headers: { "user-agent": UA } });
   if (!upstream.ok) {
-    throw new Error(`upstream install.sh at ${tag} failed: HTTP ${upstream.status}`);
+    throw new Error(`upstream ${installer.asset} at ${tag} failed: HTTP ${upstream.status}`);
   }
   const body = await upstream.arrayBuffer();
   const etag = `"${sha256Hex(await crypto.subtle.digest("SHA-256", body))}"`;
   const headers = new Headers({
-    "content-type": "text/x-shellscript; charset=utf-8",
+    "content-type": installer.contentType,
     etag,
     "cache-control": "public, max-age=300",
     "x-orquestra-tag": tag,
@@ -113,14 +125,15 @@ export default {
     if (url.pathname === "/healthz") {
       return new Response("ok", { headers: { "content-type": "text/plain; charset=utf-8" } });
     }
-    if (url.pathname !== "/install.sh") {
+    const installer = INSTALLERS.get(url.pathname);
+    if (!installer) {
       return new Response("not found", { status: 404 });
     }
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("method not allowed", { status: 405 });
     }
     try {
-      return await serveInstaller(request, ctx ?? { waitUntil: () => {} });
+      return await serveInstaller(request, ctx ?? { waitUntil: () => {} }, installer);
     } catch (error) {
       return new Response(`installer unavailable: ${error.message}`, {
         status: 502,

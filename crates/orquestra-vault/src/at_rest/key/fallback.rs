@@ -40,8 +40,8 @@ pub(crate) fn read_fallback_key(root: &Path) -> Result<Option<[u8; 32]>, String>
 
 /// The fallback key file must be exactly `0600` and owned by this uid: a
 /// group/world-readable fallback voids the encryption entirely.
+#[cfg(unix)]
 fn verify_fallback_file(path: &Path) -> Result<(), String> {
-    #[cfg(unix)]
     {
         use std::os::unix::fs::{MetadataExt, PermissionsExt};
         let metadata = std::fs::metadata(path)
@@ -62,6 +62,13 @@ fn verify_fallback_file(path: &Path) -> Result<(), String> {
             ));
         }
     }
+    Ok(())
+}
+
+/// POSIX modes and uids are the only ownership signals checked; elsewhere the
+/// profile directory's ACLs are the boundary, so there is nothing to verify.
+#[cfg(not(unix))]
+fn verify_fallback_file(_path: &Path) -> Result<(), String> {
     Ok(())
 }
 

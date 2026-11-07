@@ -57,6 +57,7 @@ fn validate_url(url: &str) -> Result<String, String> {
 /// on purpose: it uses `ShellExecuteW` in [`crate::windows_shell`], because
 /// `cmd /C start` re-splits the command line on `&` and `rundll32` is a loader
 /// Microsoft documents as not-for-direct-use.
+#[cfg(any(not(windows), test))]
 fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), String> {
     let owned = validate_url(url)?;
     match os {

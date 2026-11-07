@@ -250,8 +250,10 @@ const LEGACY_ALIASES: [(&str, &str); 4] = [
 /// vault folder for that skill — the same validity rule as
 /// [`is_projected`], checked without resolving anything: the vault is
 /// canonicalized once, and each entry costs one `lstat` plus one
-/// `read_link`. Relative links (never created by [`ensure_link`], but
-/// possible by hand) fall back to one `canonicalize` for that entry only.
+/// `read_link`. Any entry that does not match that fast path falls back to
+/// one `canonicalize`: relative links (never created by [`ensure_link`], but
+/// possible by hand) and absolute links spelled through a symlinked root,
+/// such as macOS `/var` → `/private/var`.
 /// Legacy aliases resolve to their canonical id. A set built this way
 /// answers membership exactly like [`is_projected`] for every id the
 /// caller looks up, so hot loops (`summary_from`, `list_from`) pay
@@ -287,9 +289,11 @@ pub(super) fn projected_ids(projection_dir: &Path, vault: &Path) -> HashSet<Stri
             continue;
         }
         let matches = match read_dir_link(&path) {
-            Ok(target) if target.is_absolute() => normalize(&target) == expected,
-            // Hand-made relative link or a platform whose `read_dir_link`
-            // cannot report the target: resolve this one entry the slow way.
+            // The stored target already spells the canonical vault path.
+            Ok(target) if target.is_absolute() && normalize(&target) == expected => true,
+            // Hand-made relative link, a platform whose `read_dir_link`
+            // cannot report the target, or an absolute link written through a
+            // symlinked root: resolve this one entry the slow way.
             _ => fs::canonicalize(&path)
                 .map(|resolved| normalize(&resolved) == expected)
                 .unwrap_or(false),

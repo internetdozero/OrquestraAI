@@ -27,6 +27,9 @@ test("installer worker resolves the latest release through the redirect", async 
     if (url === "https://raw.githubusercontent.com/internetdozero/OrquestraAI/v1.2.3/install.sh") {
       return new Response("#!/bin/sh\necho ok\n", { status: 200 });
     }
+    if (url === "https://raw.githubusercontent.com/internetdozero/OrquestraAI/v1.2.3/install.ps1") {
+      return new Response("Write-Host ok\n", { status: 200 });
+    }
     throw new Error(`unexpected fetch: ${url}`);
   };
 
@@ -47,5 +50,70 @@ test("installer worker resolves the latest release through the redirect", async 
   } finally {
     globalThis.fetch = originalFetch;
     globalThis.caches = originalCaches;
+  }
+});
+
+test("installer worker mirrors the PowerShell installer from the same tag", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCaches = globalThis.caches;
+  const calls = [];
+  globalThis.caches = {
+    default: {
+      match: async () => null,
+      put: async () => {},
+    },
+  };
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    calls.push(url);
+    if (url === "https://github.com/internetdozero/OrquestraAI/releases/latest") {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          location: "https://github.com/internetdozero/OrquestraAI/releases/tag/v1.2.3",
+        },
+      });
+    }
+    if (url === "https://raw.githubusercontent.com/internetdozero/OrquestraAI/v1.2.3/install.ps1") {
+      return new Response("Write-Host ok\n", { status: 200 });
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  };
+
+  try {
+    const pending = [];
+    const response = await worker.fetch(
+      new Request("https://installer.example.test/install.ps1"),
+      {},
+      { waitUntil: (promise) => pending.push(promise) },
+    );
+    await Promise.all(pending);
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type"), /text\/plain/);
+    assert.match(await response.text(), /Write-Host ok/);
+    assert.ok(
+      calls.includes(
+        "https://raw.githubusercontent.com/internetdozero/OrquestraAI/v1.2.3/install.ps1",
+      ),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.caches = originalCaches;
+  }
+});
+
+test("installer worker refuses paths it does not mirror", async () => {
+  for (const path of ["/install.bat", "/install", "/"]) {
+    const response = await worker.fetch(
+      new Request(`https://installer.example.test${path}`),
+      {},
+      {},
+    );
+    if (path === "/") {
+      assert.equal(response.status, 302);
+      continue;
+    }
+    assert.equal(response.status, 404);
   }
 });

@@ -4,6 +4,7 @@ use super::super::{parse_options, rendered, usage, CliError};
 use super::paths;
 use crate::vault::vault_purge_migration_backups;
 use orquestra_vault::vault::service::list_services;
+#[cfg(unix)]
 use std::fs;
 
 pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
@@ -17,17 +18,19 @@ pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
     let vault_file = paths.root.join("vault.json");
     let file_exists = vault_file.is_file();
 
-    let mut permissions_ok = true;
+    // POSIX modes are the only privacy signal there is; elsewhere the file is
+    // protected by the profile directory's ACLs, so the check stays quiet.
     #[cfg(unix)]
-    if file_exists {
+    let permissions_ok = {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(meta) = fs::metadata(&vault_file) {
-            let mode = meta.permissions().mode() & 0o777;
-            if mode != 0o600 {
-                permissions_ok = false;
-            }
+        match fs::metadata(&vault_file) {
+            Ok(meta) => meta.permissions().mode() & 0o777 == 0o600,
+            // A missing file is not a permissions problem.
+            Err(_) => true,
         }
-    }
+    };
+    #[cfg(not(unix))]
+    let permissions_ok = true;
 
     let vault_bak = paths.root.join("vault.json.migrate-bak");
     let mcps_bak = paths.root.join("mcps.json.migrate-bak");

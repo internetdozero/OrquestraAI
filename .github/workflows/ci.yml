@@ -136,6 +136,13 @@ jobs:
         with:
           workspaces: src-tauri
 
+      # `install.ps1` cannot be executed on the Linux runner at all: parsing it
+      # here is the only place its signature/checksum logic is ever run. The
+      # script dot-sources itself with `-TestOnly`, so nothing is downloaded.
+      - name: Test the PowerShell installer offline
+        shell: pwsh
+        run: ./scripts/Test-Install.ps1
+
       # `--all-targets` so the test modules of these crates compile here too,
       # not just the libraries the Linux runner already checks.
       - name: Cargo check (portable crates, test targets included)
@@ -146,8 +153,7 @@ jobs:
       # fixture is behind `#[cfg(unix)]`). `orquestra-sessions` and
       # `orquestra-vault` still fail to compile their tests for Windows — the
       # session fixtures rely on `std::os::unix` — so they stay compile-only
-      # below until that is fixed, and `orquestra-ai` (the Tauri shell) does not
-      # build for Windows at all yet.
+      # below until that is fixed.
       - name: Run cargo tests (portable crates)
         run: cargo test --all-targets -p orquestra-core -p orquestra-harness -p orquestra-bridge
 
@@ -155,6 +161,14 @@ jobs:
       # their test targets remain unix-only.
       - name: Cargo check (sessions and vault)
         run: cargo check -p orquestra-vault -p orquestra-sessions
+
+      # The desktop shell itself. This is the gate that decides whether the
+      # Windows release row can build at all, so it is checked on every push
+      # rather than discovered when a tag is pushed. Library and binary only:
+      # the shell's test modules still create symlinks through
+      # `std::os::unix`, which is a separate porting job.
+      - name: Cargo check (desktop shell)
+        run: cargo check -p orquestra-ai
 
   macos-check:
     # The Darwin half of the janitor health collector only exists behind

@@ -27,11 +27,8 @@ fn asset_names_match_the_release_matrix() {
         asset_candidates("windows", "x86_64").expect("windows"),
         vec!["orquestra-windows-x86_64.exe"]
     );
-    assert_eq!(
-        asset_candidates("windows", "aarch64").expect("windows arm64"),
-        vec!["orquestra-windows-aarch64.exe"]
-    );
-    // Anything else still refuses to guess an asset name.
+    // Only x86_64 is published; never guess an asset for an unpublished arch.
+    assert!(asset_candidates("windows", "aarch64").is_err());
     assert!(asset_candidates("windows", "i686").is_err());
     assert!(asset_candidates("freebsd", "x86_64").is_err());
 }

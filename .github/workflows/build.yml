@@ -62,6 +62,17 @@ jobs:
             is_macos: true
             bundle_arch: x86_64
             legacy_alias: false
+          - name: Windows x86_64
+            os: windows-latest
+            artifact: orquestra-windows-x86_64
+            # The bare `.exe` is what the updater replaces in place; the NSIS
+            # setup is the first-install channel.
+            bin_name: orquestra-windows-x86_64.exe
+            is_linux: false
+            is_macos: false
+            is_windows: true
+            exe_suffix: ".exe"
+            legacy_alias: false
 
     steps:
       - name: Checkout repository
@@ -111,6 +122,9 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        # Windows runners default `run:` to PowerShell; this step is written in
+        # Bash for every row, so it is pinned instead of duplicated per OS.
+        shell: bash
         run: |
           if [ "${{ matrix.platform.is_macos }}" = "true" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
             # One build produces both shapes: the bundle (what macOS users
@@ -121,17 +135,27 @@ jobs:
             # is still copied out below, because that is what the updater and
             # install.sh use.
             npx tauri build --bundles deb
+          elif [ "${{ matrix.platform.is_windows }}" = "true" ]; then
+            # NSIS rather than MSI: it needs no WiX download on the runner.
+            npx tauri build --bundles nsis
           else
             npx tauri build --no-bundle
           fi
           mkdir -p bin-out
-          cp target/release/orquestra-ai bin-out/${{ matrix.platform.bin_name }}
+          # `exe_suffix` is only set on the Windows row; an absent matrix key
+          # expands to the empty string everywhere else.
+          cp "target/release/orquestra-ai${{ matrix.platform.exe_suffix }}" "bin-out/${{ matrix.platform.bin_name }}"
           if [ "${{ matrix.platform.legacy_alias }}" = "true" ]; then
             cp target/release/orquestra-ai bin-out/orquestra-ai
           fi
           if [ "${{ matrix.platform.is_linux }}" = "true" ]; then
             # `--bundles deb` writes the package, not the binary: publish both.
             find target/release/bundle/deb -name '*.deb' -exec cp {} bin-out/ ';' 2>/dev/null || true
+          fi
+          if [ "${{ matrix.platform.is_windows }}" = "true" ]; then
+            # NSIS setup is the first-install channel; the bare `.exe` above is
+            # what in-app updates replace.
+            find target/release/bundle/nsis -name '*-setup.exe' -exec cp {} bin-out/ ';' 2>/dev/null || true
           fi
           if [ "${{ matrix.platform.is_macos }}" = "true" ]; then
             APP="target/release/bundle/macos/OrquestraAI.app"

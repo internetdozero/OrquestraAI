@@ -1,9 +1,10 @@
 # Installer Edge Worker — Deploy Guide
 
-`https://orquestra.internetdozero.com.br/install.sh` is served by the
-Cloudflare Worker in `workers/installer/worker.js`, never by a pasted copy:
-every request resolves the latest GitHub release tag and serves
-`install.sh` at that tag byte-identical, with a SHA-256 `ETag`,
+`https://orquestra.internetdozero.com.br/install.sh` and
+`https://orquestra.internetdozero.com.br/install.ps1` are served by the
+Cloudflare Worker in `workers/installer/worker.js`, never by pasted copies:
+every request resolves the latest GitHub release tag and serves that
+installer at the tag byte-identical, with a SHA-256 `ETag`,
 `If-None-Match` → `304` handling, and bounded caching (5-minute edge TTL
 plus instant invalidation when the resolved tag no longer matches the
 cached entry).
@@ -16,15 +17,17 @@ sh scripts/deploy-installer-worker.sh
 ```
 
 The script deploys from `workers/installer/`, then fails closed unless the
-served bytes hash exactly like `install.sh` at the canonical latest tag
-(local `git show <tag>:install.sh` when the tag exists, else the raw tag
-URL). A custom worker URL can be passed as the first argument.
+served bytes of both `install.sh` and `install.ps1` hash exactly like the
+same files at the canonical latest tag (local `git show <tag>:<file>` when
+the tag exists, else the raw tag URL). A custom worker base URL can be
+passed as the first argument; a trailing `/install.sh` or `/install.ps1` is
+accepted and trimmed.
 
 ## Custom domain
 
-Bind `orquestra.internetdozero.com.br/install.sh` to the
-`orquestra-installer` worker in the Cloudflare dashboard (or uncomment the
-`routes` line in `workers/installer/wrangler.toml`).
+Bind `orquestra.internetdozero.com.br/*` (or the two `/install.*` paths) to
+the `orquestra-installer` worker in the Cloudflare dashboard (or uncomment
+the `routes` line in `workers/installer/wrangler.toml`).
 
 ## Cache behavior
 
@@ -34,4 +37,5 @@ Bind `orquestra.internetdozero.com.br/install.sh` to the
   lookup resolves the new tag, the cached entry's tag no longer matches,
   and the worker refetches upstream.
 - `curl -s https://orquestra.internetdozero.com.br/install.sh | sha256sum`
-  must equal the tag's `install.sh` hash; the deploy script checks this.
+  and the same for `install.ps1` must equal each file's hash at the tag; the
+  deploy script checks both.

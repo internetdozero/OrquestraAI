@@ -263,6 +263,21 @@ fn ancestor_is_symlink(root: &Path, path: &Path) -> bool {
     false
 }
 
+/// The backup holds tokens too, so it must match the original file's privacy.
+/// POSIX modes only exist on Unix; elsewhere the backup inherits the
+/// destination directory's ACLs and there is nothing to copy.
+#[cfg(unix)]
+fn copy_privacy(source: &Path, destination: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = fs::metadata(source)
+        .map(|meta| meta.permissions().mode() & 0o777)
+        .unwrap_or(0o600);
+    let _ = fs::set_permissions(destination, fs::Permissions::from_mode(mode));
+}
+
+#[cfg(not(unix))]
+fn copy_privacy(_source: &Path, _destination: &Path) {}
+
 fn backup_config(
     source: &Path,
     backup: &Path,
@@ -286,17 +301,7 @@ fn backup_config(
     fs::write(&destination, content)
         .map_err(|error| format!("failed to back up {}: {error}", destination.display()))?;
 
-    // The backup holds tokens too: match the original file's privacy.
-    // POSIX modes only exist on Unix; elsewhere the backup inherits the
-    // destination directory's ACLs.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mode = fs::metadata(source)
-            .map(|meta| meta.permissions().mode() & 0o777)
-            .unwrap_or(0o600);
-        let _ = fs::set_permissions(&destination, fs::Permissions::from_mode(mode));
-    }
+    copy_privacy(source, &destination);
 
     Ok(())
 }
@@ -314,19 +319,22 @@ pub(super) fn write_config(path: &Path, content: &str, secret: bool) -> Result<b
     // POSIX modes only exist on Unix; elsewhere the file inherits the
     // parent directory's ACLs and the tightening report stays quiet.
     #[cfg(unix)]
-    let mut mode = {
+    let (mode, tightened) = {
         use std::os::unix::fs::PermissionsExt;
-        fs::metadata(path)
+        let current = fs::metadata(path)
             .map(|meta| meta.permissions().mode() & 0o777)
-            .unwrap_or(0o600)
+            .unwrap_or(0o600);
+        let tightened = secret && current & 0o077 != 0;
+        (if tightened { 0o600 } else { current }, tightened)
     };
     #[cfg(not(unix))]
-    let mut mode = 0o600;
-    let mut tightened = false;
-    if secret && mode & 0o077 != 0 {
-        mode = 0o600;
-        tightened = true;
-    }
+    let tightened = {
+        // Nothing to tighten without POSIX modes: the file inherits the
+        // parent's ACLs. `secret` still stays in the signature so both call
+        // sites read the same on every platform.
+        let _ = secret;
+        false
+    };
 
     let temporary = parent.join(format!(
         ".{}.tmp-{}",
