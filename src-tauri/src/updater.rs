@@ -226,6 +226,7 @@ fn release_asset_url(version: &str, asset: &str) -> String {
 fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
     match (os, arch) {
         ("linux", "x86_64") => Ok(vec!["orquestra-linux-x86_64", "orquestra-ai"]),
+        ("linux", "aarch64") => Ok(vec!["orquestra-linux-aarch64"]),
         ("macos", "aarch64") => Ok(vec!["orquestra-macos-arm64"]),
         ("macos", "x86_64") => Ok(vec!["orquestra-macos-x86_64"]),
         _ => Err(format!("unsupported platform for updates: {os}-{arch}")),
@@ -419,8 +420,11 @@ mod tests {
             asset_candidates("macos", "x86_64").expect("macos intel"),
             vec!["orquestra-macos-x86_64"]
         );
+        assert_eq!(
+            asset_candidates("linux", "aarch64").expect("linux arm64"),
+            vec!["orquestra-linux-aarch64"]
+        );
         assert!(asset_candidates("windows", "x86_64").is_err());
-        assert!(asset_candidates("linux", "aarch64").is_err());
     }
 
     #[test]

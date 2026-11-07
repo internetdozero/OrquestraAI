@@ -1,27 +1,22 @@
 use super::super::exec_policy::POLICY;
-use super::validate_argv;
+use super::{validate_argv, ALLOWED_BINARIES, SMOKE_TEST_BINARIES};
 
 /// Every allowlisted binary has exactly one policy entry: no binary
-/// may be allowed without an entry in the table.
+/// may be allowed without an entry in the table. The expected set is built
+/// from the platform allowlist so the Unix-only smoke helpers are covered
+/// without hardcoding them here.
 #[test]
 fn every_allowlisted_binary_has_a_policy_entry() {
     let mut binaries: Vec<&str> = POLICY.iter().map(|entry| entry.binary).collect();
     binaries.sort_unstable();
-    assert_eq!(
-        binaries,
-        [
-            "aws",
-            "az",
-            "doctl",
-            "echo",
-            "gcloud",
-            "gh",
-            "kubectl",
-            "printf",
-            "stripe",
-            "terraform"
-        ]
-    );
+
+    let mut expected: Vec<&str> = ALLOWED_BINARIES
+        .iter()
+        .chain(SMOKE_TEST_BINARIES)
+        .copied()
+        .collect();
+    expected.sort_unstable();
+    assert_eq!(binaries, expected);
 }
 
 /// Task #322: one allowed and one denied example per policy entry,
@@ -186,8 +181,10 @@ fn policy_table_allows_and_denies_per_entry() {
         ("doctl", &["compute", "droplet", "list"], true, ""),
         ("stripe", &["prices", "list"], true, ""),
         ("gcloud", &["auth", "print-access-token"], false, "`auth`"),
-        // smoke-test helpers take no subcommand
+        // smoke-test helpers take no subcommand (Unix-only binaries)
+        #[cfg(unix)]
         ("echo", &["hello-array"], true, ""),
+        #[cfg(unix)]
         ("printf", &["%d", "42"], true, ""),
         // ambiguous: unknown pre-subcommand flag, or none at all
         ("gh", &["--bogus", "pr", "list"], false, "cannot determine"),

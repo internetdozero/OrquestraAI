@@ -32,24 +32,35 @@ pub fn scrub_output(text: &str, secrets: &[String]) -> String {
 /// trusted session `PATH` — never a shell, so metacharacters, pipes,
 /// redirections and `$VAR`/backtick/`$()` expansion cannot trigger.
 ///
-/// Deliberately minimal: provider CLIs agents need for authenticated calls,
-/// plus `echo`/`printf` for smoke tests. Notably absent: shells (`sh`,
-/// `bash`), script runtimes (`python*`, `node`, `perl`, `ruby`), downloaders
-/// (`curl`, `wget`), `ssh`, and `git`/`find`/`xargs` (all have exec escapes).
-/// Extend only in code review — there is intentionally no runtime knob, so a
-/// compromised webview cannot widen this list through IPC.
+/// Deliberately minimal: provider CLIs agents need for authenticated calls.
+/// Notably absent: shells (`sh`, `bash`), script runtimes (`python*`, `node`,
+/// `perl`, `ruby`), downloaders (`curl`, `wget`), `ssh`, and
+/// `git`/`find`/`xargs` (all have exec escapes). Extend only in code review —
+/// there is intentionally no runtime knob, so a compromised webview cannot
+/// widen this list through IPC.
 const ALLOWED_BINARIES: &[&str] = &[
     "aws",
     "az",
     "doctl",
-    "echo",
     "gcloud",
     "gh",
     "kubectl",
-    "printf",
     "stripe",
     "terraform",
 ];
+
+/// Smoke-test helpers. Unix shells ship `echo` and `printf` as standalone
+/// binaries as well as built-ins; Windows has neither as an executable, so an
+/// allowlist that named them there would only produce "not found".
+#[cfg(unix)]
+pub(super) const SMOKE_TEST_BINARIES: &[&str] = &["echo", "printf"];
+#[cfg(not(unix))]
+pub(super) const SMOKE_TEST_BINARIES: &[&str] = &[];
+
+/// True when `program` may run on this platform.
+pub(super) fn is_allowed(program: &str) -> bool {
+    ALLOWED_BINARIES.contains(&program) || SMOKE_TEST_BINARIES.contains(&program)
+}
 
 /// Hard caps so one IPC call cannot exhaust memory or the argument vector.
 pub(super) const MAX_ARGV_LEN: usize = 128;
@@ -86,7 +97,7 @@ fn validate_argv(argv: &[String]) -> Result<(), String> {
             "vault exec program {program:?} must be a bare name"
         ));
     }
-    if !ALLOWED_BINARIES.contains(&program.as_str()) {
+    if !is_allowed(program) {
         return Err(format!(
             "vault exec program {program:?} is not on the allowlist"
         ));

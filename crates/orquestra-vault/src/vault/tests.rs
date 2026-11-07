@@ -263,7 +263,9 @@ fn exec_rejects_shell_strings_and_non_allowlisted_programs() {
 /// Task #322: end-to-end through `run_command` — policy denials fail before
 /// any spawn, and the smoke-test helpers still run with scrubbed output.
 #[test]
-fn exec_policy_denials_fail_before_spawn_and_echo_still_runs() {
+/// The refusal half runs everywhere; the `echo` half needs a platform that
+/// actually ships an `echo` executable (Windows does not).
+fn exec_policy_denials_fail_before_spawn() {
     let service = test_service("openai", &["sk-secret-9999"]);
     let secret = "sk-secret-9999";
     for payload in [
@@ -281,6 +283,13 @@ fn exec_policy_denials_fail_before_spawn_and_echo_still_runs() {
         let error = super::exec::run_command(&service, secret, &payload).expect_err("must refuse");
         assert!(error.contains("vault exec"), "names the layer: {error}");
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn exec_policy_still_runs_the_unix_smoke_helper() {
+    let service = test_service("openai", &["sk-secret-9999"]);
+    let secret = "sk-secret-9999";
     let (code, stdout, _) =
         super::exec::run_command(&service, secret, &serde_json::json!(["echo", "policy-ok"]))
             .expect("echo still runs");

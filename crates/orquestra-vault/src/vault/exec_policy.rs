@@ -293,6 +293,8 @@ pub(super) const POLICY: &[BinaryPolicy] = &[
         check: allow_rest,
         legacy_open: Some("per-subcommand review still owed (see follow-up Idea)"),
     },
+    // Unix-only: Windows ships no `echo`/`printf` executable.
+    #[cfg(unix)]
     BinaryPolicy {
         binary: "echo",
         globals: &[],
@@ -301,6 +303,7 @@ pub(super) const POLICY: &[BinaryPolicy] = &[
         check: allow_rest,
         legacy_open: None,
     },
+    #[cfg(unix)]
     BinaryPolicy {
         binary: "printf",
         globals: &[],

@@ -68,9 +68,16 @@ fn release_foreign_lock(lock: &Path) {
     }
 }
 
+/// The handshake socket lives in the runtime root, not in `~/.orquestra`.
+///
+/// A Unix socket path is capped at `sizeof(sun_path)` bytes (108 on Linux,
+/// 104 on macOS); `~/.orquestra/orquestra.sock` overflows it as soon as the
+/// home directory is long, and the bind then fails with `ENAMETOOLONG`. The
+/// runtime root is short, per-uid and already verified `0700`, so only this
+/// process's own user can connect. The lockfile stays next to the configs:
+/// regular files have no such limit.
 fn socket_path() -> Result<PathBuf, String> {
-    let paths = OrquestraPaths::resolve()?;
-    Ok(paths.root.join(SOCKET_NAME))
+    Ok(crate::paths::ensure_scratch_root()?.join(SOCKET_NAME))
 }
 
 fn lock_path() -> Result<PathBuf, String> {

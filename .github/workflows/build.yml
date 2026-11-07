@@ -28,12 +28,24 @@ jobs:
             artifact: orquestra-linux-x86_64
             bin_name: orquestra-linux-x86_64
             is_linux: true
+            # The legacy `orquestra-ai` alias is publishable once; only the
+            # x86_64 row claims it so the arm64 row cannot collide.
+            legacy_alias: true
+          # Native arm64 runner: no cross-compilation, so WebKitGTK and
+          # rusqlite's bundled SQLite build for the target architecture.
+          - name: Linux aarch64
+            os: ubuntu-24.04-arm
+            artifact: orquestra-linux-aarch64
+            bin_name: orquestra-linux-aarch64
+            is_linux: true
+            legacy_alias: false
           - name: macOS Apple Silicon (arm64)
             # macos-14 retired 2026-11-02; arm64 builds stay on macos-15.
             os: macos-15
             artifact: orquestra-macos-arm64
             bin_name: orquestra-macos-arm64
             is_linux: false
+            legacy_alias: false
           # Intel macs: `macos-13` was retired in Dec 2025, so native
           # x86_64 builds ride `macos-15-intel` (last Intel label, kept
           # until Aug 2027). Asset naming mirrors the arm64 row.
@@ -42,6 +54,7 @@ jobs:
             artifact: orquestra-macos-x86_64
             bin_name: orquestra-macos-x86_64
             is_linux: false
+            legacy_alias: false
 
     steps:
       - name: Checkout repository
@@ -85,14 +98,11 @@ jobs:
         run: |
           npx tauri build --no-bundle
           mkdir -p bin-out
-          if [ "${{ matrix.platform.is_linux }}" = "true" ]; then
-            cp target/release/orquestra-ai bin-out/orquestra-linux-x86_64
+          cp target/release/orquestra-ai bin-out/${{ matrix.platform.bin_name }}
+          if [ "${{ matrix.platform.legacy_alias }}" = "true" ]; then
             cp target/release/orquestra-ai bin-out/orquestra-ai
-            chmod +x bin-out/orquestra-linux-x86_64 bin-out/orquestra-ai
-          else
-            cp target/release/orquestra-ai bin-out/${{ matrix.platform.bin_name }}
-            chmod +x bin-out/${{ matrix.platform.bin_name }}
           fi
+          chmod +x bin-out/*
           cd bin-out
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum * > SHA256SUMS.txt

@@ -5,13 +5,18 @@
 // which re-exports them from `orquestra-core`.
 pub use orquestra_core::log_error;
 
+/// Default a Wayland session to the native backend, but never overrule the
+/// operator: an explicit `GDK_BACKEND` (for example `x11` to run through
+/// XWayland, or `broadway`) is a deliberate choice and is left alone.
 #[cfg(target_os = "linux")]
 fn prefer_native_wayland_backend() {
-    let is_wayland_session = std::env::var_os("WAYLAND_DISPLAY").is_some();
-    let backend_is_x11 = std::env::var("GDK_BACKEND").as_deref() == Ok("x11");
-    if is_wayland_session && backend_is_x11 {
-        std::env::set_var("GDK_BACKEND", "wayland");
+    if std::env::var_os("GDK_BACKEND").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_none() {
+        return;
     }
+    // Called from `main` before any thread exists, so nothing can observe the
+    // environment mid-change. Rust 2024 makes `set_var` unsafe for exactly
+    // that reason; this call site satisfies the same invariant.
+    std::env::set_var("GDK_BACKEND", "wayland");
 }
 
 fn main() {
