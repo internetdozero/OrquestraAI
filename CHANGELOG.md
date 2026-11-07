@@ -9,13 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] - 2026-11-07
+
 ### Added
 
+- **Chrome App Icon:** The desktop icon is the chrome symbol from the brand kit, regenerated across every platform asset (PNG set, `.icns`, `.ico`).
+- **Windows Artifact:** A `windows-latest` build produces an NSIS installer, `install.ps1` installs and updates it, and the updater accepts the Windows asset instead of refusing the platform.
+- **macOS App Bundle:** `tauri build --bundles app,dmg` ships a real bundle, with codesign and notarization gated on repository secrets, so Finder no longer blocks the download.
+- **Linux Compatibility Gate:** `debian:11` and `rockylinux:8` jobs run the built binary against their own glibc, and `scripts/check-glibc.sh` reports missing symbol versions before a release goes out.
+- **Debian Package:** The Linux build publishes a `.deb` alongside the tarball.
+- **RTK PATH Guidance:** The RTK installer reports the exact `export`/`setx` line when its target directory is not on `PATH`.
 - **Multiplatform Path Shortening:** `shortenPath` supports both Windows (`C:\Users\...`) and Unix (`/home/...`) paths seamlessly in the frontend UI and Janitor modals, backed by unit tests.
 - **Ideas CLI Filter Discovery:** Explicit `--status all` documentation and test coverage for `orquestra idea list`, surfacing the default `open` filter behavior.
 
 ### Fixed
 
+- **Windows Instruction Links:** A junction describes only a directory, so the `AGENTS.md` links never existed on Windows; fusion now creates a hard link there, recognises it, and re-points it after the instruction import republishes the master.
 - **Release Build Portability on Windows:** `build.rs` resolves `npm` via `PATHEXT` to avoid failed builds when `npm` is invoked as `npm.cmd` on Windows.
 - **Tray Fallback Window Close:** App exits gracefully on window close when the desktop environment or OS lacks system tray support.
 - **Ideas CLI Unknown Subcommand Handling:** Fails with a clear usage error on unknown subcommands instead of silent non-zero termination, keeping `--help` and dispatch in sync.

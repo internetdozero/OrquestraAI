@@ -1,9 +1,9 @@
 {
   "name": "orquestra-ai",
   "private": true,
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "type": "module",
-  "description": "OrquestraAI \u2014 Universal AI Harness Administration Platform",
+  "description": "OrquestraAI — Universal AI Harness Administration Platform",
   "scripts": {
     "dev": "vite",
     "build": "npm run check:ui && tsc --noEmit && vite build",
