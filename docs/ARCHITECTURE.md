@@ -36,7 +36,11 @@ Cross-cutting: `paths.rs` (single `OrquestraPaths` resolver + bootstrap),
 
 1. `OrquestraPaths::resolve().bootstrap()` — create `~/.orquestra` layout.
    Failure is logged, never fatal.
-2. `desktop::ensure_desktop_integration()` — Linux launcher/dock entry.
+2. `desktop::ensure_desktop_integration()` — the single owner of desktop
+   registration: Linux `.desktop` entries plus hicolor icons under
+   `$XDG_DATA_HOME` (`desktop_icons.rs`), a `~/Applications` bundle on macOS
+   (`desktop_bundle.rs`) and a Start Menu shortcut on Windows
+   (`desktop_shortcut.rs`). `install.sh` writes none of these.
 3. `tray::setup_tray()` — system tray; failure tolerated (window still opens).
    `AppConfigState.minimize_to_tray` (set via `set_minimize_to_tray`) decides
    whether close hides to tray or exits.

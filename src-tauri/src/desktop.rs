@@ -123,39 +123,54 @@ pub fn create_orquestra_backup() -> Result<String, String> {
         .map(|archive| archive.to_string_lossy().to_string())
 }
 
-/// On Linux desktop environments, automatically install the .desktop launcher and
-/// application icon theme assets so docks/taskbars (Wayland/X11) show the official icon.
-///
-/// Runs off the setup path: a detached worker thread performs the file writes
-/// and the icon-cache refresh, so the first window never waits on
-/// `gtk-update-icon-cache` / `update-desktop-database` / `kbuildsycoca6`.
-/// The refresh subprocesses only fire when launcher or icon bytes actually
-/// changed, so steady-state launches cost one thread spawn and a cheap
-/// content comparison.
-#[cfg(target_os = "linux")]
-pub fn ensure_desktop_integration() {
-    let worker = std::thread::Builder::new().name("desktop-integration".to_string());
-    if worker.spawn(refresh_integration_once).is_err() {
-        // Threading is best-effort like every write below: a missed refresh
-        // only delays icon pickup until the next launch.
-        refresh_integration_once();
-    }
-}
-
-/// Install assets, then refresh caches only when something changed.
+/// Linux: write the assets, then refresh the caches only when something
+/// changed.
 #[cfg(target_os = "linux")]
 fn refresh_integration_once() {
-    let Some(home) = crate::paths::home_dir() else {
+    let Some(data_dir) = crate::desktop_icons::data_home() else {
         return;
     };
-    let data_dir = home.join(".local/share");
     if crate::desktop_icons::install_linux_assets(&data_dir) {
         crate::desktop_icons::refresh_linux_desktop(&data_dir);
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+/// macOS: no launcher files exist in XDG terms, so the app registers itself as
+/// a bundle in `~/Applications` (Dock, Spotlight and `open -a` all find it).
+#[cfg(target_os = "macos")]
+fn refresh_integration_once() {
+    crate::desktop_bundle::ensure_macos_bundle();
+}
+
+/// Windows: a Start Menu shortcut, which is what the Start menu, search and
+/// `Win+R` index.
+#[cfg(target_os = "windows")]
+fn refresh_integration_once() {
+    crate::desktop_shortcut::ensure_start_menu_shortcut();
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 pub fn ensure_desktop_integration() {}
+
+/// Register the app with the current desktop, once per launch.
+///
+/// Linux installs `.desktop` entries and hicolor icons and refreshes the
+/// caches; macOS writes an `OrquestraAI.app` bundle into `~/Applications`;
+/// Windows writes a Start Menu shortcut. All of it runs on a detached worker
+/// thread so the first window never waits on file writes or cache refreshes,
+/// and every write is content-compared first, so a steady-state launch costs
+/// one thread spawn.
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+pub fn ensure_desktop_integration() {
+    let worker = std::thread::Builder::new().name("desktop-integration".to_string());
+    if worker.spawn(refresh_integration_once).is_err() {
+        refresh_integration_once();
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "desktop_icons_tests.rs"]
+mod icon_tests;
 
 #[cfg(test)]
 mod tests {
@@ -200,153 +215,5 @@ mod tests {
             ("explorer", vec![parent.display().to_string()])
         );
         assert!(file_manager_launch("haiku", target, parent).is_err());
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn desktop_install_does_not_write_through_a_symlink() {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-desktop-link-{}-{unique}",
-            std::process::id()
-        ));
-        let data = root.join("share");
-        std::fs::create_dir_all(data.join("applications")).unwrap();
-        let outside = root.join("outside.txt");
-        let original = "ssh-private\n";
-        std::fs::write(&outside, original).unwrap();
-        let link = data.join("applications/orquestra.desktop");
-        std::os::unix::fs::symlink(&outside, &link).unwrap();
-
-        crate::desktop_icons::install_linux_assets(&data);
-
-        assert!(
-            std::fs::symlink_metadata(&link)
-                .unwrap()
-                .file_type()
-                .is_symlink(),
-            "the desktop entry symlink must stay"
-        );
-        assert_eq!(std::fs::read_to_string(&outside).unwrap(), original);
-        let regular =
-            std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
-        assert!(regular.contains("Name=OrquestraAI"));
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn desktop_install_does_not_write_into_a_symlinked_applications_dir() {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let root = std::path::PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-desktop-dir-link-{}-{unique}",
-            std::process::id()
-        ));
-        let data = root.join("share");
-        let outside = root.join("outside");
-        std::fs::create_dir_all(&data).unwrap();
-        std::fs::create_dir_all(&outside).unwrap();
-        let link = data.join("applications");
-        std::os::unix::fs::symlink(&outside, &link).unwrap();
-
-        crate::desktop_icons::install_linux_assets(&data);
-
-        assert!(
-            !outside.join("orquestra.desktop").exists(),
-            "install must not create a launcher in the symlink target"
-        );
-        assert!(std::fs::symlink_metadata(&link)
-            .unwrap()
-            .file_type()
-            .is_symlink());
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    /// Steady-state launches must not fire the icon-cache subprocesses: the
-    /// install reports a change only on the first run, so the refresh gate
-    /// in `refresh_integration_once` stays shut afterwards.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn desktop_install_reports_change_only_once() {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let data = std::path::PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-desktop-idem-{}-{unique}",
-            std::process::id()
-        ));
-
-        assert!(
-            crate::desktop_icons::install_linux_assets(&data),
-            "first install writes launcher and icons"
-        );
-        assert_eq!(
-            std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap(),
-            crate::desktop_icons::DESKTOP_ENTRY,
-        );
-        assert!(
-            !crate::desktop_icons::install_linux_assets(&data),
-            "nothing changed, so no cache refresh is warranted"
-        );
-
-        let _ = std::fs::remove_dir_all(&data);
-    }
-
-    /// Only the canonical launcher is menu-visible: the technical aliases
-    /// carry `NoDisplay=true`, so GNOME/KDE/XFCE show a single OrquestraAI
-    /// icon. A pre-dedup alias (canonical text from an older install)
-    /// converges to hidden on the next run.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn desktop_alias_entries_stay_hidden_from_menus() {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let data = std::path::PathBuf::from("/var/tmp/testing").join(format!(
-            "orquestra-desktop-nodisplay-{}-{unique}",
-            std::process::id()
-        ));
-
-        assert!(crate::desktop_icons::install_linux_assets(&data));
-        let canonical =
-            std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap();
-        assert!(!canonical.contains("NoDisplay"), "canonical stays visible");
-        for alias in ["orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
-            let text = std::fs::read_to_string(data.join(format!("applications/{alias}"))).unwrap();
-            assert!(text.contains("Name=OrquestraAI"));
-            assert!(
-                text.lines().any(|line| line == "NoDisplay=true"),
-                "{alias} must stay hidden from menus"
-            );
-        }
-
-        // An older install left the canonical text in the alias: one pass
-        // converges it to hidden, then the install is steady again.
-        std::fs::write(
-            data.join("applications/orquestra-ai.desktop"),
-            crate::desktop_icons::DESKTOP_ENTRY,
-        )
-        .unwrap();
-        assert!(
-            crate::desktop_icons::install_linux_assets(&data),
-            "pre-dedup alias must converge to hidden"
-        );
-        let converged =
-            std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
-        assert!(converged.lines().any(|line| line == "NoDisplay=true"));
-        assert!(
-            !crate::desktop_icons::install_linux_assets(&data),
-            "steady state must not rewrite"
-        );
-
-        let _ = std::fs::remove_dir_all(&data);
     }
 }

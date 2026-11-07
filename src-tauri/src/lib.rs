@@ -10,7 +10,11 @@ mod commands;
 mod community;
 mod desktop;
 mod desktop_backup;
+#[cfg(any(target_os = "macos", test))]
+mod desktop_bundle;
 mod desktop_icons;
+#[cfg(any(windows, test))]
+mod desktop_shortcut;
 // `paths` and `harness` are re-exports of `orquestra-core` (task #326); the
 // items moved there, the import paths did not.
 pub mod harness;

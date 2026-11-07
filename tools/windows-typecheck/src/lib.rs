@@ -16,6 +16,7 @@
 //! items the module imports, `#[path]` it to the real file, and declare it
 //! here. `scripts/windows-typecheck.sh` picks the whole crate up automatically.
 
+pub mod desktop_shortcut;
 pub mod health;
 pub mod single_instance;
 
@@ -47,6 +48,7 @@ pub mod paths {
 /// Reachable entry point: without a caller the whole graph is dead code and
 /// `-D warnings` would fail on every item instead of checking it.
 pub fn build_graph() {
+    desktop_shortcut::create();
     let _ = health::snapshot();
     let _ = single_instance::acquire();
     single_instance::release();

@@ -7,6 +7,8 @@
 //! attacker-planted link must never receive launcher bytes, and cache
 //! refreshes only fire when bytes actually changed.
 
+use std::path::PathBuf;
+
 const ICON_512: &[u8] = include_bytes!("../icons/icon.png");
 const ICON_256: &[u8] = include_bytes!("../icons/128x128@2x.png");
 const ICON_128: &[u8] = include_bytes!("../icons/128x128.png");
@@ -42,6 +44,31 @@ fn entry_for(name: &str) -> Option<String> {
         "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop" => Some(alias_entry()),
         _ => None,
     }
+}
+
+/// Directory the XDG Base Directory spec calls the data home.
+///
+/// Hardcoding `~/.local/share` puts the launcher where the desktop
+/// environment will never look whenever `XDG_DATA_HOME` is set (NixOS, some
+/// immutability setups, sandboxed profiles). A relative or empty value is
+/// ignored, which is what the spec says to do.
+pub(crate) fn data_home() -> Option<PathBuf> {
+    data_home_with(|name| std::env::var_os(name), crate::paths::home_dir())
+}
+
+/// The data home in the order the spec defines: an absolute
+/// `XDG_DATA_HOME`, else `~/.local/share`.
+pub(crate) fn data_home_with(
+    lookup: impl Fn(&str) -> Option<std::ffi::OsString>,
+    home: Option<PathBuf>,
+) -> Option<PathBuf> {
+    if let Some(configured) = lookup("XDG_DATA_HOME") {
+        let path = PathBuf::from(configured);
+        if path.is_absolute() {
+            return Some(path);
+        }
+    }
+    Some(home?.join(".local/share"))
 }
 
 /// Write the launcher and icons under `data_dir` (`~/.local/share`).

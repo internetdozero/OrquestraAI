@@ -19,8 +19,6 @@ REPO="internetdozero/OrquestraAI"
 RELEASE_PUBKEY="RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1"
 BIN_DIR="${HOME}/.local/bin"
 TARGET_BIN="${BIN_DIR}/orquestra"
-APP_DIR="${HOME}/.local/share/applications"
-ICON_DIR="${HOME}/.local/share/icons/hicolor/512x512/apps"
 
 # 0. CLI Flags
 ALLOW_UNSIGNED_LEGACY=0
@@ -339,48 +337,11 @@ chmod 755 "$STAGING_BIN"
 mv -f "$STAGING_BIN" "$TARGET_BIN"
 STAGING_BIN=""
 
-# 6. Desktop Integration & Icons (Linux only: macOS has no XDG launchers
-# and the app bundle carries its own icon, so this section is skipped there)
-if [ "$OS" = "Linux" ]; then
-    mkdir -p "$APP_DIR" "$ICON_DIR" "${HOME}/.local/share/icons"
-    rm -f "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra.png" \
-          "${HOME}/.local/share/icons/hicolor/1024x1024/apps/orquestra-ai.png" 2>/dev/null || true
-
-    ICON_TMP="${TMP_DIR}/icon.png"
-    if curl -fsSL "https://raw.githubusercontent.com/${REPO}/${RELEASE_TAG}/src-tauri/icons/icon.png" -o "$ICON_TMP" 2>/dev/null && [ -s "$ICON_TMP" ]; then
-        for dst in "${ICON_DIR}/orquestra.png" "${ICON_DIR}/orquestra-ai.png" "${HOME}/.local/share/icons/orquestra.png" "${HOME}/.local/share/icons/orquestra-ai.png"; do
-            cp "$ICON_TMP" "$dst" 2>/dev/null || true
-        done
-    else
-        echo "ℹ️  Notice: Could not download application icon; existing icons preserved."
-    fi
-
-    cat << 'EOF' > "${APP_DIR}/orquestra.desktop"
-[Desktop Entry]
-Name=OrquestraAI
-GenericName=AI Harness Control Plane
-Comment=Universal AI Harness Administration Platform
-Exec=orquestra %U
-Icon=orquestra-ai
-Terminal=false
-Type=Application
-Categories=Development;Utility;System;
-StartupNotify=true
-StartupWMClass=orquestra
-Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;
-EOF
-    chmod 644 "${APP_DIR}/orquestra.desktop"
-
-    for alias in orquestra-ai.desktop ai.orquestra.desktop.desktop; do
-        cp "${APP_DIR}/orquestra.desktop" "${APP_DIR}/${alias}" 2>/dev/null || true
-        chmod 644 "${APP_DIR}/${alias}" 2>/dev/null || true
-        grep -qx 'NoDisplay=true' "${APP_DIR}/${alias}" 2>/dev/null || printf 'NoDisplay=true\n' >> "${APP_DIR}/${alias}"
-    done
-
-    command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
-    command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$APP_DIR" 2>/dev/null || true
-    command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 --noincremental 2>/dev/null || command -v kbuildsycoca5 >/dev/null 2>&1 && kbuildsycoca5 --noincremental 2>/dev/null || true
-fi
+# 6. Desktop integration is owned by the app itself.
+# `src-tauri/src/desktop_icons.rs` writes the launcher and every icon size on
+# each launch (honouring XDG_DATA_HOME) and refreshes the desktop caches only
+# when the bytes changed. Installed here, the same files would be written twice
+# from two sources that drift apart, so this script no longer touches them.
 
 echo "========================================================"
 echo "🎉 OrquestraAI installed successfully to ${TARGET_BIN}"
