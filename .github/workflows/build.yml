@@ -117,6 +117,50 @@ jobs:
           path: bin-out/*
           retention-days: 14
 
+  linux-compat:
+    # The release is built on Ubuntu 22.04, so its symbols reference glibc
+    # 2.35 and the binary stops at the loader on anything older. `ldd` cannot
+    # see this: it lists libraries, not symbol versions. This job runs the
+    # published artifact's own requirement check inside the distributions the
+    # old release was reported broken on, so the limitation is measured rather
+    # than assumed.
+    #
+    # Deliberately not a `needs` of the release job: a compatibility failure
+    # must be visible, not silently block an otherwise valid release.
+    name: Linux compatibility (glibc)
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - debian:11
+          - rockylinux:8
+    container: ${{ matrix.image }}
+    steps:
+      - name: Checkout repository (compatibility script)
+        uses: actions/checkout@v7
+
+      - name: Install the inspection tools
+        run: |
+          if command -v apt-get >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends binutils bash
+          else
+            dnf install -y binutils bash
+          fi
+
+      - name: Download the Linux x86_64 artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: orquestra-linux-x86_64
+          path: artifact
+
+      - name: Check the binary against this distribution's glibc
+        run: |
+          chmod +x artifact/orquestra-linux-x86_64
+          ./scripts/check-glibc.sh artifact/orquestra-linux-x86_64
+
   release:
     name: Publish GitHub Release
     needs: build

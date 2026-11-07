@@ -35,7 +35,9 @@ The installer:
 1. Resolves the latest GitHub release and downloads the binary, `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`.
 2. Verifies the minisign signature with the embedded release key **before** trusting any checksum. This needs [`minisign`](https://jedisct1.github.io/minisign/) or Python 3 with PyNaCl (`python3-nacl` on Debian/Ubuntu). Installation stops if neither is available or the signature is invalid.
 3. Checks the binary's SHA-256 and installs it to `~/.local/bin/orquestra`.
-4. On Linux, checks the WebKitGTK/libsoup libraries and installs missing ones through the package manager using `sudo`. Pass `--no-auto-deps` to skip this step and install the libraries yourself.
+4. On Linux, checks the binary's glibc symbol versions and the WebKitGTK/libsoup libraries, and installs the missing libraries through the package manager using `sudo`. Pass `--no-auto-deps` to skip the library step and install them yourself.
+
+Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. See [docs/install.md](docs/install.md) for the version table and what to do on an older distribution.
 
 To diagnose an existing Linux install without downloading again:
 

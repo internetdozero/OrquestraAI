@@ -1,0 +1,73 @@
+# Installing OrquestraAI
+
+The supported channel today is the installer served at
+`https://orquestra.internetdozero.com.br/install.sh`, which verifies a detached
+signature over the release checksums before it trusts anything (see
+[security.md](security.md)) and installs the binary to `~/.local/bin/orquestra`.
+
+```sh
+curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh
+```
+
+## Linux distributions
+
+The release is built on Ubuntu 22.04, which means the binary is linked against
+glibc 2.35 and WebKitGTK 4.1. The loader is the hard limit: a distribution with
+an older glibc stops before `main` with
+
+```
+/app/orquestra: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found
+```
+
+and no package install fixes that.
+
+| Distribution              | glibc | Runs the release as published |
+| ------------------------- | ----- | ----------------------------- |
+| Ubuntu 22.04+ / Debian 12+ | 2.35+ | yes                           |
+| Fedora 36+, Arch, openSUSE Tumbleweed | 2.35+ | yes                 |
+| Debian 11, Ubuntu 20.04   | 2.31  | no (`GLIBC_2.34`)             |
+| RHEL / Rocky / Alma 8     | 2.28  | no (`GLIBC_2.34`)             |
+| Amazon Linux 2            | 2.26  | no (`GLIBC_2.34`)             |
+
+The installer reads the binary's own versioned symbols (`objdump -T`) and
+compares them with `ldd --version` before replacing an installed binary, so the
+failure is reported as a version mismatch instead of a loader crash. The same
+check runs in CI against the published artifact
+(`scripts/check-glibc.sh`, job `linux-compat`), so a regression shows up in the
+build, not in a user's terminal.
+
+### Running on an older distribution
+
+Two paths exist, and neither is a package you can install today:
+
+- **Flatpak** carries its own runtime, so it is not tied to the host glibc.
+  Packaging is tracked as task #34; until it ships, there is no Flatpak build.
+- **Build from source** on the target distribution (`cargo build --release`
+  with that distribution's WebKitGTK development package) produces a binary
+  linked against its own glibc, which is what an operator on Debian 11 needs
+  right now.
+
+An AppImage is not a solution for this class of failure: an AppImage still
+links the host glibc, so it fails the same way.
+
+## macOS
+
+The release publishes a bare Mach-O binary. The app wraps itself in
+`~/Applications/OrquestraAI.app` on first launch so Spotlight, Launchpad and
+`open -a OrquestraAI` find it (see [ARCHITECTURE.md](ARCHITECTURE.md)). Task
+#21 replaces that wrapper with a signed, notarized bundle:
+
+- **Signed and notarized**: opens from Finder without the "unidentified
+  developer" dialog.
+- **Unsigned build**: macOS quarantines the download. The operator can either
+  right-click → Open once, or clear the attribute explicitly:
+
+  ```sh
+  xattr -d com.apple.quarantine ~/.local/bin/orquestra
+  ```
+
+## Windows
+
+Not published yet: the Tauri shell still contains Unix-only code, so there is
+no MSI or NSIS installer to install. Task #20 tracks that work, and until it
+lands `install.sh` refuses Windows (it has no PowerShell counterpart yet).

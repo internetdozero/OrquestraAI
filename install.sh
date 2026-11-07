@@ -84,6 +84,58 @@ try_install_linux_deps() {
     fi
 }
 
+# Highest glibc symbol version the binary references, or empty when the
+# requirement cannot be read. Mirrors scripts/check-glibc.sh, which CI runs
+# against the built artifact; this copy exists because the installer is a
+# single stream (`curl | sh`) and cannot depend on a sibling file.
+required_glibc() {
+    binary_path=$1
+    if command -v objdump >/dev/null 2>&1; then
+        symbols=$(objdump -T "$binary_path" 2>/dev/null || true)
+    elif command -v readelf >/dev/null 2>&1; then
+        symbols=$(readelf --dyn-syms --wide "$binary_path" 2>/dev/null || true)
+    else
+        return 0
+    fi
+    printf '%s\n' "$symbols" \
+        | grep -o 'GLIBC_[0-9][0-9.]*' \
+        | sed 's/^GLIBC_//' \
+        | sort -u -V \
+        | tail -1
+}
+
+# glibc a < glibc b? `sort -V` is the only version-aware comparison in POSIX
+# userland, and both operands are already normalised `major.minor` text.
+glibc_older() {
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ] && [ "$1" != "$2" ]
+}
+
+# The loader stops at the first missing symbol version, so a binary built on a
+# newer base is unusable here no matter which libraries are installed. `ldd`
+# cannot see this: it reports libraries, not versions.
+check_linux_glibc() {
+    binary_path=$1
+    [ "$(uname -s)" = "Linux" ] || return 0
+    required=$(required_glibc "$binary_path")
+    if [ -z "$required" ]; then
+        echo "ℹ️  glibc version check skipped (no binutils, or not a dynamically linked binary)."
+        return 0
+    fi
+    available=$(ldd --version 2>/dev/null | head -1 | grep -o '[0-9][0-9.]*$' || true)
+    if [ -z "$available" ]; then
+        echo "ℹ️  glibc version check skipped (could not read the local version)."
+        return 0
+    fi
+    if glibc_older "$available" "$required"; then
+        echo "❌ This binary requires glibc ${required}, but this system provides ${available}." >&2
+        echo "   The loader would fail with 'GLIBC_${required} not found'." >&2
+        echo "   Use a distribution with glibc >= ${required}, or install the Flatpak" >&2
+        echo "   build, which carries its own runtime." >&2
+        return 1
+    fi
+    echo "✓ glibc ${available} can run this binary (needs ${required})."
+}
+
 check_linux_runtime_deps() {
     binary_path=$1
     if ! command -v ldd >/dev/null 2>&1; then
@@ -96,6 +148,9 @@ check_linux_runtime_deps() {
         echo "❌ Could not inspect runtime dependencies for ${binary_path}:" >&2
         printf '%s\n' "$ldd_output" >&2
         return 2
+    fi
+    if ! check_linux_glibc "$binary_path"; then
+        return 1
     fi
     missing_libraries=$(printf '%s\n' "$ldd_output" | awk '/=> not found/ { print $1 }')
     if [ -n "$missing_libraries" ] && [ "$AUTO_INSTALL_DEPS" = "1" ]; then
