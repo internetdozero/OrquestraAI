@@ -10,6 +10,13 @@ use crate::error::{CoreError, CoreResult};
 /// directory without an owner check: on multi-user machines a predictable
 /// `/tmp/orquestra-ai` lets another local user pre-create it and race the
 /// staging writes inside.
+///
+/// The fallback lives in the system temp directory, which `systemd-tmpfiles`
+/// may empty on a timer or reboot. That is acceptable because nothing here is
+/// meant to survive: every staging tree is per-operation, and
+/// [`ensure_scratch_root`] recreates the root (verifying owner and mode) on
+/// the next call. Set `XDG_RUNTIME_DIR` to keep the root on a session-scoped,
+/// operators-only filesystem instead.
 pub fn scratch_root() -> PathBuf {
     if let Some(runtime) = std::env::var_os("XDG_RUNTIME_DIR") {
         if !runtime.is_empty() {

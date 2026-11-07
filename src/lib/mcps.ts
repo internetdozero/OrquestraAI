@@ -39,11 +39,18 @@ export type ExecutionKind = "npx" | "python" | "binary";
 
 /**
  * Classify how a server is launched, which is the only thing that decides
- * whether a machine can actually run it. We look at the basename so
- * `/usr/bin/npx` reads the same as `npx`.
+ * whether a machine can actually run it. Only the basename matters, so an
+ * absolute path reads the same as a bare name on either separator style.
+ * Windows launchers also carry an extension (`npx.cmd`, `python.exe`).
  */
 export function executionKind(command: string): ExecutionKind {
-  const base = command.trim().split("/").pop()?.toLowerCase() ?? "";
+  const base =
+    command
+      .trim()
+      .split(/[\\/]/)
+      .pop()
+      ?.toLowerCase()
+      .replace(/\.(cmd|exe|bat)$/, "") ?? "";
   if (base === "npx" || base === "bunx" || base === "pnpx") return "npx";
   if (base === "python" || base === "python3" || base === "uvx") return "python";
   return "binary";

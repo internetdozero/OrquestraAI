@@ -217,6 +217,26 @@ fn sweep_only_removes_dead_sockets_and_aged_direct_files() {
     drop(listener);
 }
 
+/// macOS and Windows have no live-socket table: the report has to say the
+/// socket half was skipped instead of implying the whole tree was checked.
+#[cfg(unix)]
+#[test]
+fn sweep_reports_socket_cleanup_as_skipped_without_liveness() {
+    let test = TestRoot::new();
+    let orquestra = test.0.join(".orquestra");
+    let scratch = test.0.join("scratch");
+    fs::create_dir_all(&orquestra).unwrap();
+    fs::create_dir_all(&scratch).unwrap();
+
+    let report = sweep_at(&orquestra, &scratch, None, SystemTime::now()).unwrap();
+    assert_eq!(report.removed_count, 0);
+    assert!(
+        report.status.contains("Socket cleanup skipped"),
+        "status must name the skipped half: {}",
+        report.status
+    );
+}
+
 /// macOS regression: `/proc/net/unix` does not exist there, and the caller
 /// used to hand the sweep an empty table. "Empty" and "unavailable" are
 /// different facts — only an empty table may justify deleting a socket — so

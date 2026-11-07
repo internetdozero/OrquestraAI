@@ -32,11 +32,21 @@ pub(super) fn sweep_at(
     clean_sockets(orquestra_root, active_sockets, &mut report)?;
     clean_scratch(scratch_root, now, &mut report)?;
     report.reclaimed_mb = (report.reclaimed_mb * 10.0).round() / 10.0;
-    report.status = if report.removed_count == 0 {
+    // Say why socket cleanup was skipped instead of leaving an operator to
+    // guess: `None` means this platform cannot report socket liveness
+    // (macOS and Windows have no `/proc/net/unix`), not that no socket is live.
+    let sockets_skipped = active_sockets.is_none();
+    let mut status = if report.removed_count == 0 {
         "Sweep completed; no stale files found.".to_string()
     } else {
         "Sweep completed.".to_string()
     };
+    if sockets_skipped {
+        status.push_str(
+            " Socket cleanup skipped: live-socket liveness is unavailable on this platform.",
+        );
+    }
+    report.status = status;
     Ok(report)
 }
 
