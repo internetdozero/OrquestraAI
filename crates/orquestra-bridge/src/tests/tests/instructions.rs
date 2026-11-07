@@ -141,7 +141,24 @@ fn freebuff_instructions_setup_is_idempotent() {
     let before = fs::read_to_string(test.paths.agents_path()).unwrap();
 
     let second = deploy_at(&test.home, &test.paths).unwrap();
-    assert!(second.backup_dir.is_none(), "second run must be a no-op");
+    assert!(
+        second.backup_dir.is_none(),
+        "second run must be a no-op: backup={:?} errors={:?} harnesses={:?}",
+        second.backup_dir,
+        second.errors,
+        second
+            .harnesses
+            .iter()
+            .map(|status| (
+                status.id.clone(),
+                status.bridged,
+                status.skills_linked,
+                status.instructions_linked,
+                status.config_linked,
+                status.secondary_cleared,
+            ))
+            .collect::<Vec<_>>()
+    );
     assert!(second.errors.is_empty(), "errors: {:?}", second.errors);
     assert_eq!(freebuff_status(&second).bridged, true);
 

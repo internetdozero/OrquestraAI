@@ -333,6 +333,7 @@ fn instructions_satisfied(home: &Path, rel: &str, master: &Path) -> bool {
 
 pub(super) fn is_linked_to(link: &Path, target: &Path) -> bool {
     // Shared with the projection code so Unix symlinks and Windows junctions
-    // answer identically, including the `\\?\` prefix normalization.
-    orquestra_core::links::resolves_to(link, target)
+    // answer identically, including the `\\?\` prefix normalization. Files
+    // also accept the Windows hard link, which canonicalizes to its own name.
+    orquestra_core::links::file_matches(link, target)
 }

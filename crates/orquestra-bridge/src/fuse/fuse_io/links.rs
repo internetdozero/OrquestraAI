@@ -9,8 +9,11 @@
 use std::fs;
 use std::path::Path;
 
-use orquestra_core::links::{create_dir_link, is_dir_link, read_dir_link, remove_dir_link};
-use orquestra_core::paths::copy_dir_all;
+use orquestra_core::harness::{self};
+use orquestra_core::links::{
+    create_dir_link, create_file_link, is_dir_link, read_dir_link, remove_dir_link,
+};
+use orquestra_core::paths::{copy_dir_all, rebase, OrquestraPaths};
 
 use super::{create_dir_all, is_link};
 use crate::status::is_linked_to;
@@ -39,7 +42,14 @@ pub(crate) fn ensure_symlink(link: &Path, target: &Path) -> Result<(), String> {
         create_dir_all(parent)?;
     }
 
-    create_dir_link(target, link).map_err(|error| {
+    // A junction cannot describe a file, and on Windows the instruction links
+    // are files: use the file primitive there instead.
+    let created = if target.is_dir() {
+        create_dir_link(target, link)
+    } else {
+        create_file_link(target, link)
+    };
+    created.map_err(|error| {
         format!(
             "failed to link {} -> {}: {error}",
             link.display(),
@@ -57,8 +67,12 @@ pub(crate) fn move_entry(source: &Path, destination: &Path) -> Result<(), String
         } else {
             let _ = fs::remove_file(destination);
         }
-        create_dir_link(&target, destination)
-            .map_err(|error| format!("failed to back up link {}: {error}", source.display()))?;
+        if target.is_dir() {
+            create_dir_link(&target, destination)
+        } else {
+            create_file_link(&target, destination)
+        }
+        .map_err(|error| format!("failed to back up link {}: {error}", source.display()))?;
         remove_dir_link(source)
             .map_err(|error| format!("failed to remove {}: {error}", source.display()))?;
         return Ok(());
@@ -75,4 +89,61 @@ pub(crate) fn move_entry(source: &Path, destination: &Path) -> Result<(), String
         .map_err(|error| format!("failed to copy {}: {error}", source.display()))?;
     fs::remove_file(source)
         .map_err(|error| format!("failed to remove {}: {error}", source.display()))
+}
+
+/// The instruction files fusion linked as *files* rather than symlinks: on
+/// Windows that is a hard link, which carries the master's bytes without
+/// resolving to its name.
+///
+/// Collected before the instruction import because `write_atomic` publishes
+/// the master through a `rename`: the master gets a new inode while a hard
+/// link keeps the previous text. Knowing which files are fusion's own links
+/// keeps [`resync_file_links`] away from anything the operator wrote.
+pub(crate) fn file_linked_instructions(
+    home: &Path,
+    paths: &OrquestraPaths,
+) -> Vec<std::path::PathBuf> {
+    let master = paths.agents_path();
+    let mut linked = Vec::new();
+
+    for spec in harness::HARNESSES {
+        if !harness::is_installed(spec, home) {
+            continue;
+        }
+        for rel in spec.instructions_rels {
+            let source = rebase(home, rel);
+            if source.is_file() && !is_link(&source) && is_linked_to(&source, &master) {
+                linked.push(source);
+            }
+        }
+    }
+
+    linked
+}
+
+/// Re-point the file links collected above at the master the import just
+/// published, since a `rename` left them holding the old text.
+pub(crate) fn resync_file_links(
+    linked: &[std::path::PathBuf],
+    paths: &OrquestraPaths,
+) -> Vec<String> {
+    let master = paths.agents_path();
+    let mut errors = Vec::new();
+
+    for source in linked {
+        if !source.is_file() || is_linked_to(source, &master) {
+            continue;
+        }
+        let relinked = fs::remove_file(source)
+            .map_err(|error| error.to_string())
+            .and_then(|()| create_file_link(&master, source).map_err(|error| error.to_string()));
+        if let Err(error) = relinked {
+            errors.push(format!(
+                "failed to refresh instruction link {}: {error}",
+                source.display()
+            ));
+        }
+    }
+
+    errors
 }

@@ -117,6 +117,51 @@ pub fn normalize(path: &Path) -> PathBuf {
     }
 }
 
+/// Create the file link `link` pointing at `target`.
+///
+/// A junction only describes a directory, so the instruction files the bridge
+/// links (`AGENTS.md` and friends) need their own primitive. On Windows a file
+/// *symlink* needs `SeCreateSymbolicLinkPrivilege` (or Developer Mode), which a
+/// plain user profile does not have, so the link is a **hard link** instead:
+/// no privilege, and the same bytes — editing one name edits the other. Where a
+/// hard link is impossible (another volume), the file is copied.
+pub fn create_file_link(target: &Path, link: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
+    #[cfg(windows)]
+    {
+        match std::fs::hard_link(target, link) {
+            Ok(()) => Ok(()),
+            // `ERROR_NOT_SAME_DEVICE`: the projection lives on another volume.
+            Err(_) => std::fs::copy(target, link).map(|_| ()),
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (target, link);
+        Err(unsupported())
+    }
+}
+
+/// True when `link` already carries `target`'s bytes: a symlink that resolves
+/// there, or the Windows hard link [`create_file_link`] makes (whose
+/// `canonicalize` answers its own name, not the target's).
+pub fn file_matches(link: &Path, target: &Path) -> bool {
+    if resolves_to(link, target) {
+        return true;
+    }
+    let (Ok(link_meta), Ok(target_meta)) = (std::fs::metadata(link), std::fs::metadata(target))
+    else {
+        return false;
+    };
+    link_meta.is_file()
+        && target_meta.is_file()
+        && link_meta.len() == target_meta.len()
+        && std::fs::read(link).ok() == std::fs::read(target).ok()
+}
+
 /// True when `link` is a directory link that resolves to `target`.
 ///
 /// Both sides are canonicalized and normalized, so a junction and a symlink
@@ -171,6 +216,42 @@ mod tests {
             strip_verbatim(Path::new(r"C:\Users\system\.orquestra")),
             PathBuf::from(r"C:\Users\system\.orquestra")
         );
+    }
+
+    #[test]
+    fn a_hard_linked_file_matches_until_the_master_is_replaced() {
+        let root = std::env::temp_dir().join(format!(
+            "orquestra-hardlink-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|duration| duration.as_nanos())
+                .unwrap_or_default()
+        ));
+        std::fs::create_dir_all(&root).expect("root");
+        let master = root.join("AGENTS.md");
+        let link = root.join("codex-AGENTS.md");
+        std::fs::write(&master, "shared rules\n").expect("master");
+
+        std::fs::hard_link(&master, &link).expect("hard link");
+        assert!(file_matches(&link, &master));
+
+        // `write_atomic` publishes through a rename: the master gets a new
+        // inode and the old name keeps the previous text, which is why fusion
+        // re-points file links after importing instructions.
+        let temporary = root.join("AGENTS.md.tmp");
+        std::fs::write(&temporary, "shared rules\nmore\n").expect("rewrite");
+        std::fs::rename(&temporary, &master).expect("publish");
+        assert!(
+            !file_matches(&link, &master),
+            "a rename must leave the old link visibly stale"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&link).expect("old text"),
+            "shared rules\n"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[cfg(unix)]

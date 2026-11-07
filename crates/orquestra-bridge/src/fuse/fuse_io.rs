@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use super::super::status::{is_link, is_linked_to};
 
 mod links;
-pub(super) use links::{ensure_symlink, move_entry};
+pub(super) use links::{ensure_symlink, file_linked_instructions, move_entry, resync_file_links};
 use orquestra_core::harness::HarnessSpec;
 use orquestra_core::paths::OrquestraPaths;
 
@@ -38,10 +38,14 @@ pub(super) fn link_instructions(
 ) -> Result<(), String> {
     let master = paths.agents_path();
 
+    // Asked before the `is_link` shape test: on Windows the instruction link is
+    // a hard link, which is not a reparse point, and re-importing it would back
+    // up and rewrite the master on every deploy.
+    if is_linked_to(source, &master) {
+        return Ok(());
+    }
+
     if is_link(source) {
-        if is_linked_to(source, &master) {
-            return Ok(());
-        }
         backup_move(source, &backup_slot(backup, spec.id, rel))?;
     } else if source.is_file() {
         if let Ok(content) = fs::read_to_string(source) {

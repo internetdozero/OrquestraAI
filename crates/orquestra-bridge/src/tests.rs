@@ -17,6 +17,9 @@ mod tests {
     struct TestHome {
         home: PathBuf,
         paths: OrquestraPaths,
+        // `rebase` resolves `.config/…` and `.local/share/…` per platform, so
+        // the fixture owns those variables while it is alive.
+        _env: orquestra_core::test_support::DirEnv,
     }
 
     impl TestHome {
@@ -33,6 +36,7 @@ mod tests {
             let root = base.join("orquestra");
 
             fs::create_dir_all(&home).unwrap();
+            let env = orquestra_core::test_support::DirEnv::isolate(&home);
 
             TestHome {
                 home,
@@ -41,6 +45,7 @@ mod tests {
                     active: root.join("active"),
                     root,
                 },
+                _env: env,
             }
         }
 
@@ -80,13 +85,38 @@ mod tests {
         }
     }
 
+    // `_env` restores the variables as it drops, even when a test panics, so
+    // one failure does not leak a fixture root into the next test.
+
+    /// Config files hold the projection path inside a JSON string, so on
+    /// Windows the backslashes arrive escaped and a raw comparison misses it.
+    fn config_points_at(body: &str, path: &Path) -> bool {
+        let literal = path.to_string_lossy();
+        if body.contains(literal.as_ref()) {
+            return true;
+        }
+        let quoted = serde_json::to_string(literal.as_ref()).unwrap_or_default();
+        body.contains(quoted.trim_matches('"'))
+    }
+
+    /// A link is either a symlink/junction that resolves to the owner or, for
+    /// the instruction files on Windows, the hard link `create_file_link`
+    /// makes — which canonicalizes to its own name and carries the same bytes.
     fn assert_linked(link: &Path, expected_owner: &Path) {
-        assert!(is_link(link), "{} is not a symlink", link.display());
-        assert_eq!(
-            fs::canonicalize(link).unwrap(),
-            fs::canonicalize(expected_owner).unwrap(),
-            "{} points at the wrong projection",
-            link.display()
+        if is_link(link) {
+            assert_eq!(
+                fs::canonicalize(link).unwrap(),
+                fs::canonicalize(expected_owner).unwrap(),
+                "{} points at the wrong projection",
+                link.display()
+            );
+            return;
+        }
+        assert!(
+            orquestra_core::links::file_matches(link, expected_owner),
+            "{} is neither a link nor the same file as {}",
+            link.display(),
+            expected_owner.display()
         );
     }
 

@@ -74,9 +74,14 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
         }
 
         if master_before == DEFAULT_AGENTS {
+            // The import publishes the master through a rename, which detaches
+            // any hard link made above: remember those links first and re-point
+            // them at the file the import wrote.
+            let file_links = fuse_io::file_linked_instructions(home, paths);
             if let Err(error) = import_instructions(paths, &imported) {
                 errors.push(format!("AGENTS.md import: {error}"));
             }
+            errors.extend(fuse_io::resync_file_links(&file_links, paths));
         }
 
         // The run may only need to create missing links. Allocate no backup

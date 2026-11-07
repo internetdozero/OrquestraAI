@@ -1,5 +1,6 @@
 //! Full fusion integration test: adopt, back up and link harness state.
 
+use super::config_points_at;
 use std::fs;
 use std::path::PathBuf;
 
@@ -172,22 +173,13 @@ fn fusion_backs_up_links_and_preserves_harness_state() {
     // Kilo config keeps its comment and gains the projection path.
     let kilo = fs::read_to_string(test.home.join(".config/kilo/kilo.jsonc")).unwrap();
     assert!(kilo.contains("// keep me"));
-    assert!(kilo.contains(
-        &test
-            .paths
-            .projection_dir("kilo")
-            .to_string_lossy()
-            .into_owned()
-    ));
+    assert!(config_points_at(&kilo, &test.paths.projection_dir("kilo")));
 
     // OpenCode config is created for an installed harness.
     let opencode = fs::read_to_string(test.home.join(".config/opencode/opencode.jsonc")).unwrap();
-    assert!(opencode.contains(
-        &test
-            .paths
-            .projection_dir("opencode")
-            .to_string_lossy()
-            .into_owned()
+    assert!(config_points_at(
+        &opencode,
+        &test.paths.projection_dir("opencode")
     ));
 
     // Harness instructions were folded into the pristine master file.

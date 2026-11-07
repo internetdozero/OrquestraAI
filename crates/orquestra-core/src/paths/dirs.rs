@@ -153,6 +153,20 @@ fn os_name() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::DirEnv;
+
+    /// The Windows roots read `%APPDATA%`/`%LOCALAPPDATA%` and Linux reads the
+    /// XDG variables from the process, so these cases hold the shared directory
+    /// lock and clear them: the Windows runner exports both and they otherwise
+    /// answer with the real profile instead of the documented defaults.
+    fn cleared() -> DirEnv {
+        DirEnv::cleared()
+    }
+
+    /// Separators differ by host; the tests spell paths with `/`.
+    fn shown(path: PathBuf) -> String {
+        path.to_string_lossy().replace('\\', "/")
+    }
 
     fn home() -> Option<PathBuf> {
         Some(PathBuf::from("/home/dev"))
@@ -175,35 +189,51 @@ mod tests {
 
     #[test]
     fn every_platform_has_its_documented_roots() {
+        let _env = cleared();
         for (os, data, config) in CASES {
             assert_eq!(
-                data_dir_for(None, home(), os),
-                Some(PathBuf::from(data)),
+                shown(data_dir_for(None, home(), os).expect("data root")),
+                *data,
                 "{os} data root"
             );
             assert_eq!(
-                config_dir_for(None, home(), os),
-                Some(PathBuf::from(config)),
+                shown(config_dir_for(None, home(), os).expect("config root")),
+                *config,
                 "{os} config root"
             );
         }
     }
 
+    /// A root the host itself calls absolute: `/nix/...` is not one on Windows,
+    /// where an absolute path needs a drive or a UNC prefix.
+    fn host_absolute(rel: &str) -> OsString {
+        #[cfg(windows)]
+        {
+            OsString::from(format!(r"C:\{}", rel.replace('/', "\\")))
+        }
+        #[cfg(not(windows))]
+        {
+            OsString::from(format!("/{rel}"))
+        }
+    }
+
     #[test]
     fn xdg_overrides_win_only_when_absolute() {
-        let absolute = Some(OsString::from("/nix/store/profile/share"));
+        let _env = cleared();
+        let profile = host_absolute("nix/store/profile/share");
+        let xdg = host_absolute("etc/xdg-custom");
         let relative = Some(OsString::from("share"));
         assert_eq!(
-            data_dir_for(absolute.clone(), home(), "linux"),
-            Some(PathBuf::from("/nix/store/profile/share"))
+            shown(data_dir_for(Some(profile.clone()), home(), "linux").expect("override")),
+            shown(PathBuf::from(&profile))
         );
         assert_eq!(
-            config_dir_for(Some(OsString::from("/etc/xdg-custom")), home(), "linux"),
-            Some(PathBuf::from("/etc/xdg-custom"))
+            shown(config_dir_for(Some(xdg.clone()), home(), "linux").expect("override")),
+            shown(PathBuf::from(&xdg))
         );
         assert_eq!(
-            data_dir_for(relative, home(), "linux"),
-            Some(PathBuf::from("/home/dev/.local/share")),
+            shown(data_dir_for(relative, home(), "linux").expect("fallback")),
+            "/home/dev/.local/share",
             "a relative XDG value is invalid, not home-relative"
         );
     }
@@ -236,28 +266,29 @@ mod tests {
 
     #[test]
     fn rebase_follows_the_platform_layout() {
+        let _env = cleared();
         let home = Path::new("/Users/dev");
         assert_eq!(
-            rebase_for(home, ".config/manicode", None, None, "macos"),
-            PathBuf::from("/Users/dev/Library/Application Support/manicode")
+            shown(rebase_for(home, ".config/manicode", None, None, "macos")),
+            "/Users/dev/Library/Application Support/manicode"
         );
         assert_eq!(
-            rebase_for(
+            shown(rebase_for(
                 home,
                 ".local/share/opencode/opencode.db",
                 None,
                 None,
                 "macos"
-            ),
-            PathBuf::from("/Users/dev/Library/Application Support/opencode/opencode.db")
+            )),
+            "/Users/dev/Library/Application Support/opencode/opencode.db"
         );
         assert_eq!(
-            rebase_for(home, ".config/opencode", None, None, "windows"),
-            PathBuf::from("/Users/dev/AppData/Roaming/opencode")
+            shown(rebase_for(home, ".config/opencode", None, None, "windows")),
+            "/Users/dev/AppData/Roaming/opencode"
         );
         assert_eq!(
-            rebase_for(home, ".local/share/kilo", None, None, "windows"),
-            PathBuf::from("/Users/dev/AppData/Local/kilo")
+            shown(rebase_for(home, ".local/share/kilo", None, None, "windows")),
+            "/Users/dev/AppData/Local/kilo"
         );
     }
 
