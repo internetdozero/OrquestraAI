@@ -16,7 +16,11 @@ use rusqlite::Connection;
 
 use super::{registry, SessionAdapter};
 
-struct TestHome(PathBuf);
+struct TestHome(
+    PathBuf,
+    // Shared with the adapter fixtures through its own lock; held for `Drop`.
+    #[allow(dead_code)] orquestra_core::test_support::DirEnv,
+);
 
 impl TestHome {
     fn new(name: &str) -> Self {
@@ -30,7 +34,11 @@ impl TestHome {
         ));
         fs::create_dir_all(&path)
             .expect("create the transcript test home under the test scratch root");
-        Self(path)
+        // `rebase` resolves `.config/…` and `.local/share/…` through the XDG
+        // variables, so the fixture points them at its own tree while it runs.
+        let env = orquestra_core::test_support::DirEnv::isolate(&path);
+
+        Self(path, env)
     }
 
     fn write(&self, relative: &str, content: &str) {
@@ -52,6 +60,7 @@ impl TestHome {
 impl Drop for TestHome {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
+        // `self.1` restores the directory variables as it drops.
     }
 }
 

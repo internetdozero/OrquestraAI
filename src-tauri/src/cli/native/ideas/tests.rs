@@ -1,13 +1,13 @@
 use super::*;
 
 fn ideas_cli_lock() -> std::sync::MutexGuard<'static, ()> {
-    // Lifecycle tests share ~/.local/share/idea-vault/ideas.sqlite3. Cargo runs
+    // Lifecycle tests share the idea-vault database under `HOME`. Cargo runs
     // lib tests on several threads, so concurrent WAL enable races as
-    // "database is locked". Serialize the DB-touching CLI suites.
-    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
-    LOCK.get_or_init(|| std::sync::Mutex::new(()))
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+    // "database is locked" — and the env test in `ideas::tests` briefly
+    // repoints `IDEA_VAULT_DB_PATH`/`XDG_DATA_HOME`, which would send a
+    // concurrent read to an empty database. One crate-wide guard serializes
+    // every test that touches the store (and keeps them off the real `HOME`).
+    crate::test_env::isolated_home()
 }
 
 #[test]

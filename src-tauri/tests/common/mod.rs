@@ -67,6 +67,12 @@ fn with_scratch_home<T>(label: &str, windows_style: bool, body: impl FnOnce(&Pat
 
     let home = unique_dir(label);
     std::fs::create_dir_all(&home).expect("scratch home");
+    // `rebase` honours the platform's directory variables over the scratch
+    // `HOME` (XDG on Unix, `%APPDATA%`/`%LOCALAPPDATA%` on Windows), so a runner
+    // that exports any of them would send paths back to the operator's real
+    // tree even though `HOME` was swapped. `DirEnv` pins all four here and
+    // restores them on drop.
+    let dirs = orquestra_core::test_support::DirEnv::isolate(&home);
 
     unsafe {
         if windows_style {
@@ -83,6 +89,7 @@ fn with_scratch_home<T>(label: &str, windows_style: bool, body: impl FnOnce(&Pat
     restore("HOME", previous_home);
     restore("USERPROFILE", previous_profile);
     restore(KEYRING_FLAG, previous_flag);
+    drop(dirs);
     let _ = std::fs::remove_dir_all(&home);
     outcome
 }

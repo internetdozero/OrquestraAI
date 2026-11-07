@@ -1,13 +1,14 @@
 use super::*;
 use std::fs;
 use std::io::Write;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Two fixtures can start inside the same clock tick, and the clock alone then
+/// gives them the same root — one test deleting the other's files.
+static NEXT_SCRATCH: AtomicU64 = AtomicU64::new(0);
 
 fn scratch() -> PathBuf {
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_nanos())
-        .unwrap_or(0);
+    let unique = NEXT_SCRATCH.fetch_add(1, Ordering::Relaxed);
     let root = orquestra_core::test_support::root().join(format!(
         "orquestra-freebuff-link-{}-{unique}",
         std::process::id()

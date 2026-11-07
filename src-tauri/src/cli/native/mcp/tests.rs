@@ -24,6 +24,7 @@ fn mcp_cli_rejects_set_state_with_invalid_state() {
 
 #[test]
 fn mcp_cli_list_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let args = ["list".to_string(), "--json".to_string()];
     let res = run(&args);
     assert!(res.is_ok(), "mcp list --json failed: {:?}", res.err());
@@ -34,6 +35,7 @@ fn mcp_cli_list_runs_cleanly() {
 
 #[test]
 fn mcp_cli_status_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let args = ["status".to_string(), "--json".to_string()];
     let res = run(&args);
     assert!(res.is_ok(), "mcp status --json failed: {:?}", res.err());
@@ -45,6 +47,7 @@ fn mcp_cli_status_runs_cleanly() {
 
 #[test]
 fn mcp_cli_targets_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let args = ["targets".to_string(), "--json".to_string()];
     let res = run(&args);
     assert!(res.is_ok(), "mcp targets --json failed: {:?}", res.err());

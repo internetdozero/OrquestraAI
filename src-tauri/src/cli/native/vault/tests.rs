@@ -56,12 +56,14 @@ fn http_requires_service_and_endpoint() {
 
 #[test]
 fn vault_list_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let res = query::list(&["--json".to_string()]);
     assert!(res.is_ok(), "vault list failed: {:?}", res.err());
 }
 
 #[test]
 fn vault_presets_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let res = query::presets(&["--json".to_string()]);
     assert!(res.is_ok(), "vault presets failed: {:?}", res.err());
     let output = res.unwrap();
@@ -72,6 +74,7 @@ fn vault_presets_runs_cleanly() {
 
 #[test]
 fn vault_audit_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let res = audit::audit(&["--json".to_string()]);
     assert!(res.is_ok(), "vault audit failed: {:?}", res.err());
 }

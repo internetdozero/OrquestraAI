@@ -13,20 +13,31 @@ use std::os::unix::net::UnixListener;
 #[cfg(unix)]
 use std::path::PathBuf;
 #[cfg(unix)]
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(unix)]
+use std::time::{Duration, SystemTime};
 
 #[cfg(unix)]
 struct TestRoot(PathBuf);
 
+/// Per-process counter: the fixture name has to stay short (see below), so the
+/// pid plus a counter is what keeps two tests from sharing a directory.
+#[cfg(unix)]
+static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
+
 #[cfg(unix)]
 impl TestRoot {
     fn new() -> Self {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = orquestra_core::test_support::root()
-            .join(format!("orquestra-janitor-{}-{unique}", std::process::id()));
+        // Deliberately short: these fixtures bind Unix sockets, and macOS caps
+        // `sun_path` at 104 bytes (`SUN_LEN`). The macOS temp root is already
+        // ~48 bytes (`/var/folders/<2>/<30>/T`), which leaves 56 for this
+        // directory plus `/.orquestra/orquestra.sock`; a timestamp there used
+        // to push the socket path over the limit, so the name is `j-<pid>-<n>`
+        // and any leftover from a crashed run with the same pid is cleared.
+        let index = NEXT_ROOT.fetch_add(1, Ordering::Relaxed);
+        let path =
+            orquestra_core::test_support::root().join(format!("j-{}-{index}", std::process::id()));
+        let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path)
             .expect("create Janitor test workspace under the test scratch root");
         Self(path)

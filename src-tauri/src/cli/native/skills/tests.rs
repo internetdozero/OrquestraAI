@@ -38,6 +38,7 @@ fn skills_cli_usage_errors() {
 
 #[test]
 fn skills_cli_list_and_summary() {
+    let _home = crate::test_env::isolated_home();
     let list_out = run(&["list".to_string(), "--json".to_string()]).expect("skills list");
     let list_val: serde_json::Value = serde_json::from_str(&list_out).expect("json array");
     assert!(list_val.is_array());

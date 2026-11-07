@@ -40,7 +40,12 @@ fn fixture_path(home: &Path, relative: &str) -> PathBuf {
     orquestra_core::paths::rebase(home, relative)
 }
 
-struct TestHome(PathBuf);
+struct TestHome(
+    PathBuf,
+    // Held only for its `Drop`: it owns the directory variables while the
+    // fixture is alive.
+    #[allow(dead_code)] orquestra_core::test_support::DirEnv,
+);
 
 impl TestHome {
     fn new() -> Self {
@@ -48,13 +53,17 @@ impl TestHome {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = orquestra_core::test_support::root().join(format!(
+        let root = orquestra_core::test_support::root().join(format!(
             "orquestra-sessions-adapters-{}-{unique}",
             std::process::id()
         ));
-        fs::create_dir_all(&path)
+        fs::create_dir_all(&root)
             .expect("create the adapter test home under the test scratch root");
-        Self(path)
+        // [`fixture_path`] resolves through `rebase`, so the fixture owns the
+        // directory variables while it is alive.
+        let env = orquestra_core::test_support::DirEnv::isolate(&root);
+
+        Self(root, env)
     }
 
     fn write(&self, relative: &str, content: &str) -> u64 {
@@ -77,6 +86,7 @@ impl TestHome {
 impl Drop for TestHome {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
+        // `self.1` restores the directory variables as it drops.
     }
 }
 

@@ -27,6 +27,7 @@ fn sessions_cli_usage_errors() {
 
 #[test]
 fn sessions_cli_list_runs_cleanly() {
+    let _home = crate::test_env::isolated_home();
     let args = ["list".to_string(), "--json".to_string()];
     let res = run(&args);
     assert!(res.is_ok(), "sessions list --json failed: {:?}", res.err());

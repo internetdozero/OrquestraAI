@@ -15,8 +15,7 @@ mod desktop_bundle;
 mod desktop_icons;
 #[cfg(any(windows, test))]
 mod desktop_shortcut;
-// `paths` and `harness` are re-exports of `orquestra-core` (task #326); the
-// items moved there, the import paths did not.
+// `paths`/`harness` re-export `orquestra-core` (task #326): items moved, paths did not.
 pub mod harness;
 pub mod ideas;
 #[cfg(test)]
@@ -33,6 +32,8 @@ mod rtk_install;
 pub mod sessions;
 pub mod single_instance;
 mod skills;
+#[cfg(test)]
+mod test_env;
 mod tooling;
 mod tray;
 pub mod update_sig;

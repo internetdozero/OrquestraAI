@@ -33,6 +33,8 @@ pub(super) use super::{estimate, execute, execute_selection, select_by_ttl};
 struct Fixture {
     home: PathBuf,
     root: PathBuf,
+    // Holds the directory variables at the fixture while it is alive.
+    _env: orquestra_core::test_support::DirEnv,
 }
 
 impl Fixture {
@@ -45,8 +47,15 @@ impl Fixture {
             .join(format!("orquestra-purge-{}-{unique}", std::process::id()));
         let root = home.join(".orquestra");
         fs::create_dir_all(&root).expect("create the purge fixture under the test scratch root");
+        // The fixture writes through `rebase`, so it owns the directory
+        // variables while it is alive.
+        let env = orquestra_core::test_support::DirEnv::isolate(&home);
 
-        Self { home, root }
+        Self {
+            home,
+            root,
+            _env: env,
+        }
     }
 
     fn store(&self) -> Store {
@@ -99,6 +108,7 @@ impl Fixture {
 impl Drop for Fixture {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.home);
+        // `self._env` restores the directory variables as it drops.
     }
 }
 

@@ -179,6 +179,9 @@ fn copilot_symlink_lock_is_not_an_active_session() {
         "a symlink lock followed to an outside file"
     );
 
+    // The fixture owns the XDG guard for as long as it lives, so the second
+    // case has to release the first one before starting.
+    drop(home);
     let home = TestHome::new();
     let outside_dir = home.0.join("outside-locks");
     fs::create_dir_all(&outside_dir).unwrap();

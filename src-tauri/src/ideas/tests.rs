@@ -316,6 +316,10 @@ fn blackboard_posts_lists_unread_and_marks_read() {
 
 #[test]
 fn database_paths_honor_env_and_xdg() {
+    // `XDG_DATA_HOME` also moves the at-rest key store for every other unit
+    // test in this binary, so this one holds the shared home guard while it
+    // repoints the variable.
+    let _home = crate::test_env::isolated_home();
     // Env override wins verbatim, without touching the filesystem.
     let scratch = orquestra_core::test_support::root();
     std::env::set_var("IDEA_VAULT_DB_PATH", scratch.join("vault.sqlite3"));
