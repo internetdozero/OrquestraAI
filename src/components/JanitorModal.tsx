@@ -183,9 +183,12 @@ export function JanitorModal({
                   <h3 className="text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
                     {t.janitor.topProcesses}
                   </h3>
-                  <span className="text-[10px] text-zinc-600">
-                    {t.janitor.tmpPath(health.tmp.path, health.tmp.isTmpfs)}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-zinc-600">
+                      {t.janitor.tmpPath(health.tmp.path, health.tmp.isTmpfs)}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">{t.janitor.topProcessesHint}</span>
+                  </div>
                 </div>
                 {health.topProcesses.length > 0 ? (
                   <ul className="divide-y divide-white/[0.05] rounded-lg border border-white/[0.06] bg-white/[0.015] px-3">

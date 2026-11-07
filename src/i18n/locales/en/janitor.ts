@@ -13,6 +13,7 @@ export const janitor: TranslationSchema["janitor"] = {
   cores: "cores",
   mb: "MB",
   topProcesses: "Top processes by RAM",
+  topProcessesHint: "Processes owned by other users may be hidden by system permissions.",
   tmpPath: (path: string, isTmpfs: boolean) => `${path}${isTmpfs ? " · tmpfs" : ""}`,
   tmpMetric: (isTmpfs: boolean) => (isTmpfs ? "Temp storage" : "Volume capacity"),
   noProcesses: "No visible processes.",

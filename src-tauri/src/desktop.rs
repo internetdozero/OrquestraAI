@@ -7,7 +7,7 @@
 //! reveals locations inside `~/.orquestra`, and non-`http(s)` URLs are
 //! rejected so a crafted string can never escape into a local handler.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Root everything here is confined to.
 fn orquestra_root() -> Result<PathBuf, String> {
@@ -73,30 +73,39 @@ pub fn open_in_file_manager(path: String) -> Result<(), String> {
 
     // Revealing means showing the folder: a file resolves to its parent.
     let reveal = if target.is_file() {
-        target.parent().map(PathBuf::from).unwrap_or(target)
-    } else {
         target
+            .parent()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| target.clone())
+    } else {
+        target.clone()
     };
 
-    #[cfg(target_os = "linux")]
-    let opener: (&str, Vec<&str>) = (
-        "xdg-open",
-        vec![reveal.to_str().ok_or("Unrepresentable path")?],
-    );
-    #[cfg(target_os = "macos")]
-    let opener: (&str, Vec<&str>) = ("open", vec![reveal.to_str().ok_or("Unrepresentable path")?]);
-    #[cfg(target_os = "windows")]
-    let opener: (&str, Vec<&str>) = (
-        "explorer",
-        vec![reveal.to_str().ok_or("Unrepresentable path")?],
-    );
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-    return Err("Revealing folders is not supported on this platform".to_string());
-    std::process::Command::new(opener.0)
-        .args(&opener.1)
+    let (program, args) = file_manager_launch(std::env::consts::OS, &target, &reveal)?;
+    std::process::Command::new(program)
+        .args(&args)
         .spawn()
         .map(|_| ())
         .map_err(|error| format!("Failed to launch file manager: {error}"))
+}
+
+/// Build the platform-specific reveal command without launching it.
+fn file_manager_launch(
+    os: &str,
+    target: &Path,
+    reveal: &Path,
+) -> Result<(&'static str, Vec<String>), String> {
+    let path = |path: &Path| {
+        path.to_str()
+            .map(str::to_string)
+            .ok_or_else(|| "Unrepresentable path".to_string())
+    };
+    match os {
+        "linux" => Ok(("xdg-open", vec![path(reveal)?])),
+        "macos" => Ok(("open", vec!["-R".to_string(), path(target)?])),
+        "windows" => Ok(("explorer", vec![path(reveal)?])),
+        _ => Err("Revealing folders is not supported on this platform".to_string()),
+    }
 }
 
 /// Snapshot `~/.orquestra` (configs, presets, vault, projections) into a
@@ -150,7 +159,8 @@ pub fn ensure_desktop_integration() {}
 
 #[cfg(test)]
 mod tests {
-    use super::browser_launch;
+    use super::{browser_launch, file_manager_launch};
+    use std::path::Path;
 
     #[test]
     fn windows_launch_keeps_the_query_string_out_of_cmd() {
@@ -170,6 +180,26 @@ mod tests {
         assert!(browser_launch("linux", "file:///etc/passwd").is_err());
         assert!(browser_launch("windows", "https://example.com/\ncalc").is_err());
         assert!(browser_launch("haiku", "https://example.com").is_err());
+    }
+
+    #[test]
+    fn file_manager_reveals_the_item_in_finder_and_parent_on_other_platforms() {
+        let target = Path::new("/home/user/.orquestra/config.json");
+        let parent = Path::new("/home/user/.orquestra");
+
+        assert_eq!(
+            file_manager_launch("macos", target, parent).unwrap(),
+            ("open", vec!["-R".to_string(), target.display().to_string()])
+        );
+        assert_eq!(
+            file_manager_launch("linux", target, parent).unwrap(),
+            ("xdg-open", vec![parent.display().to_string()])
+        );
+        assert_eq!(
+            file_manager_launch("windows", target, parent).unwrap(),
+            ("explorer", vec![parent.display().to_string()])
+        );
+        assert!(file_manager_launch("haiku", target, parent).is_err());
     }
 
     #[cfg(target_os = "linux")]
