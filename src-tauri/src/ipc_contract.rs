@@ -210,6 +210,7 @@ mod tests {
             "src/lib/presets.ts",
             "src/lib/sessions.ts",
             "src/lib/janitor.ts",
+            "src/lib/tooling.ts",
             "src/lib/ideas.ts",
             "src/lib/vault.ts",
         ] {

@@ -79,6 +79,20 @@ export const settings = {
     syncExtensions: "Sincronizar extensões oficiais",
     syncingExtensions: "Sincronizando skills e MCPs oficiais…",
     syncExtensionsSuccess: (count: number) => `${count} extensões atualizadas com sucesso.`,
+    toolsTitle: "Ferramentas externas",
+    toolsAllPresent: "Todas as ferramentas externas estão disponíveis.",
+    toolsMissing: (tools: string) =>
+      `${tools} não está no PATH. Os recursos abaixo ficam desativados até a instalação.`,
+    toolsAvailable: "disponível",
+    toolsAbsent: "não encontrada",
+    toolFeature: (feature: string) =>
+      (
+        ({
+          skill_sync: "Sincronização de extensões oficiais",
+          skill_import: "Importação de skill via Git",
+          backup_archive: "Arquivo de backup",
+        }) as Record<string, string>
+      )[feature] ?? feature,
   },
   sidebarAction: "Configurações",
   sidebarHint: "Preferências, idioma, retenção e sobre",

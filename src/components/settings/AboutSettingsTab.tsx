@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   CheckCircle2,
@@ -16,6 +16,7 @@ import { useI18n } from "../../hooks/useI18n";
 import { HARNESSES } from "../../lib/harnesses";
 import type { CoreStatus } from "../../lib/tauri";
 import { openExternalUrl } from "../../lib/tauri";
+import { probeExternalTools, type ToolReport } from "../../lib/tooling";
 import { checkLatestRelease, type ReleaseCheckResult } from "../../lib/updater";
 import { cn } from "../../lib/utils";
 
@@ -46,9 +47,25 @@ export function AboutSettingsTab({
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<ReleaseCheckResult | null>(null);
   const { copied: copiedDiag, copy: copyDiagText } = useClipboard(1500);
+  const [tools, setTools] = useState<ToolReport | null>(null);
   const version = status?.version ?? "0.1.0";
   const { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart, step } =
     useAppUpdater({ onToast, onError });
+
+  useEffect(() => {
+    if (!isTauri) return;
+    let cancelled = false;
+    probeExternalTools()
+      .then((report) => {
+        if (!cancelled) setTools(report);
+      })
+      // A probe failure only means "no report"; the buttons below still fail
+      // with their own message when the tool is actually needed.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [isTauri]);
 
   const checkNow = async () => {
     setChecking(true);
@@ -69,6 +86,13 @@ export function AboutSettingsTab({
       `- tauri: ${isTauri ? "desktop" : "browser-preview"}`,
       `- harnesses: ${HARNESSES.map((h) => h.id).join(", ")}`,
       `- bridge: ${status?.bridge ?? "unknown"}`,
+      `- tools: ${
+        tools
+          ? tools.tools
+              .map((tool) => `${tool.id}=${tool.present ? (tool.version ?? "present") : "missing"}`)
+              .join("; ")
+          : "unknown"
+      }`,
       `- date: ${new Date().toISOString()}`,
     ];
     try {
@@ -112,6 +136,44 @@ export function AboutSettingsTab({
           </div>
         ))}
       </dl>
+
+      <section>
+        <h3 className="text-[12.5px] font-semibold text-zinc-100">{a.toolsTitle}</h3>
+        {tools && tools.missing.length > 0 && (
+          <p
+            role="status"
+            className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11.5px] text-amber-200"
+          >
+            {a.toolsMissing(tools.missing.join(", "))}
+          </p>
+        )}
+        <ul className="mt-2 space-y-1.5">
+          {(tools?.tools ?? []).map((tool) => (
+            <li
+              key={tool.id}
+              className="rounded-lg border border-white/[0.05] bg-white/[0.015] px-3 py-2"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-[11.5px] text-zinc-200">{tool.id}</span>
+                <span
+                  className={cn(
+                    "font-mono text-[11px]",
+                    tool.present ? "text-emerald-300" : "text-amber-300",
+                  )}
+                >
+                  {tool.present ? (tool.version ?? a.toolsAvailable) : a.toolsAbsent}
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                {tool.disables.map((feature) => a.toolFeature(feature)).join(" · ")}
+              </p>
+            </li>
+          ))}
+        </ul>
+        {tools && tools.missing.length === 0 && (
+          <p className="mt-2 text-[11px] text-zinc-500">{a.toolsAllPresent}</p>
+        )}
+      </section>
 
       <button
         type="button"

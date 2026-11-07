@@ -80,6 +80,20 @@ export const settings: TranslationSchema["settings"] = {
     syncExtensions: "Sync official extensions",
     syncingExtensions: "Syncing official skills & MCPs…",
     syncExtensionsSuccess: (count: number) => `${count} extensions updated successfully.`,
+    toolsTitle: "External tools",
+    toolsAllPresent: "Every external tool is available.",
+    toolsMissing: (tools: string) =>
+      `${tools} is missing from PATH. The features below stay disabled until it is installed.`,
+    toolsAvailable: "available",
+    toolsAbsent: "not found",
+    toolFeature: (feature: string) =>
+      (
+        ({
+          skill_sync: "Official extension sync",
+          skill_import: "Skill import from Git",
+          backup_archive: "Backup archive",
+        }) as Record<string, string>
+      )[feature] ?? feature,
   },
   sidebarAction: "Settings",
   sidebarHint: "Preferences, language, retention and about",

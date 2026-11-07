@@ -29,6 +29,7 @@ mod rtk_install;
 pub mod sessions;
 pub mod single_instance;
 mod skills;
+mod tooling;
 mod tray;
 pub mod update_sig;
 mod updater;
@@ -36,6 +37,10 @@ pub mod vault;
 
 // Shared structured logging macros re-exported from `orquestra-core`.
 pub use orquestra_core::{log_error, log_info, log_warn};
+
+// Registered as a bare identifier: the IPC contract test reads the handler list
+// and treats a `module::name` entry as two separate command names.
+use tooling::probe_external_tools;
 
 use crate::paths::OrquestraPaths;
 use bridge::{BridgeReport, HarnessStatus};
@@ -293,6 +298,10 @@ pub use cli::{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // A release build has no visible stderr, so a panic used to be a silent
+    // exit; every panic now leaves a report in `<store root>/logs`.
+    tooling::install_panic_hook();
+
     if let Err(error) = tauri::Builder::default()
         .setup(|app| {
             #[cfg(target_os = "linux")]
@@ -318,6 +327,25 @@ pub fn run() {
                 state.set_tray_available();
             }
 
+            // Probe the external programs up front: a missing `git` or `tar`
+            // disables named features, and saying so at boot beats a generic
+            // failure the first time the operator clicks the button.
+            let tools = tooling::probe_external_tools();
+            if !tools.missing.is_empty() {
+                crate::log_warn!(
+                    "missing external tools: {} (disabled features: {})",
+                    tools.missing.join(", "),
+                    tools
+                        .tools
+                        .iter()
+                        .filter(|tool| !tool.present)
+                        .flat_map(|tool| tool.disables.iter())
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+            }
+
             // Single instance listener: ensures subsequent launches focus this window
             if let Err(error) = single_instance::start_listener(app.handle().clone()) {
                 crate::log_warn!("single-instance listener failed: {error}");
@@ -339,6 +367,7 @@ pub fn run() {
             log_ui_error,
             get_system_health,
             sweep_system_caches,
+            probe_external_tools,
             list_skills,
             set_skill_state,
             batch_set_all,

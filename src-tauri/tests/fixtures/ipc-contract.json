@@ -40,6 +40,7 @@
     "open_url",
     "pick_folder",
     "post_blackboard_note",
+    "probe_external_tools",
     "purge_sessions",
     "read_master_agents_md",
     "read_skill_content",
@@ -114,6 +115,7 @@
       "open_url",
       "open_in_file_manager",
       "create_orquestra_backup",
+      "probe_external_tools",
       "set_minimize_to_tray"
     ],
     "vault-ops": [

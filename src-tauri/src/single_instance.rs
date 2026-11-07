@@ -359,7 +359,9 @@ mod windows_instance {
             // SAFETY: `GetLastError` reads thread-local state and has no
             // preconditions.
             let code = unsafe { GetLastError() };
-            return Err(format!("could not create the instance mutex (error {code})"));
+            return Err(format!(
+                "could not create the instance mutex (error {code})"
+            ));
         }
 
         // `ERROR_ALREADY_EXISTS` means the name existed before this call: a
