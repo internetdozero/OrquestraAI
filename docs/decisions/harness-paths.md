@@ -11,10 +11,10 @@ them wherever the operator said.
 
 `orquestra_core::paths` owns two functions and one mapping:
 
-| Logical path       | Linux (`XDG_*_HOME` when absolute) | macOS                        | Windows          |
-| ------------------ | ---------------------------------- | ---------------------------- | ---------------- |
+| Logical path       | Linux (`XDG_*_HOME` when absolute) | macOS                               | Windows                                          |
+| ------------------ | ---------------------------------- | ----------------------------------- | ------------------------------------------------ |
 | `.local/share/...` | `~/.local/share/...`               | `~/Library/Application Support/...` | `%LOCALAPPDATA%/...`, else `~/AppData/Local/...` |
-| `.config/...`      | `~/.config/...`                    | `~/Library/Application Support/...` | `%APPDATA%/...`, else `~/AppData/Roaming/...` |
+| `.config/...`      | `~/.config/...`                    | `~/Library/Application Support/...` | `%APPDATA%/...`, else `~/AppData/Roaming/...`    |
 
 - `data_dir()` / `config_dir()` answer where the **app** keeps its own data and
   configuration.
@@ -22,7 +22,7 @@ them wherever the operator said.
   keeps its paths in XDG form, because that is how the harnesses document
   them, and every consumer calls `rebase` instead of `join`.
 
-The two XDG prefixes are the *only* thing rewritten. `.claude`, `.agents`,
+The two XDG prefixes are the _only_ thing rewritten. `.claude`, `.agents`,
 `.copilot`, `.freebuff`, `.hermes`, `.grok`, `.codex` and `.gemini` are the
 harnesses' own conventions; those folders sit beside the home directory on
 every OS, and moving them would hide real stores.

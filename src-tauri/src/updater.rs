@@ -214,6 +214,11 @@ fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
         ("linux", "aarch64") => Ok(vec!["orquestra-linux-aarch64"]),
         ("macos", "aarch64") => Ok(vec!["orquestra-macos-arm64"]),
         ("macos", "x86_64") => Ok(vec!["orquestra-macos-x86_64"]),
+        // Windows ships the bare executable, like every other row: the MSI/NSIS
+        // installer is for first install, and an in-place update must not run
+        // one (it would relaunch the installer mid-session).
+        ("windows", "x86_64") => Ok(vec!["orquestra-windows-x86_64.exe"]),
+        ("windows", "aarch64") => Ok(vec!["orquestra-windows-aarch64.exe"]),
         _ => Err(format!("unsupported platform for updates: {os}-{arch}")),
     }
 }

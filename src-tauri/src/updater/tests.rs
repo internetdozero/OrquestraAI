@@ -21,7 +21,19 @@ fn asset_names_match_the_release_matrix() {
         asset_candidates("linux", "aarch64").expect("linux arm64"),
         vec!["orquestra-linux-aarch64"]
     );
-    assert!(asset_candidates("windows", "x86_64").is_err());
+    // Windows updates replace the executable in place, exactly like the Unix
+    // rows: publishing an MSI is a first-install channel, not an update one.
+    assert_eq!(
+        asset_candidates("windows", "x86_64").expect("windows"),
+        vec!["orquestra-windows-x86_64.exe"]
+    );
+    assert_eq!(
+        asset_candidates("windows", "aarch64").expect("windows arm64"),
+        vec!["orquestra-windows-aarch64.exe"]
+    );
+    // Anything else still refuses to guess an asset name.
+    assert!(asset_candidates("windows", "i686").is_err());
+    assert!(asset_candidates("freebsd", "x86_64").is_err());
 }
 
 #[test]
