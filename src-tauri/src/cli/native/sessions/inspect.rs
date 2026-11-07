@@ -35,7 +35,7 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
             .find(|s| {
                 s.id == session_id_arg && harness_opt.as_deref().map_or(true, |h| s.harness == h)
             })
-            .ok_or_else(|| CliError::Operation(format!("session '{session_id_arg}' not found")))?
+            .ok_or_else(|| CliError::Operation("session not found".to_string()))?
     };
 
     let mut turns = get_session_transcript(session.harness.clone(), session.id.clone())

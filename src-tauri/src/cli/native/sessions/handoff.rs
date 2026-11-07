@@ -26,7 +26,7 @@ pub(super) fn handoff(args: &[String]) -> Result<String, CliError> {
         Some(id) if id != "latest" => sessions
             .into_iter()
             .find(|s| s.id == id && source_harness.as_deref().map_or(true, |h| s.harness == h))
-            .ok_or_else(|| CliError::Operation(format!("session '{id}' not found")))?,
+            .ok_or_else(|| CliError::Operation("session not found".to_string()))?,
         _ => sessions
             .into_iter()
             .find(|s| source_harness.as_deref().map_or(true, |h| s.harness == h))

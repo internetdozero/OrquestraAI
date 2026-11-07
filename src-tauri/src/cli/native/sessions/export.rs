@@ -36,7 +36,7 @@ pub(super) fn export(args: &[String]) -> Result<String, CliError> {
             .find(|s| {
                 s.id == *session_id && harness_opt.as_deref().map_or(true, |h| s.harness == h)
             })
-            .ok_or_else(|| CliError::Operation(format!("session '{session_id}' not found")))?,
+            .ok_or_else(|| CliError::Operation("session not found".to_string()))?,
     };
 
     let turns = get_session_transcript(session.harness.clone(), session.id.clone())

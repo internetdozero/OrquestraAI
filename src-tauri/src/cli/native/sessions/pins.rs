@@ -28,7 +28,7 @@ pub(super) fn pin(args: &[String]) -> Result<String, CliError> {
         "isPinned": true,
         "label": label,
     });
-    let human = format!("Pinned session '{session_id}' [{harness}].");
+    let human = format!("Pinned session [{harness}].");
     rendered(&report, options.has("--json"), human)
 }
 
@@ -60,7 +60,7 @@ pub(super) fn unpin(args: &[String]) -> Result<String, CliError> {
         "sessionId": session_id,
         "isPinned": false,
     });
-    let human = format!("Unpinned session '{session_id}' [{harness}].");
+    let human = format!("Unpinned session [{harness}].");
     rendered(&report, options.has("--json"), human)
 }
 
@@ -75,11 +75,11 @@ fn resolve_harness(session_id: &str, explicit: Option<String>) -> Result<String,
         .collect();
     match matches.len() {
         1 => Ok(matches[0].harness.clone()),
-        0 => Err(CliError::Operation(format!(
-            "session '{session_id}' not found; specify --harness"
-        ))),
-        _ => Err(usage(format!(
-            "ambiguous session '{session_id}' found in multiple harnesses; specify --harness"
-        ))),
+        0 => Err(CliError::Operation(
+            "session not found; specify --harness".to_string(),
+        )),
+        _ => Err(usage(
+            "ambiguous session found in multiple harnesses; specify --harness".to_string(),
+        )),
     }
 }
