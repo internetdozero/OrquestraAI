@@ -304,6 +304,10 @@ pub fn run() {
                 Err(error) => crate::log_error!("storage bootstrap failed: {error}"),
             }
 
+            // An update on Windows parks the replaced image beside the binary;
+            // remove it now that the old process is gone.
+            updater::purge_retired_binaries();
+
             // Desktop entry and icon integration for Linux application launchers and docks.
             desktop::ensure_desktop_integration();
             app.manage(tray::AppConfigState::default());
