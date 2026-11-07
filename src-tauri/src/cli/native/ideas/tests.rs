@@ -230,6 +230,7 @@ fn ideas_cli_usage_matches_dispatch() {
 
 #[test]
 fn ideas_cli_list_status_filter_default_and_all() {
+    let _guard = ideas_cli_lock();
     let unique_proj = format!(
         "list-filter-{}",
         std::time::SystemTime::now()
