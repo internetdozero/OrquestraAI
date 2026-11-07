@@ -143,61 +143,37 @@ pub fn batch_set_all(harness_id: String, enabled: bool) -> Result<(), String> {
     batch_from(&paths, &harness_id, enabled)
 }
 
-/// Open a native OS folder picker and return the chosen directory.
-/// `Ok(None)` means the user cancelled. Linux tries `zenity`, then
-/// `kdialog`; when neither exists an `Err` tells the UI to fall back to
-/// the typed path instead of failing silently.
-pub async fn pick_folder() -> Result<Option<String>, String> {
-    tauri::async_runtime::spawn_blocking(run_folder_picker)
-        .await
-        .map_err(|error| format!("folder picker task failed: {error}"))?
+/// Open the OS folder picker and return the chosen directory.
+///
+/// `Ok(None)` means the operator cancelled. The dialog is the platform's own,
+/// through `tauri-plugin-dialog`, so it exists on GNOME, macOS and Windows
+/// alike; the previous `zenity`/`kdialog` shell-out only worked on desktops
+/// that happened to ship one of those binaries, and every other desktop got an
+/// error asking the operator to type a path.
+///
+/// The blocking call runs inside `spawn_blocking`: the dialog owns the UI
+/// until it closes, while the command itself stays awaitable.
+#[tauri::command]
+pub async fn pick_folder(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let chosen = app
+            .dialog()
+            .file()
+            .set_title(PICKER_TITLE)
+            .blocking_pick_folder();
+        Ok(chosen
+            .and_then(|path| path.into_path().ok())
+            .map(|path| path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|error| format!("folder picker task failed: {error}"))?
 }
 
-fn run_folder_picker() -> Result<Option<String>, String> {
-    const TITLE: &str = "Selecione a pasta da Skill";
-
-    // Owned args per backend: zenity first, then kdialog.
-    let owned: Vec<(String, Vec<String>)> = vec![
-        (
-            "zenity".to_string(),
-            vec![
-                "--file-selection".to_string(),
-                "--directory".to_string(),
-                format!("--title={TITLE}"),
-            ],
-        ),
-        (
-            "kdialog".to_string(),
-            vec![
-                "--getexistingdirectory".to_string(),
-                ".".to_string(),
-                "--title".to_string(),
-                TITLE.to_string(),
-            ],
-        ),
-    ];
-    for (program, args) in &owned {
-        let output = match std::process::Command::new(program).args(args).output() {
-            Ok(output) => output,
-            // Backend missing: try the next one.
-            Err(_) => continue,
-        };
-        // Non-zero exit is the user cancelling the dialog.
-        if !output.status.success() {
-            return Ok(None);
-        }
-        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if path.is_empty() {
-            return Ok(None);
-        }
-        return Ok(Some(path));
-    }
-
-    Err(
-        "no folder picker available (tried zenity, kdialog); type or paste the path instead"
-            .to_string(),
-    )
-}
+/// Title shown by the folder picker. Kept next to the call so the one string
+/// a native dialog renders is not buried in the command body.
+const PICKER_TITLE: &str = "Selecione a pasta da Skill";
 
 /// Clear only the Global baseline link for one skill, preserving harness
 /// projections. Kept for harness-specific workflows; preset reconciliation

@@ -39,6 +39,10 @@ orquestra-sessions = { path = "../crates/orquestra-sessions" }
 # `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }
+# Native folder chooser (`pick_folder`). Shelling out to `zenity`/`kdialog`
+# only ever worked on X11 desktops that ship them; the plugin uses each OS's
+# own dialog, so GNOME, macOS and Windows all get the real picker.
+tauri-plugin-dialog = "2"
 serde.workspace = true
 libc.workspace = true
 # `preserve_order` keeps the key order of the configs we edit, so a harness

@@ -58,7 +58,7 @@ use sessions::{
     estimate_purge, get_retention_policy, get_session_transcript, get_unified_sessions,
     purge_sessions, save_retention_policy, toggle_pin_session,
 };
-use skills::{HarnessSummary, SkillItem};
+use skills::{pick_folder, HarnessSummary, SkillItem};
 use tauri::Manager;
 use tray::set_minimize_to_tray;
 use updater::{restart_app, sync_official_extensions};
@@ -113,12 +113,6 @@ fn delete_skill(id: String) -> Result<(), String> {
 #[tauri::command]
 fn import_skill(source_path: String) -> Result<SkillItem, String> {
     skills::import_skill(source_path)
-}
-
-/// Open a native OS folder picker; `None` means the user cancelled.
-#[tauri::command]
-async fn pick_folder() -> Result<Option<String>, String> {
-    skills::pick_folder().await
 }
 
 /// Active-skill counters for Global and every harness tab.
@@ -269,6 +263,7 @@ pub fn run() {
     tooling::install_panic_hook();
 
     if let Err(error) = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             #[cfg(target_os = "linux")]
             if let Some(window) = app.get_webview_window("main") {
