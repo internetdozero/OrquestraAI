@@ -39,7 +39,7 @@ pub fn resolve_install_dir_with(
             }
         }
     }
-    home.join(spec.install_rel)
+    crate::paths::rebase(home, spec.install_rel)
 }
 
 /// Global roots OrquestraAI provisions itself. Every other link waits for its

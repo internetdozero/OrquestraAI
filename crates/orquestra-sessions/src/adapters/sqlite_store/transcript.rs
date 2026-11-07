@@ -36,13 +36,12 @@ fn valid_id(session_id: &str) -> bool {
 /// database actually has wins. Roles come from the message row; text comes
 /// from the part payload parsed as JSON, so tool parts never surface as
 /// conversation. Anything unrecognized is an empty feed, never an error.
-pub fn read_transcript(root: &Path, db_rel: &str, session_id: &str) -> Vec<TranscriptTurn> {
+pub fn read_transcript(database: &Path, session_id: &str) -> Vec<TranscriptTurn> {
     if !valid_id(session_id) {
         return Vec::new();
     }
 
-    let database = root.join(db_rel);
-    let Ok(connection) = utils::open_readonly(&database) else {
+    let Ok(connection) = utils::open_readonly(database) else {
         return Vec::new();
     };
 

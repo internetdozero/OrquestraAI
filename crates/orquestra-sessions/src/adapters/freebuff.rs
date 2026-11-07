@@ -24,6 +24,35 @@ impl Freebuff {
     }
 }
 
+/// Candidate Manicode project roots, most specific first.
+///
+/// The registry spells the store `.config/manicode`, which is XDG: xdg on
+/// Linux, `~/Library/Application Support` on macOS, `%APPDATA%` on Windows.
+/// The literal `.config` location is kept as a fallback so a store written by
+/// an earlier build on those platforms is still found — and still cleaned up.
+fn manicode_roots(home: &Path) -> Vec<PathBuf> {
+    let rebased = orquestra_core::paths::rebase(home, MANICODE_REL);
+    let legacy = home.join(MANICODE_REL);
+    if rebased == legacy {
+        vec![rebased]
+    } else {
+        vec![rebased, legacy]
+    }
+}
+
+/// The candidate root that really holds `project`, if any.
+///
+/// The root itself has to be a real directory: a symlinked `projects/` hides
+/// the whole store behind a path the operator did not create, and reading or
+/// deleting through it would reach outside the harness folder.
+fn manicode_project(home: &Path, project: &str) -> Option<PathBuf> {
+    manicode_roots(home)
+        .into_iter()
+        .filter(|root| real_dir(root))
+        .map(|root| root.join(project))
+        .find(|project_dir| real_dir(project_dir))
+}
+
 impl SessionAdapter for Freebuff {
     fn harness_id(&self) -> &'static str {
         HARNESS
@@ -31,7 +60,7 @@ impl SessionAdapter for Freebuff {
 
     fn is_available(&self) -> bool {
         self.root.join(WORKTREES_REL).is_dir()
-            || self.root.join(MANICODE_REL).is_dir()
+            || manicode_roots(&self.root).iter().any(|dir| dir.is_dir())
             || freebuff_desktop::is_available(&self.root)
     }
 
@@ -47,7 +76,9 @@ impl SessionAdapter for Freebuff {
             .into_iter()
             .filter(|s| !claimed.contains(&s.id))
             .collect();
-        sessions.extend(manicode_chats(&self.root.join(MANICODE_REL)));
+        for root in manicode_roots(&self.root) {
+            sessions.extend(manicode_chats(&root));
+        }
         sessions.extend(desktop);
         Ok(sessions)
     }
@@ -83,15 +114,15 @@ impl SessionAdapter for Freebuff {
             if !single_segment(project) || !single_segment(chat) {
                 return Ok(bytes);
             }
-            let projects = self.root.join(MANICODE_REL);
-            let project_dir = projects.join(project);
-            let chats_dir = project_dir.join("chats");
             // `remove_path` checks the lexical prefix. A symlink in the middle
             // still points at a directory outside the store, and `remove_dir_all`
             // would delete that directory.
-            if real_dir(&projects) && real_dir(&project_dir) && real_dir(&chats_dir) {
-                let chat_dir = chats_dir.join(chat);
-                bytes += fsops::remove_path(&projects, &chat_dir)?;
+            if let Some(project_dir) = manicode_project(&self.root, project) {
+                let chats_dir = project_dir.join("chats");
+                if real_dir(&chats_dir) {
+                    let chat_dir = chats_dir.join(chat);
+                    bytes += fsops::remove_path(&project_dir, &chat_dir)?;
+                }
             }
         }
 
@@ -120,14 +151,11 @@ impl SessionAdapter for Freebuff {
         if !valid_segment(project) || !valid_segment(chat) {
             return Vec::new();
         }
-        let projects = self.root.join(MANICODE_REL);
-        let project_dir = projects.join(project);
+        let Some(project_dir) = manicode_project(&self.root, project) else {
+            return Vec::new();
+        };
         let chats_dir = project_dir.join("chats");
-        if !real_dir(&projects)
-            || !real_dir(&project_dir)
-            || !real_dir(&chats_dir)
-            || !real_dir(&chats_dir.join(chat))
-        {
+        if !real_dir(&chats_dir) || !real_dir(&chats_dir.join(chat)) {
             return Vec::new();
         }
         let log = chats_dir.join(chat).join("chat-messages.json");

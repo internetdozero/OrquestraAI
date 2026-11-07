@@ -37,9 +37,41 @@ const WORKTREES_REL: &str = ".freebuff/worktrees";
 const DB_NAME: &str = "desktop-v2.db";
 const FTS_TABLE: &str = "freebuff_conversation_search";
 
+/// Candidate directory for one desktop-store location, most specific first.
+///
+/// `.config/freebuff-desktop` is XDG, so the platform decides the real path;
+/// the literal location is kept as a fallback so a store written by an earlier
+/// build on macOS or Windows is still listed and still purged.
+fn candidates(home: &Path, rel: &str) -> Vec<PathBuf> {
+    let rebased = orquestra_core::paths::rebase(home, rel);
+    let legacy = home.join(rel);
+    if rebased == legacy {
+        vec![rebased]
+    } else {
+        vec![rebased, legacy]
+    }
+}
+
+/// Every candidate that exists on disk.
+fn existing(home: &Path, rel: &str) -> Vec<PathBuf> {
+    candidates(home, rel)
+        .into_iter()
+        .filter(|dir| real_dir(dir))
+        .collect()
+}
+
+/// The first candidate that exists, which is where writes belong.
+pub fn projects_dir(home: &Path) -> PathBuf {
+    let all = candidates(home, PROJECTS_REL);
+    all.iter()
+        .find(|dir| real_dir(dir))
+        .cloned()
+        .unwrap_or_else(|| all[0].clone())
+}
+
 /// The desktop store exists when at least one project directory does.
 pub fn is_available(home: &Path) -> bool {
-    home.join(PROJECTS_REL).is_dir()
+    existing(home, PROJECTS_REL).iter().any(|dir| dir.is_dir())
 }
 
 /// Split `desktop:<slug>:<thread-id>` into its parts. Anything else is not a
@@ -63,7 +95,7 @@ pub fn parse_id(session_id: &str) -> Option<(String, String)> {
 /// Every desktop thread in every project. A project whose database is locked
 /// or corrupt is skipped: one broken store must not hide the healthy ones.
 pub fn list(home: &Path) -> Vec<UnifiedSession> {
-    let projects = home.join(PROJECTS_REL);
+    let projects = projects_dir(home);
     // `read_dir` follows a directory symlink. Each project inside is then a
     // real directory, so the child check does not keep the database inside.
     if !real_dir(&projects) {
@@ -135,7 +167,7 @@ pub fn delete(home: &Path, slug: &str, thread: &str) -> Result<u64, String> {
         ));
     }
 
-    let projects = home.join(PROJECTS_REL);
+    let projects = projects_dir(home);
     let project = projects.join(slug);
     let database = project.join(DB_NAME);
     // `is_file` follows a symlinked project folder and `open_writable` would
@@ -159,7 +191,7 @@ pub fn delete(home: &Path, slug: &str, thread: &str) -> Result<u64, String> {
 
 /// Reclaim the pages deletes left in every desktop database.
 pub fn vacuum_all(home: &Path) -> Result<(), String> {
-    let projects = home.join(PROJECTS_REL);
+    let projects = projects_dir(home);
     if !real_dir(&projects) {
         return Ok(());
     }
@@ -213,28 +245,29 @@ fn delete_rows(database: &Path, thread: &str) -> Result<(), String> {
 fn thread_dirs(home: &Path, thread: &str) -> Vec<PathBuf> {
     let mut folders = Vec::new();
 
-    let local = home.join(LOCAL_REL);
-    if real_dir(&local) {
-        if let Ok(entries) = std::fs::read_dir(&local) {
-            for entry in entries.flatten() {
-                if !entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
-                    continue;
-                }
-                // `threads/` itself can be a directory symlink. The session
-                // folder is then a real directory and `remove_path` follows it.
-                let threads = entry.path().join("threads");
-                let folder = threads.join(thread);
-                if real_dir(&threads) && folder.is_dir() {
-                    folders.push(folder);
-                }
+    for local in existing(home, LOCAL_REL) {
+        let Ok(entries) = std::fs::read_dir(&local) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            if !entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
+                continue;
+            }
+            // `threads/` itself can be a directory symlink. The session folder
+            // is then a real directory and `remove_path` follows it.
+            let threads = entry.path().join("threads");
+            let folder = threads.join(thread);
+            if real_dir(&threads) && folder.is_dir() {
+                folders.push(folder);
             }
         }
     }
 
-    let threads = home.join(NOFOLDER_REL);
-    let orphan = threads.join(thread);
-    if real_dir(&threads) && orphan.is_dir() {
-        folders.push(orphan);
+    for threads in existing(home, NOFOLDER_REL) {
+        let orphan = threads.join(thread);
+        if real_dir(&threads) && orphan.is_dir() {
+            folders.push(orphan);
+        }
     }
 
     folders

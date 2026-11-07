@@ -12,6 +12,8 @@ use super::{sqlite_store, SessionAdapter};
 const HARNESS: &str = "opencode";
 const STORE_REL: &str = ".local/share/opencode";
 const DATABASE: &str = "opencode.db";
+/// The harness's own override: an exact database file, not a directory.
+const DATABASE_OVERRIDE: &str = "OPENCODE_DB";
 
 pub struct OpenCode {
     root: PathBuf,
@@ -24,8 +26,14 @@ impl OpenCode {
         }
     }
 
-    fn store(&self) -> PathBuf {
-        self.root.join(STORE_REL)
+    /// Store directory and database file, resolved for this platform.
+    fn store_paths(&self) -> (PathBuf, PathBuf) {
+        sqlite_store::store_paths(
+            &self.root,
+            STORE_REL,
+            DATABASE,
+            std::env::var_os(DATABASE_OVERRIDE),
+        )
     }
 }
 
@@ -35,32 +43,24 @@ impl SessionAdapter for OpenCode {
     }
 
     fn is_available(&self) -> bool {
-        self.store().is_dir()
+        self.store_paths().1.is_file()
     }
 
     fn list_sessions(&self) -> Result<Vec<UnifiedSession>, String> {
-        sqlite_store::list(
-            &self.root,
-            HARNESS,
-            &format!("{STORE_REL}/{DATABASE}"),
-            STORE_REL,
-        )
+        let (store, database) = self.store_paths();
+        sqlite_store::list(&store, &database, HARNESS)
     }
 
     fn read_transcript(&self, session_id: &str) -> Vec<TranscriptTurn> {
-        sqlite_store::read_transcript(&self.root, &format!("{STORE_REL}/{DATABASE}"), session_id)
+        sqlite_store::read_transcript(&self.store_paths().1, session_id)
     }
 
     fn delete_session(&self, session_id: &str) -> Result<u64, String> {
-        sqlite_store::delete(
-            &self.root,
-            &format!("{STORE_REL}/{DATABASE}"),
-            STORE_REL,
-            session_id,
-        )
+        let (store, database) = self.store_paths();
+        sqlite_store::delete(&store, &database, session_id)
     }
 
     fn optimize_storage(&self) -> Result<(), String> {
-        sqlite_store::vacuum(&self.root, &format!("{STORE_REL}/{DATABASE}"))
+        sqlite_store::vacuum(&self.store_paths().1)
     }
 }

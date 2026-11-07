@@ -31,6 +31,15 @@ mod stores;
 mod symlink_cases;
 mod transcript_cases;
 
+/// Fixture path for a registry-style relative path.
+///
+/// The adapters resolve `.local/share/...` and `.config/...` per platform, so
+/// the fixtures must land where the adapter will look — otherwise the suite
+/// would pass on Linux and silently test nothing on macOS or Windows.
+fn fixture_path(home: &Path, relative: &str) -> PathBuf {
+    orquestra_core::paths::rebase(home, relative)
+}
+
 struct TestHome(PathBuf);
 
 impl TestHome {
@@ -49,14 +58,14 @@ impl TestHome {
     }
 
     fn write(&self, relative: &str, content: &str) -> u64 {
-        let path = self.0.join(relative);
+        let path = fixture_path(&self.0, relative);
         fs::create_dir_all(path.parent().unwrap()).expect("create the fixture parent");
         fs::write(&path, content).expect("write the fixture file");
         content.len() as u64
     }
 
     fn database(&self, relative: &str, schema: &str) {
-        let path = self.0.join(relative);
+        let path = fixture_path(&self.0, relative);
         fs::create_dir_all(path.parent().unwrap()).expect("create the fixture parent");
         Connection::open(path)
             .expect("open the fixture database")

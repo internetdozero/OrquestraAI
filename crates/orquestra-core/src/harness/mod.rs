@@ -77,6 +77,15 @@ pub struct McpSpec {
 }
 
 /// One harness and every path OrquestraAI claims for it.
+///
+/// Every path field below is written **relative to `$HOME`, in XDG form**:
+/// `.config/…` for configuration and `.local/share/…` for data, which is what
+/// the harnesses themselves document. Resolution per platform is not the
+/// registry's job — [`crate::paths::rebase`] maps those two prefixes onto
+/// `~/Library/Application Support`, `%APPDATA%` and `%LOCALAPPDATA%` — so a
+/// harness that keeps its own dotfolder (`.claude`, `.agents`, `.copilot`,
+/// `.freebuff`) is spelled literally and stays beside the home directory
+/// everywhere.
 pub struct HarnessSpec {
     pub id: &'static str,
     pub label: &'static str,

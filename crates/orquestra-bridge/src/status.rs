@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use super::{HarnessStatus, SecondaryStatus};
 use orquestra_core::harness::{self, SecondaryAction};
-use orquestra_core::paths::OrquestraPaths;
+use orquestra_core::paths::{rebase, OrquestraPaths};
 use orquestra_core::skills::SKILL_FILE;
 
 /// How far a skill walk may look, and whether it may enter hidden folders.
@@ -47,12 +47,12 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
             let skills_paths: Vec<String> = spec
                 .skills_links
                 .iter()
-                .map(|rel| home.join(rel).to_string_lossy().into_owned())
+                .map(|rel| rebase(home, rel).to_string_lossy().into_owned())
                 .collect();
             // Config-only harnesses carry no skills directory, so their link
             // state is satisfied by the config path registered below.
             let skills_linked = spec.skills_links.iter().all(|rel| {
-                let source = home.join(rel);
+                let source = rebase(home, rel);
                 ancestor_is_symlink(home, &source)
                     || (!path_present(&source) && !parent_is_dir(&source))
                     || is_linked_to(&source, &projection)
@@ -63,7 +63,7 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
             let instructions_path = spec
                 .instructions_rels
                 .first()
-                .map(|rel| home.join(rel).to_string_lossy().into_owned());
+                .map(|rel| rebase(home, rel).to_string_lossy().into_owned());
             let instructions_linked = spec
                 .instructions_rels
                 .iter()
@@ -71,10 +71,10 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
 
             let config_path = spec
                 .config_rel
-                .map(|rel| home.join(rel).to_string_lossy().into_owned());
+                .map(|rel| rebase(home, rel).to_string_lossy().into_owned());
             let config_linked = spec
                 .config_rel
-                .map(|rel| config_registers(&home.join(rel), &projection))
+                .map(|rel| config_registers(&rebase(home, rel), &projection))
                 .unwrap_or(true);
 
             let supported = !spec.skills_links.is_empty() || spec.config_rel.is_some();
@@ -83,7 +83,7 @@ pub(super) fn statuses_at(home: &Path, paths: &OrquestraPaths) -> Vec<HarnessSta
                 .secondary
                 .iter()
                 .map(|entry| {
-                    let path = home.join(entry.rel);
+                    let path = rebase(home, entry.rel);
                     SecondaryStatus {
                         cleared: secondary_cleared(home, paths, &path, entry, &projection),
                         path: path.to_string_lossy().into_owned(),
@@ -321,7 +321,7 @@ pub(super) fn is_link(path: &Path) -> bool {
 /// platform so fusion has nothing to claim (mirroring `link_instructions`,
 /// which skips a parentless location instead of provisioning one).
 fn instructions_satisfied(home: &Path, rel: &str, master: &Path) -> bool {
-    let source = home.join(rel);
+    let source = rebase(home, rel);
     if ancestor_is_symlink(home, &source) {
         return true;
     }

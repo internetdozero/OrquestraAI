@@ -34,13 +34,13 @@ impl TestHome {
     }
 
     fn write(&self, relative: &str, content: &str) {
-        let path = self.0.join(relative);
+        let path = orquestra_core::paths::rebase(&self.0, relative);
         fs::create_dir_all(path.parent().unwrap()).expect("create the fixture parent");
         fs::write(&path, content).expect("write the fixture file");
     }
 
     fn database(&self, relative: &str, schema: &str) {
-        let path = self.0.join(relative);
+        let path = orquestra_core::paths::rebase(&self.0, relative);
         fs::create_dir_all(path.parent().unwrap()).expect("create the fixture parent");
         Connection::open(path)
             .expect("open the fixture database")

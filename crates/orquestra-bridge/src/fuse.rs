@@ -15,7 +15,7 @@ use super::status::{
 use super::BridgeReport;
 use orquestra_core::agents::{read_agents, write_agents, DEFAULT_AGENTS};
 use orquestra_core::harness::{self, HarnessSpec, SecondaryAction};
-use orquestra_core::paths::OrquestraPaths;
+use orquestra_core::paths::{rebase, OrquestraPaths};
 use orquestra_core::skills::SKILL_FILE;
 
 mod adopt;
@@ -117,7 +117,7 @@ fn fuse_harness(
     create_dir_all(&projection)?;
 
     for rel in spec.skills_links {
-        let source = home.join(rel);
+        let source = rebase(home, rel);
         if ancestor_is_symlink(home, &source) {
             continue;
         }
@@ -134,14 +134,14 @@ fn fuse_harness(
     }
 
     for rel in spec.instructions_rels {
-        let source = home.join(rel);
+        let source = rebase(home, rel);
         if !ancestor_is_symlink(home, &source) {
             link_instructions(&source, paths, backup, spec, rel, imported)?;
         }
     }
 
     if let Some(rel) = spec.config_rel {
-        let source = home.join(rel);
+        let source = rebase(home, rel);
         if !ancestor_is_symlink(home, &source) {
             ensure_config(&source, &projection, backup, spec, rel)?;
         }
@@ -263,7 +263,7 @@ fn fuse_secondary(
     let projection = paths.projection_dir(spec.id);
 
     for entry in spec.secondary {
-        let source = home.join(entry.rel);
+        let source = rebase(home, entry.rel);
         let slot = backup_slot(backup, spec.id, entry.rel);
         if ancestor_is_symlink(home, &source) {
             continue;

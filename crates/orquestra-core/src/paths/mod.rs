@@ -3,13 +3,17 @@
 //! them.
 //!
 //! [`home`] is the single place that knows which variables name the operator's
-//! home directory; [`scratch`] owns the per-process runtime and staging
-//! storage; [`seed`] owns first-launch seeding of an empty vault.
+//! home directory; [`dirs`] owns the per-OS data and config roots and the
+//! rebasing of home-relative harness paths; [`scratch`] owns the per-process
+//! runtime and staging storage; [`seed`] owns first-launch seeding of an empty
+//! vault.
 
+mod dirs;
 mod home;
 mod scratch;
 mod seed;
 
+pub use dirs::{config_dir, config_dir_for, data_dir, data_dir_for, rebase, rebase_for};
 pub use home::{home_dir, home_dir_with, require_home, require_home_with, HOME_VARS};
 pub use scratch::{ensure_scratch_root, fresh_scratch_dir, scratch_root, unique_tmp_suffix};
 pub use seed::copy_dir_all;

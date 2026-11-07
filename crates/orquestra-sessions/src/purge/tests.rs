@@ -57,14 +57,14 @@ impl Fixture {
     }
 
     fn write(&self, relative: &str, content: &str) -> u64 {
-        let path = self.home.join(relative);
+        let path = orquestra_core::paths::rebase(&self.home, relative);
         fs::create_dir_all(path.parent().unwrap()).expect("create fixture parent");
         fs::write(&path, content).expect("write fixture file");
         content.len() as u64
     }
 
     fn database(&self, relative: &str, schema: &str) {
-        let path = self.home.join(relative);
+        let path = orquestra_core::paths::rebase(&self.home, relative);
         fs::create_dir_all(path.parent().unwrap()).expect("create fixture parent");
         Connection::open(path)
             .expect("open fixture database")
@@ -74,7 +74,7 @@ impl Fixture {
 
     /// Run SQL against a fixture database, for assertions after a purge.
     fn scalar(&self, relative: &str, sql: &str) -> i64 {
-        Connection::open(self.home.join(relative))
+        Connection::open(orquestra_core::paths::rebase(&self.home, relative))
             .expect("reopen fixture database")
             .query_row(sql, [], |row| row.get(0))
             .expect("query fixture database")
@@ -92,7 +92,7 @@ impl Fixture {
     }
 
     fn exists(&self, relative: &str) -> bool {
-        self.home.join(relative).exists()
+        orquestra_core::paths::rebase(&self.home, relative).exists()
     }
 }
 

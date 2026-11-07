@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::types::TranscriptTurn;
 
 use super::super::{time, transcript, utils};
-use super::{real_dir, DB_NAME, PROJECTS_REL};
+use super::{projects_dir, real_dir, DB_NAME};
 
 /// Conversation turns of one desktop thread, oldest first.
 ///
@@ -22,7 +22,7 @@ pub fn transcript(home: &Path, slug: &str, thread: &str) -> Vec<TranscriptTurn> 
     if slug.contains('/') || thread.contains('/') || thread.contains(':') {
         return Vec::new();
     }
-    let projects = home.join(PROJECTS_REL);
+    let projects = projects_dir(home);
     let project = projects.join(slug);
     // `projects/<slug>` as a directory symlink makes `desktop-v2.db` a regular
     // file, and the read would return turns from outside the store.
