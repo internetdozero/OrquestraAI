@@ -11,6 +11,8 @@
 pub mod agents;
 pub mod error;
 pub mod harness;
+// Directory links: symlinks on Unix, junctions on Windows.
+pub mod links;
 pub mod logging;
 pub mod paths;
 pub mod skills;
@@ -22,4 +24,8 @@ mod testenv;
 pub use agents::{read_agents, write_agents, DEFAULT_AGENTS};
 pub use error::{CoreError, CoreResult};
 pub use harness::{find, harness_ids, HarnessSpec, GLOBAL_SCOPE, HARNESSES};
+pub use links::{
+    create_dir_link, is_dir_link, normalize, read_dir_link, remove_dir_link, resolves_to,
+    strip_verbatim,
+};
 pub use paths::OrquestraPaths;

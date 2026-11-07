@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::status::{is_link, is_linked_to};
 use orquestra_core::harness::HarnessSpec;
+use orquestra_core::links::{create_dir_link, is_dir_link, read_dir_link, remove_dir_link};
 use orquestra_core::paths::{copy_dir_all, OrquestraPaths};
 
 /// Move every entry out of `source` into `destination`, leaving an empty
@@ -191,12 +192,15 @@ pub(super) fn ensure_symlink(link: &Path, target: &Path) -> Result<(), String> {
     }
 
     if let Ok(metadata) = fs::symlink_metadata(link) {
-        if metadata.file_type().is_symlink() || metadata.is_file() {
+        if is_dir_link(link) {
+            remove_dir_link(link)
+                .map_err(|error| format!("failed to clear {}: {error}", link.display()))?;
+        } else if metadata.is_file() {
             fs::remove_file(link)
                 .map_err(|error| format!("failed to clear {}: {error}", link.display()))?;
         } else {
             return Err(format!(
-                "refusing to replace the directory {} with a symlink",
+                "refusing to replace the directory {} with a link",
                 link.display()
             ));
         }
@@ -206,7 +210,7 @@ pub(super) fn ensure_symlink(link: &Path, target: &Path) -> Result<(), String> {
         create_dir_all(parent)?;
     }
 
-    std::os::unix::fs::symlink(target, link).map_err(|error| {
+    create_dir_link(target, link).map_err(|error| {
         format!(
             "failed to link {} -> {}: {error}",
             link.display(),
@@ -234,12 +238,16 @@ pub(super) fn backup_move(source: &Path, destination: &Path) -> Result<(), Strin
 
 pub(super) fn move_entry(source: &Path, destination: &Path) -> Result<(), String> {
     if is_link(source) {
-        let target = fs::read_link(source)
+        let target = read_dir_link(source)
             .map_err(|error| format!("failed to read {}: {error}", source.display()))?;
-        let _ = fs::remove_file(destination);
-        std::os::unix::fs::symlink(target, destination)
-            .map_err(|error| format!("failed to back up symlink {}: {error}", source.display()))?;
-        fs::remove_file(source)
+        if is_dir_link(destination) {
+            let _ = remove_dir_link(destination);
+        } else {
+            let _ = fs::remove_file(destination);
+        }
+        create_dir_link(&target, destination)
+            .map_err(|error| format!("failed to back up link {}: {error}", source.display()))?;
+        remove_dir_link(source)
             .map_err(|error| format!("failed to remove {}: {error}", source.display()))?;
         return Ok(());
     }

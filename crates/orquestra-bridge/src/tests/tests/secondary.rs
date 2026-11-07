@@ -1,11 +1,14 @@
 //! Secondary-discovery fusion tests, split out to stay under the file cap.
 
 use std::fs;
+#[cfg(unix)]
 use std::path::PathBuf;
+#[cfg(unix)]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::super::*;
 use super::{assert_linked, TestHome};
+#[cfg(unix)]
 use orquestra_core::paths::OrquestraPaths;
 
 #[test]

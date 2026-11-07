@@ -313,9 +313,7 @@ fn config_registers(config: &Path, projection: &Path) -> bool {
 }
 
 pub(super) fn is_link(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|metadata| metadata.file_type().is_symlink())
-        .unwrap_or(false)
+    orquestra_core::links::is_dir_link(path)
 }
 
 /// True when an instruction location needs no more work: either it already
@@ -334,12 +332,7 @@ fn instructions_satisfied(home: &Path, rel: &str, master: &Path) -> bool {
 }
 
 pub(super) fn is_linked_to(link: &Path, target: &Path) -> bool {
-    if !is_link(link) {
-        return false;
-    }
-
-    match (fs::canonicalize(link), fs::canonicalize(target)) {
-        (Ok(current), Ok(expected)) => current == expected,
-        _ => false,
-    }
+    // Shared with the projection code so Unix symlinks and Windows junctions
+    // answer identically, including the `\\?\` prefix normalization.
+    orquestra_core::links::resolves_to(link, target)
 }

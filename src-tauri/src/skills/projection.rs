@@ -14,6 +14,9 @@ use super::vault::{skill_directories, skill_directory};
 use super::GLOBAL_SCOPE;
 use crate::harness::harness_ids;
 use crate::paths::{create_dir, OrquestraPaths};
+use orquestra_core::links::{
+    create_dir_link, is_dir_link, normalize, read_dir_link, remove_dir_link,
+};
 
 pub(super) fn set_global(paths: &OrquestraPaths, id: &str, enabled: bool) -> Result<(), String> {
     let vault_item = skill_directory(paths, id)?;
@@ -133,14 +136,11 @@ fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
         .map_err(|error| format!("failed to resolve {}: {error}", vault_item.display()))?;
 
     match fs::symlink_metadata(projection) {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            if fs::canonicalize(projection)
-                .map(|existing| existing == target)
-                .unwrap_or(false)
-            {
+        Ok(_) if is_dir_link(projection) => {
+            if orquestra_core::links::resolves_to(projection, &target) {
                 return Ok(());
             }
-            fs::remove_file(projection).map_err(|error| {
+            remove_dir_link(projection).map_err(|error| {
                 format!(
                     "failed to replace stale link {}: {error}",
                     projection.display()
@@ -173,7 +173,7 @@ fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
         create_dir(parent)?;
     }
 
-    std::os::unix::fs::symlink(&target, projection).map_err(|error| {
+    create_dir_link(&target, projection).map_err(|error| {
         format!(
             "failed to link {} -> {}: {error}",
             projection.display(),
@@ -193,8 +193,8 @@ fn remove_projection_entry(directory: &Path, name: &str) -> Result<(), String> {
     let projection = directory.join(name);
 
     match fs::symlink_metadata(&projection) {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            fs::remove_file(&projection)
+        Ok(_) if is_dir_link(&projection) => {
+            remove_dir_link(&projection)
                 .map_err(|error| format!("failed to unlink {}: {error}", projection.display()))?;
         }
         Ok(metadata) if metadata.is_dir() => {
@@ -265,14 +265,11 @@ pub(super) fn projected_ids(projection_dir: &Path, vault: &Path) -> HashSet<Stri
         return projected;
     };
     for entry in entries.flatten() {
-        // `file_type` does not follow symlinks: a real directory or file
-        // wearing a skill's name is not a projection, and this stays one
-        // `lstat` with no path resolution.
-        if !entry
-            .file_type()
-            .map(|kind| kind.is_symlink())
-            .unwrap_or(false)
-        {
+        // Detection never follows the link: a real directory or file wearing
+        // a skill's name is not a projection, and on Windows this also
+        // recognises a junction.
+        let path = entry.path();
+        if !is_dir_link(&path) {
             continue;
         }
         let name = entry.file_name().to_string_lossy().into_owned();
@@ -281,18 +278,20 @@ pub(super) fn projected_ids(projection_dir: &Path, vault: &Path) -> HashSet<Stri
             .find(|(legacy, _)| *legacy == name)
             .map(|(_, canonical)| *canonical)
             .unwrap_or_else(|| name.as_str());
-        let expected = vault_canon.join(canonical);
+        // Normalized on both sides: on Windows `canonicalize` returns a
+        // `\\?\` verbatim path, which would never equal the plain spelling.
+        let expected = normalize(&vault_canon.join(canonical));
         // A dangling link whose target string happens to match must not
         // count: `is_projected` refuses it because the resolution fails.
         if !expected.is_dir() {
             continue;
         }
-        let path = entry.path();
-        let matches = match fs::read_link(&path) {
-            Ok(target) if target.is_absolute() => target == expected,
-            // Hand-made relative link: resolve this one entry the slow way.
+        let matches = match read_dir_link(&path) {
+            Ok(target) if target.is_absolute() => normalize(&target) == expected,
+            // Hand-made relative link or a platform whose `read_dir_link`
+            // cannot report the target: resolve this one entry the slow way.
             _ => fs::canonicalize(&path)
-                .map(|resolved| resolved == expected)
+                .map(|resolved| normalize(&resolved) == expected)
                 .unwrap_or(false),
         };
         if matches {
@@ -310,18 +309,9 @@ pub(super) fn is_projected(projection_dir: &Path, vault: &Path, id: &str) -> boo
     };
 
     let check_link = |name: &str| -> bool {
-        let projection = projection_dir.join(name);
-        let Ok(metadata) = fs::symlink_metadata(&projection) else {
-            return false;
-        };
-
-        if !metadata.file_type().is_symlink() {
-            return false;
-        }
-
-        fs::canonicalize(&projection)
-            .map(|target| target == vault_item)
-            .unwrap_or(false)
+        // `resolves_to` canonicalizes and normalizes both sides, and refuses
+        // anything that is not a directory link (symlink or junction).
+        orquestra_core::links::resolves_to(&projection_dir.join(name), &vault_item)
     };
 
     if check_link(id) {

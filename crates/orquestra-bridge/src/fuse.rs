@@ -204,7 +204,7 @@ fn import_visible_skills(source: &Path, vault: &Path, projection: &Path) -> Resu
             continue;
         }
 
-        std::os::unix::fs::symlink(&vault_item, &link).map_err(|error| {
+        orquestra_core::links::create_dir_link(&vault_item, &link).map_err(|error| {
             format!(
                 "failed to project {} into {}: {error}",
                 name,

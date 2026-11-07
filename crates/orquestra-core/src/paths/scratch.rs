@@ -186,6 +186,8 @@ mod tests {
         assert_eq!(seen.lock().unwrap_or_else(|p| p.into_inner()).len(), 8000);
     }
 
+    // Only the Unix-only refusal tests below build a scratch tree.
+    #[cfg(unix)]
     fn temp_root(label: &str) -> PathBuf {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
