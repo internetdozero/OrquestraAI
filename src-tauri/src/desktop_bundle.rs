@@ -138,10 +138,18 @@ pub(crate) fn ensure_macos_bundle() {
     install_bundle(&home.join(APPS_DIR), &exe);
 }
 
-/// A future signed `OrquestraAI.app` already registers itself; wrapping it
-/// again would produce a second, unsigned copy in the Dock.
+/// A signed `OrquestraAI.app` already registers itself; wrapping it again
+/// would produce a second, unsigned copy in the Dock.
+///
+/// The installer links `~/.local/bin/orquestra` at the executable inside the
+/// bundle, and `current_exe` reports that link rather than its target, so the
+/// resolved path is checked too.
 pub(super) fn is_inside_bundle(exe: &std::path::Path) -> bool {
-    exe.to_string_lossy().contains(".app/Contents/MacOS/")
+    let inside = |path: &std::path::Path| path.to_string_lossy().contains(".app/Contents/MacOS/");
+    inside(exe)
+        || std::fs::canonicalize(exe)
+            .map(|real| inside(&real))
+            .unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -207,5 +215,27 @@ mod tests {
         assert!(!is_inside_bundle(std::path::Path::new(
             "/Users/dev/.local/bin/orquestra-ai"
         )));
+    }
+
+    /// The installer's `orquestra` command is a symlink into the bundle, and
+    /// `current_exe` may report the link itself.
+    #[cfg(unix)]
+    #[test]
+    fn a_cli_link_into_the_bundle_counts_as_bundled() {
+        let root = sandbox();
+        let bundle_bin = root.join("Applications/OrquestraAI.app/Contents/MacOS");
+        std::fs::create_dir_all(&bundle_bin).unwrap();
+        let exe = bundle_bin.join("orquestra-ai");
+        std::fs::write(&exe, b"binary").unwrap();
+
+        let shim = root.join("orquestra");
+        std::os::unix::fs::symlink(&exe, &shim).unwrap();
+        assert!(
+            is_inside_bundle(&shim),
+            "the CLI link resolves into the bundle"
+        );
+        assert!(is_inside_bundle(&exe));
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

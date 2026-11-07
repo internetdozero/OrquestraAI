@@ -28,6 +28,7 @@ jobs:
             artifact: orquestra-linux-x86_64
             bin_name: orquestra-linux-x86_64
             is_linux: true
+            is_macos: false
             # The legacy `orquestra-ai` alias is publishable once; only the
             # x86_64 row claims it so the arm64 row cannot collide.
             legacy_alias: true
@@ -38,6 +39,7 @@ jobs:
             artifact: orquestra-linux-aarch64
             bin_name: orquestra-linux-aarch64
             is_linux: true
+            is_macos: false
             legacy_alias: false
           - name: macOS Apple Silicon (arm64)
             # macos-14 retired 2026-11-02; arm64 builds stay on macos-15.
@@ -45,6 +47,9 @@ jobs:
             artifact: orquestra-macos-arm64
             bin_name: orquestra-macos-arm64
             is_linux: false
+            is_macos: true
+            # Name the bundle zip the installer looks for.
+            bundle_arch: arm64
             legacy_alias: false
           # Intel macs: `macos-13` was retired in Dec 2025, so native
           # x86_64 builds ride `macos-15-intel` (last Intel label, kept
@@ -54,6 +59,8 @@ jobs:
             artifact: orquestra-macos-x86_64
             bin_name: orquestra-macos-x86_64
             is_linux: false
+            is_macos: true
+            bundle_arch: x86_64
             legacy_alias: false
 
     steps:
@@ -95,15 +102,48 @@ jobs:
         run: npm ci
 
       - name: Build OrquestraAI Release Binary & SHA-256 Checksum
+        env:
+          # Signing is opt-in: `tauri build` signs the bundle and the dmg only
+          # when these are present, and notarization follows from APPLE_ID,
+          # APPLE_PASSWORD and APPLE_TEAM_ID. A fork without the secrets still
+          # produces a working (unsigned) artifact.
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          npx tauri build --no-bundle
+          if [ "${{ matrix.platform.is_macos }}" = "true" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+            # One build produces both shapes: the bundle (what macOS users
+            # open) and the Mach-O inside it (what the updater replaces).
+            npx tauri build --bundles app,dmg
+          else
+            npx tauri build --no-bundle
+          fi
           mkdir -p bin-out
           cp target/release/orquestra-ai bin-out/${{ matrix.platform.bin_name }}
           if [ "${{ matrix.platform.legacy_alias }}" = "true" ]; then
             cp target/release/orquestra-ai bin-out/orquestra-ai
           fi
+          if [ "${{ matrix.platform.is_macos }}" = "true" ]; then
+            APP="target/release/bundle/macos/OrquestraAI.app"
+            if [ -d "$APP" ]; then
+              # Notarization is asynchronous proof: staple the ticket to the
+              # bundle so it validates offline, then ship it as a zip (dmg is
+              # published too, for drag-and-drop installs).
+              if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+                xcrun stapler staple "$APP" || echo "::warning::stapler found no ticket; the bundle is unsigned or notarization was skipped"
+              fi
+              ditto -c -k --keepParent "$APP" "bin-out/OrquestraAI-${{ matrix.platform.bundle_arch }}.app.zip"
+              cp target/release/bundle/dmg/*.dmg bin-out/ 2>/dev/null || true
+            else
+              echo "::warning::no app bundle was produced; only the bare binary is published"
+            fi
+          fi
+          chmod +x bin-out/*.app.zip 2>/dev/null || true
           chmod +x bin-out/*
           cd bin-out
+          # The bundle is a zip: `chmod +x` must not have touched it, but the
+          # checksum covers every published byte either way.
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum * > SHA256SUMS.txt
           else

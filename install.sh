@@ -217,8 +217,12 @@ ARCH="$(uname -m)"
 ASSET_CANDIDATES=""
 case "${OS}-${ARCH}" in
     Linux-x86_64) ASSET_CANDIDATES="orquestra-linux-x86_64 orquestra-ai" ;;
-    Darwin-arm64|Darwin-aarch64) ASSET_CANDIDATES="orquestra-macos-arm64" ;;
-    Darwin-x86_64) ASSET_CANDIDATES="orquestra-macos-x86_64" ;;
+    # The signed bundle is preferred: it is the artifact the release signs and
+    # notarizes, and macOS treats a bare Mach-O from the internet as an
+    # unidentified developer. The bare binary stays as the fallback for
+    # releases built without the bundle step.
+    Darwin-arm64|Darwin-aarch64) ASSET_CANDIDATES="OrquestraAI-macos-arm64.app.zip orquestra-macos-arm64" ;;
+    Darwin-x86_64) ASSET_CANDIDATES="OrquestraAI-macos-x86_64.app.zip orquestra-macos-x86_64" ;;
     *) echo "❌ Error: unsupported platform ${OS}/${ARCH}." >&2; exit 1 ;;
 esac
 
@@ -382,15 +386,84 @@ if [ "$OS" = "Linux" ]; then
     fi
 fi
 
-# 5. Truly Atomic Installation (Same-Filesystem Staging & Rename)
-chmod 755 "${TMP_DIR}/${ASSET}"
-STAGING_BIN=$(mktemp "${BIN_DIR}/.orquestra.tmp.XXXXXXXXXX")
-cp -p "${TMP_DIR}/${ASSET}" "$STAGING_BIN"
-chmod 755 "$STAGING_BIN"
+# 5. Installation
+#
+# Two shapes reach this point: the bare executable every platform publishes
+# (which the in-app updater replaces in place) and, on macOS, the signed
+# `OrquestraAI.app` bundle. Both are installed from the staging copy whose
+# SHA-256 was just verified.
+install_binary() {
+    source_bin=$1
+    chmod 755 "$source_bin"
+    STAGING_BIN=$(mktemp "${BIN_DIR}/.orquestra.tmp.XXXXXXXXXX")
+    cp -p "$source_bin" "$STAGING_BIN"
+    chmod 755 "$STAGING_BIN"
 
-# Atomic swap: rename(2) guarantees seamless, atomic replacement
-mv -f "$STAGING_BIN" "$TARGET_BIN"
-STAGING_BIN=""
+    # Atomic swap: rename(2) guarantees seamless, atomic replacement
+    mv -f "$STAGING_BIN" "$TARGET_BIN"
+    STAGING_BIN=""
+}
+
+# Install a notarized bundle into ~/Applications and point the `orquestra`
+# command at the executable inside it.
+#
+# The bundle is copied into a sibling staging directory and swapped in, so an
+# interrupted install leaves the previous app intact. Quarantine is cleared
+# because the archive was downloaded by this script rather than by a browser;
+# a signed bundle does not need that, but an unsigned build does.
+install_macos_bundle() {
+    archive=$1
+    apps_dir="${HOME}/Applications"
+    bundle="${apps_dir}/OrquestraAI.app"
+    unpack="${TMP_DIR}/unpacked"
+
+    command -v unzip >/dev/null 2>&1 || {
+        echo "❌ Error: 'unzip' is required to install the macOS app bundle." >&2
+        exit 1
+    }
+    rm -rf "$unpack"
+    mkdir -p "$unpack"
+    unzip -q "$archive" -d "$unpack" || {
+        echo "❌ Error: the bundle archive could not be extracted." >&2
+        exit 1
+    }
+
+    app=$(find "$unpack" -maxdepth 2 -name '*.app' -type d | head -1)
+    if [ -z "$app" ] || [ ! -d "$app/Contents/MacOS" ]; then
+        echo "❌ Error: the archive does not contain an app bundle." >&2
+        exit 1
+    fi
+
+    mkdir -p "$apps_dir"
+    staged="${apps_dir}/.OrquestraAI.app.new.$$"
+    rm -rf "$staged"
+    cp -R "$app" "$staged" || {
+        echo "❌ Error: could not stage the app bundle in ${apps_dir}." >&2
+        exit 1
+    }
+    if command -v xattr >/dev/null 2>&1; then
+        xattr -dr com.apple.quarantine "$staged" 2>/dev/null || true
+    fi
+    rm -rf "$bundle"
+    mv "$staged" "$bundle"
+
+    # The CLI keeps its documented name. The link is what `orquestra` resolves
+    # through, and the updater replaces the real Mach-O behind it.
+    executable=$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)
+    if [ -z "$executable" ]; then
+        echo "❌ Error: the app bundle has no executable." >&2
+        exit 1
+    fi
+    mkdir -p "$BIN_DIR"
+    rm -f "$TARGET_BIN"
+    ln -s "$executable" "$TARGET_BIN"
+    TARGET_BIN="$bundle"
+}
+
+case "$ASSET" in
+    *.app.zip) install_macos_bundle "${TMP_DIR}/${ASSET}" ;;
+    *) install_binary "${TMP_DIR}/${ASSET}" ;;
+esac
 
 # 6. Desktop integration is owned by the app itself.
 # `src-tauri/src/desktop_icons.rs` writes the launcher and every icon size on
@@ -401,6 +474,20 @@ STAGING_BIN=""
 echo "========================================================"
 echo "🎉 OrquestraAI installed successfully to ${TARGET_BIN}"
 echo "Run 'orquestra' in your terminal to launch the control plane."
+if [ "$OS" = "Darwin" ]; then
+    case "$ASSET" in
+        *.app.zip)
+            echo "Open it from Launchpad, Spotlight, or with 'open -a OrquestraAI'."
+            ;;
+        *)
+            # A bare Mach-O downloaded over the network is quarantined; the
+            # signed bundle avoids this, which is why it is preferred above.
+            echo "macOS quarantines a binary downloaded from the internet. If it is blocked,"
+            echo "allow it once in System Settings → Privacy & Security, or clear the flag:"
+            echo "  xattr -d com.apple.quarantine ${TARGET_BIN}"
+            ;;
+    esac
+fi
 if [ "$OS" = "Linux" ]; then
     echo "If it later fails to launch, diagnose missing libraries without reinstalling:"
     echo "  curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps"

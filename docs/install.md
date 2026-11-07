@@ -21,13 +21,13 @@ an older glibc stops before `main` with
 
 and no package install fixes that.
 
-| Distribution              | glibc | Runs the release as published |
-| ------------------------- | ----- | ----------------------------- |
-| Ubuntu 22.04+ / Debian 12+ | 2.35+ | yes                           |
-| Fedora 36+, Arch, openSUSE Tumbleweed | 2.35+ | yes                 |
-| Debian 11, Ubuntu 20.04   | 2.31  | no (`GLIBC_2.34`)             |
-| RHEL / Rocky / Alma 8     | 2.28  | no (`GLIBC_2.34`)             |
-| Amazon Linux 2            | 2.26  | no (`GLIBC_2.34`)             |
+| Distribution                          | glibc | Runs the release as published |
+| ------------------------------------- | ----- | ----------------------------- |
+| Ubuntu 22.04+ / Debian 12+            | 2.35+ | yes                           |
+| Fedora 36+, Arch, openSUSE Tumbleweed | 2.35+ | yes                           |
+| Debian 11, Ubuntu 20.04               | 2.31  | no (`GLIBC_2.34`)             |
+| RHEL / Rocky / Alma 8                 | 2.28  | no (`GLIBC_2.34`)             |
+| Amazon Linux 2                        | 2.26  | no (`GLIBC_2.34`)             |
 
 The installer reads the binary's own versioned symbols (`objdump -T`) and
 compares them with `ldd --version` before replacing an installed binary, so the
@@ -52,19 +52,30 @@ links the host glibc, so it fails the same way.
 
 ## macOS
 
-The release publishes a bare Mach-O binary. The app wraps itself in
-`~/Applications/OrquestraAI.app` on first launch so Spotlight, Launchpad and
-`open -a OrquestraAI` find it (see [ARCHITECTURE.md](ARCHITECTURE.md)). Task
-#21 replaces that wrapper with a signed, notarized bundle:
+Two assets are published per architecture, and the installer takes the first
+one that exists:
 
-- **Signed and notarized**: opens from Finder without the "unidentified
-  developer" dialog.
-- **Unsigned build**: macOS quarantines the download. The operator can either
-  right-click → Open once, or clear the attribute explicitly:
+- `OrquestraAI-macos-<arch>.app.zip`: the app bundle. When the release was
+  signed and notarized (the `APPLE_*` secrets were set for that tag), it opens
+  from Finder without the "unidentified developer" dialog. The installer
+  unpacks it into `~/Applications` and links `~/.local/bin/orquestra` at the
+  executable inside the bundle, so the CLI and the updater keep working against
+  the same Mach-O.
+- `orquestra-macos-<arch>`: the bare binary. This is the shape older releases
+  published, and it is still the updater's asset; without a bundle the app
+  wraps itself in `~/Applications/OrquestraAI.app` on first launch (see
+  [ARCHITECTURE.md](ARCHITECTURE.md)).
 
-  ```sh
-  xattr -d com.apple.quarantine ~/.local/bin/orquestra
-  ```
+A build without the signing secrets is quarantined by macOS. Allow it once in
+System Settings → Privacy & Security, right-click → Open, or clear the flag:
+
+```sh
+xattr -dr com.apple.quarantine ~/Applications/OrquestraAI.app
+```
+
+The bundle is built with the hardened runtime plus the JIT entitlement the
+WebView needs (`src-tauri/entitlements.plist`); a hardened bundle without it
+renders an empty window.
 
 ## Windows
 
