@@ -12,13 +12,13 @@ and which `lstat` reports without following.
 
 Windows has two candidate primitives and neither is a drop-in replacement:
 
-| | Directory symlink (`mklink /D`) | NTFS junction (`mklink /J`) |
-| --- | --- | --- |
-| Privilege required | `SeCreateSymbolicLinkPrivilege`, or Developer Mode (Windows 10 14972+) | none |
-| Local volume only | no (also works across volumes) | yes (both paths must be local) |
-| Works for files | yes | no, directories only |
-| Created by `std` | `std::os::windows::fs::symlink_dir` | only `junction_point`, still nightly |
-| Reported by `FileType::is_symlink` | yes | **no**: a junction is a directory with a reparse point |
+|                                    | Directory symlink (`mklink /D`)                                        | NTFS junction (`mklink /J`)                            |
+| ---------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| Privilege required                 | `SeCreateSymbolicLinkPrivilege`, or Developer Mode (Windows 10 14972+) | none                                                   |
+| Local volume only                  | no (also works across volumes)                                         | yes (both paths must be local)                         |
+| Works for files                    | yes                                                                    | no, directories only                                   |
+| Created by `std`                   | `std::os::windows::fs::symlink_dir`                                    | only `junction_point`, still nightly                   |
+| Reported by `FileType::is_symlink` | yes                                                                    | **no**: a junction is a directory with a reparse point |
 
 The last row is the one that matters for safety. Every `remove_dir_all` and
 every "is this a real folder?" guard in the vault reads link state; if a

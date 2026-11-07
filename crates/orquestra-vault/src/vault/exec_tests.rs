@@ -1,4 +1,5 @@
 use super::super::exec_policy::POLICY;
+use super::super::tests::test_service;
 use super::{validate_argv, ALLOWED_BINARIES, SMOKE_TEST_BINARIES};
 
 /// Every allowlisted binary has exactly one policy entry: no binary
@@ -205,4 +206,16 @@ fn policy_table_allows_and_denies_per_entry() {
             );
         }
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn exec_policy_still_runs_the_unix_smoke_helper() {
+    let service = test_service("openai", &["sk-secret-9999"]);
+    let secret = "sk-secret-9999";
+    let (code, stdout, _) =
+        super::run_command(&service, secret, &serde_json::json!(["echo", "policy-ok"]))
+            .expect("echo still runs");
+    assert_eq!(code, 0);
+    assert!(stdout.contains("policy-ok"));
 }

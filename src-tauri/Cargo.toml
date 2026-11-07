@@ -66,6 +66,9 @@ tar = "0.4"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
+    # `CreateMutexW` takes a `SECURITY_ATTRIBUTES`, so the type lives in the
+    # security module and the feature is required to name it.
+    "Win32_Security",
     "Win32_Storage_FileSystem",
     "Win32_System_Console",
     "Win32_System_ProcessStatus",

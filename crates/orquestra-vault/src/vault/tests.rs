@@ -8,7 +8,7 @@ use super::store::{
 };
 use std::collections::HashMap;
 
-fn test_service(preset: &str, secrets: &[&str]) -> VaultService {
+pub(super) fn test_service(preset: &str, secrets: &[&str]) -> VaultService {
     VaultService {
         id: "svc".to_string(),
         label: "Svc".to_string(),
@@ -283,18 +283,6 @@ fn exec_policy_denials_fail_before_spawn() {
         let error = super::exec::run_command(&service, secret, &payload).expect_err("must refuse");
         assert!(error.contains("vault exec"), "names the layer: {error}");
     }
-}
-
-#[cfg(unix)]
-#[test]
-fn exec_policy_still_runs_the_unix_smoke_helper() {
-    let service = test_service("openai", &["sk-secret-9999"]);
-    let secret = "sk-secret-9999";
-    let (code, stdout, _) =
-        super::exec::run_command(&service, secret, &serde_json::json!(["echo", "policy-ok"]))
-            .expect("echo still runs");
-    assert_eq!(code, 0);
-    assert!(stdout.contains("policy-ok"));
 }
 
 #[test]

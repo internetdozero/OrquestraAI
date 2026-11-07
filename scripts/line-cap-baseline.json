@@ -1,8 +1,5 @@
 {
-  "crates/orquestra-bridge/src/fuse/fuse_io.rs": 405,
   "crates/orquestra-vault/src/vault/proxy.rs": 422,
   "crates/orquestra-vault/src/vault/store.rs": 562,
-  "crates/orquestra-vault/src/vault/tests.rs": 1339,
-  "src-tauri/src/lib.rs": 411,
-  "src-tauri/src/updater.rs": 524
+  "crates/orquestra-vault/src/vault/tests.rs": 1336
 }

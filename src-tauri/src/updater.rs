@@ -14,6 +14,10 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+mod replace;
+
+pub use replace::purge_retired_binaries;
+
 const REPO: &str = "internetdozero/OrquestraAI";
 
 /// Summary of an upstream sync of installed official extensions.
@@ -114,7 +118,7 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
         ));
     }
 
-    let target = active_binary()?;
+    let target = replace::active_binary()?;
     let sibling = target.with_file_name(format!(
         ".{}.tmp-{}",
         target
@@ -128,77 +132,9 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
     #[cfg(unix)]
     fs::set_permissions(&sibling, fs::Permissions::from_mode(0o755))
         .map_err(|error| format!("failed to chmod {}: {error}", sibling.display()))?;
-    replace_running_binary(&sibling, &target)?;
+    replace::install(&sibling, &target)?;
 
     Ok(format!("App updated successfully to {version}"))
-}
-
-/// Install `staged` at `target`, which is the running image.
-///
-/// Unix renames over the live path: the kernel keeps the old inode alive for
-/// the running process and the next launch sees the new file.
-///
-/// Windows cannot delete or overwrite a running image (`ERROR_ACCESS_DENIED`,,
-/// the "sharing violation" an in-place rename reports), but it *can* rename it.
-/// So the live file is retired under a dotted sibling name, the staged file
-/// takes its place, and the leftover is deleted on the next launch by
-/// [`purge_retired_binaries`]. If the second rename fails, the original is put
-/// back so a failed update never leaves the app unlaunchable.
-fn replace_running_binary(staged: &Path, target: &Path) -> Result<(), String> {
-    #[cfg(windows)]
-    {
-        let retired = retired_binary_path(target);
-        fs::rename(target, &retired)
-            .map_err(|error| format!("failed to retire {}: {error}", target.display()))?;
-        if let Err(error) = fs::rename(staged, target) {
-            let _ = fs::rename(&retired, target);
-            return Err(format!("failed to install {}: {error}", target.display()));
-        }
-        Ok(())
-    }
-    #[cfg(not(windows))]
-    {
-        fs::rename(staged, target)
-            .map_err(|error| format!("failed to replace {}: {error}", target.display()))
-    }
-}
-
-/// Dotted sibling name a replaced image is parked under. Windows retires the
-/// running image; the test pins the naming on every host.
-#[cfg(any(windows, test))]
-fn retired_binary_path(target: &Path) -> PathBuf {
-    target.with_file_name(format!(
-        ".{}.old-{}",
-        target
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "orquestra".to_string()),
-        crate::paths::unique_tmp_suffix()
-    ))
-}
-
-/// Delete retired images left next to the running binary. Best-effort: a
-/// still-locked file simply stays until the next launch.
-pub fn purge_retired_binaries() {
-    let Ok(exe) = std::env::current_exe() else {
-        return;
-    };
-    let Some(directory) = exe.parent() else {
-        return;
-    };
-    purge_retired_binaries_in(directory);
-}
-
-fn purge_retired_binaries_in(directory: &Path) {
-    let Ok(entries) = fs::read_dir(directory) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if name.starts_with('.') && name.contains(".old-") {
-            let _ = fs::remove_file(entry.path());
-        }
-    }
 }
 
 /// Pull upstream into every installed official skill with a known repo URL.
@@ -258,30 +194,12 @@ pub fn sync_official_extensions() -> Result<ExtensionSyncResult, String> {
 /// listener fd does not block the child from binding the freed path.
 #[tauri::command]
 pub fn restart_app() -> Result<(), String> {
-    let exe = active_binary()?;
+    let exe = replace::active_binary()?;
     crate::single_instance::cleanup();
     std::process::Command::new(&exe)
         .spawn()
         .map_err(|error| format!("failed to relaunch {}: {error}", exe.display()))?;
     std::process::exit(0);
-}
-
-/// Running executable first, `~/.local/bin/orquestra` as fallback.
-fn active_binary() -> Result<PathBuf, String> {
-    if let Ok(exe) = std::env::current_exe() {
-        if exe.is_file() {
-            return Ok(exe);
-        }
-    }
-    let home = crate::paths::require_home("locate the active binary")?;
-    let fallback = home.join(".local/bin/orquestra");
-    if fallback.is_file() {
-        return Ok(fallback);
-    }
-    Err(
-        "cannot locate the running binary (current_exe and ~/.local/bin/orquestra both missing)"
-            .to_string(),
-    )
 }
 
 /// Asset URL for one validated version tag (`v` is added back; validation strips it).
@@ -468,157 +386,4 @@ fn validate_version(raw: &str) -> Result<String, String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
-#[allow(clippy::expect_used)]
-mod tests {
-    use super::*;
-
-    /// The retired image sits beside the target under a dotted name, so the
-    /// purge prefix scan can find it without touching real binaries.
-    #[test]
-    fn retired_images_are_dotted_siblings_and_purged() {
-        let dir = std::env::temp_dir().join(format!(
-            "orquestra-update-purge-{}-{}",
-            std::process::id(),
-            crate::paths::unique_tmp_suffix()
-        ));
-        std::fs::create_dir_all(&dir).unwrap();
-
-        let target = dir.join("orquestra-ai");
-        let retired = retired_binary_path(&target);
-        assert_eq!(retired.parent(), Some(dir.as_path()));
-        let name = retired.file_name().unwrap().to_string_lossy().into_owned();
-        assert!(
-            name.starts_with(".orquestra-ai.old-"),
-            "unexpected name {name}"
-        );
-
-        std::fs::write(&retired, b"old").unwrap();
-        std::fs::write(&target, b"new").unwrap();
-        purge_retired_binaries_in(&dir);
-
-        assert!(!retired.exists(), "the retired image must be removed");
-        assert!(target.is_file(), "the live binary must survive the purge");
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn asset_names_match_the_release_matrix() {
-        assert_eq!(
-            asset_candidates("linux", "x86_64").expect("linux"),
-            vec!["orquestra-linux-x86_64", "orquestra-ai"]
-        );
-        assert_eq!(
-            asset_candidates("macos", "aarch64").expect("macos"),
-            vec!["orquestra-macos-arm64"]
-        );
-        assert_eq!(
-            asset_candidates("macos", "x86_64").expect("macos intel"),
-            vec!["orquestra-macos-x86_64"]
-        );
-        assert_eq!(
-            asset_candidates("linux", "aarch64").expect("linux arm64"),
-            vec!["orquestra-linux-aarch64"]
-        );
-        assert!(asset_candidates("windows", "x86_64").is_err());
-    }
-
-    #[test]
-    fn asset_url_pins_the_validated_release_tag() {
-        let version = validate_version("v0.1.0-alpha.3").expect("tag");
-        let binary = release_asset_url(&version, "orquestra-linux-x86_64");
-        assert_eq!(
-            binary,
-            "https://github.com/internetdozero/OrquestraAI/releases/download/v0.1.0-alpha.3/orquestra-linux-x86_64"
-        );
-        assert!(!binary.contains("/releases/latest/"));
-        let sums = release_asset_url(&version, "SHA256SUMS.txt");
-        assert!(sums.ends_with("/releases/download/v0.1.0-alpha.3/SHA256SUMS.txt"));
-    }
-
-    #[test]
-    fn versions_reject_paths_and_blanks() {
-        assert_eq!(validate_version("v0.1.0").expect("tag"), "0.1.0");
-        assert_eq!(
-            validate_version("0.1.0-alpha.2").expect("pre"),
-            "0.1.0-alpha.2"
-        );
-        for hostile in ["", "   ", "../escape", "a/b", "a\\b", "v with space"] {
-            assert!(
-                validate_version(hostile).is_err(),
-                "{hostile:?} must be refused"
-            );
-        }
-    }
-
-    /// Task #325: equal and lower versions fail closed before any network
-    /// access; prerelease ordering is numeric (`alpha.5 < alpha.10`).
-    #[test]
-    fn downgrades_and_replays_are_refused() {
-        let current = env!("CARGO_PKG_VERSION");
-        assert!(
-            require_newer_version(current).is_err(),
-            "re-applying the running version must be refused"
-        );
-        for older in ["0.1.0-alpha.4", "0.1.0-alpha.1", "0.0.9"] {
-            let error =
-                require_newer_version(older).expect_err(&format!("{older} must be refused"));
-            assert!(error.contains("not newer"), "says why: {error}");
-        }
-        // The gate relies on numeric prerelease ordering, not string order.
-        let v5 = semver::Version::parse("0.1.0-alpha.5").expect("v5");
-        let v10 = semver::Version::parse("0.1.0-alpha.10").expect("v10");
-        assert!(v5 < v10, "alpha.5 < alpha.10");
-        assert!(require_newer_version("not-a-version").is_err());
-        assert!(require_newer_version("").is_err());
-    }
-
-    #[test]
-    fn checksum_parsing_is_exact_and_unambiguous() {
-        let dir = crate::paths::fresh_scratch_dir("orquestra-updater-test").expect("scratch");
-        let sums = dir.join("SHA256SUMS.txt");
-        fs::write(&sums, "abc123  orquestra-linux-x86_64\n Antenna\n").expect("write");
-        assert_eq!(
-            expected_hash(&sums, "orquestra-linux-x86_64").expect("hash"),
-            "abc123"
-        );
-        assert!(expected_hash(&sums, "missing-binary").is_err());
-        fs::write(
-            &sums,
-            "abc123  orquestra-linux-x86_64\ndef456 *orquestra-linux-x86_64\n",
-        )
-        .expect("rewrite");
-        assert!(expected_hash(&sums, "orquestra-linux-x86_64").is_err());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn sha256_of_matches_the_nist_vector_without_external_tools() {
-        let dir = crate::paths::fresh_scratch_dir("orquestra-updater-hash").expect("scratch");
-        let file = dir.join("input.bin");
-        fs::write(&file, b"abc").expect("write");
-        assert_eq!(
-            sha256_of(&file).expect("hash"),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
-        assert!(sha256_of(&dir.join("missing.bin")).is_err());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn staging_uses_the_secure_runtime_root() {
-        let staging = Staging::fresh("orquestra-update-test").expect("staging");
-        let root = crate::paths::ensure_scratch_root().expect("runtime root");
-        assert_eq!(root, crate::paths::scratch_root());
-        assert!(staging.0.starts_with(&root));
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            assert_eq!(
-                std::fs::metadata(&root).unwrap().permissions().mode() & 0o777,
-                0o700
-            );
-        }
-        // `Staging` removes the tree on drop.
-    }
-}
+mod tests;

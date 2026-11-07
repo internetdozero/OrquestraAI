@@ -17,14 +17,30 @@
 //! here. `scripts/windows-typecheck.sh` picks the whole crate up automatically.
 
 pub mod health;
+pub mod single_instance;
 
-/// Stand-in for the shell's `crate::paths`: the collectors only read storage
-/// paths, and [`scratch_root`] is the one the Windows health snapshot sizes.
+/// Stand-in for the shell's `crate::paths`: these modules only need the storage
+/// root (health sizes its volume, the instance mutex hashes it).
 pub mod paths {
+    use std::path::PathBuf;
+
     /// Windows scratch root. Only its capacity is read, so the temp directory
     /// stands in for `%LOCALAPPDATA%\orquestra-ai`.
-    pub fn scratch_root() -> std::path::PathBuf {
+    pub fn scratch_root() -> PathBuf {
         std::env::temp_dir()
+    }
+
+    /// The slice of `OrquestraPaths` these modules touch.
+    pub struct OrquestraPaths {
+        pub root: PathBuf,
+    }
+
+    impl OrquestraPaths {
+        pub fn resolve() -> Result<Self, String> {
+            Ok(Self {
+                root: std::env::temp_dir(),
+            })
+        }
     }
 }
 
@@ -32,4 +48,6 @@ pub mod paths {
 /// `-D warnings` would fail on every item instead of checking it.
 pub fn build_graph() {
     let _ = health::snapshot();
+    let _ = single_instance::acquire();
+    single_instance::release();
 }

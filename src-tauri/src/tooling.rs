@@ -61,6 +61,28 @@ pub fn probe_external_tools() -> ToolReport {
     report()
 }
 
+/// Log one line at boot naming the missing tools and what they disable.
+///
+/// The UI reports the same thing per tool; this exists so the diagnosis is
+/// already in the log when an operator asks why a button failed.
+pub fn warn_missing_tools() {
+    let tools = report();
+    if tools.missing.is_empty() {
+        return;
+    }
+    let disabled: Vec<String> = tools
+        .tools
+        .iter()
+        .filter(|tool| !tool.present)
+        .flat_map(|tool| tool.disables.iter().cloned())
+        .collect();
+    crate::log_warn!(
+        "missing external tools: {} (disabled features: {})",
+        tools.missing.join(", "),
+        disabled.join(", ")
+    );
+}
+
 fn report() -> ToolReport {
     report_with(None)
 }

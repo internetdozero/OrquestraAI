@@ -5,9 +5,11 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::status::{is_link, is_linked_to};
+
+mod links;
+pub(super) use links::{ensure_symlink, move_entry};
 use orquestra_core::harness::HarnessSpec;
-use orquestra_core::links::{create_dir_link, is_dir_link, read_dir_link, remove_dir_link};
-use orquestra_core::paths::{copy_dir_all, OrquestraPaths};
+use orquestra_core::paths::OrquestraPaths;
 
 /// Move every entry out of `source` into `destination`, leaving an empty
 /// directory behind so a harness that expects the folder still finds it.
@@ -186,39 +188,6 @@ pub(crate) fn merge_skills_path(content: &str, scope: &str) -> Result<Option<Str
     Ok(Some(rewritten))
 }
 
-pub(super) fn ensure_symlink(link: &Path, target: &Path) -> Result<(), String> {
-    if is_linked_to(link, target) {
-        return Ok(());
-    }
-
-    if let Ok(metadata) = fs::symlink_metadata(link) {
-        if is_dir_link(link) {
-            remove_dir_link(link)
-                .map_err(|error| format!("failed to clear {}: {error}", link.display()))?;
-        } else if metadata.is_file() {
-            fs::remove_file(link)
-                .map_err(|error| format!("failed to clear {}: {error}", link.display()))?;
-        } else {
-            return Err(format!(
-                "refusing to replace the directory {} with a link",
-                link.display()
-            ));
-        }
-    }
-
-    if let Some(parent) = link.parent() {
-        create_dir_all(parent)?;
-    }
-
-    create_dir_link(target, link).map_err(|error| {
-        format!(
-            "failed to link {} -> {}: {error}",
-            link.display(),
-            target.display()
-        )
-    })
-}
-
 pub(super) fn backup_slot(backup: &Path, id: &str, rel: &str) -> PathBuf {
     backup.join(id).join(rel.replace('/', "__"))
 }
@@ -234,35 +203,6 @@ pub(super) fn backup_move(source: &Path, destination: &Path) -> Result<(), Strin
 
     // Different filesystem: copy then remove.
     move_entry(source, destination)
-}
-
-pub(super) fn move_entry(source: &Path, destination: &Path) -> Result<(), String> {
-    if is_link(source) {
-        let target = read_dir_link(source)
-            .map_err(|error| format!("failed to read {}: {error}", source.display()))?;
-        if is_dir_link(destination) {
-            let _ = remove_dir_link(destination);
-        } else {
-            let _ = fs::remove_file(destination);
-        }
-        create_dir_link(&target, destination)
-            .map_err(|error| format!("failed to back up link {}: {error}", source.display()))?;
-        remove_dir_link(source)
-            .map_err(|error| format!("failed to remove {}: {error}", source.display()))?;
-        return Ok(());
-    }
-
-    if source.is_dir() {
-        copy_dir_all(source, destination)?;
-        fs::remove_dir_all(source)
-            .map_err(|error| format!("failed to remove {}: {error}", source.display()))?;
-        return Ok(());
-    }
-
-    fs::copy(source, destination)
-        .map_err(|error| format!("failed to copy {}: {error}", source.display()))?;
-    fs::remove_file(source)
-        .map_err(|error| format!("failed to remove {}: {error}", source.display()))
 }
 
 fn backup_copy(source: &Path, destination: &Path) -> Result<(), String> {

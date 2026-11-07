@@ -44,7 +44,8 @@ use tooling::probe_external_tools;
 
 use crate::paths::OrquestraPaths;
 use bridge::{BridgeReport, HarnessStatus};
-use commands::import_skill_from_git;
+pub use commands::CoreStatus;
+use commands::{core_status, import_skill_from_git, log_ui_error};
 use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
 use ideas::{
     create_idea, delete_idea, get_productivity_metrics, list_blackboard_notes, list_idea_projects,
@@ -53,7 +54,6 @@ use ideas::{
 use janitor::{get_system_health, sweep_system_caches};
 use mcp::{McpServer, McpTargetStatus};
 use official::OfficialStore;
-use serde::Serialize;
 use sessions::{
     estimate_purge, get_retention_policy, get_session_transcript, get_unified_sessions,
     purge_sessions, save_retention_policy, toggle_pin_session,
@@ -70,40 +70,6 @@ use vault::{
     vault_remove_key, vault_reveal_key, vault_save_service, vault_set_primary,
     vault_set_service_enabled, vault_test_connection,
 };
-
-/// Runtime identity of the native core, surfaced in the UI footer so the
-/// frontend can prove the IPC bridge is alive.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CoreStatus {
-    name: String,
-    version: String,
-    platform: String,
-    bridge: String,
-}
-
-#[tauri::command]
-fn core_status(app: tauri::AppHandle) -> CoreStatus {
-    let package = app.package_info();
-
-    CoreStatus {
-        name: package.name.clone(),
-        version: package.version.to_string(),
-        platform: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
-        bridge: "ready".to_string(),
-    }
-}
-
-/// Crash reports from the React error boundaries land on stderr next to the
-/// backend logs, so a white-screen report carries its area and message.
-#[tauri::command]
-fn log_ui_error(area: String, message: String, stack: Option<String>) -> Result<(), String> {
-    crate::log_error!("ui error in {area}: {message}");
-    if let Some(stack) = stack.filter(|stack| !stack.is_empty()) {
-        crate::log_error!("ui stack: {stack}");
-    }
-    Ok(())
-}
 
 /// Scan the master vault and evaluate each skill for the selected harness.
 /// `None` evaluates the universal Global baseline.
@@ -327,24 +293,9 @@ pub fn run() {
                 state.set_tray_available();
             }
 
-            // Probe the external programs up front: a missing `git` or `tar`
-            // disables named features, and saying so at boot beats a generic
-            // failure the first time the operator clicks the button.
-            let tools = tooling::probe_external_tools();
-            if !tools.missing.is_empty() {
-                crate::log_warn!(
-                    "missing external tools: {} (disabled features: {})",
-                    tools.missing.join(", "),
-                    tools
-                        .tools
-                        .iter()
-                        .filter(|tool| !tool.present)
-                        .flat_map(|tool| tool.disables.iter())
-                        .cloned()
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
-            }
+            // Name the missing external tools once, instead of a generic
+            // failure the first time the operator clicks a disabled action.
+            tooling::warn_missing_tools();
 
             // Single instance listener: ensures subsequent launches focus this window
             if let Err(error) = single_instance::start_listener(app.handle().clone()) {
