@@ -28,17 +28,67 @@ const INSTALLERS = new Map([
     { asset: "install.ps1", contentType: "text/plain; charset=utf-8" },
   ],
 ]);
-/** How long a resolved tag is trusted before re-querying the API. */
+/** How long a resolved tag is trusted before re-querying GitHub. */
 const TAG_TTL_MS = 5 * 60 * 1000;
+/** How long the last good installer copy survives as an outage fallback. */
+const LAST_GOOD_TTL_S = 30 * 24 * 60 * 60;
+/** GitHub answers are retried this many times on 5xx/429/network errors. */
+const FETCH_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 150;
+
+// Synthetic Cache API keys (never fetched): shared by every isolate in a
+// colo, so a cold isolate does not have to reach GitHub on its first request.
+const INTERNAL = "https://orquestra-installer.internal";
+const TAG_KEY = `${INTERNAL}/latest-tag`;
+const LAST_GOOD_KEY = (asset) => `${INTERNAL}/last-good/${asset}`;
 
 let tagCache = { tag: null, at: 0 };
 
-async function latestTag() {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * GitHub intermittently answers Worker subrequests with 5xx (observed:
+ * `releases/latest` -> HTTP 504), so transient failures are retried before
+ * the caller falls back to the last good copy.
+ */
+async function fetchWithRetry(url, init) {
+  let lastError;
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status < 500 && res.status !== 429) return res;
+      lastError = new Error(`HTTP ${res.status}`);
+      lastError.status = res.status;
+      if (attempt === FETCH_ATTEMPTS) return res;
+    } catch (error) {
+      lastError = error;
+      if (attempt === FETCH_ATTEMPTS) throw error;
+    }
+    await sleep(RETRY_DELAY_MS * attempt);
+  }
+  throw lastError;
+}
+
+async function cachedTag(cache) {
+  const hit = await cache.match(TAG_KEY);
+  if (!hit) return null;
+  const at = Number(hit.headers.get("x-orquestra-at"));
+  const tag = hit.headers.get("x-orquestra-tag");
+  if (!tag || !Number.isFinite(at) || Date.now() - at >= TAG_TTL_MS) return null;
+  return { tag, at };
+}
+
+async function latestTag(cache, ctx) {
   const now = Date.now();
   if (tagCache.tag && now - tagCache.at < TAG_TTL_MS) {
     return tagCache.tag;
   }
-  const res = await fetch(LATEST_RELEASE, {
+  const shared = await cachedTag(cache);
+  if (shared) {
+    tagCache = shared;
+    return shared.tag;
+  }
+  const res = await fetchWithRetry(LATEST_RELEASE, {
     redirect: "manual",
     headers: { "user-agent": UA },
   });
@@ -55,6 +105,18 @@ async function latestTag() {
     throw new Error("release tag redirect did not contain a release tag");
   }
   tagCache = { tag, at: now };
+  ctx.waitUntil(
+    cache.put(
+      TAG_KEY,
+      new Response(null, {
+        headers: {
+          "cache-control": `public, max-age=${TAG_TTL_MS / 1000}`,
+          "x-orquestra-tag": tag,
+          "x-orquestra-at": String(now),
+        },
+      }),
+    ),
+  );
   return tag;
 }
 
@@ -71,26 +133,43 @@ function etagMatches(request, etag) {
     .includes(etag);
 }
 
-async function serveInstaller(request, ctx, installer) {
-  const tag = await latestTag();
-  const cache = caches.default;
-  const cached = request.method === "GET" ? await cache.match(request) : null;
-
-  if (cached && cached.headers.get("x-orquestra-tag") === tag) {
-    const etag = cached.headers.get("etag");
-    if (etagMatches(request, etag)) {
-      return new Response(null, {
-        status: 304,
-        headers: { etag, "x-orquestra-tag": tag },
-      });
-    }
-    return new Response(request.method === "HEAD" ? null : await cached.arrayBuffer(), {
-      status: 200,
-      headers: cached.headers,
+function respondWith(request, body, headers) {
+  const etag = headers.get("etag");
+  if (etagMatches(request, etag)) {
+    return new Response(null, {
+      status: 304,
+      headers: { etag, "x-orquestra-tag": headers.get("x-orquestra-tag") ?? "" },
     });
   }
+  return new Response(request.method === "HEAD" ? null : body, { status: 200, headers });
+}
 
-  const upstream = await fetch(RAW_AT(tag, installer.asset), { headers: { "user-agent": UA } });
+/**
+ * Serves the last installer this colo fetched successfully when GitHub is
+ * unreachable, instead of failing the `curl | sh` with a 502. Returns null
+ * when no copy exists yet (then the original error surfaces).
+ */
+async function serveLastGood(request, cache, installer) {
+  const stored = await cache.match(LAST_GOOD_KEY(installer.asset));
+  if (!stored) return null;
+  const headers = new Headers(stored.headers);
+  headers.set("cache-control", "public, max-age=60");
+  headers.set("x-orquestra-fallback", "last-good");
+  return respondWith(request, await stored.arrayBuffer(), headers);
+}
+
+async function serveFresh(request, ctx, installer, cache) {
+  const tag = await latestTag(cache, ctx);
+  const cacheKey = new Request(request.url, { method: "GET" });
+  const cached = await cache.match(cacheKey);
+
+  if (cached && cached.headers.get("x-orquestra-tag") === tag) {
+    return respondWith(request, await cached.arrayBuffer(), new Headers(cached.headers));
+  }
+
+  const upstream = await fetchWithRetry(RAW_AT(tag, installer.asset), {
+    headers: { "user-agent": UA },
+  });
   if (!upstream.ok) {
     throw new Error(`upstream ${installer.asset} at ${tag} failed: HTTP ${upstream.status}`);
   }
@@ -102,18 +181,29 @@ async function serveInstaller(request, ctx, installer) {
     "cache-control": "public, max-age=300",
     "x-orquestra-tag": tag,
   });
+  const lastGoodHeaders = new Headers(headers);
+  lastGoodHeaders.set("cache-control", `public, max-age=${LAST_GOOD_TTL_S}`);
+  ctx.waitUntil(
+    Promise.all([
+      cache.put(cacheKey, new Response(body.slice(0), { status: 200, headers })),
+      cache.put(
+        LAST_GOOD_KEY(installer.asset),
+        new Response(body.slice(0), { status: 200, headers: lastGoodHeaders }),
+      ),
+    ]),
+  );
+  return respondWith(request, body, headers);
+}
 
-  if (etagMatches(request, etag)) {
-    return new Response(null, { status: 304, headers });
+async function serveInstaller(request, ctx, installer) {
+  const cache = caches.default;
+  try {
+    return await serveFresh(request, ctx, installer, cache);
+  } catch (error) {
+    const fallback = await serveLastGood(request, cache, installer).catch(() => null);
+    if (fallback) return fallback;
+    throw error;
   }
-  const response = new Response(request.method === "HEAD" ? null : body, {
-    status: 200,
-    headers,
-  });
-  if (request.method === "GET") {
-    ctx.waitUntil(cache.put(request, new Response(body.slice(0), { status: 200, headers })));
-  }
-  return response;
 }
 
 export default {
