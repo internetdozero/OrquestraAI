@@ -48,9 +48,13 @@ function github({ latest = [], raw = [] }) {
 
 async function run(worker, { method = "GET", url = "https://orquestra.example/install.sh" } = {}) {
   const pending = [];
-  const res = await worker.fetch(new Request(url, { method }), {}, {
-    waitUntil: (p) => pending.push(p),
-  });
+  const res = await worker.fetch(
+    new Request(url, { method }),
+    {},
+    {
+      waitUntil: (p) => pending.push(p),
+    },
+  );
   await Promise.all(pending);
   return res;
 }
@@ -69,7 +73,9 @@ async function withEnv(env, fn) {
 
 test("a transient GitHub 504 on the release lookup is retried instead of answering 502", async () => {
   const gh = github({ latest: [504, "redirect"], raw: ["script"] });
-  const res = await withEnv({ fetch: gh.fetch, caches: colo() }, async () => run(await coldWorker()));
+  const res = await withEnv({ fetch: gh.fetch, caches: colo() }, async () =>
+    run(await coldWorker()),
+  );
   assert.equal(res.status, 200);
   assert.equal(await res.text(), SCRIPT);
   assert.deepEqual(gh.calls, [LATEST, LATEST, RAW]);
@@ -77,7 +83,9 @@ test("a transient GitHub 504 on the release lookup is retried instead of answeri
 
 test("transient raw.githubusercontent failures are retried too", async () => {
   const gh = github({ latest: ["redirect"], raw: ["network", 503, "script"] });
-  const res = await withEnv({ fetch: gh.fetch, caches: colo() }, async () => run(await coldWorker()));
+  const res = await withEnv({ fetch: gh.fetch, caches: colo() }, async () =>
+    run(await coldWorker()),
+  );
   assert.equal(res.status, 200);
   assert.equal(await res.text(), SCRIPT);
 });
@@ -106,7 +114,9 @@ test("a GitHub outage serves the last good installer byte-identical instead of 5
 
   const down = github({ latest: [504], raw: [504] });
   for (const method of ["GET", "HEAD"]) {
-    const res = await withEnv({ fetch: down.fetch, caches }, async () => run(await coldWorker(), { method }));
+    const res = await withEnv({ fetch: down.fetch, caches }, async () =>
+      run(await coldWorker(), { method }),
+    );
     assert.equal(res.status, 200, method);
     assert.equal(res.headers.get("etag"), etag);
     assert.equal(res.headers.get("x-orquestra-fallback"), "last-good");
@@ -118,7 +128,9 @@ test("a GitHub outage serves the last good installer byte-identical instead of 5
 
 test("with no copy anywhere, a persistent outage still reports 502 with the cause", async () => {
   const gh = github({ latest: [504], raw: ["script"] });
-  const res = await withEnv({ fetch: gh.fetch, caches: colo() }, async () => run(await coldWorker()));
+  const res = await withEnv({ fetch: gh.fetch, caches: colo() }, async () =>
+    run(await coldWorker()),
+  );
   assert.equal(res.status, 502);
   assert.equal(await res.text(), "installer unavailable: release tag lookup failed: HTTP 504");
   assert.deepEqual(gh.calls, [LATEST, LATEST, LATEST]);
