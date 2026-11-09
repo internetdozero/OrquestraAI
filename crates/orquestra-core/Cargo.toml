@@ -23,4 +23,4 @@ libc.workspace = true
 # `SeCreateSymbolicLinkPrivilege` or Developer Mode, a junction needs nothing.
 # 1.x because the workspace's Rust floor is 1.77.2 (2.x requires 1.85).
 [target.'cfg(windows)'.dependencies]
-junction = "1"
+junction = "2"
