@@ -11,14 +11,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [
-      "dist/**",
-      "target/**",
-      "src-tauri/**",
-      "node_modules/**",
-      ".freebuff/logs/**",
-      ".freebuff/tmp/**",
-    ],
+    ignores: ["dist/**", "target/**", "src-tauri/**", "node_modules/**", ".freebuff/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

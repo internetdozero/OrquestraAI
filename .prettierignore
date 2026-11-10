@@ -3,9 +3,7 @@ dist/
 dist-ssr/
 target/
 node_modules/
-.freebuff/logs/
-.freebuff/tmp/
-.freebuff/evidence/
+.freebuff/
 .orquestra/audits/
 *.sqlite
 *.sqlite3

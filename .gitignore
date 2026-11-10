@@ -15,11 +15,8 @@ src-tauri/target/
 src-tauri/gen/schemas/
 /tools/windows-typecheck/target/
 
-# Agent scratch state (scratch files, session logs) — never source. Only the
-# scratch subfolders: `.freebuff/evidence/` and `project-id` are tracked on
-# purpose, and ignoring the whole tree would silently drop that evidence.
-/.freebuff/tmp/
-/.freebuff/logs/
+# Agent scratch state (scratch files, session logs, evidence)
+.freebuff/
 
 # Editors
 .vscode/*
