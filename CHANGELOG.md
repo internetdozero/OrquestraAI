@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Linux Launcher:** The generated `.desktop` entry uses the absolute executable path (the `.AppImage` file when running from one) with Desktop Entry quoting instead of a bare `orquestra` command. Inside Flatpak the app no longer writes a launcher that would shadow the exported one.
 - **Open Links and Folders:** Falls back across `gio open`, `xdg-open`, `kde-open6/5`, `sensible-browser`/`x-www-browser` and the common file managers instead of requiring `xdg-utils`.
 - **Installer Runtime Tools:** `install.sh` and `--check-deps` now diagnose and (unless `--no-auto-deps`) install `xdg-utils` or `gio`, `git` and `python3` with `venv`, naming the package per distribution.
-- **Debian Package Dependencies:** The `.deb` declares WebKitGTK 4.1, GTK 3, libsoup 3, libayatana-appindicator, librsvg and `xdg-utils`, so `dpkg -i` resolves them instead of leaving a binary that cannot start.
+- **Debian Package Dependencies:** The `.deb` declares `libwebkit2gtk-4.1-0`, `libgtk-3-0`, `libsoup-3.0-0`, `libayatana-appindicator3-1`, `librsvg2-2` and `xdg-utils`, so `dpkg -i` resolves them instead of leaving a binary that cannot start.
 - **Faster Views:** Ideas and sessions are served from TTL caches with stale-while-revalidate, the remaining caches expire instead of living forever, harness mounts are cached and views prefetch on hover. `src/lib/perf.ts` records boot and view-switch timings.
 - **Shared Agents Skills:** `~/.agents/skills` is tracked as a secondary skills source for Codex and Grok, so skills installed there are not silently ignored.
 

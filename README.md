@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)](CHANGELOG.md)
-[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS-emerald.svg)](https://github.com/internetdozero/OrquestraAI/releases/latest)
+[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-emerald.svg)](https://github.com/internetdozero/OrquestraAI/releases/latest)
 
 [Leia em Português](README.pt-BR.md)
 
@@ -38,7 +38,7 @@ The installer:
 3. Checks the binary's SHA-256 and installs it to `~/.local/bin/orquestra`.
 4. On Linux, checks the binary's glibc symbol versions and the WebKitGTK/libsoup libraries, then the runtime tools (`xdg-utils` or `gio`, `git`, `python3` with `venv`), and installs what is missing through the package manager using `sudo`. Pass `--no-auto-deps` to skip the install step and manage them yourself.
 
-Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. See [docs/install.md](docs/install.md) for the version table and what to do on an older distribution.
+Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. The same release also ships a Flatpak bundle that runs there. See [docs/install.md](docs/install.md) for the version table and the Flatpak channel.
 
 To diagnose an existing Linux install without downloading again:
 
