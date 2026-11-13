@@ -339,17 +339,22 @@ jobs:
       - name: Build the self-contained bundle
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: OrquestraAI.flatpak
+          # The action writes exactly this name, which is the one the docs and
+          # the installer look for. Its own artifact upload is off: the named
+          # `orquestra-linux-flatpak` upload below is what the release reads.
+          bundle: OrquestraAI-x86_64.flatpak
           manifest-path: packaging/flatpak/ai.orquestra.desktop.yml
           arch: x86_64
+          upload-artifact: false
           cache-key: flatpak-builder-${{ hashFiles('packaging/flatpak/**', 'scripts/build-flatpak.sh') }}
 
       # Proves the bundle is installable and that the binary starts from its
       # own runtime instead of the runner's system libraries.
       - name: Install and smoke-test the bundle
         run: |
-          bundle=$(ls OrquestraAI-*.flatpak | head -1)
-          flatpak install --user -y --noninteractive --bundle "$bundle"
+          # System install: the action's dependencies went to the root user's
+          # system installation, so the runtime is already there.
+          flatpak install --system -y --noninteractive --bundle OrquestraAI-x86_64.flatpak
           flatpak run --command=orquestra ai.orquestra.desktop --help
 
       - name: Upload the Flatpak bundle
