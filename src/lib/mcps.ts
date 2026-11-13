@@ -164,10 +164,7 @@ export async function listMcpTargets(): Promise<McpTarget[]> {
 }
 
 /** Enable or disable every server for one scope in a single atomic write. */
-export async function batchSetMcpAll(
-  harnessId: string | null,
-  enabled: boolean,
-): Promise<void> {
+export async function batchSetMcpAll(harnessId: string | null, enabled: boolean): Promise<void> {
   if (devMockMode()) {
     const { fixtureBatchSetMcpAll } = await loadDevFixtures();
     return fixtureBatchSetMcpAll(harnessId, enabled);

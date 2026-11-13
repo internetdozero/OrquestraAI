@@ -22,9 +22,11 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::time::{Duration, Instant};
+#[cfg(unix)]
+use std::time::Duration;
 
 /// How long a login shell may take to print its `PATH`.
+#[cfg(unix)]
 const SHELL_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Directories worth trying when the process `PATH` does not answer.
@@ -54,10 +56,13 @@ fn compute_extra_dirs() -> Vec<PathBuf> {
             dirs.push(home.join(relative));
         }
     }
-    // Homebrew on Apple Silicon and Intel. Harmless elsewhere (a missing
-    // directory is skipped).
-    dirs.push(PathBuf::from("/opt/homebrew/bin"));
-    dirs.push(PathBuf::from("/usr/local/bin"));
+    // Homebrew on Apple Silicon and Intel. Unix-only: on Windows these are
+    // not absolute paths and would never match.
+    #[cfg(unix)]
+    {
+        dirs.push(PathBuf::from("/opt/homebrew/bin"));
+        dirs.push(PathBuf::from("/usr/local/bin"));
+    }
 
     dedupe(dirs)
 }
@@ -81,6 +86,7 @@ fn login_shell_path() -> Option<std::ffi::OsString> {
     use std::io::Read;
     use std::process::{Command, Stdio};
     use std::sync::mpsc;
+    use std::time::Instant;
 
     let shell = std::env::var_os("SHELL")
         .filter(|value| !value.is_empty())
@@ -182,17 +188,14 @@ pub fn is_executable(path: &Path) -> bool {
     let Ok(metadata) = std::fs::metadata(path) else {
         return false;
     };
-    if !metadata.is_file() {
-        return false;
-    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        metadata.permissions().mode() & 0o111 != 0
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
     }
     #[cfg(not(unix))]
     {
-        true
+        metadata.is_file()
     }
 }
 
@@ -235,10 +238,19 @@ pub fn resolve_in(binary: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn explicit_paths_are_used_verbatim() {
         assert!(resolve("/bin/sh").is_some());
         assert!(resolve("/nonexistent/definitely-not-a-binary").is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn explicit_paths_are_used_verbatim() {
+        let windir = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".to_string());
+        assert!(resolve(&format!("{windir}\\System32\\cmd.exe")).is_some());
+        assert!(resolve("C:\\nonexistent\\definitely-not-a-binary.exe").is_none());
     }
 
     #[test]
