@@ -6,7 +6,7 @@
   "description": "OrquestraAI — Universal AI Harness Administration Platform",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:ui && tsc --noEmit && vite build",
+    "build": "npm run check:ui && tsc --noEmit && vite build && npm run check:bundle",
     "build:fast": "npm run build && cd src-tauri && cargo build --features custom-protocol",
     "build:release": "tauri build --no-bundle",
     "dev:tauri": "tauri dev",
@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "check:ui": "node scripts/check-card-motion.mjs",
     "check:lines": "node scripts/check-line-cap.mjs",
+    "check:bundle": "node scripts/check-dev-bundle.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "prepare": "git config core.hooksPath .githooks || true",
     "test": "node --test 'scripts/**/*.test.mjs'",

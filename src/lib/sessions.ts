@@ -1,14 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  fixtureEstimate,
-  fixturePurge,
-  fixtureRetention,
-  fixtureSaveRetention,
-  fixtureSessionTranscript,
-  fixtureSessions,
-  fixtureTogglePin,
-  fixturesEnabled,
-} from "./fixtures";
+import { fixturesEnabled } from "./fixtures";
+import { loadDevFixtures } from "./devFixtureLoader";
 import { loadCacheValue, readCacheValue, writeCacheValue } from "./dataCache";
 import { isTauri } from "./tauri";
 
@@ -85,8 +77,11 @@ export interface RetentionPolicy {
 }
 
 /** Every harness conversation, newest first, with pin state applied. */
-export function getUnifiedSessions(): Promise<UnifiedSession[]> {
-  if (fixturesEnabled()) return Promise.resolve(fixtureSessions());
+export async function getUnifiedSessions(): Promise<UnifiedSession[]> {
+  if (fixturesEnabled()) {
+    const { fixtureSessions } = await loadDevFixtures();
+    return fixtureSessions();
+  }
   return invoke<UnifiedSession[]>("get_unified_sessions");
 }
 
@@ -103,7 +98,10 @@ export async function getSessionTranscript(
   harness: string,
   sessionId: string,
 ): Promise<TranscriptTurn[]> {
-  if (fixturesEnabled()) return fixtureSessionTranscript(harness, sessionId) ?? [];
+  if (fixturesEnabled()) {
+    const { fixtureSessionTranscript } = await loadDevFixtures();
+    return fixtureSessionTranscript(harness, sessionId) ?? [];
+  }
   if (!isTauri()) return [];
   return invoke<TranscriptTurn[]>("get_session_transcript", {
     harness,
@@ -144,14 +142,15 @@ export function peekWarmedSessions(): UnifiedSession[] | null {
 }
 
 /** Pin or unpin one conversation; resolves to the state after the toggle. */
-export function togglePinSession(
+export async function togglePinSession(
   harness: string,
   sessionId: string,
   label?: string | null,
 ): Promise<boolean> {
   if (fixturesEnabled()) {
     void label;
-    return Promise.resolve(fixtureTogglePin(harness, sessionId));
+    const { fixtureTogglePin } = await loadDevFixtures();
+    return fixtureTogglePin(harness, sessionId);
   }
   return invoke<boolean>("toggle_pin_session", {
     harness,
@@ -160,16 +159,20 @@ export function togglePinSession(
   });
 }
 
-export function getRetentionPolicy(): Promise<RetentionPolicy> {
-  if (fixturesEnabled()) return Promise.resolve(fixtureRetention());
+export async function getRetentionPolicy(): Promise<RetentionPolicy> {
+  if (fixturesEnabled()) {
+    const { fixtureRetention } = await loadDevFixtures();
+    return fixtureRetention();
+  }
   return invoke<RetentionPolicy>("get_retention_policy");
 }
 
 /** Replace the retention rules; the pin list is preserved by the core. */
-export function saveRetentionPolicy(policy: RetentionPolicy): Promise<void> {
+export async function saveRetentionPolicy(policy: RetentionPolicy): Promise<void> {
   if (fixturesEnabled()) {
+    const { fixtureSaveRetention } = await loadDevFixtures();
     fixtureSaveRetention(policy);
-    return Promise.resolve();
+    return;
   }
   return invoke<void>("save_retention_policy", { policy });
 }
@@ -196,13 +199,19 @@ export async function saveRetentionPolicyCached(policy: RetentionPolicy): Promis
 }
 
 /** Dry run: what `purgeSessions` would delete for this filter. */
-export function estimatePurge(filter: PurgeFilter): Promise<PurgeEstimate> {
-  if (fixturesEnabled()) return Promise.resolve(fixtureEstimate(filter));
+export async function estimatePurge(filter: PurgeFilter): Promise<PurgeEstimate> {
+  if (fixturesEnabled()) {
+    const { fixtureEstimate } = await loadDevFixtures();
+    return fixtureEstimate(filter);
+  }
   return invoke<PurgeEstimate>("estimate_purge", { filter });
 }
 
 /** Delete every session the filter matches, keeping pinned and open ones. */
-export function purgeSessions(filter: PurgeFilter): Promise<PurgeReport> {
-  if (fixturesEnabled()) return Promise.resolve(fixturePurge(filter));
+export async function purgeSessions(filter: PurgeFilter): Promise<PurgeReport> {
+  if (fixturesEnabled()) {
+    const { fixturePurge } = await loadDevFixtures();
+    return fixturePurge(filter);
+  }
   return invoke<PurgeReport>("purge_sessions", { filter });
 }

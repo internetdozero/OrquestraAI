@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import { devMockMode, fixtureOfficialStore, fixtureSkills } from "./fixtures.ts";
+import { devMockMode } from "./fixtures.ts";
+import { loadDevFixtures } from "./devFixtureLoader.ts";
 import type { HarnessSummary } from "./harnesses";
 import type { SkillItem } from "./skills";
 
@@ -45,9 +46,10 @@ export function useCoreStatus() {
 }
 
 /** List skills evaluated for `harnessId`; `global` evaluates the baseline. */
-export function listSkills(harnessId: string): Promise<SkillItem[]> {
+export async function listSkills(harnessId: string): Promise<SkillItem[]> {
   if (devMockMode()) {
-    return Promise.resolve(fixtureSkills());
+    const { fixtureSkills } = await loadDevFixtures();
+    return fixtureSkills();
   }
   return invoke<SkillItem[]>("list_skills", {
     harnessId: harnessId === "global" ? null : harnessId,
@@ -135,8 +137,11 @@ export interface OfficialStore {
 }
 
 /** Fetch the curated Official Store (static data, never fails to exist). */
-export function listOfficialStore(): Promise<OfficialStore> {
-  if (devMockMode()) return Promise.resolve(fixtureOfficialStore());
+export async function listOfficialStore(): Promise<OfficialStore> {
+  if (devMockMode()) {
+    const { fixtureOfficialStore } = await loadDevFixtures();
+    return fixtureOfficialStore();
+  }
   return invoke<OfficialStore>("list_official_store");
 }
 

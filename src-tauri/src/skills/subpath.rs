@@ -125,7 +125,7 @@ pub(crate) fn locate_skill_dir(staging: &Path, subpath: Option<&str>) -> Option<
 /// Shallow-clone `url` into `destination` (which must not exist yet).
 /// The caller strips any `#subpath` fragment first.
 pub(crate) fn clone_shallow(url: &str, destination: &Path) -> Result<(), String> {
-    use std::process::{Command, Stdio};
+    use std::process::Stdio;
     use std::time::{Duration, Instant};
 
     const TIMEOUT: Duration = Duration::from_secs(120);
@@ -135,7 +135,8 @@ pub(crate) fn clone_shallow(url: &str, destination: &Path) -> Result<(), String>
         .join("git-clone.stderr");
     let stderr_file = std::fs::File::create(&stderr_path)
         .map_err(|error| format!("failed to capture git clone output: {error}"))?;
-    let mut child = Command::new("git")
+    let mut command = crate::exec_env::hidden("git")?;
+    let mut child = command
         .args([
             "-c",
             "http.lowSpeedLimit=1000",
@@ -223,7 +224,7 @@ pub(crate) fn refresh_skill_dir(
         .map(|metadata| metadata.file_type().is_dir())
         .unwrap_or(false);
     if real_checkout {
-        let output = std::process::Command::new("git")
+        let output = crate::exec_env::hidden("git")?
             .arg("-C")
             .arg(vault_dir)
             .args(["pull", "--ff-only"])

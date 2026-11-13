@@ -88,6 +88,52 @@ recorded, expected outcome there, not a regression.
 An AppImage is not a solution for this class of failure: an AppImage still
 links the host glibc, so it fails the same way.
 
+### Flatpak sandbox limits
+
+Only what the GNOME runtime ships is executable inside the sandbox. Host
+binaries are not visible, even with `--filesystem=home`, because the loader and
+`/usr` differ. `git`, `node`/`npx` and the Python `venv` module are therefore
+unavailable in the Flatpak channel; `skills` sync/import and official MCP
+install require the `.deb`, the installer binary or the AppImage. The app
+reports them as missing instead of failing at the first click, and the
+Settings → About probe names the sandbox.
+
+The vault key uses `org.freedesktop.secrets`; the manifest declares
+`--talk-name=org.freedesktop.secrets` and `--filesystem=xdg-run/keyring`. When
+no provider answers, the app falls back to a `0600` key file and says so.
+
+## Runtime tools (Linux)
+
+The binary links its UI stack, but several features shell out to commands that
+are not shared libraries. `install.sh` diagnoses and installs them unless
+`--no-auto-deps` was passed; the `.deb` declares `xdg-utils` and the library
+dependencies.
+
+| Command                   | Feature                                    | Package                            |
+| ------------------------- | ------------------------------------------ | ---------------------------------- |
+| `xdg-open` or `gio`       | open links, reveal folders                 | `xdg-utils` (or GLib's `gio`)      |
+| `git`                     | skill import, official extension sync      | `git`                              |
+| `python3` + `venv`        | install official Python MCP servers        | `python3`, `python3-venv` (Debian) |
+| `node` / `npx`            | start npx-based MCP presets                | `nodejs`/`npm`                     |
+| `dbus` session + keyring  | keep the vault key in the OS keyring       | `gnome-keyring` or `kwallet`       |
+
+Without a keyring the vault still works, protected by a `0600` key file beside
+the ciphertext; Settings → About shows the backend and the reason.
+
+### Wayland and NVIDIA
+
+WebKitGTK 2.42+ renders through DMA-BUF, which produces a blank window or a
+crash with the proprietary NVIDIA driver on Wayland. Launch with
+
+```sh
+WEBKIT_DISABLE_DMABUF_RENDERER=1 orquestra
+# or, equivalently:
+ORQUESTRA_WEBKIT_SOFTWARE=1 orquestra
+```
+
+To test the X11 path instead, set `GDK_BACKEND=x11`; the app never overrides an
+explicit `GDK_BACKEND`.
+
 ## macOS
 
 Two assets are published per architecture, and the installer takes the first

@@ -1,18 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { loadCacheValue } from "./dataCache.ts";
-import {
-  devMockMode,
-  fixtureCreateIdea,
-  fixtureProductivity,
-  fixtureDeleteIdea,
-  fixtureListIdeaProjects,
-  fixtureListIdeas,
-  fixtureListNotes,
-  fixtureMarkNoteRead,
-  fixturePostNote,
-  fixtureUpdateIdea,
-  fixtureUpdateIdeaStatus,
-} from "./fixtures.ts";
+import { devMockMode } from "./fixtures.ts";
+import { loadDevFixtures } from "./devFixtureLoader.ts";
 
 /** Closed vocabularies, mirroring the Rust core and the Python MCP. */
 export type IdeaCategory = "feature" | "architecture" | "bug" | "ux" | "idea";
@@ -88,13 +77,16 @@ export interface PostNoteInput {
  * pass `"all"` to disable the status filter. `limit`/`offset` page the
  * result; omitting them returns the backend's default first page (500).
  */
-export function listIdeas(
+export async function listIdeas(
   project?: string | null,
   status?: string | null,
   limit?: number | null,
   offset?: number | null,
 ): Promise<IdeaItem[]> {
-  if (devMockMode()) return Promise.resolve(fixtureListIdeas(project, status));
+  if (devMockMode()) {
+    const { fixtureListIdeas } = await loadDevFixtures();
+    return fixtureListIdeas(project, status);
+  }
   return invoke<IdeaItem[]>("list_ideas", {
     project: project ?? null,
     status: status ?? null,
@@ -104,8 +96,11 @@ export function listIdeas(
 }
 
 /** Distinct project names for the filter dropdown. */
-export function listIdeaProjects(): Promise<string[]> {
-  if (devMockMode()) return Promise.resolve(fixtureListIdeaProjects());
+export async function listIdeaProjects(): Promise<string[]> {
+  if (devMockMode()) {
+    const { fixtureListIdeaProjects } = await loadDevFixtures();
+    return fixtureListIdeaProjects();
+  }
   return invoke<string[]>("list_idea_projects");
 }
 
@@ -148,26 +143,39 @@ export function loadBlackboardNotes(): Promise<BlackboardNote[]> {
 }
 
 /** Record one idea; resolves to the stored row. */
-export function createIdea(input: CreateIdeaInput): Promise<IdeaItem> {
-  if (devMockMode()) return Promise.resolve(fixtureCreateIdea(input));
+export async function createIdea(input: CreateIdeaInput): Promise<IdeaItem> {
+  if (devMockMode()) {
+    const { fixtureCreateIdea } = await loadDevFixtures();
+    return fixtureCreateIdea(input);
+  }
   return invoke<IdeaItem>("create_idea", { input });
 }
 
 /** Partial update; resolves to the stored row. */
-export function updateIdea(input: UpdateIdeaInput): Promise<IdeaItem> {
-  if (devMockMode()) return Promise.resolve(fixtureUpdateIdea(input));
+export async function updateIdea(input: UpdateIdeaInput): Promise<IdeaItem> {
+  if (devMockMode()) {
+    const { fixtureUpdateIdea } = await loadDevFixtures();
+    return fixtureUpdateIdea(input);
+  }
   return invoke<IdeaItem>("update_idea", { input });
 }
 
 /** Move one idea to a new status; resolves to the stored row. */
-export function updateIdeaStatus(id: number, status: string): Promise<IdeaItem> {
-  if (devMockMode()) return Promise.resolve(fixtureUpdateIdeaStatus(id, status));
+export async function updateIdeaStatus(id: number, status: string): Promise<IdeaItem> {
+  if (devMockMode()) {
+    const { fixtureUpdateIdeaStatus } = await loadDevFixtures();
+    return fixtureUpdateIdeaStatus(id, status);
+  }
   return invoke<IdeaItem>("update_idea_status", { id, status });
 }
 
 /** Delete one idea; rejects on an unknown id. */
-export function deleteIdea(id: number): Promise<void> {
-  if (devMockMode()) return Promise.resolve(fixtureDeleteIdea(id));
+export async function deleteIdea(id: number): Promise<void> {
+  if (devMockMode()) {
+    const { fixtureDeleteIdea } = await loadDevFixtures();
+    fixtureDeleteIdea(id);
+    return;
+  }
   return invoke<void>("delete_idea", { id });
 }
 
@@ -175,12 +183,15 @@ export function deleteIdea(id: number): Promise<void> {
  * Blackboard notes oldest first, optionally unread only and/or one project.
  * Paged like ideas; omitting `limit` returns the default page.
  */
-export function listBlackboardNotes(
+export async function listBlackboardNotes(
   project?: string | null,
   unreadOnly?: boolean,
   limit?: number | null,
 ): Promise<BlackboardNote[]> {
-  if (devMockMode()) return Promise.resolve(fixtureListNotes(project, unreadOnly));
+  if (devMockMode()) {
+    const { fixtureListNotes } = await loadDevFixtures();
+    return fixtureListNotes(project, unreadOnly);
+  }
   return invoke<BlackboardNote[]>("list_blackboard_notes", {
     project: project ?? null,
     unreadOnly: unreadOnly ?? true,
@@ -190,14 +201,21 @@ export function listBlackboardNotes(
 }
 
 /** Post a note for other agents; resolves to the stored row. */
-export function postBlackboardNote(input: PostNoteInput): Promise<BlackboardNote> {
-  if (devMockMode()) return Promise.resolve(fixturePostNote(input));
+export async function postBlackboardNote(input: PostNoteInput): Promise<BlackboardNote> {
+  if (devMockMode()) {
+    const { fixturePostNote } = await loadDevFixtures();
+    return fixturePostNote(input);
+  }
   return invoke<BlackboardNote>("post_blackboard_note", { input });
 }
 
 /** Mark one note read; rejects on an unknown id. */
-export function markNoteRead(id: number): Promise<void> {
-  if (devMockMode()) return Promise.resolve(fixtureMarkNoteRead(id));
+export async function markNoteRead(id: number): Promise<void> {
+  if (devMockMode()) {
+    const { fixtureMarkNoteRead } = await loadDevFixtures();
+    fixtureMarkNoteRead(id);
+    return;
+  }
   return invoke<void>("mark_note_read", { id });
 }
 
@@ -227,11 +245,14 @@ export interface ProductivityMetrics {
  * Developer velocity: Idea Vault completions per day. `weeks` defaults to
  * 16 on the core side; `project` scopes the deliveries.
  */
-export function getProductivityMetrics(
+export async function getProductivityMetrics(
   project?: string | null,
   weeks?: number | null,
 ): Promise<ProductivityMetrics> {
-  if (devMockMode()) return Promise.resolve(fixtureProductivity(project, weeks));
+  if (devMockMode()) {
+    const { fixtureProductivity } = await loadDevFixtures();
+    return fixtureProductivity(project, weeks);
+  }
   return invoke<ProductivityMetrics>("get_productivity_metrics", {
     project: project ?? null,
     weeks: weeks ?? null,

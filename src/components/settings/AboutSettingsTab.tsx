@@ -147,6 +147,14 @@ export function AboutSettingsTab({
             {a.toolsMissing(tools.missing.join(", "))}
           </p>
         )}
+        {tools?.note && (
+          <p
+            role="status"
+            className="mt-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-[11.5px] text-sky-200"
+          >
+            {tools.note}
+          </p>
+        )}
         <ul className="mt-2 space-y-1.5">
           {(tools?.tools ?? []).map((tool) => (
             <li
@@ -167,6 +175,9 @@ export function AboutSettingsTab({
               <p className="mt-0.5 text-[11px] text-zinc-500">
                 {tool.disables.map((feature) => a.toolFeature(feature)).join(" · ")}
               </p>
+              {!tool.present && tool.hint && (
+                <p className="mt-0.5 text-[10.5px] text-amber-200/80">{tool.hint}</p>
+              )}
             </li>
           ))}
         </ul>

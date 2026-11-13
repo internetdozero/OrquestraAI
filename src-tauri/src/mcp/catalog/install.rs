@@ -84,9 +84,13 @@ fn install_repository(
     }
 
     let virtual_env = install_dir.join(".venv");
-    let python = python_command();
+    let python = python_command()?;
+    ensure_python_venv(&python)?;
     run(
-        Command::new(python).arg("-m").arg("venv").arg(&virtual_env),
+        Command::new(&python)
+            .arg("-m")
+            .arg("venv")
+            .arg(&virtual_env),
         "create the MCP's private Python environment",
     )?;
 
@@ -152,6 +156,7 @@ fn allocate_install_dir(base: &Path) -> Result<PathBuf, String> {
 }
 
 fn run(command: &mut Command, action: &str) -> Result<(), String> {
+    crate::exec_env::hide_console(command);
     let output = command
         .output()
         .map_err(|error| format!("could not {action}: {error}"))?;
@@ -167,33 +172,54 @@ fn run(command: &mut Command, action: &str) -> Result<(), String> {
 }
 
 pub(super) fn find_command(command: &str) -> Option<PathBuf> {
-    let path = Path::new(command);
-    if path.components().count() > 1 || path.is_absolute() {
-        return is_executable(path).then(|| path.to_path_buf());
-    }
-    let search = std::env::var_os("PATH")?;
-    for directory in std::env::split_paths(&search) {
-        let candidate = directory.join(command);
-        if is_executable(&candidate) {
-            return Some(candidate);
-        }
-        #[cfg(windows)]
-        for suffix in [".exe", ".cmd", ".bat"] {
-            let candidate = directory.join(format!("{command}{suffix}"));
-            if is_executable(&candidate) {
-                return Some(candidate);
-            }
-        }
-    }
-    None
+    // `exec_env` also knows the login shell's PATH (`nvm`, `mise`, cargo) and
+    // the Windows user PATH, which a menu-launched GUI process does not get.
+    crate::exec_env::resolve(command)
 }
 
-fn python_command() -> &'static str {
-    if cfg!(windows) {
-        "python"
+/// Path to a Python that can create virtual environments.
+///
+/// Windows prefers the `py` launcher and rejects the Microsoft Store alias,
+/// which opens the store instead of running Python.
+fn python_command() -> Result<PathBuf, String> {
+    let candidates: &[&str] = if cfg!(windows) {
+        &["py", "python"]
     } else {
-        "python3"
+        &["python3"]
+    };
+    for candidate in candidates {
+        let Some(path) = crate::exec_env::resolve(candidate) else {
+            continue;
+        };
+        if cfg!(windows)
+            && path
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .contains("windowsapps")
+        {
+            continue;
+        }
+        return Ok(path);
     }
+    Err(crate::exec_env::missing_message("python3"))
+}
+
+/// Refuse to start an install that cannot possibly finish, with the package
+/// to install instead of `ensurepip is not available`.
+fn ensure_python_venv(python: &Path) -> Result<(), String> {
+    let mut command = Command::new(python);
+    command.args(["-m", "venv", "--help"]);
+    let ok = command
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+    if ok {
+        return Ok(());
+    }
+    Err(format!(
+        "{} cannot create virtual environments; install Python's venv module (Debian/Ubuntu: sudo apt install python3-venv)",
+        python.display()
+    ))
 }
 
 fn venv_python(virtual_env: &Path) -> PathBuf {
@@ -227,21 +253,6 @@ fn is_real_directory(path: &Path) -> bool {
 fn is_symlink(path: &Path) -> bool {
     fs::symlink_metadata(path)
         .map(|metadata| metadata.file_type().is_symlink())
-        .unwrap_or(false)
-}
-
-#[cfg(unix)]
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    fs::metadata(path)
-        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
-}
-
-#[cfg(not(unix))]
-fn is_executable(path: &Path) -> bool {
-    fs::metadata(path)
-        .map(|metadata| metadata.is_file())
         .unwrap_or(false)
 }
 

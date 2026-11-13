@@ -147,9 +147,62 @@ fn set_mode(_path: &Path, _mode: u32, _what: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Archive `root/name` into `archive` (`.tar.gz`), replacing any existing
+/// file there. Used by `skills export --tar` so it never shells out to the
+/// system `tar` (missing before Windows 10/1803, absent on minimal images).
+pub fn write_dir_archive(root: &Path, name: &str, archive: &Path) -> Result<(), String> {
+    let source = root.join(name);
+    if !source.is_dir() {
+        return Err(format!("{} is not a directory", source.display()));
+    }
+
+    let file = File::create(archive)
+        .map_err(|error| format!("failed to create {}: {error}", archive.display()))?;
+    let result = fill_dir_archive(&source, name, file);
+    if result.is_err() {
+        let _ = std::fs::remove_file(archive);
+    }
+    result.map_err(|error| format!("failed to archive {name}: {error}"))
+}
+
+fn fill_dir_archive(source: &Path, name: &str, file: File) -> Result<(), String> {
+    let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+    let mut builder = tar::Builder::new(encoder);
+    // Projections and skill folders may contain links; storing them as links
+    // keeps the archive small and never duplicates content outside the vault.
+    builder.follow_symlinks(false);
+    builder
+        .append_dir_all(name, source)
+        .map_err(|error| error.to_string())?;
+    let mut file = builder
+        .into_inner()
+        .map_err(|error| error.to_string())?
+        .finish()
+        .map_err(|error| error.to_string())?;
+    file.flush().map_err(|error| error.to_string())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::create_backup_at;
+    use super::{create_backup_at, write_dir_archive};
+
+    #[test]
+    fn exports_one_directory_without_external_tar() {
+        let scratch = crate::paths::fresh_scratch_dir("archive-export").expect("scratch");
+        let skill = scratch.join("vault/demo-skill");
+        std::fs::create_dir_all(&skill).expect("skill dir");
+        std::fs::write(skill.join("SKILL.md"), "# demo\n").expect("skill file");
+
+        let archive = scratch.join("demo-skill.tar.gz");
+        write_dir_archive(&scratch.join("vault"), "demo-skill", &archive).expect("archive");
+
+        let names = entry_names(&archive);
+        assert!(
+            names.iter().any(|name| name == "demo-skill/SKILL.md"),
+            "{names:?}"
+        );
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
 
     #[cfg(unix)]
     fn mode_of(path: &std::path::Path) -> u32 {

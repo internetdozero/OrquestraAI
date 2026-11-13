@@ -139,6 +139,68 @@ check_linux_glibc() {
     echo "✓ glibc ${available} can run this binary (needs ${required})."
 }
 
+# Commands the app shells out to. The binary starts without them, but the
+# features they power fail at the first click, so diagnose them here instead
+# of leaving the operator with a generic error inside the app.
+# Argument: "check" reports only; "install" also installs when allowed.
+ensure_linux_tools() {
+    mode=$1
+    missing=""
+    if ! command -v xdg-open >/dev/null 2>&1 && ! command -v gio >/dev/null 2>&1; then
+        missing="$missing opener"
+    fi
+    command -v git >/dev/null 2>&1 || missing="$missing git"
+    python_ok=1
+    command -v python3 >/dev/null 2>&1 || python_ok=0
+    if [ "$python_ok" = "1" ] && ! python3 -c 'import ensurepip' >/dev/null 2>&1; then python_ok=0; fi
+    if [ "$python_ok" = "1" ] && ! python3 -m venv --help >/dev/null 2>&1; then python_ok=0; fi
+    [ "$python_ok" = "1" ] || missing="$missing python"
+
+    [ -z "$missing" ] && return 0
+
+    echo "⚠️  Optional runtime tools missing:${missing}" >&2
+    echo "   They power: opening links/folders (xdg-utils or gio), skill sync/import (git)," >&2
+    echo "   official MCP installs (python3 with venv/ensurepip)." >&2
+    [ "$mode" = "check" ] && return 1
+
+    if command -v pacman >/dev/null 2>&1; then
+        mgr="pacman"; cmd="pacman -S --needed --noconfirm"; p_open="xdg-utils"; p_git="git"; p_py="python"
+    elif command -v apt-get >/dev/null 2>&1; then
+        mgr="apt-get"; cmd="apt-get install -y"; p_open="xdg-utils"; p_git="git"; p_py="python3 python3-venv"
+    elif command -v dnf >/dev/null 2>&1; then
+        mgr="dnf"; cmd="dnf install -y"; p_open="xdg-utils"; p_git="git"; p_py="python3"
+    elif command -v zypper >/dev/null 2>&1; then
+        mgr="zypper"; cmd="zypper --non-interactive install"; p_open="xdg-utils"; p_git="git"; p_py="python3"
+    elif command -v apk >/dev/null 2>&1; then
+        mgr="apk"; cmd="apk add"; p_open="xdg-utils"; p_git="git"; p_py="python3"
+    else
+        echo "   No supported package manager found; install them manually." >&2
+        return 1
+    fi
+
+    pkgs=""
+    for feature in $missing; do
+        case "$feature" in
+            opener) pkgs="$pkgs $p_open" ;;
+            git) pkgs="$pkgs $p_git" ;;
+            python) pkgs="$pkgs $p_py" ;;
+        esac
+    done
+    SUDO=""
+    if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; else
+            echo "   Run as root to install them automatically." >&2
+            return 1
+        fi
+    fi
+    echo "📦 Installing missing runtime tools with ${mgr}:${pkgs}"
+    if [ "$mgr" = "apt-get" ]; then
+        $SUDO apt-get update && $SUDO apt-get install -y $pkgs
+    else
+        $SUDO $cmd $pkgs
+    fi
+}
+
 check_linux_runtime_deps() {
     binary_path=$1
     if ! command -v ldd >/dev/null 2>&1; then
@@ -178,7 +240,9 @@ check_linux_runtime_deps() {
 if [ "$CHECK_DEPS_ONLY" = "1" ]; then
     [ "$(uname -s)" = "Linux" ] || { echo "❌ Runtime dependency diagnostics currently support Linux only." >&2; exit 2; }
     [ -x "$TARGET_BIN" ] || { echo "❌ Installed OrquestraAI binary not found at ${TARGET_BIN}." >&2; exit 1; }
-    check_linux_runtime_deps "$TARGET_BIN" && exit 0 || exit "$?"
+    check_linux_runtime_deps "$TARGET_BIN" || exit "$?"
+    ensure_linux_tools check || true
+    exit 0
 fi
 
 # 1. Dependency Checks
@@ -413,6 +477,9 @@ if [ "$OS" = "Linux" ]; then
     if ! check_linux_runtime_deps "${TMP_DIR}/${ASSET}"; then
         echo "❌ Installation stopped before replacing the installed binary." >&2
         exit 1
+    fi
+    if [ "$AUTO_INSTALL_DEPS" = "1" ]; then
+        ensure_linux_tools install || true
     fi
 fi
 

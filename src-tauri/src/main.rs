@@ -5,6 +5,20 @@
 // which re-exports them from `orquestra-core`.
 pub use orquestra_core::log_error;
 
+/// Opt-in software rendering for WebKitGTK: `WEBKIT_DISABLE_DMABUF_RENDERER`
+/// fixes the blank window / crash seen with the proprietary NVIDIA driver on
+/// Wayland. An explicit value from the operator always wins.
+#[cfg(target_os = "linux")]
+fn maybe_disable_dmabuf() {
+    let requested = std::env::var("ORQUESTRA_WEBKIT_SOFTWARE")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if !requested || std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some() {
+        return;
+    }
+    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+}
+
 /// Default a Wayland session to the native backend, but never overrule the
 /// operator: an explicit `GDK_BACKEND` (for example `x11` to run through
 /// XWayland, or `broadway`) is a deliberate choice and is left alone.
@@ -40,7 +54,10 @@ fn main() {
     attach_parent_console();
 
     #[cfg(target_os = "linux")]
-    prefer_native_wayland_backend();
+    {
+        maybe_disable_dmabuf();
+        prefer_native_wayland_backend();
+    }
 
     // Headless operator entry points: the same bridge code the UI invokes,
     // usable from a terminal so fusion can be scripted or verified over SSH.

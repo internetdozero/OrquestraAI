@@ -9,11 +9,17 @@ export interface ToolProbe {
   version: string | null;
   /** Feature ids that stop working without it. */
   disables: string[];
+  /** Install command for this platform, when the tool is unavailable. */
+  hint: string | null;
 }
 
 export interface ToolReport {
   tools: ToolProbe[];
   missing: string[];
+  /** True inside a Flatpak sandbox, where host binaries are invisible. */
+  sandboxed: boolean;
+  /** Environment note (for example the Flatpak limitation), when relevant. */
+  note: string | null;
 }
 
 /**
@@ -24,7 +30,7 @@ export interface ToolReport {
 export const TOOL_PROBE_KEY = "tools:probe";
 export const TOOL_PROBE_TTL_MS = 5 * 60_000;
 
-/** Probe `git` and `tar` so a missing tool explains itself before it is used. */
+/** Probe every external tool so a missing one explains itself before it is used. */
 export function probeExternalTools(options?: { force?: boolean }): Promise<ToolReport> {
   const request = {
     key: TOOL_PROBE_KEY,

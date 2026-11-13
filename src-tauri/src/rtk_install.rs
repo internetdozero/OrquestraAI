@@ -6,15 +6,18 @@ const REPO: &str = "https://github.com/rtk-ai/rtk";
 const MAX_DOWNLOAD: usize = 64 * 1024 * 1024;
 
 pub fn status() -> Option<String> {
-    let candidates = std::env::var_os("PATH")
-        .into_iter()
-        .flat_map(|paths| std::env::split_paths(&paths).collect::<Vec<_>>())
-        .map(|dir| dir.join(binary_name()))
-        .chain(
-            crate::paths::require_home("locate RTK")
-                .ok()
-                .map(|home| install_dir(&home).join(binary_name())),
-        );
+    // `exec_env` searches the login shell's PATH too, which is where a GUI
+    // launch finds nvm/cargo/mise binaries.
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+    if let Some(found) = crate::exec_env::resolve(binary_name()) {
+        candidates.push(found);
+    }
+    if let Ok(home) = crate::paths::require_home("locate RTK") {
+        let installed = install_dir(&home).join(binary_name());
+        if !candidates.contains(&installed) {
+            candidates.push(installed);
+        }
+    }
 
     for path in candidates {
         if !path.is_file() {
@@ -140,7 +143,13 @@ pub fn install() -> Result<String, String> {
         .map(|paths| std::env::split_paths(&paths).collect::<Vec<_>>())
         .unwrap_or_default();
     let mut message = format!("RTK {tag} instalado em {}", path.display());
-    if !on_path(&dir, &dirs) {
+    // A login shell may already export the directory even when this process's
+    // PATH does not; do not tell the operator to edit an rc file that is fine.
+    let reachable = on_path(&dir, &dirs)
+        || crate::exec_env::extra_dirs()
+            .iter()
+            .any(|entry| entry == &dir);
+    if !reachable {
         message.push_str(&format!(
             " — este diretório não está no PATH; para usar o RTK adicione:\n  {}",
             path_hint(&dir)

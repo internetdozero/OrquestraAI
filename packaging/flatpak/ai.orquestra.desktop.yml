@@ -37,6 +37,12 @@ finish-args:
   # sandbox without a tray never leaves a headless process.
   - --talk-name=org.kde.StatusNotifierWatcher
   - --filesystem=xdg-run/tray-icon:create
+  # The credentials vault keeps its at-rest key in the Secret Service. Without
+  # these the sandbox cannot reach gnome-keyring/kwallet, every read waits for
+  # provider activation to fail, and the vault silently degrades to the 0600
+  # key file.
+  - --talk-name=org.freedesktop.secrets
+  - --filesystem=xdg-run/keyring
 
 modules:
   - name: orquestra

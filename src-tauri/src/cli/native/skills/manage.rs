@@ -146,21 +146,10 @@ pub(super) fn export(args: &[String]) -> Result<String, CliError> {
     let target_path = PathBuf::from(&out_dir);
     if tar {
         let archive_file = target_path.join(format!("{id}.tar.gz"));
-        let status = std::process::Command::new("tar")
-            .args([
-                "-czf",
-                archive_file.to_string_lossy().as_ref(),
-                "-C",
-                paths.vault.to_string_lossy().as_ref(),
-                id,
-            ])
-            .status()
-            .map_err(|e| CliError::Operation(format!("tar execution failed: {e}")))?;
-        if !status.success() {
-            return Err(CliError::Operation(
-                "failed to create tar archive".to_string(),
-            ));
-        }
+        // In-process archiving, matching the backup contract: Windows before
+        // 10/1803 has no tar.exe and minimal Linux images may omit it.
+        crate::desktop_backup::write_dir_archive(&paths.vault, id, &archive_file)
+            .map_err(CliError::Operation)?;
         let report = serde_json::json!({ "id": id, "archive": archive_file.display().to_string() });
         let human = format!(
             "Exported skill '{id}' as archive to '{}'.",

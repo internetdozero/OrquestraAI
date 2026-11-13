@@ -1,20 +1,14 @@
-import { FIXTURE_IDEAS, FIXTURE_NOTES } from "../mocks/ideaFixtures.ts";
-import { FIXTURE_SESSIONS, fixtureTranscript } from "../mocks/transcriptFixtures.ts";
-import type {
-  BlackboardNote,
-  CreateIdeaInput,
-  IdeaItem,
-  PostNoteInput,
-  UpdateIdeaInput,
-} from "./ideas";
-import type {
-  PurgeEstimate,
-  PurgeFilter,
-  PurgeReport,
-  RetentionPolicy,
-  TranscriptTurn,
-  UnifiedSession,
-} from "./sessions";
+/**
+ * Dev-only switches.
+ *
+ * This module must stay dependency-free: every view imports these helpers,
+ * including in production, and a static import of the fixture data would drag
+ * the whole mock dataset (and the developer paths inside it) into the shipped
+ * bundle. The fixtures themselves live in `devFixtures.ts` and are reached
+ * through a dynamic `import()` from the dev branches only.
+ */
+
+const STORAGE_KEY = "orquestra.fixtureMode";
 
 /**
  * Developer fixture mode: makes the Sessions view and the transcript drawer
@@ -24,8 +18,6 @@ import type {
  * Enable with `?fixtures=1` (remembered in localStorage) and disable with
  * `?fixtures=0`.
  */
-const STORAGE_KEY = "orquestra.fixtureMode";
-
 export function fixturesEnabled(): boolean {
   if (!import.meta.env.DEV || typeof window === "undefined") return false;
   // Never shadow real session data inside the desktop app, even in dev.
@@ -57,212 +49,3 @@ export function devMockMode(): boolean {
   if (!import.meta.env.DEV || typeof window === "undefined") return false;
   return !("__TAURI_INTERNALS__" in window);
 }
-
-/** Core-shaped timestamp for rows created through the mock mutations. */
-function nowStamp(): string {
-  return new Date().toISOString().replace("T", " ").slice(0, 19);
-}
-
-/** Mutable copies so pin/delete/purge exercise the real UI paths. */
-const sessions: UnifiedSession[] = FIXTURE_SESSIONS.map((session) => ({ ...session }));
-
-/** Mutable idea vault / board / catalog so mock edits feel real. */
-const ideas: IdeaItem[] = FIXTURE_IDEAS.map((idea) => ({ ...idea }));
-const notes: BlackboardNote[] = FIXTURE_NOTES.map((note) => ({ ...note }));
-const DEFAULT_RETENTION: RetentionPolicy = {
-  defaultTtlDays: 15,
-  harnessOverrides: {},
-  autoPurgeEnabled: false,
-  autoPurgeIntervalHours: 24,
-  lastRun: null,
-};
-
-let retention: RetentionPolicy = { ...DEFAULT_RETENTION };
-
-export function fixtureSessions(): UnifiedSession[] {
-  return sessions.map((session) => ({ ...session }));
-}
-
-export function fixtureSessionTranscript(
-  harness: string,
-  sessionId: string,
-): TranscriptTurn[] | undefined {
-  return fixtureTranscript(harness, sessionId);
-}
-
-export function fixtureRetention(): RetentionPolicy {
-  return { ...retention, harnessOverrides: { ...retention.harnessOverrides } };
-}
-
-export function fixtureSaveRetention(policy: RetentionPolicy): void {
-  retention = { ...policy, harnessOverrides: { ...policy.harnessOverrides } };
-}
-
-/** Flip one fixture's pin and report the state after the toggle. */
-export function fixtureTogglePin(harness: string, sessionId: string): boolean {
-  const session = sessions.find((entry) => entry.harness === harness && entry.id === sessionId);
-  if (!session) return false;
-  session.isPinned = !session.isPinned;
-  if (!session.isPinned) session.pinLabel = null;
-  return session.isPinned;
-}
-
-function matcher(filter: PurgeFilter): (session: UnifiedSession) => boolean {
-  return (session) => {
-    if (filter.harness && session.harness !== filter.harness) return false;
-    if (filter.sessionIds && !filter.sessionIds.includes(session.id)) return false;
-    if (filter.olderThanDays != null) {
-      const then = Date.parse(session.updatedAt);
-      if (Number.isNaN(then)) return false;
-      const age = Date.now() - then;
-      if (age < filter.olderThanDays * 86_400_000) return false;
-    }
-    return true;
-  };
-}
-
-export function fixtureEstimate(filter: PurgeFilter): PurgeEstimate {
-  const matched = sessions.filter(matcher(filter));
-  const ignorePinned = filter.ignorePinned ?? true;
-  const targets = matched.filter((session) => !(ignorePinned && session.isPinned));
-  const harnesses = [...new Set(targets.map((session) => session.harness))].sort();
-
-  return {
-    sessionsCount: targets.length,
-    reclaimedBytes: targets.reduce((total, session) => total + session.sizeBytes, 0),
-    affectedHarnesses: harnesses,
-    skippedPinnedCount: matched.length - targets.length,
-    skippedActiveCount: 0,
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Ideas mock resolvers (mirror lib/ideas filter semantics)              */
-/* ------------------------------------------------------------------ */
-
-export function fixtureListIdeas(project?: string | null, status?: string | null): IdeaItem[] {
-  return ideas
-    .filter((idea) => {
-      if (project && idea.project !== project) return false;
-      // A missing status defaults to `open`; `all` disables the filter.
-      if (status == null) return idea.status === "open";
-      if (status === "all") return true;
-      return idea.status === status;
-    })
-    .map((idea) => ({ ...idea }));
-}
-
-export function fixtureListIdeaProjects(): string[] {
-  return [...new Set(ideas.map((idea) => idea.project))].sort((a, b) => a.localeCompare(b));
-}
-
-export function fixtureCreateIdea(input: CreateIdeaInput): IdeaItem {
-  const next: IdeaItem = {
-    id: ideas.reduce((max, idea) => Math.max(max, idea.id), 0) + 1,
-    project: input.project,
-    title: input.title,
-    description: input.description ?? null,
-    category: input.category ?? "idea",
-    priority: input.priority ?? "medium",
-    tags: input.tags ?? null,
-    status: "open",
-    createdAt: nowStamp(),
-    updatedAt: nowStamp(),
-    completedAt: null,
-    prompt: input.prompt ?? null,
-  };
-  ideas.push(next);
-  return { ...next };
-}
-
-export function fixtureUpdateIdea(input: UpdateIdeaInput): IdeaItem {
-  const idea = ideas.find((entry) => entry.id === input.id);
-  if (!idea) throw new Error(`Unknown idea id ${input.id}`);
-  if (input.project != null) idea.project = input.project;
-  if (input.title != null) idea.title = input.title;
-  if (input.description !== undefined) idea.description = input.description;
-  if (input.category != null) idea.category = input.category;
-  if (input.priority != null) idea.priority = input.priority;
-  if (input.tags !== undefined) idea.tags = input.tags;
-  if (input.prompt !== undefined) idea.prompt = input.prompt;
-  if (input.status != null) {
-    idea.status = input.status;
-    // Mirror the core: completing stamps, reopening clears, archiving keeps.
-    if (input.status === "completed") idea.completedAt = nowStamp();
-    else if (input.status === "open" || input.status === "in_progress") {
-      idea.completedAt = null;
-    }
-  }
-  idea.updatedAt = nowStamp();
-  return { ...idea };
-}
-
-export function fixtureUpdateIdeaStatus(id: number, status: string): IdeaItem {
-  return fixtureUpdateIdea({ id, status });
-}
-
-export function fixtureDeleteIdea(id: number): void {
-  const index = ideas.findIndex((entry) => entry.id === id);
-  if (index >= 0) ideas.splice(index, 1);
-}
-
-export function fixtureListNotes(project?: string | null, unreadOnly?: boolean): BlackboardNote[] {
-  return notes
-    .filter((note) => {
-      if (project && note.project !== project) return false;
-      if (unreadOnly && note.isRead) return false;
-      return true;
-    })
-    .map((note) => ({ ...note }));
-}
-
-export function fixturePostNote(input: PostNoteInput): BlackboardNote {
-  const next: BlackboardNote = {
-    id: notes.reduce((max, note) => Math.max(max, note.id), 0) + 1,
-    project: input.project,
-    topic: input.topic,
-    sender: input.sender,
-    target: input.target ?? "all",
-    note: input.note,
-    isRead: false,
-    createdAt: nowStamp(),
-  };
-  notes.push(next);
-  return { ...next };
-}
-
-export function fixtureMarkNoteRead(id: number): void {
-  const note = notes.find((entry) => entry.id === id);
-  if (note) note.isRead = true;
-}
-
-export function fixturePurge(filter: PurgeFilter): PurgeReport {
-  const ignorePinned = filter.ignorePinned ?? true;
-  const matches = matcher(filter);
-  let deletedCount = 0;
-  let reclaimedBytes = 0;
-
-  for (let index = sessions.length - 1; index >= 0; index -= 1) {
-    const session = sessions[index];
-    if (!matches(session) || (ignorePinned && session.isPinned)) continue;
-    deletedCount += 1;
-    reclaimedBytes += session.sizeBytes;
-    sessions.splice(index, 1);
-  }
-
-  return { deletedCount, reclaimedBytes, failedCount: 0, errors: [] };
-}
-
-export {
-  fixtureBatchSetMcpAll,
-  fixtureDeleteMcp,
-  fixtureDeployMcps,
-  fixtureListMcpServers,
-  fixtureListMcpTargets,
-  fixtureOfficialStore,
-  fixtureProductivity,
-  fixtureRevealMcpSecret,
-  fixtureSaveMcp,
-  fixtureSetMcpState,
-  fixtureSkills,
-} from "./fixtures/browser.ts";

@@ -17,10 +17,11 @@
 //! runs.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
+
+mod capabilities;
 
 /// Directory holding crash reports: `<store root>/logs`, beside the state the
 /// app already owns on every platform.
@@ -41,6 +42,8 @@ pub struct ToolProbe {
     pub version: Option<String>,
     /// Feature ids that stop working without it.
     pub disables: Vec<String>,
+    /// How to install it, when missing.
+    pub hint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -49,13 +52,14 @@ pub struct ToolReport {
     pub tools: Vec<ToolProbe>,
     /// Ids of the missing tools, so a caller can show one line instead of a list.
     pub missing: Vec<String>,
+    /// True inside a Flatpak sandbox, where host binaries are invisible.
+    pub sandboxed: bool,
+    /// Operator-facing note for this environment, when it changes the rules.
+    pub note: Option<String>,
 }
 
-/// Tools the app shells out to, paired with the features they unlock.
-const REQUIRED_TOOLS: [(&str, &[&str]); 1] = [("git", &["skill_sync", "skill_import"])];
-
-/// Probe every tool in [`REQUIRED_TOOLS`]. Never fails: a missing binary is a
-/// reported capability, not an error.
+/// Probe every external program the app shells out to. Never fails: a
+/// missing binary is a reported capability, not an error.
 #[tauri::command]
 pub fn probe_external_tools() -> ToolReport {
     report()
@@ -89,70 +93,12 @@ fn report() -> ToolReport {
 
 /// The probe, with an optional `PATH` override for the child process.
 ///
-/// Overriding the child's environment instead of the test process's keeps the
-/// "missing tool" case testable without mutating global state that other tests
-/// (and other threads) read at the same time.
+/// Overriding the search path instead of the test process's environment keeps
+/// the "missing tool" case testable without mutating global state that other
+/// tests (and other threads) read at the same time. Resolution itself lives in
+/// [`crate::exec_env`], which also knows the login shell's `PATH`.
 fn report_with(search_path: Option<&std::ffi::OsStr>) -> ToolReport {
-    let tools: Vec<ToolProbe> = REQUIRED_TOOLS
-        .iter()
-        .map(|(id, disables)| {
-            let version = tool_banner(id, search_path);
-            ToolProbe {
-                id: (*id).to_string(),
-                present: version.is_some(),
-                version,
-                disables: disables.iter().map(|name| (*name).to_string()).collect(),
-            }
-        })
-        .collect();
-
-    ToolReport {
-        missing: tools
-            .iter()
-            .filter(|tool| !tool.present)
-            .map(|tool| tool.id.clone())
-            .collect(),
-        tools,
-    }
-}
-
-/// First version line if the binary answers `--version`, else `None`.
-fn tool_banner(id: &str, search_path: Option<&std::ffi::OsStr>) -> Option<String> {
-    let mut command = command(id);
-    if let Some(path) = search_path {
-        command.env("PATH", path);
-    }
-    let output = command.arg("--version").output().ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let first_line = |bytes: &[u8]| {
-        String::from_utf8_lossy(bytes)
-            .lines()
-            .next()
-            .map(str::trim)
-            .filter(|line| !line.is_empty())
-            .map(str::to_string)
-    };
-    // GNU writes the banner to stdout; some builds (notably BSD tar) use stderr.
-    first_line(&output.stdout).or_else(|| first_line(&output.stderr))
-}
-
-/// Build a `Command` that never flashes a console window.
-///
-/// A GUI-subsystem Windows process that spawns a console program opens a new
-/// window for it; `CREATE_NO_WINDOW` suppresses that for a probe the operator
-/// never asked to see.
-fn command(binary: &str) -> Command {
-    #[allow(unused_mut)]
-    let mut command = Command::new(binary);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
-    command
+    capabilities::report(search_path)
 }
 
 /// Install the crash hook: write a report, then let the default hook speak.
@@ -276,16 +222,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn probe_names_every_required_tool() {
+    fn probe_names_every_external_tool() {
         let report = report();
         let ids: Vec<&str> = report.tools.iter().map(|tool| tool.id.as_str()).collect();
-        assert_eq!(ids, ["git"]);
+        for expected in ["git", "python", "node"] {
+            assert!(ids.contains(&expected), "{expected} is not probed: {ids:?}");
+        }
         assert_eq!(
             report.missing.len(),
             report.tools.iter().filter(|tool| !tool.present).count()
         );
         for tool in &report.tools {
-            assert_eq!(tool.present, tool.version.is_some());
+            // A capability can answer `--version` and still be unusable (a
+            // Python without `venv`), so presence implies a banner, not the
+            // other way around.
+            assert!(tool.version.is_some() || !tool.present);
             assert!(!tool.disables.is_empty(), "{} disables nothing", tool.id);
         }
     }
@@ -302,7 +253,7 @@ mod tests {
 
         let report = report_with(Some(empty_path.as_os_str()));
 
-        assert_eq!(report.missing, ["git"]);
+        assert!(report.missing.contains(&"git".to_string()));
         let git = report
             .tools
             .iter()
@@ -311,6 +262,7 @@ mod tests {
         assert!(!git.present);
         assert!(git.version.is_none());
         assert_eq!(git.disables, ["skill_sync", "skill_import"]);
+        assert!(git.hint.as_deref().is_some_and(|hint| hint.contains("git")));
     }
 
     #[test]

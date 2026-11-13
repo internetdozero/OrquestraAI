@@ -89,7 +89,7 @@ fn desktop_install_reports_change_only_once() {
     );
     assert_eq!(
         std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap(),
-        desktop_icons::DESKTOP_ENTRY,
+        desktop_icons::desktop_entry(&desktop_icons::launch_exec()),
     );
     assert!(
         !desktop_icons::install_linux_assets(&data),
@@ -130,7 +130,7 @@ fn desktop_alias_entries_stay_hidden_from_menus() {
     // converges it to hidden, then the install is steady again.
     std::fs::write(
         data.join("applications/orquestra-ai.desktop"),
-        desktop_icons::DESKTOP_ENTRY,
+        desktop_icons::desktop_entry(&desktop_icons::launch_exec()),
     )
     .unwrap();
     assert!(

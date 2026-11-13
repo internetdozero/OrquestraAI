@@ -1,15 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  devMockMode,
-  fixtureBatchSetMcpAll,
-  fixtureDeleteMcp,
-  fixtureDeployMcps,
-  fixtureListMcpServers,
-  fixtureListMcpTargets,
-  fixtureRevealMcpSecret,
-  fixtureSaveMcp,
-  fixtureSetMcpState,
-} from "./fixtures.ts";
+import { devMockMode } from "./fixtures.ts";
+import { loadDevFixtures } from "./devFixtureLoader.ts";
 
 /** Mirrors the Rust `McpServer` struct. */
 export interface McpServer {
@@ -156,19 +147,31 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function listMcpServers(): Promise<McpServer[]> {
-  if (devMockMode()) return Promise.resolve(fixtureListMcpServers());
+export async function listMcpServers(): Promise<McpServer[]> {
+  if (devMockMode()) {
+    const { fixtureListMcpServers } = await loadDevFixtures();
+    return fixtureListMcpServers();
+  }
   return invoke<McpServer[]>("list_mcps");
 }
 
-export function listMcpTargets(): Promise<McpTarget[]> {
-  if (devMockMode()) return Promise.resolve(fixtureListMcpTargets());
+export async function listMcpTargets(): Promise<McpTarget[]> {
+  if (devMockMode()) {
+    const { fixtureListMcpTargets } = await loadDevFixtures();
+    return fixtureListMcpTargets();
+  }
   return invoke<McpTarget[]>("mcp_targets");
 }
 
 /** Enable or disable every server for one scope in a single atomic write. */
-export function batchSetMcpAll(harnessId: string | null, enabled: boolean): Promise<void> {
-  if (devMockMode()) return Promise.resolve(fixtureBatchSetMcpAll(harnessId, enabled));
+export async function batchSetMcpAll(
+  harnessId: string | null,
+  enabled: boolean,
+): Promise<void> {
+  if (devMockMode()) {
+    const { fixtureBatchSetMcpAll } = await loadDevFixtures();
+    return fixtureBatchSetMcpAll(harnessId, enabled);
+  }
   return invoke<void>("batch_set_mcp_all", {
     harnessId: harnessId === "global" ? null : harnessId,
     enabled,
@@ -176,8 +179,15 @@ export function batchSetMcpAll(harnessId: string | null, enabled: boolean): Prom
 }
 
 /** `harnessId` `null` (or `global`) edits the universal baseline. */
-export function setMcpState(id: string, harnessId: string | null, enabled: boolean): Promise<void> {
-  if (devMockMode()) return Promise.resolve(fixtureSetMcpState(id, harnessId, enabled));
+export async function setMcpState(
+  id: string,
+  harnessId: string | null,
+  enabled: boolean,
+): Promise<void> {
+  if (devMockMode()) {
+    const { fixtureSetMcpState } = await loadDevFixtures();
+    return fixtureSetMcpState(id, harnessId, enabled);
+  }
   return invoke<void>("set_mcp_state", {
     id,
     harnessId: harnessId === "global" ? null : harnessId,
@@ -185,24 +195,36 @@ export function setMcpState(id: string, harnessId: string | null, enabled: boole
   });
 }
 
-export function saveMcp(server: McpServer): Promise<void> {
-  if (devMockMode()) return Promise.resolve(fixtureSaveMcp(server));
+export async function saveMcp(server: McpServer): Promise<void> {
+  if (devMockMode()) {
+    const { fixtureSaveMcp } = await loadDevFixtures();
+    return fixtureSaveMcp(server);
+  }
   return invoke<void>("save_mcp", { mcpServer: server });
 }
 
-export function deleteMcp(id: string): Promise<void> {
-  if (devMockMode()) return Promise.resolve(fixtureDeleteMcp(id));
+export async function deleteMcp(id: string): Promise<void> {
+  if (devMockMode()) {
+    const { fixtureDeleteMcp } = await loadDevFixtures();
+    return fixtureDeleteMcp(id);
+  }
   return invoke<void>("delete_mcp", { id });
 }
 
 /** Fetch a single value only after the operator explicitly requests reveal. */
-export function revealMcpSecret(id: string, key: string): Promise<string> {
-  if (devMockMode()) return Promise.resolve(fixtureRevealMcpSecret(id, key));
+export async function revealMcpSecret(id: string, key: string): Promise<string> {
+  if (devMockMode()) {
+    const { fixtureRevealMcpSecret } = await loadDevFixtures();
+    return fixtureRevealMcpSecret(id, key);
+  }
   return invoke<string>("reveal_mcp_secret", { id, key });
 }
 
 /** Re-compile every harness config; resolves with the changed file paths. */
-export function deployMcps(): Promise<string[]> {
-  if (devMockMode()) return Promise.resolve(fixtureDeployMcps());
+export async function deployMcps(): Promise<string[]> {
+  if (devMockMode()) {
+    const { fixtureDeployMcps } = await loadDevFixtures();
+    return fixtureDeployMcps();
+  }
   return invoke<string[]>("deploy_mcps");
 }

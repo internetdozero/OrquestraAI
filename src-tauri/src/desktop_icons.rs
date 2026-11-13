@@ -15,33 +15,80 @@ const ICON_128: &[u8] = include_bytes!("../icons/128x128.png");
 const ICON_64: &[u8] = include_bytes!("../icons/64x64.png");
 const ICON_32: &[u8] = include_bytes!("../icons/32x32.png");
 
-pub(crate) const DESKTOP_ENTRY: &str = r#"[Desktop Entry]
-Name=OrquestraAI
-GenericName=AI Harness Control Plane
-Comment=Universal AI Harness Administration Platform
-Exec=orquestra %U
-Icon=orquestra-ai
-Terminal=false
-Type=Application
-Categories=Development;Utility;System;
-StartupNotify=true
-StartupWMClass=orquestra
-Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;
-"#;
+/// Launcher text with an explicit `Exec=`.
+///
+/// A bare `orquestra` only works when that name is on the menu session's
+/// `PATH`. Running the AppImage from `~/Downloads`, or the binary from any
+/// folder, wrote a launcher that did nothing when clicked.
+pub(crate) fn desktop_entry(exec: &str) -> String {
+    format!(
+        "[Desktop Entry]\n\
+         Name=OrquestraAI\n\
+         GenericName=AI Harness Control Plane\n\
+         Comment=Universal AI Harness Administration Platform\n\
+         Exec={exec} %U\n\
+         Icon=orquestra-ai\n\
+         Terminal=false\n\
+         Type=Application\n\
+         Categories=Development;Utility;System;\n\
+         StartupNotify=true\n\
+         StartupWMClass=orquestra\n\
+         Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;\n"
+    )
+}
+
+/// Absolute path of the running binary, quoted for a `Desktop Entry` file.
+///
+/// Falls back to the bare command only when the path is not representable;
+/// that case is what the old launcher always did.
+pub(crate) fn launch_exec() -> String {
+    // An AppImage runs from a temporary mount that disappears on exit; the
+    // path to keep is the `.AppImage` file itself, which `$APPIMAGE` names.
+    let executable = std::env::var_os("APPIMAGE")
+        .filter(|path| !path.is_empty())
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .map(|path| path.into_os_string())
+        });
+    executable
+        .and_then(|path| path.into_string().ok())
+        .map(|path| quote_exec(&path))
+        .unwrap_or_else(|| "orquestra".to_string())
+}
+
+/// Quote an `Exec` value the way the Desktop Entry spec requires: only when
+/// it contains a reserved character, and with `\\`, `\"`, `` ` `` and `$`
+/// escaped inside the quotes.
+fn quote_exec(path: &str) -> String {
+    let reserved = "\"'\\><~|&;$*?#()`";
+    let needs_quotes = path
+        .chars()
+        .any(|ch| ch.is_whitespace() || reserved.contains(ch));
+    if !needs_quotes {
+        return path.to_string();
+    }
+    let escaped = path
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('`', "\\`")
+        .replace('$', "\\$");
+    format!("\"{escaped}\"")
+}
 
 /// Launcher text for an alias entry: identical to the canonical entry but
 /// hidden from menus. Without this, GNOME/KDE/XFCE list two or three
 /// duplicate OrquestraAI icons (one per alias filename).
-fn alias_entry() -> String {
-    format!("{DESKTOP_ENTRY}NoDisplay=true\n")
+fn alias_entry(exec: &str) -> String {
+    format!("{}NoDisplay=true\n", desktop_entry(exec))
 }
 
 /// Expected launcher bytes per filename: only `orquestra.desktop` is the
 /// visible canonical entry; the technical aliases stay hidden.
-fn entry_for(name: &str) -> Option<String> {
+fn entry_for(name: &str, exec: &str) -> Option<String> {
     match name {
-        "orquestra.desktop" => Some(DESKTOP_ENTRY.to_string()),
-        "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop" => Some(alias_entry()),
+        "orquestra.desktop" => Some(desktop_entry(exec)),
+        "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop" => Some(alias_entry(exec)),
         _ => None,
     }
 }
@@ -75,9 +122,16 @@ pub(crate) fn data_home_with(
 /// Reports whether any bytes changed so the caller can skip the desktop
 /// refresh subprocesses when a launch changed nothing.
 pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
+    // Flatpak exports its own launcher pointing at `/app/bin/orquestra`,
+    // which is meaningless outside the sandbox. Do not shadow it with a
+    // host-visible entry that cannot launch.
+    if crate::exec_env::in_flatpak() {
+        return false;
+    }
     let apps_dir = data_dir.join("applications");
     let icons_base = data_dir.join("icons/hicolor");
     let mut changed = false;
+    let exec = launch_exec();
 
     if !is_symlink(&apps_dir) {
         let _ = std::fs::create_dir_all(&apps_dir);
@@ -93,7 +147,7 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
         }
         // A pre-dedup alias still carries the canonical text: rewrite it
         // hidden so one install pass converges every launcher.
-        let Some(expected) = entry_for(name) else {
+        let Some(expected) = entry_for(name, &exec) else {
             continue;
         };
         let needs_write = match std::fs::read_to_string(&dest) {
@@ -192,13 +246,41 @@ fn is_symlink(path: &std::path::Path) -> bool {
 pub(crate) fn refresh_linux_desktop(data_dir: &std::path::Path) {
     let icons_base = data_dir.join("icons/hicolor");
     let apps_dir = data_dir.join("applications");
-    let _ = std::process::Command::new("gtk-update-icon-cache")
-        .args(["-f", "-t", &icons_base.to_string_lossy()])
-        .output();
-    let _ = std::process::Command::new("update-desktop-database")
-        .arg(&apps_dir)
-        .output();
-    let _ = std::process::Command::new("kbuildsycoca6")
-        .arg("--noincremental")
-        .output();
+    let icons = icons_base.to_string_lossy().into_owned();
+    let apps = apps_dir.to_string_lossy().into_owned();
+
+    let mut unavailable: Vec<&str> = Vec::new();
+    if !run_quiet("gtk-update-icon-cache", &["-f", "-t", &icons]) {
+        unavailable.push("gtk-update-icon-cache");
+    }
+    if !run_quiet("update-desktop-database", &[&apps]) {
+        unavailable.push("update-desktop-database");
+    }
+    // Plasma 6 uses kbuildsycoca6, Plasma 5 uses kbuildsycoca5, and neither
+    // exists outside KDE.
+    if !run_quiet("kbuildsycoca6", &["--noincremental"])
+        && !run_quiet("kbuildsycoca5", &["--noincremental"])
+    {
+        unavailable.push("kbuildsycoca");
+    }
+
+    if !unavailable.is_empty() {
+        crate::log_warn!(
+            "desktop cache refresh unavailable ({}); the launcher or icon may need a re-login to appear",
+            unavailable.join(", ")
+        );
+    }
+}
+
+/// Run a cache refresher if it is installed; `false` means "not available or
+/// failed", which the caller reports once.
+fn run_quiet(program: &str, args: &[&str]) -> bool {
+    let Some(path) = crate::exec_env::resolve(program) else {
+        return false;
+    };
+    std::process::Command::new(path)
+        .args(args)
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
 }

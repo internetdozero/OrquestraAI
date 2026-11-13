@@ -26,13 +26,35 @@ pub fn open_url(url: String) -> Result<(), String> {
     }
     #[cfg(not(windows))]
     {
-        let (program, args) = browser_launch(std::env::consts::OS, &url)?;
-        std::process::Command::new(program)
+        let candidates = browser_candidates(std::env::consts::OS, &url)?;
+        spawn_first(candidates, "open a browser")
+    }
+}
+
+/// Spawn the first launcher that is actually installed.
+///
+/// `xdg-open` lives in `xdg-utils`, which is not a hard dependency of
+/// WebKitGTK/GTK and is absent from minimal Arch installs and containers. A
+/// single hardcoded launcher therefore made every documentation link and
+/// "reveal folder" action fail on a clean machine.
+fn spawn_first(candidates: Vec<(&'static str, Vec<String>)>, action: &str) -> Result<(), String> {
+    let mut tried: Vec<&'static str> = Vec::new();
+    for (program, args) in candidates {
+        let Some(path) = crate::exec_env::resolve(program) else {
+            tried.push(program);
+            continue;
+        };
+        return std::process::Command::new(&path)
             .args(&args)
             .spawn()
             .map(|_| ())
-            .map_err(|error| format!("Failed to open browser: {error}"))
+            .map_err(|error| format!("Failed to {action} with {}: {error}", path.display()));
     }
+    Err(format!(
+        "Failed to {action}: none of {} is installed. {}",
+        tried.join(", "),
+        crate::exec_env::missing_message("xdg-open")
+    ))
 }
 
 /// Reject anything that is not an http(s) URL without control characters.
@@ -51,18 +73,27 @@ fn validate_url(url: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-/// Launcher for one http(s) URL on the platforms that spawn a program.
+/// Launcher candidates for one http(s) URL, best first.
 ///
 /// The URL is a single argv entry, so nothing re-parses it. Windows is absent
 /// on purpose: it uses `ShellExecuteW` in [`crate::windows_shell`], because
 /// `cmd /C start` re-splits the command line on `&` and `rundll32` is a loader
 /// Microsoft documents as not-for-direct-use.
 #[cfg(any(not(windows), test))]
-fn browser_launch(os: &str, url: &str) -> Result<(&'static str, Vec<String>), String> {
+fn browser_candidates(os: &str, url: &str) -> Result<Vec<(&'static str, Vec<String>)>, String> {
     let owned = validate_url(url)?;
     match os {
-        "linux" => Ok(("xdg-open", vec![owned])),
-        "macos" => Ok(("open", vec![owned])),
+        // `gio open` comes with GLib (always present with GTK); the rest cover
+        // desktops that ship a different opener.
+        "linux" => Ok(vec![
+            ("gio", vec!["open".to_string(), owned.clone()]),
+            ("xdg-open", vec![owned.clone()]),
+            ("kde-open6", vec![owned.clone()]),
+            ("kde-open5", vec![owned.clone()]),
+            ("sensible-browser", vec![owned.clone()]),
+            ("x-www-browser", vec![owned]),
+        ]),
+        "macos" => Ok(vec![("open", vec![owned])]),
         other => Err(format!(
             "Opening URLs is not supported on {other}; this build needs the platform shell API"
         )),
@@ -101,29 +132,35 @@ pub fn open_in_file_manager(path: String) -> Result<(), String> {
         target.clone()
     };
 
-    let (program, args) = file_manager_launch(std::env::consts::OS, &target, &reveal)?;
-    std::process::Command::new(program)
-        .args(&args)
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("Failed to launch file manager: {error}"))
+    let candidates = file_manager_candidates(std::env::consts::OS, &target, &reveal)?;
+    spawn_first(candidates, "launch a file manager")
 }
 
-/// Build the platform-specific reveal command without launching it.
-fn file_manager_launch(
+/// Build the platform-specific reveal candidates without launching them.
+fn file_manager_candidates(
     os: &str,
     target: &Path,
     reveal: &Path,
-) -> Result<(&'static str, Vec<String>), String> {
+) -> Result<Vec<(&'static str, Vec<String>)>, String> {
     let path = |path: &Path| {
         path.to_str()
             .map(str::to_string)
             .ok_or_else(|| "Unrepresentable path".to_string())
     };
     match os {
-        "linux" => Ok(("xdg-open", vec![path(reveal)?])),
-        "macos" => Ok(("open", vec!["-R".to_string(), path(target)?])),
-        "windows" => Ok(("explorer", vec![path(reveal)?])),
+        "linux" => {
+            let folder = path(reveal)?;
+            let item = path(target)?;
+            Ok(vec![
+                ("gio", vec!["open".to_string(), folder.clone()]),
+                ("xdg-open", vec![folder.clone()]),
+                ("nautilus", vec!["--select".to_string(), item.clone()]),
+                ("dolphin", vec!["--select".to_string(), item.clone()]),
+                ("thunar", vec![folder]),
+            ])
+        }
+        "macos" => Ok(vec![("open", vec!["-R".to_string(), path(target)?])]),
+        "windows" => Ok(vec![("explorer", vec![path(reveal)?])]),
         _ => Err("Revealing folders is not supported on this platform".to_string()),
     }
 }
@@ -194,27 +231,32 @@ mod icon_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{browser_launch, file_manager_launch, validate_url};
+    use super::{browser_candidates, file_manager_candidates, validate_url};
     use std::path::Path;
 
     #[test]
     fn windows_launch_keeps_the_query_string_out_of_cmd() {
         // Windows does not build a command line at all: the URL goes to
         // `ShellExecuteW`, which cannot re-split a query string.
-        assert!(browser_launch("windows", "https://example.com/a?x=1").is_err());
+        assert!(browser_candidates("windows", "https://example.com/a?x=1").is_err());
         // Validation is shared, so a rejected URL never reaches the shell API.
         assert_eq!(
             validate_url("  https://example.com/a?x=1&y=2  ").expect("valid"),
             "https://example.com/a?x=1&y=2"
         );
 
-        let (program, args) = browser_launch("linux", "  http://example.com/docs  ").expect("http");
-        assert_eq!(program, "xdg-open");
-        assert_eq!(args, vec!["http://example.com/docs".to_string()]);
+        let candidates = browser_candidates("linux", "  http://example.com/docs  ").expect("http");
+        assert_eq!(candidates[0].0, "gio");
+        assert_eq!(
+            candidates[0].1,
+            vec!["open".to_string(), "http://example.com/docs".to_string()]
+        );
+        // The old single launcher is still tried, just not first.
+        assert!(candidates.iter().any(|(program, _)| *program == "xdg-open"));
 
-        assert!(browser_launch("linux", "file:///etc/passwd").is_err());
-        assert!(browser_launch("windows", "https://example.com/\ncalc").is_err());
-        assert!(browser_launch("haiku", "https://example.com").is_err());
+        assert!(browser_candidates("linux", "file:///etc/passwd").is_err());
+        assert!(browser_candidates("windows", "https://example.com/\ncalc").is_err());
+        assert!(browser_candidates("haiku", "https://example.com").is_err());
     }
 
     #[test]
@@ -222,18 +264,25 @@ mod tests {
         let target = Path::new("/home/user/.orquestra/config.json");
         let parent = Path::new("/home/user/.orquestra");
 
+        let macos = file_manager_candidates("macos", target, parent).unwrap();
+        assert_eq!(macos[0].0, "open");
         assert_eq!(
-            file_manager_launch("macos", target, parent).unwrap(),
-            ("open", vec!["-R".to_string(), target.display().to_string()])
+            macos[0].1,
+            vec!["-R".to_string(), target.display().to_string()]
         );
+
+        let linux = file_manager_candidates("linux", target, parent).unwrap();
+        assert_eq!(linux[0].0, "gio");
         assert_eq!(
-            file_manager_launch("linux", target, parent).unwrap(),
-            ("xdg-open", vec![parent.display().to_string()])
+            linux[0].1,
+            vec!["open".to_string(), parent.display().to_string()]
         );
-        assert_eq!(
-            file_manager_launch("windows", target, parent).unwrap(),
-            ("explorer", vec![parent.display().to_string()])
-        );
-        assert!(file_manager_launch("haiku", target, parent).is_err());
+        // Without GLib's gio, the XDG launcher remains available.
+        assert!(linux.iter().any(|(program, _)| *program == "xdg-open"));
+
+        let windows = file_manager_candidates("windows", target, parent).unwrap();
+        assert_eq!(windows[0].0, "explorer");
+        assert_eq!(windows[0].1, vec![parent.display().to_string()]);
+        assert!(file_manager_candidates("haiku", target, parent).is_err());
     }
 }

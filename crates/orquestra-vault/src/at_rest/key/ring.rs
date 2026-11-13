@@ -116,6 +116,11 @@ fn keyring_disabled(root: &Path) -> bool {
     }
 }
 
+/// Longest a Secret Service round-trip may take before the vault falls back
+/// to the `0600` key file. A session bus with no provider activates slowly and
+/// only then reports the failure.
+const KEYRING_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+
 /// Whether the keyring backend is reachable right now. Native backends need
 /// no D-Bus. On Linux, skip the keyring fast when no session bus exists
 /// instead of waiting out a secret-service timeout.
@@ -147,7 +152,27 @@ pub(crate) fn keyring_usable(root: &Path) -> bool {
     if super::test_keyring_is_forced_usable() {
         return true;
     }
-    !keyring_disabled(root) && keyring_reachable()
+    if keyring_disabled(root) || !keyring_reachable() {
+        return false;
+    }
+    // A live session bus is not a live Secret Service: inside Flatpak without
+    // `--talk-name=org.freedesktop.secrets`, or in a WM session with dbus but
+    // no gnome-keyring/kwallet, the first call blocks until the provider
+    // activation times out. Do that once, bounded, instead of on every read.
+    static ALIVE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ALIVE.get_or_init(keyring_responds)
+}
+
+/// One real lookup with a deadline. `NoEntry` still proves the backend
+/// answered; only an error or a timeout means it is unusable.
+fn keyring_responds() -> bool {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(keyring_backend::get(MIGRATED_ACCOUNT).is_ok());
+    });
+    receiver
+        .recv_timeout(KEYRING_PROBE_TIMEOUT)
+        .unwrap_or(false)
 }
 
 /// Read-only keyring lookup. Never creates: `None` means no entry, `Err`

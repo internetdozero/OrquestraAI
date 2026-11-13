@@ -15,6 +15,7 @@ mod desktop_bundle;
 mod desktop_icons;
 #[cfg(any(windows, test))]
 mod desktop_shortcut;
+mod exec_env;
 // `paths`/`harness` re-export `orquestra-core` (task #326): items moved, paths did not.
 pub mod harness;
 pub mod ideas;
@@ -42,7 +43,6 @@ pub mod vault;
 #[cfg(any(windows, test))]
 mod windows_shell;
 
-// Shared structured logging macros re-exported from `orquestra-core`.
 pub use orquestra_core::{log_error, log_info, log_warn};
 
 // Registered as a bare identifier: the IPC contract test reads the handler list
