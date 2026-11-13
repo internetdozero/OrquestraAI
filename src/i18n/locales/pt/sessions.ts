@@ -1,7 +1,7 @@
 /** Sessions view: header, toolbar, purge confirm and retention rules. */
 export const sessions = {
   title: "Sessões & Histórico",
-  subtitle: "Catálogo unificado de conversas dos 9 harnesses.",
+  subtitle: "Catálogo unificado de conversas dos 8 harnesses.",
   totalSessions: "Total de sessões",
   totalSessionsHint: "conversas encontradas no disco",
   diskUsage: "Espaço em disco",
@@ -95,8 +95,5 @@ export const sessions = {
   copiedAll: "Conversa copiada para a área de transferência",
   matchesCount: (count: number) => `${count} resultados`,
   noSearchMatches: "Nenhuma mensagem corresponde à busca",
-  cloudPendingSync: "Nuvem (não sincronizada)",
-  cloudPendingSyncTooltip:
-    "Sessão remota na nuvem (Codebuff Cloud). Abra no Freebuff Desktop para sincronizar localmente.",
   executionTarget: "Alvo de execução",
 };

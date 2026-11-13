@@ -12,7 +12,6 @@ OrquestraAI unifies agent sessions across multiple AI coding harnesses:
 - **Antigravity** (`antigravity`)
 - **OpenCode** (`opencode`)
 - **Codex** (`codex`)
-- **Freebuff / Freebuff Desktop** (`freebuff`)
 - **Copilot CLI** (`copilot`)
 - **Kilo** (`kilo`)
 - **Hermes** (`hermes`)

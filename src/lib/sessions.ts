@@ -14,15 +14,7 @@ import { isTauri } from "./tauri";
 
 /** Canonical harness ids, in the order the core lists them. */
 export type SessionHarness =
-  | "antigravity"
-  | "codex"
-  | "claude"
-  | "freebuff"
-  | "opencode"
-  | "kilo"
-  | "copilot"
-  | "hermes"
-  | "grok";
+  "antigravity" | "codex" | "claude" | "opencode" | "kilo" | "copilot" | "hermes" | "grok";
 
 /** Mirrors the Rust `UnifiedSession` struct: one conversation on disk. */
 export interface UnifiedSession {
@@ -45,7 +37,6 @@ export interface UnifiedSession {
   /** Execution target from harness (e.g. 'cloud' or 'local'). */
   executionTarget?: string | null;
   /** Whether the session was executed in remote cloud and is pending local sync. */
-  isRemoteCloud?: boolean;
 }
 
 /** Which sessions a purge may touch. Mirrors the Rust `PurgeFilter` struct. */
@@ -124,7 +115,7 @@ export async function getSessionTranscript(
  * Cache identity and freshness for the unified catalog.
  *
  * The listing is the most expensive read the UI makes: it walks every harness
- * store and sizes Freebuff worktrees (hundreds of ms, seconds when those hold
+ * store and sizes session folders (hundreds of ms, seconds when worktrees hold
  * `node_modules`). 30 s keeps tab switches free while edits made by another
  * agent still surface quickly; an explicit refresh or a purge bypasses it.
  */

@@ -73,7 +73,7 @@ export const FIXTURE_MCP_SERVERS: McpServer[] = [
     id: "session-relay",
     name: "Session Relay (Cross-Harness)",
     description:
-      "Read-only inspection of Codex, Claude Code, Antigravity, OpenCode and Freebuff sessions, with keyword search and an executive handoff.",
+      "Read-only inspection of Codex, Claude Code, Antigravity and OpenCode sessions, with keyword search and an executive handoff.",
     command: "/usr/local/bin/session-relay-mcp",
     args: [],
     env: {},

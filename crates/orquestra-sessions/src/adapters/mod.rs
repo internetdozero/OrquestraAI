@@ -1,4 +1,4 @@
-//! The [`SessionAdapter`] contract and the registry of all nine harnesses.
+//! The [`SessionAdapter`] contract and the registry of all eight harnesses.
 //!
 //! Adapters are constructed with an explicit home directory so a test can
 //! point them at a fixture tree. Listing is synchronous and read-only: the
@@ -9,8 +9,6 @@ mod antigravity;
 mod claude;
 mod codex;
 mod copilot;
-mod freebuff;
-mod freebuff_desktop;
 pub mod fsops;
 mod grok;
 mod hermes;
@@ -35,11 +33,10 @@ use crate::types::{TranscriptTurn, UnifiedSession};
 pub use utils::home;
 
 /// Canonical harness ids, in the order the UI lists them.
-pub const HARNESS_IDS: [&str; 9] = [
+pub const HARNESS_IDS: [&str; 8] = [
     "antigravity",
     "codex",
     "claude",
-    "freebuff",
     "opencode",
     "kilo",
     "copilot",
@@ -91,7 +88,6 @@ pub fn registry(home: &Path) -> Vec<Box<dyn SessionAdapter>> {
         Box::new(antigravity::Antigravity::new(home)),
         Box::new(codex::Codex::new(home)),
         Box::new(claude::Claude::new(home)),
-        Box::new(freebuff::Freebuff::new(home)),
         Box::new(opencode::OpenCode::new(home)),
         Box::new(kilo::Kilo::new(home)),
         Box::new(copilot::Copilot::new(home)),

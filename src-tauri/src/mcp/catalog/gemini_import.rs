@@ -18,9 +18,8 @@ pub(super) fn adopt_existing(
     let mut changed = false;
 
     // Read only harness-owned user configs. Workspace `.agents` and
-    // Freebuff account-level MCPs/skills are outside this filesystem catalog.
+    // account-level MCPs/skills are outside this filesystem catalog.
     for (rel, scope) in [
-        (".agents/mcp.json", "freebuff"),
         (".gemini/config/mcp_config.json", "antigravity"),
         (".gemini/settings.json", "antigravity"),
     ] {
@@ -177,7 +176,8 @@ mod tests {
         let home = base.join("home");
         let root = base.join("orquestra");
         fs::create_dir_all(home.join(".gemini/config")).expect("Gemini config");
-        fs::create_dir_all(home.join(".agents")).expect("Freebuff config");
+        // An unmanaged file at the old shared root: adoption must ignore it.
+        fs::create_dir_all(home.join(".agents")).expect("shared root");
         let paths = OrquestraPaths {
             vault: root.join("skills-library"),
             active: root.join("active"),
@@ -188,7 +188,7 @@ mod tests {
             home.join(".agents/mcp.json"),
             r#"{"mcpServers":{"exa":{"url":"https://exa.example/mcp"},"rea":{"command":"/bin/echo","args":[]},"orquestra-idea-vault":{"command":"idea-vault","args":[]}}}"#,
         )
-        .expect("Freebuff config");
+        .expect("shared root config");
         fs::write(
             home.join(".gemini/config/mcp_config.json"),
             r#"{"mcpServers":{"exa":{"url":"https://exa.example/mcp"}}}"#,
@@ -210,10 +210,8 @@ mod tests {
             catalog.mcps["exa"].url.as_deref(),
             Some("https://exa.example/mcp")
         );
-        assert_eq!(
-            catalog.mcps["rea"].enabled_harnesses,
-            ["antigravity", "freebuff"]
-        );
+        assert_eq!(catalog.mcps["rea"].enabled_harnesses, ["antigravity"]);
+        // `.agents/mcp.json` belongs to no managed harness any more.
         assert!(!catalog.mcps.contains_key("orquestra-idea-vault"));
         assert_eq!(
             catalog.managed_ids,
@@ -221,11 +219,11 @@ mod tests {
         );
 
         let rea = catalog.mcps.get_mut("rea").expect("rea adopted");
-        rea.enabled_harnesses.retain(|scope| scope != "freebuff");
+        rea.enabled_harnesses.clear();
         save_catalog(&paths, &catalog).expect("save scope change");
         adopt_existing(&paths, &home, &home.join("missing-seed.json")).expect("second scan");
         let catalog = load_catalog(&paths, &home.join("missing-seed.json")).expect("reload");
-        assert_eq!(catalog.mcps["rea"].enabled_harnesses, ["antigravity"]);
+        assert!(catalog.mcps["rea"].enabled_harnesses.is_empty());
         let _ = fs::remove_dir_all(base);
     }
 }

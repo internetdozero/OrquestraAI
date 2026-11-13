@@ -71,8 +71,6 @@ export function harnessColor(harness: string): string {
       return "text-emerald-300 border-emerald-500/25 bg-emerald-500/10";
     case "claude":
       return "text-orange-300 border-orange-500/25 bg-orange-500/10";
-    case "freebuff":
-      return "text-cyan-300 border-cyan-500/25 bg-cyan-500/10";
     case "opencode":
       return "text-sky-300 border-sky-500/25 bg-sky-500/10";
     case "kilo":

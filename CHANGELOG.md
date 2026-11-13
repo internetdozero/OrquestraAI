@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Flatpak Channel:** The release publishes `OrquestraAI-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load.
 
+### Removed
+
+- **Freebuff Harness Support:** Freebuff now keeps skills, MCPs and global instructions in its cloud account, so the folder-based harness integration no longer had an effect. The harness, its session adapters, its MCP target, its instruction/skill links and the cloud-session badge are gone; the other eight harnesses keep full skills, MCP and `AGENTS.md` support. Existing `~/.agents` content is left untouched and is no longer adopted or quarantined.
+
 ### Fixed
 
 - **Windows App Identity:** The Start Menu shortcut now carries `System.AppUserModel.ID`, so the window, the tray icon and the Start Menu entry group as one app instead of by executable path, and a shortcut written by an older build is refreshed once instead of being treated as current forever.

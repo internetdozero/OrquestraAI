@@ -7,7 +7,7 @@
 //!   [`types::UnifiedSession`] per conversation, the transcript turns, and
 //!   the pin/retention/purge payloads the commands exchange.
 //! - [`adapters`] is the [`adapters::SessionAdapter`] contract plus one
-//!   implementation per harness (Claude, Codex, Freebuff, …), the shared
+//!   implementation per harness (Claude, Codex, Grok, …), the shared
 //!   filesystem/transcript/SQLite helpers they build on, and the registry
 //!   that merges an installed fleet into one listing.
 //!

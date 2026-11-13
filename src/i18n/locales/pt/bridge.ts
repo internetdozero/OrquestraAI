@@ -33,8 +33,6 @@ export const bridge = {
   backupConnect: "Fazer backup e conectar",
   linkingHarnesses: "Vinculando harnesses…",
   rationales: {
-    sharedRoot:
-      "Raiz compartilhada que Codex e Grok também leem; o Freebuff a vincula à sua projeção",
     vendorBuiltins:
       "Built-ins do fornecedor vêm com o app; arquivados no cofre para ~/.gemini/config/skills continuar sendo a única fonte do usuário",
     codexVendor: "Checkout de fornecedor que o Codex indexa ao lado de ~/.codex/skills",
@@ -48,7 +46,6 @@ export const bridge = {
   },
   notes: {
     codexSystem: "Pastas internas .system são movidas para a projeção primeiro",
-    freebuff: "O Manicode e ~/.agents/skills compartilham a projeção do Freebuff",
     hermesCurator: "Arquivos de estado do curator ficam dentro da projeção",
   },
   readFailed: (detail: string) => `Não foi possível ler a ponte de harnesses: ${detail}`,

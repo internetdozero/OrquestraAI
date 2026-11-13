@@ -1,12 +1,12 @@
 //! Unified session and chat-history management.
 //!
-//! Phase 1: a read-only catalog of every conversation the nine harnesses keep
+//! Phase 1: a read-only catalog of every conversation the eight harnesses keep
 //! on disk, plus the pin and retention sidecar in `~/.orquestra`. Listing never
 //! writes to a harness store — a harness that is broken, locked or absent is
 //! reported on stderr and skipped, so one bad database cannot empty the tab.
 //!
 //! Everything but the IPC surface lives in `orquestra-sessions`: the wire
-//! types and the nine harness adapters, the pin and retention sidecar
+//! types and the eight harness adapters, the pin and retention sidecar
 //! (`policy`), purge execution (`purge`) and the auto-purge daemon
 //! (`scheduler`). This module keeps only the commands the React view calls.
 
@@ -28,9 +28,9 @@ use types::{
 /// Every session from every installed harness, newest first, with pin state
 /// applied from `~/.orquestra/sessions_policy.json`.
 ///
-/// Runs on the async runtime rather than the main thread: sizing Freebuff
-/// worktrees walks their `node_modules` folders and measures ~3.6 s on a real
-/// machine, which would otherwise freeze the window mid-scan.
+/// Runs on the async runtime rather than the main thread: sizing a worktree
+/// store walks `node_modules` folders and measured ~3.6 s on a real machine,
+/// which would otherwise freeze the window mid-scan.
 #[tauri::command(async)]
 pub fn get_unified_sessions() -> Result<Vec<UnifiedSession>, String> {
     let mut sessions = adapters::list_all()?;

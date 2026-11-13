@@ -7,5 +7,4 @@
 pub(super) use super::{adapter, TestHome};
 
 mod claude;
-mod freebuff;
 mod others;

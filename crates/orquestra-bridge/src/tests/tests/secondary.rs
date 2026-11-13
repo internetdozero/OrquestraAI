@@ -22,8 +22,6 @@ fn fusion_neutralises_secondary_discovery_paths() {
     test.mkdir(".hermes/skills");
     test.mkdir(".grok/skills");
     test.mkdir(".copilot/skills");
-    test.mkdir(".freebuff/skills");
-    test.mkdir(".config/manicode");
     test.mkdir(".config/kilo");
     test.mkdir(".config/opencode");
 
@@ -40,7 +38,8 @@ fn fusion_neutralises_secondary_discovery_paths() {
     );
     test.skill(".codex/.tmp/marketplaces/ponytail/skills", "ponytail-audit");
 
-    // The shared root Codex and Grok read, owned by Freebuff's projection.
+    // The shared root Codex and Grok read. No harness projects into it any
+    // more, so fusion must leave it exactly as the `skills` CLI wrote it.
     test.skill(".agents/skills", "orca-cli");
     test.write(".agents/.skill-lock.json", "{\n  \"version\": 3\n}\n");
 
@@ -92,7 +91,6 @@ fn fusion_neutralises_secondary_discovery_paths() {
             "feature-dev",
             "latex-compile",
             "legacy-antigravity-guide",
-            "orca-cli",
             "ponytail-audit",
             "ponytail-debt",
             "threat-model",
@@ -157,19 +155,11 @@ fn fusion_neutralises_secondary_discovery_paths() {
     assert!(backup
         .join("grok/.grok__installed-plugins/ponytail/skills/ponytail-debt/SKILL.md")
         .is_file());
-    // The shared root is Freebuff's canonical skills root: Codex and Grok defer
-    // to it instead of emptying it, and its skills move into that projection.
-    assert_linked(
-        &test.home.join(".agents/skills"),
-        &test.paths.projection_dir("freebuff"),
-    );
-    assert_linked(
-        &test.paths.projection_dir("freebuff").join("orca-cli"),
-        &test.paths.vault.join("orca-cli"),
-    );
-    assert!(backup
-        .join("freebuff/.agents__skills/orca-cli/SKILL.md")
-        .is_file());
+    // The shared root is nobody's projection: Codex and Grok read it, but
+    // fusion neither empties it nor adopts from it.
+    assert!(!is_link(&test.home.join(".agents/skills")));
+    assert!(test.home.join(".agents/skills/orca-cli/SKILL.md").is_file());
+    assert!(!test.paths.vault.join("orca-cli").exists());
     // The shared root's own bookkeeping stays where the CLI expects it.
     assert!(test.home.join(".agents/.skill-lock.json").is_file());
 

@@ -93,7 +93,6 @@ test("harnessColor returns expected Tailwind classes for known and unknown harne
   assert.ok(harnessColor("antigravity").includes("text-violet-300"));
   assert.ok(harnessColor("codex").includes("text-emerald-300"));
   assert.ok(harnessColor("claude").includes("text-orange-300"));
-  assert.ok(harnessColor("freebuff").includes("text-cyan-300"));
   assert.ok(harnessColor("opencode").includes("text-sky-300"));
   assert.ok(harnessColor("kilo").includes("text-teal-300"));
   assert.ok(harnessColor("copilot").includes("text-blue-300"));

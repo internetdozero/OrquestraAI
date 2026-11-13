@@ -1,16 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  Bot,
-  Boxes,
-  Compass,
-  Globe,
-  Moon,
-  Package,
-  Rocket,
-  Target,
-  Terminal,
-  Zap,
-} from "lucide-react";
+import { Bot, Boxes, Compass, Globe, Moon, Package, Rocket, Target, Terminal } from "lucide-react";
 
 export interface HarnessScope {
   id: string;
@@ -44,12 +33,6 @@ export const HARNESSES: HarnessScope[] = [
     label: "Claude Code",
     hint: "~/.claude/skills",
     icon: Bot,
-  },
-  {
-    id: "freebuff",
-    label: "Freebuff",
-    hint: "~/.freebuff/worktrees",
-    icon: Zap,
   },
   {
     id: "opencode",

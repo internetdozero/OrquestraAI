@@ -3,7 +3,7 @@ import type { TranslationSchema } from "../pt";
 /** English mirror of `pt/sessions.ts`. A missing or extra key fails the build. */
 export const sessions: TranslationSchema["sessions"] = {
   title: "Sessions & History",
-  subtitle: "Unified conversation catalog across all 9 harnesses.",
+  subtitle: "Unified conversation catalog across all 8 harnesses.",
   totalSessions: "Total sessions",
   totalSessionsHint: "conversations found on disk",
   diskUsage: "Disk usage",
@@ -96,8 +96,5 @@ export const sessions: TranslationSchema["sessions"] = {
   copiedAll: "Conversation copied to clipboard",
   matchesCount: (count: number) => `${count} matches`,
   noSearchMatches: "No messages match your search",
-  cloudPendingSync: "Cloud (unsynced)",
-  cloudPendingSyncTooltip:
-    "Remote session in Codebuff Cloud. Open in Freebuff Desktop to sync locally.",
   executionTarget: "Execution target",
 };

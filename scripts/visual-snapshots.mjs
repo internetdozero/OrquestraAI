@@ -1,5 +1,5 @@
 /**
- * Visual regression gate for the nine harness transcript drawers.
+ * Visual regression gate for the eight harness transcript drawers.
  *
  * Boots a throwaway Vite dev server (fixture mode), drives headless Chrome,
  * and snapshots each fixture drawer's rendered structure, text, alignment and
@@ -29,7 +29,6 @@ const HARNESSES = [
   "grok",
   "codex",
   "claude",
-  "freebuff",
   "copilot",
   "hermes",
   "opencode",

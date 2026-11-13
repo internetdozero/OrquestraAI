@@ -102,16 +102,11 @@ same OrquestraAI-managed skills, MCP configs and instructions.
 - **Steady state**: the footer indicator polls `get_bridge_status`; skill/MCP
   mutations recompile projections and configs without re-bridging (vault
   folders refresh in place so symlinks stay live).
-- **Freebuff**: `~/.agents/skills` is its canonical global root. Existing skills
-  are kept in Orquestra's vault and exposed back through symlinks; optional
-  legacy roots are linked only when their parent exists. Replaced originals
-  remain recoverable from the bridge backup. Project-local `.agents` folders
-  are outside this global bridge.
 
 ## Sessions pipeline
 
 Per-harness adapters (`sessions/adapters/`: codex, claude, copilot, grok,
-antigravity, freebuff, freebuff_desktop, + `transcript`, `utils`, `fsops`)
+antigravity, opencode, kilo, hermes, + `transcript`, `utils`, `fsops`)
 translate native histories into `UnifiedSession` / `TranscriptTurn`. Reads are
 async (worktree sizing walks `node_modules`). OrquestraAI-owned layers on top:
 
@@ -140,7 +135,6 @@ the store resolve to an empty feed, never to outside bytes.
 | hermes      | `~/.hermes`                                                                                         | `sessions/<id>.jsonl` + `terminal-sessions/<id>.jsonl`; `state.db`                                                                                                                                        | Same JSONL files, lines → turns                                                                   |
 | opencode    | `~/.local/share/opencode/opencode.db`                                                               | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB: join/message/part table layouts tried in order                                           |
 | kilo        | `~/.local/share/kilo/kilo.db`                                                                       | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB, same fallback order                                                                      |
-| freebuff    | Manicode chat logs + `~/.config/freebuff-desktop/local-projects/<slug>/threads/<thread>/state.json` | Log files / thread state                                                                                                                                                                                  | JSON-array chat logs via the shared reader; desktop threads via `freebuff_desktop`                |
 
 Shared mapping (`sessions/adapters/transcript*.rs`, used by every reader):
 `parse_value` detects the canonical role, extracts text blocks and ISO

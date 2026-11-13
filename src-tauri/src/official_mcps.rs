@@ -42,7 +42,7 @@ pub(crate) fn official_mcps() -> Vec<OfficialMcpEntry> {
         official_mcp(
             "orquestra-session-relay",
             "Session Relay",
-            "Session handoff briefs from the stores Codex, Claude, Antigravity, OpenCode, Freebuff and Grok already keep (stdio, no cloud).",
+            "Session handoff briefs from the stores Codex, Claude, Antigravity, OpenCode and Grok already keep (stdio, no cloud).",
             "mcps/orquestra-session-relay",
             "https://github.com/internetdozero/session-relay-mcp.git",
             "session-relay",

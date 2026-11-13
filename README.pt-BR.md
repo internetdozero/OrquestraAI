@@ -6,7 +6,7 @@
 
 [Read in English](README.md)
 
-O OrquestraAI é um app desktop e uma CLI para gerenciar vários agentes de código com IA num lugar só. Ele mantém skills, servidores MCP, arquivos de instruções, sessões e credenciais consistentes entre Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), Freebuff, GitHub Copilot CLI, Hermes Agent, OpenCode e Kilo Code.
+O OrquestraAI é um app desktop e uma CLI para gerenciar vários agentes de código com IA num lugar só. Ele mantém skills, servidores MCP, arquivos de instruções, sessões e credenciais consistentes entre Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), GitHub Copilot CLI, Hermes Agent, OpenCode e Kilo Code.
 
 > [!WARNING]
 > **Software em Alpha.** Formatos de configuração, comandos IPC e a saída da CLI podem mudar entre releases. Fixe automações numa release com tag.
@@ -14,7 +14,7 @@ O OrquestraAI é um app desktop e uma CLI para gerenciar vários agentes de cód
 ## Recursos
 
 - **Cofre de skills:** uma biblioteca em `~/.orquestra/skills-library`, projetada em cada harness por symlinks ou entradas nativas de configuração.
-- **Registro de MCPs:** ative servidores MCP globalmente ou por harness. Definições já existentes do Freebuff (`~/.agents/mcp.json`) e do Gemini/Antigravity são adotadas, e os servidores oficiais são instalados num ambiente privado em `~/.orquestra/mcp-servers/`.
+- **Registro de MCPs:** ative servidores MCP globalmente ou por harness. Definições já existentes do Gemini/Antigravity são adotadas, e os servidores oficiais são instalados num ambiente privado em `~/.orquestra/mcp-servers/`.
 - **Instruções unificadas:** um `AGENTS.md` mestre ligado ao caminho de instruções de cada harness.
 - **Sessões:** navegue, busque, exporte, fixe e limpe históricos de conversa de todos os harnesses suportados.
 - **Cofre de credenciais:** chaves de API cifradas em repouso com AES-256-GCM. A chave de cifragem fica no keyring do sistema. Agentes podem usar as chaves por um proxy cego de HTTP/exec sem vê-las, e chaves copiadas na interface saem do clipboard após 20 segundos.
@@ -74,14 +74,13 @@ orquestra idea list --project MeuProjeto
 | Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md`   | logs de transcript, `mcp_config.json` |
 | OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite`, rollouts   |
 | Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`             |
-| Freebuff           | `~/.agents/skills`        | `~/.config/manicode/AGENTS.md` | `~/.agents/mcp.json`, `desktop-v2.db` |
 | OpenCode           | `skills.paths` na config  | nativo                         | `opencode.jsonc`, `opencode.db`       |
 | Kilo Code          | `skills.paths` na config  | nativo                         | `kilo.jsonc`, `kilo.db`               |
 | GitHub Copilot CLI | `~/.copilot/skills`       | nativo                         | `session-store.db`                    |
 | Hermes Agent       | `~/.hermes/skills`        | nativo                         | `state.db`                            |
 | xAI Grok           | `~/.grok/skills`          | nativo                         | `chat_history.jsonl`                  |
 
-Só arquivos de nível de usuário são gerenciados. Pastas `.agents` de workspace e skills/MCPs que existem só na conta de nuvem do Freebuff não são importados. Sessões do Freebuff que ainda estão na nuvem aparecem com o selo "Nuvem (não sincronizada)" até sincronizarem localmente.
+Só arquivos de nível de usuário são gerenciados. Pastas `.agents` de workspace não são importadas.
 
 ## Desenvolvimento
 

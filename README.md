@@ -6,7 +6,7 @@
 
 [Leia em Português](README.pt-BR.md)
 
-OrquestraAI is a desktop app and CLI for managing several AI coding agents from one place. It keeps skills, MCP servers, instruction files, sessions and credentials consistent across Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), Freebuff, GitHub Copilot CLI, Hermes Agent, OpenCode and Kilo Code.
+OrquestraAI is a desktop app and CLI for managing several AI coding agents from one place. It keeps skills, MCP servers, instruction files, sessions and credentials consistent across Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), GitHub Copilot CLI, Hermes Agent, OpenCode and Kilo Code.
 
 > [!WARNING]
 > **Alpha software.** Config formats, IPC commands and CLI output may change between releases. Pin automation to a tagged release.
@@ -14,7 +14,7 @@ OrquestraAI is a desktop app and CLI for managing several AI coding agents from 
 ## Features
 
 - **Skills vault:** one library in `~/.orquestra/skills-library`, projected into each harness through symlinks or native config entries.
-- **MCP registry:** enable MCP servers globally or per harness. Existing Freebuff (`~/.agents/mcp.json`) and Gemini/Antigravity definitions are adopted, and official servers are installed into a private environment under `~/.orquestra/mcp-servers/`.
+- **MCP registry:** enable MCP servers globally or per harness. Existing Gemini/Antigravity definitions are adopted, and official servers are installed into a private environment under `~/.orquestra/mcp-servers/`.
 - **Unified instructions:** one master `AGENTS.md` linked to each harness's instruction path.
 - **Sessions:** browse, search, export, pin and purge conversation histories from every supported harness.
 - **Credentials vault:** API keys encrypted at rest with AES-256-GCM. The encryption key lives in the OS keyring. Agents can use keys through a blind HTTP/exec proxy without seeing them, and keys copied in the UI are cleared from the clipboard after 20 seconds.
@@ -76,14 +76,13 @@ orquestra idea list --project MyProject
 | Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md`   | transcript logs, `mcp_config.json`    |
 | OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite`, rollouts   |
 | Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`             |
-| Freebuff           | `~/.agents/skills`        | `~/.config/manicode/AGENTS.md` | `~/.agents/mcp.json`, `desktop-v2.db` |
 | OpenCode           | `skills.paths` in config  | native                         | `opencode.jsonc`, `opencode.db`       |
 | Kilo Code          | `skills.paths` in config  | native                         | `kilo.jsonc`, `kilo.db`               |
 | GitHub Copilot CLI | `~/.copilot/skills`       | native                         | `session-store.db`                    |
 | Hermes Agent       | `~/.hermes/skills`        | native                         | `state.db`                            |
 | xAI Grok           | `~/.grok/skills`          | native                         | `chat_history.jsonl`                  |
 
-Only user-level files are managed. Workspace `.agents` folders and skills/MCPs that exist only in a Freebuff cloud account are not imported. Freebuff sessions still in the cloud show a "Cloud (unsynced)" badge until they sync locally.
+Only user-level files are managed. Workspace `.agents` folders are not imported.
 
 ## Development
 

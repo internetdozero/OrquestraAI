@@ -3,7 +3,6 @@ import { ANTIGRAVITY_TURNS } from "./transcripts/antigravity.ts";
 import { CLAUDE_TURNS } from "./transcripts/claude.ts";
 import { CODEX_TURNS } from "./transcripts/codex.ts";
 import { COPILOT_TURNS } from "./transcripts/copilot.ts";
-import { FREEBUFF_TURNS } from "./transcripts/freebuff.ts";
 import { GROK_TURNS } from "./transcripts/grok.ts";
 import { HERMES_TURNS } from "./transcripts/hermes.ts";
 import { KILO_TURNS } from "./transcripts/kilo.ts";
@@ -11,7 +10,7 @@ import { OPENCODE_TURNS } from "./transcripts/opencode.ts";
 
 /**
  * Developer fixture gallery: representative multi-turn conversations for all
- * nine harnesses, so the Session Detail Drawer can be reviewed without nine
+ * eight harnesses, so the Session Detail Drawer can be reviewed without eight
  * live agents installed. Data only — activation lives in `lib/fixtures`.
  *
  * The turns are what the readers should emit *after* sanitization: no system
@@ -71,16 +70,6 @@ const FIXTURES: Fixture[] = [
     sizeBytes: 76_544,
     pinned: true,
     turns: CLAUDE_TURNS,
-  },
-  {
-    harness: "freebuff",
-    id: "fixture-freebuff",
-    title: "Desktop parts JSON cleanup",
-    projectPath: "/home/operator/work/freebuff-desktop",
-    createdAt: "2026-10-18T07:52:00Z",
-    updatedAt: "2026-10-18T07:58:00Z",
-    sizeBytes: 54_016,
-    turns: FREEBUFF_TURNS,
   },
   {
     harness: "copilot",

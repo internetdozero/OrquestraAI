@@ -35,11 +35,8 @@ fn fusion_backs_up_links_and_preserves_harness_state() {
     // Grok: a skill that is missing from the vault and must be adopted.
     test.skill(".grok/skills", "epsilon");
 
-    // Copilot, Freebuff and Manicode.
+    // Copilot.
     test.skill(".copilot/skills", "zeta");
-    test.mkdir(".agents");
-    test.mkdir(".freebuff/worktrees");
-    test.mkdir(".config/manicode");
 
     // Kilo has a JSONC config; OpenCode has a directory but no config yet.
     test.write(
@@ -102,15 +99,6 @@ fn fusion_backs_up_links_and_preserves_harness_state() {
         &test.home.join(".copilot/skills"),
         &test.paths.projection_dir("copilot"),
     );
-    assert_linked(
-        &test.home.join(".freebuff/skills"),
-        &test.paths.projection_dir("freebuff"),
-    );
-    assert_linked(
-        &test.home.join(".config/manicode/skills"),
-        &test.paths.projection_dir("freebuff"),
-    );
-
     // Harness-owned state survives inside the projection.
     assert!(test
         .paths
@@ -148,11 +136,6 @@ fn fusion_backs_up_links_and_preserves_harness_state() {
         &test.home.join(".codex/AGENTS.md"),
         &test.paths.agents_path(),
     );
-    assert_linked(
-        &test.home.join(".config/manicode/AGENTS.md"),
-        &test.paths.agents_path(),
-    );
-
     // Harness-only skills (flat and nested) were adopted instead of
     // disappearing when the folders were replaced.
     let mut adopted = report.adopted.clone();

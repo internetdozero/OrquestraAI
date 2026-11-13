@@ -185,7 +185,6 @@ fn link_skills(
         .parent()
         .map(|parent| parent.is_dir())
         .unwrap_or(false)
-        && !harness::provisions_parent(rel)
     {
         // Harness root is not provisioned for this path; nothing to bridge.
         return Ok(());
@@ -275,8 +274,7 @@ fn fuse_secondary(
         }
 
         // A path another harness projects as its own skills root belongs to
-        // that harness: emptying it here would break the owner's link. Freebuff
-        // owns `~/.agents/skills`, so Codex and Grok defer to its projection.
+        // that harness: emptying it here would break the owner's link.
         if harness::primary_owner(entry.rel)
             .is_some_and(|owner| owner.id != spec.id && harness::is_installed(owner, home))
         {

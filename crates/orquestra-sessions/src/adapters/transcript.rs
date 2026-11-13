@@ -28,8 +28,8 @@ const MAX_TURN_CHARS: usize = 12_000;
 /// Plain text of one transcript line's message, restricted to text blocks.
 ///
 /// Accepts the `type` marker (Claude, Grok, Antigravity), the `kind` marker
-/// (Freebuff Desktop parts) and Codex's `input_text` / `output_text` content
-/// parts. Tool calls and tool results are excluded on purpose: they are
+/// (thread-based stores store parts that way) and Codex's `input_text` /
+/// `output_text` content parts. Tool calls and tool results are excluded on purpose: they are
 /// usually command output or JSON arguments, not conversation. A corrupt or
 /// foreign shape yields `None`.
 fn turn_text(message: &Value) -> Option<String> {

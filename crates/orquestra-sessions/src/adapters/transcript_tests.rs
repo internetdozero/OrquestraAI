@@ -232,32 +232,6 @@ fn opencode_and_kilo_read_part_payloads_through_their_messages() {
 }
 
 #[test]
-fn manicode_chat_logs_read_as_json_arrays() {
-    let home = TestHome::new("manicode");
-    home.write(
-        ".config/manicode/projects/app/chats/chat-1/chat.json",
-        "{\"title\":\"Deploy\"}",
-    );
-    home.write(
-        ".config/manicode/projects/app/chats/chat-1/chat-messages.json",
-        "[{\"role\":\"user\",\"content\":\"deploy now\"},\
-          {\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"deploying\"}]},\
-          {\"role\":\"system\",\"content\":\"key\"}]",
-    );
-
-    let turns = adapter(&home.0, "freebuff").read_transcript("app/chat-1");
-    assert_eq!(
-        turns.len(),
-        2,
-        "system scaffolding is not a turn: {turns:?}"
-    );
-    assert_eq!(turns[0].role, "user");
-    assert_eq!(turns[0].content, "deploy now");
-    assert_eq!(turns[1].role, "assistant");
-    assert_eq!(turns[1].content, "deploying");
-}
-
-#[test]
 fn antigravity_tool_execution_dumps_are_not_speech() {
     let home = TestHome::new("antigravity-tools");
     home.write(
@@ -338,36 +312,4 @@ fn system_prompt_rows_never_reach_the_feed() {
             .all(|turn| !turn.content.contains("dangerous_actions")),
         "no raw system instructions anywhere: {turns:?}"
     );
-}
-
-#[test]
-fn desktop_threads_read_parts_json_in_seq_order() {
-    let home = TestHome::new("desktop");
-    let thread = "11111111-2222-3333-4444-555555555555";
-    home.write(
-        ".config/freebuff-desktop/projects/OrquestraAI-abc123/project.json",
-        "{\"projectId\":\"abc123\",\"projectPath\":\"/work/orquestra\"}",
-    );
-    home.database(
-        ".config/freebuff-desktop/projects/OrquestraAI-abc123/desktop-v2.db",
-        "CREATE TABLE threads (id TEXT PRIMARY KEY, title TEXT);\n\
-         CREATE TABLE messages (seq INTEGER PRIMARY KEY AUTOINCREMENT, thread_id TEXT,\
-                                role TEXT, parts_json TEXT, ts INTEGER);\n\
-         INSERT INTO threads VALUES ('11111111-2222-3333-4444-555555555555', 'T');\n\
-         INSERT INTO messages (thread_id, role, parts_json, ts) VALUES\n           ('11111111-2222-3333-4444-555555555555', 'user',\n            '[{\"type\":\"text\",\"text\":\"first\"}]', 1792324600000),\n           ('11111111-2222-3333-4444-555555555555', 'assistant',\n            '[{\"type\":\"text\",\"text\":\"second\"}]', 1792324544000);",
-    );
-
-    let turns = adapter(&home.0, "freebuff")
-        .read_transcript(&format!("desktop:OrquestraAI-abc123:{thread}"));
-    assert_eq!(
-        turns.len(),
-        2,
-        "seq orders the feed, not the clock: {turns:?}"
-    );
-    assert_eq!(turns[0].role, "user");
-    assert_eq!(turns[0].content, "first");
-    assert_eq!(turns[0].timestamp.as_deref(), Some("2026-10-18T11:56:40Z"));
-    assert_eq!(turns[1].role, "assistant");
-    assert_eq!(turns[1].content, "second");
-    assert_eq!(turns[1].timestamp.as_deref(), Some("2026-10-18T11:55:44Z"));
 }

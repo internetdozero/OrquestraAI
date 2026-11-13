@@ -220,7 +220,5 @@ mod tests {
     }
 
     mod fusion;
-    mod instructions;
     mod secondary;
-    mod shared_root;
 }

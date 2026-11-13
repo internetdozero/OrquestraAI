@@ -136,7 +136,7 @@ SQLite-backed (`ideas.db`): an idea vault plus an inter-agent blackboard.
 ## Sessions
 
 Unified read over every harness's native chat history via per-harness adapters
-(`codex`, `claude`, `copilot`, `grok`, `antigravity`, `freebuff`, …) plus a
+(`codex`, `claude`, `copilot`, `grok`, `antigravity`, …) plus a
 pin/retention/purge layer owned by OrquestraAI.
 
 | Command                  | Args                                                                                     | Returns                                                                                                                     | Side effects / notes                                                                                                                                                                  |

@@ -59,8 +59,8 @@ pub fn ensure_within(root: &Path, target: &Path) -> Result<(), String> {
 /// Remove a file, a directory tree or a symlink. Returns the bytes reclaimed,
 /// or `0` when nothing was removed.
 ///
-/// A symlink is unlinked, never followed: Freebuff worktrees link into
-/// `/nsstyx/...` and removing the target by accident would be unrecoverable.
+/// A symlink is unlinked, never followed: harness stores point into worktrees
+/// and removing the target by accident would be unrecoverable.
 pub fn remove_path(root: &Path, target: &Path) -> Result<u64, String> {
     ensure_within(root, target)?;
 

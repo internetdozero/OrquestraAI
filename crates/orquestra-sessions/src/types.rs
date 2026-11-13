@@ -18,8 +18,8 @@ pub const TITLE_LIMIT: usize = 120;
 pub struct UnifiedSession {
     /// Harness-native session id, unique together with `harness`.
     pub id: String,
-    /// Canonical harness id: `antigravity`, `codex`, `claude`, `freebuff`,
-    /// `opencode`, `kilo`, `copilot`, `hermes`, `grok`.
+    /// Canonical harness id: `antigravity`, `codex`, `claude`, `opencode`,
+    /// `kilo`, `copilot`, `hermes`, `grok`.
     pub harness: String,
     /// Session summary or first prompt, trimmed to [`TITLE_LIMIT`].
     pub title: String,
@@ -41,9 +41,6 @@ pub struct UnifiedSession {
     /// Execution target recorded by the harness (e.g. 'cloud' or 'local').
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub execution_target: Option<String>,
-    /// Whether this session was run in remote cloud and is pending local sync.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub is_remote_cloud: bool,
 }
 
 impl UnifiedSession {
@@ -62,7 +59,6 @@ impl UnifiedSession {
             is_pinned: false,
             pin_label: None,
             execution_target: None,
-            is_remote_cloud: false,
         }
     }
 }

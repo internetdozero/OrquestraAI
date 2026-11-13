@@ -10,46 +10,6 @@ use super::{execute, Fixture};
 use crate::types::PurgeFilter;
 
 #[test]
-fn freebuff_removes_the_worktree_but_never_follows_a_link_out_of_it() {
-    let fixture = Fixture::new();
-    let outside = fixture.home.join("outside/precious.txt");
-    fs::create_dir_all(outside.parent().unwrap()).unwrap();
-    fs::write(&outside, "unrecoverable").unwrap();
-
-    fixture.write(
-        ".freebuff/worktrees/cb07e0aa/turma/turma.thread.json",
-        "{\"title\":\"Turma\"}",
-    );
-    fixture.write(
-        ".freebuff/worktrees/cb07e0aa/turma/node_modules/pkg/index.js",
-        "module.exports = 1;",
-    );
-    // A link *inside* the worktree pointing out of it: deleting the tree must
-    // unlink it, never recurse into the target.
-    std::os::unix::fs::symlink(
-        &outside,
-        fixture
-            .home
-            .join(".freebuff/worktrees/cb07e0aa/turma/node_modules/link.txt"),
-    )
-    .unwrap();
-    fixture.write(
-        ".config/manicode/projects/app/chats/chat-1/chat-messages.json",
-        "[{\"role\":\"user\",\"content\":\"ship it\"}]",
-    );
-
-    let report = execute(&fixture.store(), &PurgeFilter::default()).expect("purge");
-    assert_eq!(report.deleted_count, 2);
-
-    assert!(!fixture.exists(".freebuff/worktrees/cb07e0aa"));
-    assert!(!fixture.exists(".config/manicode/projects/app/chats/chat-1"));
-    assert!(
-        outside.exists(),
-        "a symlink target outside the store must survive"
-    );
-}
-
-#[test]
 fn claude_filters_history_and_leaves_a_project_that_still_holds_data() {
     let fixture = Fixture::new();
     fixture.write(

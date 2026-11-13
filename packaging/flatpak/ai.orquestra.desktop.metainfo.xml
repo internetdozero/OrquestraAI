@@ -16,8 +16,8 @@
       OrquestraAI is a desktop control plane and CLI for several AI coding
       agents at once. It holds skills, MCP servers, instruction files, sessions
       and credentials in one place and projects them into Claude Code, OpenAI
-      Codex, xAI Grok, Antigravity, Freebuff, GitHub Copilot CLI, Hermes Agent,
-      OpenCode and Kilo Code.
+      Codex, xAI Grok, Antigravity, GitHub Copilot CLI, Hermes Agent, OpenCode
+      and Kilo Code.
     </p>
     <p>
       This Flatpak exists for distributions whose glibc or WebKitGTK is older

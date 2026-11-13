@@ -6,5 +6,4 @@
 pub(super) use super::{adapter, TestHome};
 
 mod file_symlink;
-mod freebuff;
 mod indexes;

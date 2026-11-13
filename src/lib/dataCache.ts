@@ -20,8 +20,8 @@
  *
  * TTLs belong to the caller and should match the data, not the screen: the
  * session catalog is an expensive disk walk (hundreds of ms, seconds on a
- * Freebuff worktree-heavy install) and tolerates ~30 s of staleness, while the
- * retention policy changes only when the operator saves it.
+ * worktree-heavy install) and tolerates ~30 s of staleness, while the retention
+ * policy changes only when the operator saves it.
  */
 
 interface Entry {

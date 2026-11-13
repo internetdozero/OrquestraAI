@@ -49,17 +49,6 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
         ".grok/config.toml",
         "[models]\ndefault = \"grok-4.7\"\n\n[mcp_servers.rea]\ncommand = \"/opt/rea\"\nargs = [\"mcp\"]\nstartup_timeout_sec = 30\n\n[plugins]\nenabled = [\"ponytail\"]\n",
     );
-    test.mkdir(".freebuff");
-    test.mkdir(".agents");
-    test.write(
-        ".agents/mcp.json",
-        r#"{
-  "mcpServers": { "hand-added": { "command": "custom" } },
-  "theme": "dark"
-}
-"#,
-    );
-
     // The two JSONC targets are world-readable to start with.
     fs::set_permissions(
         test.home.join(".config/kilo/kilo.jsonc"),
@@ -70,7 +59,7 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     let changed = deploy_at(&test.home, &test.paths, &seed).unwrap();
     assert_eq!(
         changed.len(),
-        9,
+        8,
         "every installed target is written: {changed:?}"
     );
     assert!(
@@ -121,12 +110,6 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     assert!(grok.contains("ponytail"));
     let _: toml_edit::DocumentMut = grok.parse().expect("grok config must stay valid TOML");
 
-    let freebuff: JsonValue = serde_json::from_str(&test.read(".agents/mcp.json")).unwrap();
-    assert_eq!(freebuff["theme"], "dark");
-    assert_eq!(freebuff["mcpServers"]["hand-added"]["command"], "custom");
-    assert_eq!(freebuff["mcpServers"]["github"]["command"], "npx");
-    assert_eq!(freebuff["mcpServers"]["headroom"]["command"], "headroom");
-
     // Second run changes nothing.
     assert!(deploy_at(&test.home, &test.paths, &seed)
         .unwrap()
@@ -140,7 +123,7 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     save_catalog(&test.paths, &catalog).unwrap();
 
     let changed = deploy_at(&test.home, &test.paths, &seed).unwrap();
-    assert_eq!(changed.len(), 9);
+    assert_eq!(changed.len(), 8);
 
     let claude: JsonValue = serde_json::from_str(&test.read(".claude.json")).unwrap();
     assert!(claude["mcpServers"].get("github").is_none());
@@ -170,12 +153,6 @@ fn deploy_writes_every_adapter_and_removes_only_what_it_owns() {
     assert!(grok.contains("[mcp_servers.rea]"));
     assert!(grok.contains("startup_timeout_sec = 30"));
     assert!(grok.contains("[plugins]"));
-
-    let freebuff: JsonValue = serde_json::from_str(&test.read(".agents/mcp.json")).unwrap();
-    assert!(freebuff["mcpServers"].get("github").is_none());
-    assert!(freebuff["mcpServers"].get("headroom").is_some());
-    assert_eq!(freebuff["mcpServers"]["hand-added"]["command"], "custom");
-    assert_eq!(freebuff["theme"], "dark");
 
     // The backup keeps the pre-deploy bytes and the original privacy.
     let backup = test.paths.root.join("backups");

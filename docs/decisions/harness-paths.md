@@ -23,7 +23,7 @@ them wherever the operator said.
   them, and every consumer calls `rebase` instead of `join`.
 
 The two XDG prefixes are the _only_ thing rewritten. `.claude`, `.agents`,
-`.copilot`, `.freebuff`, `.hermes`, `.grok`, `.codex` and `.gemini` are the
+`.copilot`, `.hermes`, `.grok`, `.codex` and `.gemini` are the
 harnesses' own conventions; those folders sit beside the home directory on
 every OS, and moving them would hide real stores.
 

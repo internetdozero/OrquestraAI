@@ -23,7 +23,6 @@ use super::{registry, SessionAdapter};
 
 mod brain_links;
 mod catalog_cases;
-mod desktop_links;
 mod grok_links;
 mod id_escape;
 mod store_guards;

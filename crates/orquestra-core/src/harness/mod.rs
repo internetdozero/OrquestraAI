@@ -16,7 +16,7 @@ mod registry;
 
 pub use lookup::{
     find, harness_ids, is_installed, is_installed_with, is_mcp_target, mcp_targets, primary_owner,
-    provisions_parent, resolve_install_dir, resolve_install_dir_with,
+    resolve_install_dir, resolve_install_dir_with,
 };
 pub use registry::HARNESSES;
 
@@ -83,9 +83,8 @@ pub struct McpSpec {
 /// the harnesses themselves document. Resolution per platform is not the
 /// registry's job — [`crate::paths::rebase`] maps those two prefixes onto
 /// `~/Library/Application Support`, `%APPDATA%` and `%LOCALAPPDATA%` — so a
-/// harness that keeps its own dotfolder (`.claude`, `.agents`, `.copilot`,
-/// `.freebuff`) is spelled literally and stays beside the home directory
-/// everywhere.
+/// harness that keeps its own dotfolder (`.claude`, `.copilot`, `.hermes`) is
+/// spelled literally and stays beside the home directory everywhere.
 pub struct HarnessSpec {
     pub id: &'static str,
     pub label: &'static str,
@@ -98,10 +97,10 @@ pub struct HarnessSpec {
     pub skills_links: &'static [&'static str],
     /// Harness instruction files replaced by symlinks to the master AGENTS.md.
     /// Empty when the harness reads no global instruction file. A harness may
-    /// list several locations (e.g. Freebuff Desktop's per-platform globals);
-    /// fusion links every location whose parent directory exists and treats a
-    /// missing parent as nothing to do, so bridging never blocks on a path
-    /// the current platform does not use.
+    /// list several locations when it reads per-platform globals; fusion links
+    /// every location whose parent directory exists and treats a missing parent
+    /// as nothing to do, so bridging never blocks on a path the current
+    /// platform does not use.
     pub instructions_rels: &'static [&'static str],
     /// JSONC config that receives `skills.paths`.
     pub config_rel: Option<&'static str>,
@@ -172,33 +171,29 @@ mod tests {
     }
 
     #[test]
-    fn freebuff_claims_both_global_instruction_locations() {
-        let spec = find("freebuff").expect("freebuff is registered");
-        // Manicode's existing location plus Freebuff Desktop's per-platform
-        // globals: fusion links whichever the operator's setup created.
-        for rel in [
-            ".config/manicode/AGENTS.md",
-            ".freebuff/AGENTS.md",
-            ".config/freebuff/AGENTS.md",
-        ] {
-            assert!(
-                spec.instructions_rels.contains(&rel),
-                "freebuff misses {rel}"
-            );
-        }
-        // Single-location harnesses keep exactly one entry.
+    fn instruction_targets_match_each_harness_documentation() {
+        // One global instruction file per harness; harnesses that read none
+        // keep an empty list instead of an invented path.
         assert_eq!(
-            find("codex").expect("registered").instructions_rels.len(),
-            1
+            find("codex").expect("registered").instructions_rels,
+            &[".codex/AGENTS.md"]
         );
+        assert_eq!(
+            find("claude").expect("registered").instructions_rels,
+            &[".claude/CLAUDE.md"]
+        );
+        assert!(find("grok")
+            .expect("registered")
+            .instructions_rels
+            .is_empty());
     }
 
     #[test]
     fn harnesses_without_override_use_home() {
-        let spec = find("freebuff").expect("freebuff is registered");
+        let spec = find("hermes").expect("hermes is registered");
         assert_eq!(spec.env_override, None);
         let home = Path::new("/tmp/orquestra-home-that-cannot-exist");
-        assert_eq!(resolve_install_dir(spec, home), home.join(".agents"));
+        assert_eq!(resolve_install_dir(spec, home), home.join(".hermes"));
     }
 
     #[test]

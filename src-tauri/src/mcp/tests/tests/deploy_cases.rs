@@ -96,7 +96,7 @@ fn global_selection_sets_the_baseline_but_keeps_harness_opt_ins() {
 fn harnesses_without_an_adapter_are_rejected() {
     assert!(is_target("grok"));
     assert!(!is_target("hermes"));
-    assert!(is_target("freebuff"));
+    assert!(!is_target("freebuff"));
     assert!(is_target("codex"));
     assert!(is_target("opencode"));
 

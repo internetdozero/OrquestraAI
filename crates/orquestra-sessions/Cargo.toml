@@ -1,7 +1,7 @@
 [package]
 name = "orquestra-sessions"
 version = "0.1.0"
-description = "OrquestraAI session catalog: the unified listing, the nine harness adapters and the transcript readers"
+description = "OrquestraAI session catalog: the unified listing, the eight harness adapters and the transcript readers"
 authors = ["Operator"]
 edition = "2021"
 rust-version = "1.77.2"

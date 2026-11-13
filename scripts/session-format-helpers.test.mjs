@@ -23,7 +23,6 @@ test("harnessColor returns expected CSS badge classes for known harnesses", () =
     antigravity: "text-violet-300 border-violet-500/25 bg-violet-500/10",
     codex: "text-emerald-300 border-emerald-500/25 bg-emerald-500/10",
     claude: "text-orange-300 border-orange-500/25 bg-orange-500/10",
-    freebuff: "text-cyan-300 border-cyan-500/25 bg-cyan-500/10",
     opencode: "text-sky-300 border-sky-500/25 bg-sky-500/10",
     kilo: "text-teal-300 border-teal-500/25 bg-teal-500/10",
     copilot: "text-blue-300 border-blue-500/25 bg-blue-500/10",

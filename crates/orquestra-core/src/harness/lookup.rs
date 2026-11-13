@@ -42,23 +42,10 @@ pub fn resolve_install_dir_with(
     crate::paths::rebase(home, spec.install_rel)
 }
 
-/// Global roots OrquestraAI provisions itself. Every other link waits for its
-/// harness to create the parent folder (a harness that never ran is not given
-/// an empty tree), but the Codebuff SDK's `~/.agents/skills` is only reachable
-/// through the link, so fusion creates its parent instead of skipping it.
-const PROVISIONED_ROOTS: &[&str] = &[".agents/skills"];
-
-/// True when fusion may create the parent of `rel` on its own.
-pub fn provisions_parent(rel: &str) -> bool {
-    PROVISIONED_ROOTS.contains(&rel)
-}
-
 /// The harness that claims `rel` as one of its primary skills roots.
 ///
-/// Some paths are read by several harnesses: `~/.agents/skills` is the
-/// Codebuff SDK's canonical root (Freebuff) while Codex and Grok also inject
-/// it. The registry names exactly one owner, and fusion defers to that
-/// harness's projection instead of treating the shared path as a backdoor.
+/// Every primary link has exactly one owner, so fusion can tell a harness's own
+/// projection apart from a path another harness links.
 pub fn primary_owner(rel: &str) -> Option<&'static HarnessSpec> {
     HARNESSES
         .iter()
@@ -122,35 +109,9 @@ mod tests {
     }
 
     #[test]
-    fn the_shared_agent_root_belongs_to_freebuff() {
-        assert_eq!(
-            primary_owner(".agents/skills").map(|owner| owner.id),
-            Some("freebuff")
-        );
-        assert!(provisions_parent(".agents/skills"));
-
-        // Codex and Grok read the same path, but only as a secondary location:
-        // they never claim it as their own projection.
-        for id in ["codex", "grok"] {
-            let spec = find(id).expect("registered");
-            assert!(!spec.skills_links.contains(&".agents/skills"));
-            assert!(spec
-                .secondary
-                .iter()
-                .any(|entry| entry.rel == ".agents/skills"));
-        }
-
-        // A harness-specific link still waits for the harness to provision it.
-        assert!(!provisions_parent(".codex/skills"));
-    }
-
-    #[test]
-    fn freebuff_is_detected_from_its_global_agents_root() {
-        let home = std::env::temp_dir().join(format!("freebuff-global-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&home);
-        std::fs::create_dir_all(home.join(".agents")).expect("global agents root");
-        let spec = find("freebuff").expect("Freebuff is registered");
-        assert!(is_installed_with(spec, &home, &|_| None));
-        let _ = std::fs::remove_dir_all(home);
+    fn a_path_no_harness_links_has_no_owner() {
+        // `None` is meaningful: fusion reads it as "not a projection of ours"
+        // and leaves the path alone instead of deferring to a harness.
+        assert_eq!(primary_owner(".agents/skills").map(|owner| owner.id), None);
     }
 }
