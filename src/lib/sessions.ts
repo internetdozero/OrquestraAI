@@ -9,6 +9,7 @@ import {
   fixtureTogglePin,
   fixturesEnabled,
 } from "./fixtures";
+import { loadCacheValue, readCacheValue } from "./dataCache";
 import { isTauri } from "./tauri";
 
 /** Canonical harness ids, in the order the core lists them. */
@@ -119,24 +120,36 @@ export async function getSessionTranscript(
   });
 }
 
-/** Warm index of the unified catalog, filled once per boot by the background preload. */
-let warmedSessions: UnifiedSession[] | null = null;
+/**
+ * Cache identity and freshness for the unified catalog.
+ *
+ * The listing is the most expensive read the UI makes: it walks every harness
+ * store and sizes Freebuff worktrees (hundreds of ms, seconds when those hold
+ * `node_modules`). 30 s keeps tab switches free while edits made by another
+ * agent still surface quickly; an explicit refresh or a purge bypasses it.
+ */
+export const SESSIONS_CATALOG_KEY = "sessions:catalog";
+export const SESSIONS_CATALOG_TTL_MS = 30_000;
+/** The retention policy changes only when the operator saves it. */
+export const SESSIONS_POLICY_KEY = "sessions:policy";
+export const SESSIONS_POLICY_TTL_MS = 5 * 60_000;
 
 /**
- * Best-effort boot warm-up: index the catalog so the Sessions view paints
- * from memory instead of walking ~1.2k session files on first open.
+ * Boot warm-up: index the catalog so the Sessions view paints from memory
+ * instead of walking ~1.2k session files on first open. Shares one cache entry
+ * with the view, so the preload and the first open never read twice.
  */
 export function ensureUnifiedSessions(): Promise<UnifiedSession[]> {
-  if (warmedSessions) return Promise.resolve(warmedSessions);
-  return getUnifiedSessions().then((list) => {
-    warmedSessions = list;
-    return list;
+  return loadCacheValue({
+    key: SESSIONS_CATALOG_KEY,
+    ttlMs: SESSIONS_CATALOG_TTL_MS,
+    load: getUnifiedSessions,
   });
 }
 
 /** The warmed catalog, when the background preload has already finished. */
 export function peekWarmedSessions(): UnifiedSession[] | null {
-  return warmedSessions;
+  return readCacheValue<UnifiedSession[]>(SESSIONS_CATALOG_KEY);
 }
 
 /** Pin or unpin one conversation; resolves to the state after the toggle. */

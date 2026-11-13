@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  SESSIONS_CATALOG_KEY,
+  SESSIONS_CATALOG_TTL_MS,
+  SESSIONS_POLICY_KEY,
+  SESSIONS_POLICY_TTL_MS,
   estimatePurge,
   getRetentionPolicy,
   getUnifiedSessions,
-  peekWarmedSessions,
   purgeSessions,
   saveRetentionPolicy,
   togglePinSession,
@@ -14,6 +17,7 @@ import {
 } from "../lib/sessions";
 import { fixturesEnabled } from "../lib/fixtures";
 import { formatMb } from "../lib/sessionFormat";
+import { useCachedResource } from "./useCachedResource";
 import { useI18n } from "./useI18n";
 
 export type SessionSort = "newest" | "oldest" | "largest";
@@ -34,16 +38,14 @@ const INITIAL_FILTER: SessionFilterState = {
   sort: "newest",
 };
 
+/** Stable identity so the resource state is not reset between renders. */
+const EMPTY_SESSIONS: UnifiedSession[] = [];
+
 function toMessage(cause: unknown, fallback: string): string {
   if (typeof cause === "string") return cause;
   if (cause instanceof Error) return cause.message;
   return fallback;
 }
-
-/** Last catalog, kept outside the hook so remounting the view (tab switch)
- * paints instantly and revalidates in the background instead of walking
- * ~1.2k session files with a skeleton on screen. */
-let cachedSessions: UnifiedSession[] | null = null;
 
 function isOld(s: UnifiedSession, days: number): boolean {
   const then = Date.parse(s.updatedAt);
@@ -56,6 +58,11 @@ function isOld(s: UnifiedSession, days: number): boolean {
  * the dry-run-backed purge flow. Purge modals always open through
  * `openPurgeModal`, which fetches `estimate_purge` first so the destructive
  * action is previewed before it runs.
+ *
+ * The catalog and the retention policy are separate cache entries with their
+ * own TTLs (`lib/sessions`): opening the tab again within the TTL paints from
+ * memory and never repeats the disk walk, while a stale catalog is repainted in
+ * place and revalidated in the background instead of blanking the table.
  */
 export function useSessions(options: {
   isTauri: boolean;
@@ -70,13 +77,29 @@ export function useSessions(options: {
   // IPC entry point has a matching in-memory implementation in `lib/fixtures`.
   const [fixtureMode] = useState(fixturesEnabled);
   const enabled = isTauri || fixtureMode;
-  const [sessions, setSessions] = useState<UnifiedSession[]>(
-    () => cachedSessions ?? peekWarmedSessions() ?? [],
-  );
-  const [loading, setLoading] = useState(false);
+
+  const catalog = useCachedResource<UnifiedSession[]>({
+    key: SESSIONS_CATALOG_KEY,
+    ttlMs: SESSIONS_CATALOG_TTL_MS,
+    enabled,
+    fallback: EMPTY_SESSIONS,
+    load: getUnifiedSessions,
+  });
+
+  const policyResource = useCachedResource<RetentionPolicy | null>({
+    key: SESSIONS_POLICY_KEY,
+    ttlMs: SESSIONS_POLICY_TTL_MS,
+    enabled,
+    fallback: null,
+    load: getRetentionPolicy,
+  });
+
+  const sessions = catalog.data;
+  const policy = policyResource.data;
+  const loading = catalog.loading;
+
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<SessionFilterState>(INITIAL_FILTER);
-  const [policy, setPolicy] = useState<RetentionPolicy | null>(null);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [purgeFilter, setPurgeFilter] = useState<PurgeFilter | null>(null);
   const [estimate, setEstimate] = useState<PurgeEstimate | null>(null);
@@ -84,30 +107,26 @@ export function useSessions(options: {
   const [purging, setPurging] = useState(false);
   const [retentionOpen, setRetentionOpen] = useState(false);
 
+  // Destructured: the resource objects are re-created every render, so a
+  // callback closing over them would never be stable.
+  const { refresh: reloadCatalog, mutate: mutateCatalog } = catalog;
+  const { refresh: reloadPolicy, mutate: mutatePolicy } = policyResource;
+  const failure = catalog.error ?? policyResource.error;
+
+  // One place turns either resource's failure into the operator-facing banner.
+  useEffect(() => {
+    if (!failure) return;
+    const message = t.sessions.loadFailed(toMessage(failure, t.common.unexpected));
+    setError(message);
+    onError(message);
+  }, [failure, onError, t]);
+
+  /** Unconditional rescan, for the shell refresh button and after a deletion. */
   const refreshSessions = useCallback(async () => {
     if (!enabled) return;
-    // Warm cache: paint instantly, revalidate silently. Cold start keeps
-    // the loading banner so first paint never flashes an empty catalog.
-    const cold = cachedSessions === null && peekWarmedSessions() === null;
-    if (cold) setLoading(true);
     setError(null);
-    try {
-      const [list, retention] = await Promise.all([getUnifiedSessions(), getRetentionPolicy()]);
-      cachedSessions = list;
-      setSessions(list);
-      setPolicy(retention);
-    } catch (cause) {
-      const message = t.sessions.loadFailed(toMessage(cause, t.common.unexpected));
-      setError(message);
-      onError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled, onError, t]);
-
-  useEffect(() => {
-    void refreshSessions();
-  }, [refreshSessions]);
+    await Promise.all([reloadCatalog(), reloadPolicy()]);
+  }, [enabled, reloadCatalog, reloadPolicy]);
 
   const visible = useMemo(() => {
     const needle = filter.query.trim().toLowerCase();
@@ -152,15 +171,13 @@ export function useSessions(options: {
       setPendingIds((ids) => new Set(ids).add(key));
       try {
         const pinned = await togglePinSession(harness, sessionId);
-        // Keep the module cache coherent so a tab switch never shows a
-        // stale pin until the next background revalidation lands.
-        setSessions((rows) => {
-          const next = rows.map((s) =>
+        // Optimistic: the cache and the table move together, so a tab switch
+        // never flashes the previous pin state while the rescan is pending.
+        mutateCatalog(
+          sessions.map((s) =>
             s.harness === harness && s.id === sessionId ? { ...s, isPinned: pinned } : s,
-          );
-          cachedSessions = next;
-          return next;
-        });
+          ),
+        );
         onToast(pinned ? t.sessions.pinnedToast : t.sessions.unpinnedToast);
       } catch (cause) {
         onError(t.sessions.loadFailed(toMessage(cause, t.common.unexpected)));
@@ -172,7 +189,7 @@ export function useSessions(options: {
         });
       }
     },
-    [enabled, onError, onToast, t],
+    [enabled, onError, onToast, sessions, mutateCatalog, t],
   );
 
   const openPurgeModal = useCallback(
@@ -220,7 +237,6 @@ export function useSessions(options: {
   const deleteSingleSession = useCallback(
     async (harness: string, sessionId: string) => {
       if (!enabled) return;
-      const before = sessions.find((s) => s.harness === harness && s.id === sessionId);
       try {
         const report = await purgeSessions({
           harness,
@@ -232,11 +248,10 @@ export function useSessions(options: {
         }
         await refreshSessions();
       } catch (cause) {
-        void before;
         onError(t.sessions.purgeFailed(toMessage(cause, t.common.unexpected)));
       }
     },
-    [enabled, notifyOnPurge, onError, onToast, refreshSessions, sessions, t],
+    [enabled, notifyOnPurge, onError, onToast, refreshSessions, t],
   );
 
   const updatePolicy = useCallback(
@@ -244,14 +259,14 @@ export function useSessions(options: {
       if (!enabled) return;
       try {
         await saveRetentionPolicy(next);
-        setPolicy(next);
+        mutatePolicy(next);
         setRetentionOpen(false);
         onToast(t.sessions.saved);
       } catch (cause) {
         onError(t.sessions.saveFailed(toMessage(cause, t.common.unexpected)));
       }
     },
-    [enabled, onError, onToast, t],
+    [enabled, onError, onToast, mutatePolicy, t],
   );
 
   return {

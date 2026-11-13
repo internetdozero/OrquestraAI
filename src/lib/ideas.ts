@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { loadCacheValue } from "./dataCache.ts";
 import {
   devMockMode,
   fixtureCreateIdea,
@@ -106,6 +107,44 @@ export function listIdeas(
 export function listIdeaProjects(): Promise<string[]> {
   if (devMockMode()) return Promise.resolve(fixtureListIdeaProjects());
   return invoke<string[]>("list_idea_projects");
+}
+
+/**
+ * Cache identities for the Ideas view.
+ *
+ * Rows and the project list come from one SQLite read pair, so they share an
+ * entry; the blackboard lives in its own table and gets its own, because
+ * posting a note must not invalidate the whole catalog. The idea-vault MCP can
+ * write at any moment, hence the short TTL: a tab switch stays free, an edit
+ * from another agent still surfaces within half a minute.
+ */
+export const IDEAS_CATALOG_KEY = "ideas:catalog";
+export const IDEAS_CATALOG_TTL_MS = 30_000;
+export const IDEAS_NOTES_KEY = "ideas:notes";
+export const IDEAS_NOTES_TTL_MS = 30_000;
+
+/** Rows plus project names, shared by the view and the boot warm-up. */
+export function loadIdeasCatalog(): Promise<{
+  ideas: IdeaItem[];
+  projects: string[];
+}> {
+  return loadCacheValue({
+    key: IDEAS_CATALOG_KEY,
+    ttlMs: IDEAS_CATALOG_TTL_MS,
+    load: async () => {
+      const [ideas, projects] = await Promise.all([listIdeas(null, "all"), listIdeaProjects()]);
+      return { ideas, projects };
+    },
+  });
+}
+
+/** Blackboard notes, shared by the view and the boot warm-up. */
+export function loadBlackboardNotes(): Promise<BlackboardNote[]> {
+  return loadCacheValue({
+    key: IDEAS_NOTES_KEY,
+    ttlMs: IDEAS_NOTES_TTL_MS,
+    load: () => listBlackboardNotes(null, false),
+  });
 }
 
 /** Record one idea; resolves to the stored row. */

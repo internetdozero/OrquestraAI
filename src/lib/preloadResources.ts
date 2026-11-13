@@ -1,5 +1,6 @@
 import { ensureAgentsText } from "./agentsCache";
 import { HARNESSES, GLOBAL_SCOPE } from "./harnesses";
+import { loadBlackboardNotes, loadIdeasCatalog } from "./ideas";
 import { ensureMcpCatalog } from "./mcpCache";
 import { ensureVaultCatalog } from "./vaultCache";
 import { ensureUnifiedSessions } from "./sessions";
@@ -73,6 +74,14 @@ export async function preloadBackground(isCancelled: () => boolean): Promise<voi
   await whenIdle(isCancelled);
   if (isCancelled()) return;
   await ensureMcpCatalog().catch(() => undefined);
+  if (isCancelled()) return;
+
+  await whenIdle(isCancelled);
+  if (isCancelled()) return;
+  // Ideas is one click away and used to be the only view with no warm-up at
+  // all: every visit paid three round trips behind a skeleton. Filling its
+  // cache entry here makes the first open paint from memory.
+  await Promise.all([loadIdeasCatalog(), loadBlackboardNotes()]).catch(() => undefined);
   if (isCancelled()) return;
 
   await whenIdle(isCancelled);
