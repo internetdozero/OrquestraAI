@@ -10,6 +10,8 @@
 
 pub mod agents;
 pub mod error;
+// External-program lookup shared by the shell and the vault exec proxy.
+pub mod exec;
 pub mod harness;
 // Directory links: symlinks on Unix, junctions on Windows.
 pub mod links;

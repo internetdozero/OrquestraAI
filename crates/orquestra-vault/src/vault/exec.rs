@@ -29,8 +29,10 @@ pub fn scrub_output(text: &str, secrets: &[String]) -> String {
 }
 
 /// Executables IPC callers may run. Bare names only, resolved through the
-/// trusted session `PATH` — never a shell, so metacharacters, pipes,
-/// redirections and `$VAR`/backtick/`$()` expansion cannot trigger.
+/// process `PATH` and then the login shell's `PATH` (a GUI launch does not
+/// inherit `~/.local/bin`, `nvm`, `mise` or Homebrew) — never a shell, so
+/// metacharacters, pipes, redirections and `$VAR`/backtick/`$()` expansion
+/// cannot trigger.
 ///
 /// Deliberately minimal: provider CLIs agents need for authenticated calls.
 /// Notably absent: shells (`sh`, `bash`), script runtimes (`python*`, `node`,
@@ -75,8 +77,17 @@ pub(super) fn run_argv(
     argv: &[String],
 ) -> Result<(i32, String, String), String> {
     validate_argv(argv)?;
+    // Validation ran first, so only a bare allowlisted name can reach this
+    // lookup. Resolution adds the login shell's PATH without widening the
+    // allowlist or accepting a path from IPC.
+    let program = orquestra_core::exec::resolve(&argv[0]).ok_or_else(|| {
+        format!(
+            "vault exec could not find `{}` on the process or login-shell PATH",
+            argv[0]
+        )
+    })?;
     let env = child_env(service, secret);
-    let mut child = std::process::Command::new(&argv[0]);
+    let mut child = std::process::Command::new(&program);
     child.args(&argv[1..]);
     for (name, value) in &env {
         child.env(name, value);
