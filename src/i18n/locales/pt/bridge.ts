@@ -22,7 +22,8 @@ export const bridge = {
   },
   warnLead:
     "Cada pasta de skill, arquivo de instruções e arquivo de configuração listado abaixo é movido para",
-  warnTail: "antes de criar o symlink. Nada é apagado.",
+  warnTail:
+    "antes de criar o symlink. Os arquivos de origem são preservados; quando uma execução cria backup, ficam apenas os três pre-fusion mais recentes e os antigos são removidos.",
   warnSees:
     "Depois do vínculo, um harness só vê as skills que você ativou para ele neste app. Skills que existem só dentro de um harness entram primeiro no cofre.",
   warnSecondary:

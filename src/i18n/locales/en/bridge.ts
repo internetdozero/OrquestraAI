@@ -20,7 +20,8 @@ export const bridge: TranslationSchema["bridge"] = {
     return `${found} · ${done}${waiting}`;
   },
   warnLead: "Every skill folder, instruction file, and config file listed below is moved into",
-  warnTail: "before a symlink is created. Nothing is deleted.",
+  warnTail:
+    "before a symlink is created. Source files are preserved; after a run creates a backup, only the three newest pre-fusion backups are kept and older bridge backups are removed.",
   warnSees:
     "After linking, a harness only sees the skills you enabled for it in this app. Skills that exist only inside a harness are adopted into the vault first.",
   warnSecondary:

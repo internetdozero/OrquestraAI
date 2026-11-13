@@ -199,3 +199,49 @@ fn fusion_backs_up_links_and_preserves_harness_state() {
 
     test.cleanup();
 }
+
+#[test]
+fn successful_bridge_prunes_backups_to_three_versions() {
+    let test = TestHome::new("backup-retention");
+    test.skill(".codex/skills", "current");
+
+    let backups = test.paths.root.join("backups");
+    for date in ["20260101", "20260102", "20260103", "20260104"] {
+        let path = backups.join(format!("pre-fusion-{date}-000000"));
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("saved.txt"), date).unwrap();
+    }
+
+    let report = deploy_at(&test.home, &test.paths).unwrap();
+    assert!(report.errors.is_empty(), "errors: {:?}", report.errors);
+    let current_backup = PathBuf::from(report.backup_dir.as_ref().unwrap())
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
+
+    let mut retained: Vec<_> = fs::read_dir(&backups)
+        .unwrap()
+        .flatten()
+        .filter(|entry| {
+            entry.file_type().unwrap().is_dir()
+                && entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("pre-fusion-")
+        })
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    retained.sort();
+
+    let mut expected = vec![
+        "pre-fusion-20260103-000000".to_string(),
+        "pre-fusion-20260104-000000".to_string(),
+        current_backup,
+    ];
+    expected.sort();
+    assert_eq!(retained, expected, "retained backups");
+    assert!(!backups.join("pre-fusion-20260101-000000").exists());
+    assert!(!backups.join("pre-fusion-20260102-000000").exists());
+    test.cleanup();
+}

@@ -22,7 +22,7 @@ mod adopt;
 mod backup;
 mod fuse_io;
 use adopt::adopt_missing_skills;
-use backup::{finalize_backup, next_backup_path};
+use backup::{finalize_backup, next_backup_path, retain_recent_backups};
 pub use fuse_io::timestamp_label;
 use fuse_io::{
     backup_move, backup_slot, create_dir_all, ensure_config, ensure_symlink, link_instructions,
@@ -91,6 +91,17 @@ pub(super) fn deploy_at(home: &Path, paths: &OrquestraPaths) -> Result<BridgeRep
 
     let harnesses = statuses_at(home, paths);
     let bridged = harnesses.iter().filter(|status| status.bridged).count();
+    // Only prune after a complete deployment. On a partial failure, keep every
+    // older recovery point so the operator can still roll back safely.
+    let installed_bridged = harnesses
+        .iter()
+        .filter(|status| status.supported && status.installed)
+        .all(|status| status.bridged);
+    if backup_dir.is_some() && errors.is_empty() && installed_bridged {
+        if let Err(error) = retain_recent_backups(&paths.root.join("backups")) {
+            warnings.push(format!("backup retention: {error}"));
+        }
+    }
 
     Ok(BridgeReport {
         backup_dir: backup_dir.map(|path| path.to_string_lossy().into_owned()),

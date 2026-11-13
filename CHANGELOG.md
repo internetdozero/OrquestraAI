@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bridge Backup Retention:** Keep the three newest `pre-fusion-*` recovery directories after a fully successful bridge; preserve failed-run and unrelated backups.
 - **Flatpak Channel:** The release publishes `OrquestraAI-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load.
 
 ### Removed
