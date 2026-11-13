@@ -285,10 +285,14 @@ jobs:
     # A tag or a release needs the freshly built artifact. `build_flatpak`
     # skips the matrix entirely and wraps the binary already on the release
     # page, so a packaging problem is visible without cutting a tag.
+    # `!cancelled()` instead of the implicit `success()`: the matrix is
+    # deliberately skipped in manual packaging runs, and a skipped `needs`
+    # would otherwise skip this job too.
     if: |
-      inputs.build_flatpak == true ||
-      (needs.build.result == 'success' &&
-       (startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true))
+      !cancelled() &&
+      (inputs.build_flatpak == true ||
+       (needs.build.result == 'success' &&
+        (startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true)))
     runs-on: ubuntu-22.04
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
