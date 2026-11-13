@@ -9,7 +9,7 @@ import {
   fixtureTogglePin,
   fixturesEnabled,
 } from "./fixtures";
-import { loadCacheValue, readCacheValue } from "./dataCache";
+import { loadCacheValue, readCacheValue, writeCacheValue } from "./dataCache";
 import { isTauri } from "./tauri";
 
 /** Canonical harness ids, in the order the core lists them. */
@@ -181,6 +181,27 @@ export function saveRetentionPolicy(policy: RetentionPolicy): Promise<void> {
     return Promise.resolve();
   }
   return invoke<void>("save_retention_policy", { policy });
+}
+
+/**
+ * The policy, cache first. Settings and the Sessions header read the same
+ * entry, so opening one after the other never doubles the round trip.
+ */
+export function loadRetentionPolicy(): Promise<RetentionPolicy> {
+  return loadCacheValue({
+    key: SESSIONS_POLICY_KEY,
+    ttlMs: SESSIONS_POLICY_TTL_MS,
+    load: getRetentionPolicy,
+  });
+}
+
+/**
+ * Save and publish to the shared cache, so the Sessions view reflects the new
+ * policy without a refetch and without waiting for its TTL.
+ */
+export async function saveRetentionPolicyCached(policy: RetentionPolicy): Promise<void> {
+  await saveRetentionPolicy(policy);
+  writeCacheValue(SESSIONS_POLICY_KEY, policy);
 }
 
 /** Dry run: what `purgeSessions` would delete for this filter. */

@@ -19,7 +19,12 @@ import { useToast } from "./hooks/useToast";
 import { ensureMcpCatalog, refreshMcpCatalog } from "./lib/mcpCache";
 import { dropSkillsCache } from "./lib/skillsCache";
 import { setMinimizeToTray } from "./lib/tauri";
-import { preloadBackground, preloadEssentials, preloadViewChunks } from "./lib/preloadResources";
+import {
+  preloadBackground,
+  preloadEssentials,
+  preloadViewChunks,
+  preloadViewData,
+} from "./lib/preloadResources";
 import { useCoreStatus } from "./lib/tauri";
 import { cn } from "./lib/utils";
 import type { ActiveView } from "./lib/views";
@@ -221,6 +226,17 @@ export default function App() {
     };
   }, [isTauri, reloadToken, skillsReady]);
 
+  // Hovering or keyboard-focusing a sidebar entry warms that view's primary
+  // cache entry, so the click that usually follows paints instead of
+  // showing a skeleton. Best effort: the view still loads itself on miss.
+  const prefetchView = useCallback(
+    (next: ActiveView) => {
+      if (!isTauri) return;
+      void preloadViewData(next).catch(() => undefined);
+    },
+    [isTauri],
+  );
+
   const essentialsReady = !isTauri || (skillsReady && !presets.loading);
 
   // Harnesses the bridge could not find are dimmed in the skills scope tabs.
@@ -302,6 +318,7 @@ export default function App() {
         <Sidebar
           view={view}
           onSelect={selectView}
+          onIntent={prefetchView}
           skillStats={{ active: skillStats.active, total: totalSkills }}
           mcpCount={mcpCount}
           onOpenSettings={() => setSettingsOpen(true)}

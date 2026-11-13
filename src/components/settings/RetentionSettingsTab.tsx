@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
-import { getRetentionPolicy, saveRetentionPolicy, type RetentionPolicy } from "../../lib/sessions";
+import {
+  loadRetentionPolicy,
+  saveRetentionPolicyCached,
+  type RetentionPolicy,
+} from "../../lib/sessions";
 import { cn, confirmOnEnter } from "../../lib/utils";
 
 function toMessage(cause: unknown): string {
@@ -25,9 +29,11 @@ export function RetentionSettingsTab({
   const [policy, setPolicy] = useState<RetentionPolicy | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Cache first: the Sessions header has usually read this already, and the
+  // save path publishes back to the same entry.
   useEffect(() => {
     if (!isTauri) return;
-    void getRetentionPolicy()
+    void loadRetentionPolicy()
       .then(setPolicy)
       .catch(() => undefined);
   }, [isTauri]);
@@ -51,7 +57,7 @@ export function RetentionSettingsTab({
     if (!isTauri || !policy || saving) return;
     setSaving(true);
     try {
-      await saveRetentionPolicy(policy);
+      await saveRetentionPolicyCached(policy);
       onToast(t.sessions.saved);
     } catch (cause) {
       onError(t.sessions.saveFailed(toMessage(cause)));

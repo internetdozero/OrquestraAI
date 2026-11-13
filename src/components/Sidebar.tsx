@@ -7,6 +7,8 @@ import { cn } from "../lib/utils";
 interface SidebarProps {
   view: ActiveView;
   onSelect: (view: ActiveView) => void;
+  /** Hover or focus: warm the view's data before the click lands. */
+  onIntent?: (view: ActiveView) => void;
   /** Active skills in whichever scope the skills view is showing. */
   skillStats: { active: number; total: number };
   mcpCount: number;
@@ -38,6 +40,7 @@ function ViewButton({
   active,
   count,
   onSelect,
+  onIntent,
 }: {
   view: ViewDefinition;
   label: string;
@@ -45,6 +48,7 @@ function ViewButton({
   active: boolean;
   count: number | null;
   onSelect: (view: ActiveView) => void;
+  onIntent?: (view: ActiveView) => void;
 }) {
   const Icon = view.icon;
 
@@ -52,6 +56,8 @@ function ViewButton({
     <button
       type="button"
       onClick={() => onSelect(view.id)}
+      onMouseEnter={() => onIntent?.(view.id)}
+      onFocus={() => onIntent?.(view.id)}
       title={hint}
       aria-current={active ? "page" : undefined}
       className={cn(
@@ -87,6 +93,7 @@ function ViewButton({
 export function Sidebar({
   view,
   onSelect,
+  onIntent,
   skillStats,
   mcpCount,
   onOpenSettings,
@@ -131,6 +138,7 @@ export function Sidebar({
                 active={view === definition.id}
                 count={counts[definition.id]}
                 onSelect={onSelect}
+                onIntent={onIntent}
               />
             );
           })}
@@ -154,6 +162,7 @@ export function Sidebar({
           active={view === "agents"}
           count={null}
           onSelect={onSelect}
+          onIntent={onIntent}
         />
       </div>
       <div className="flex shrink-0 items-center justify-between border-t border-white/[0.06] px-3 py-2.5">

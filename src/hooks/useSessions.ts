@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type SetStateAction } from "react";
 import {
   SESSIONS_CATALOG_KEY,
   SESSIONS_CATALOG_TTL_MS,
   SESSIONS_POLICY_KEY,
   SESSIONS_POLICY_TTL_MS,
   estimatePurge,
-  getRetentionPolicy,
   getUnifiedSessions,
+  loadRetentionPolicy,
   purgeSessions,
-  saveRetentionPolicy,
+  saveRetentionPolicyCached,
   togglePinSession,
   type PurgeEstimate,
   type PurgeFilter,
@@ -37,6 +37,13 @@ const INITIAL_FILTER: SessionFilterState = {
   purgeCandidates: false,
   sort: "newest",
 };
+
+/**
+ * The shell unmounts the whole view on a tab switch, so the filter would reset
+ * on every visit. Keeping it beside the hook makes "back to Sessions" land
+ * where the operator left off.
+ */
+let lastFilter: SessionFilterState = INITIAL_FILTER;
 
 /** Stable identity so the resource state is not reset between renders. */
 const EMPTY_SESSIONS: UnifiedSession[] = [];
@@ -91,7 +98,7 @@ export function useSessions(options: {
     ttlMs: SESSIONS_POLICY_TTL_MS,
     enabled,
     fallback: null,
-    load: getRetentionPolicy,
+    load: loadRetentionPolicy,
   });
 
   const sessions = catalog.data;
@@ -99,7 +106,14 @@ export function useSessions(options: {
   const loading = catalog.loading;
 
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<SessionFilterState>(INITIAL_FILTER);
+  const [filter, setFilterState] = useState<SessionFilterState>(lastFilter);
+  const setFilter = useCallback((next: SetStateAction<SessionFilterState>) => {
+    setFilterState((previous) => {
+      const value = typeof next === "function" ? next(previous) : next;
+      lastFilter = value;
+      return value;
+    });
+  }, []);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [purgeFilter, setPurgeFilter] = useState<PurgeFilter | null>(null);
   const [estimate, setEstimate] = useState<PurgeEstimate | null>(null);
@@ -258,7 +272,7 @@ export function useSessions(options: {
     async (next: RetentionPolicy) => {
       if (!enabled) return;
       try {
-        await saveRetentionPolicy(next);
+        await saveRetentionPolicyCached(next);
         mutatePolicy(next);
         setRetentionOpen(false);
         onToast(t.sessions.saved);

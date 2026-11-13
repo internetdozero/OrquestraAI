@@ -3,7 +3,7 @@ import { HARNESSES, GLOBAL_SCOPE } from "./harnesses";
 import { loadBlackboardNotes, loadIdeasCatalog } from "./ideas";
 import { ensureMcpCatalog } from "./mcpCache";
 import { ensureVaultCatalog } from "./vaultCache";
-import { ensureUnifiedSessions } from "./sessions";
+import { ensureUnifiedSessions, loadRetentionPolicy } from "./sessions";
 import { hasSkillsCache } from "./skillsCache";
 import { loadSkillsScope } from "./skillsLoader";
 
@@ -54,6 +54,38 @@ export async function preloadViewChunks(isCancelled: () => boolean): Promise<voi
     import("../components/settings/SettingsModal"),
     import("../components/BridgeModal"),
   ]);
+}
+
+/**
+ * Warm the data behind one view, for a hover or keyboard focus on its sidebar
+ * entry: a click that follows lands on a filled cache instead of a skeleton.
+ * Never rejects — a failed warm just means the view loads itself as before.
+ */
+export async function preloadViewData(view: string): Promise<void> {
+  switch (view) {
+    case "ideas":
+      await Promise.all([loadIdeasCatalog(), loadBlackboardNotes()]);
+      return;
+    case "sessions":
+      await Promise.all([ensureUnifiedSessions(), loadRetentionPolicy()]);
+      return;
+    case "mcps":
+      await ensureMcpCatalog();
+      return;
+    case "credentials":
+      await ensureVaultCatalog();
+      return;
+    case "agents":
+      await ensureAgentsText();
+      return;
+    case "skills":
+      // The grid's first screen is already warm; re-evaluating the vault on
+      // every hover would be pure waste.
+      if (!hasSkillsCache(GLOBAL_SCOPE.id)) await loadSkillsScope(GLOBAL_SCOPE.id);
+      return;
+    default:
+      return;
+  }
 }
 
 /**

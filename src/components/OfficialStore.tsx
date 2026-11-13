@@ -6,7 +6,8 @@ import { useI18n } from "../hooks/useI18n";
 import { StoreCard } from "./StoreCard";
 import { StoreFilters, type StoreTierFilter } from "./StoreFilters";
 import { Download, ExternalLink } from "lucide-react";
-import { installRtk, openExternalUrl, rtkStatus } from "../lib/tauri";
+import { installRtk, openExternalUrl } from "../lib/tauri";
+import { ensureRtkStatus, refreshRtkStatus } from "../lib/rtkCache";
 
 export type StoreStatus = "active" | "idle" | "missing";
 export type StoreActionKind = "install" | "enable" | "add";
@@ -69,7 +70,8 @@ export function OfficialStore({
 
   useEffect(() => {
     let cancelled = false;
-    rtkStatus()
+    // Cached: mounting this tab used to spawn `rtk --version` every time.
+    ensureRtkStatus()
       .then((status) => {
         if (!cancelled) setRtkInstalled(status);
       })
@@ -243,7 +245,7 @@ export function OfficialStore({
                 try {
                   if (!rtkInstalled) {
                     const result = await installRtk();
-                    const status = await rtkStatus();
+                    const status = await refreshRtkStatus();
                     setRtkInstalled(status ?? result);
                     setRtkMessage(result);
                   }

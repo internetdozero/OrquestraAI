@@ -8,7 +8,8 @@ import { PresetPickers } from "./PresetPickers";
 import { presentPreset } from "../i18n/presetCopy";
 import { ensureMcpCatalog } from "../lib/mcpCache";
 import type { Preset } from "../lib/presets";
-import { listSkills } from "../lib/tauri";
+import { readSkillsCache } from "../lib/skillsCache";
+import { loadSkillsScope } from "../lib/skillsLoader";
 
 interface PresetEditModalProps {
   preset: Preset;
@@ -45,7 +46,11 @@ export function PresetEditModal({
 
   useEffect(() => {
     let active = true;
-    void listSkills("global")
+    // The grid or the boot warm-up has usually evaluated the global scope
+    // already: seed from it instead of re-walking the vault to fill a picker.
+    const cached = readSkillsCache("global");
+    const skills = cached ? Promise.resolve(cached) : loadSkillsScope("global").catch(() => []);
+    void skills
       .then((items) => {
         if (active) setAvailableSkills(items.map((s) => ({ id: s.id, name: s.name })));
       })
