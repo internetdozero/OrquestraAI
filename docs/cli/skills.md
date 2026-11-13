@@ -6,7 +6,7 @@ Comprehensive specification and operational guide for the granular Skills CLI in
 
 ## 1. Overview & Architecture
 
-In OrquestraAI, **Skills** are autonomous capability packages provided to AI agents across various development harnesses (Gemini, Claude, Codex, Copilot, Cursor, OpenCode, etc.).
+In OrquestraAI, **Skills** are autonomous capability packages provided to AI agents across the supported harnesses (Antigravity/AGY, Claude Code, Codex CLI, Copilot CLI, OpenCode, Kilo Code, Hermes Agent and Grok).
 
 ### Domain Model & Storage Layout
 

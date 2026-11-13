@@ -14,8 +14,10 @@ curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh
 The Linux release also publishes a `.deb`, built from the same bundle metadata
 as the installer path. It is the discoverable channel: `dpkg -i` puts the
 binary in `/usr/bin`, registers the launcher and lets the package manager
-record what is installed. It does not change the runtime requirements below —
-the package links the same glibc and WebKitGTK.
+record what is installed. It declares its Debian dependencies — WebKitGTK 4.1,
+GTK 3, libsoup 3, libayatana-appindicator, librsvg and `xdg-utils` — so
+`dpkg -i` resolves them instead of leaving a binary that cannot start. The
+glibc requirement still comes from the binary itself, not from a package.
 
 ```sh
 curl -fLO https://github.com/internetdozero/OrquestraAI/releases/latest/download/<name>.deb
@@ -109,13 +111,13 @@ are not shared libraries. `install.sh` diagnoses and installs them unless
 `--no-auto-deps` was passed; the `.deb` declares `xdg-utils` and the library
 dependencies.
 
-| Command                   | Feature                                    | Package                            |
-| ------------------------- | ------------------------------------------ | ---------------------------------- |
-| `xdg-open` or `gio`       | open links, reveal folders                 | `xdg-utils` (or GLib's `gio`)      |
-| `git`                     | skill import, official extension sync      | `git`                              |
-| `python3` + `venv`        | install official Python MCP servers        | `python3`, `python3-venv` (Debian) |
-| `node` / `npx`            | start npx-based MCP presets                | `nodejs`/`npm`                     |
-| `dbus` session + keyring  | keep the vault key in the OS keyring       | `gnome-keyring` or `kwallet`       |
+| Command                  | Feature                               | Package                            |
+| ------------------------ | ------------------------------------- | ---------------------------------- |
+| `xdg-open` or `gio`      | open links, reveal folders            | `xdg-utils` (or GLib's `gio`)      |
+| `git`                    | skill import, official extension sync | `git`                              |
+| `python3` + `venv`       | install official Python MCP servers   | `python3`, `python3-venv` (Debian) |
+| `node` / `npx`           | start npx-based MCP presets           | `nodejs`/`npm`                     |
+| `dbus` session + keyring | keep the vault key in the OS keyring  | `gnome-keyring` or `kwallet`       |
 
 Without a keyring the vault still works, protected by a `0600` key file beside
 the ciphertext; Settings → About shows the backend and the reason.

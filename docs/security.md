@@ -105,3 +105,23 @@ profile ACL: the owning account, `SYSTEM` and the local `Administrators` group
 a per-file DACL, so a profile directory whose ACL was widened by hand widens
 the backups with it. Deployments that need a stronger guarantee should point
 `USERPROFILE` at a directory with a restrictive ACL.
+
+## Runtime tool resolution
+
+The app shells out to a small, fixed set of programs (`git`, `python3`,
+`node`, a desktop opener) and the vault's blind `vault exec` proxy shells out
+to its own allowlist. Both use the same resolver
+(`orquestra_core::exec`): the process `PATH` first, then the login shell's
+`PATH`, `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew; on
+Windows the user `PATH` comes from `HKCU\Environment`.
+
+- The login shell (`$SHELL -lc`) runs once per process, with a two-second
+  deadline, and only when a plain `PATH` lookup already failed.
+- `vault exec` validates the bare allowlisted name and the per-binary
+  subcommand policy **before** resolving it. IPC cannot supply a path, and a
+  modified rc file can only choose among executables that already carry an
+  allowed name; the allowlist itself is still code-reviewed and has no
+  runtime knob.
+- Nothing is installed silently: a missing program is reported with the
+  package name for the distribution, and the Flatpak sandbox says plainly
+  that host binaries are not visible.

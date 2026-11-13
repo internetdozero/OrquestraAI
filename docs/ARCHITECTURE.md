@@ -29,6 +29,10 @@ views - hooks - lib/*Cache.ts         lib.rs handler registry
 | Official store | store UI                                                  | `official.rs`                                                | static curated data                                                            |
 
 Cross-cutting: `paths.rs` (single `OrquestraPaths` resolver + bootstrap),
+`exec_env.rs` (thin shell layer over `orquestra_core::exec`, which resolves
+binaries through the process and login-shell `PATH`), `tooling/`
+(capability probe: git, python+venv, node, opener, with install hints),
+`desktop_backup.rs` (in-process `tar.gz`, also used by `skills export --tar`),
 `log.rs`, `single_instance.rs`, `cli.rs`, `ipc_contract.rs` + fixture
 (contract tests), `ipc_acl.rs` + `build.rs` (deny-by-default ACL).
 
@@ -40,7 +44,9 @@ Cross-cutting: `paths.rs` (single `OrquestraPaths` resolver + bootstrap),
    registration: Linux `.desktop` entries plus hicolor icons under
    `$XDG_DATA_HOME` (`desktop_icons.rs`), a `~/Applications` bundle on macOS
    (`desktop_bundle.rs`) and a Start Menu shortcut on Windows
-   (`desktop_shortcut.rs`). `install.sh` writes none of these.
+   (`desktop_shortcut.rs`). `install.sh` writes none of these. The Linux entry
+   uses the absolute executable path (the `.AppImage` file when running from
+   one) and is skipped inside Flatpak, which exports its own launcher.
 3. `tray::setup_tray()` — system tray; failure tolerated (window still opens).
    `AppConfigState.minimize_to_tray` (set via `set_minimize_to_tray`) decides
    whether close hides to tray or exits.
@@ -125,16 +131,16 @@ resolved once through `paths::home_dir` (`HOME`, then `USERPROFILE` on Windows);
 ids are path-segment-checked so `../` escapes and symlinks pointing outside
 the store resolve to an empty feed, never to outside bytes.
 
-| Harness     | Store                                                                                               | Listing source                                                                                                                                                                                            | Transcript source                                                                                 |
-| ----------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| claude      | `~/.claude`                                                                                         | `history.jsonl` (`sessionId`, `display`, `project`, `timestamp`\|`created_at` as epoch or ISO) ∪ `projects/<slug>/<id>.jsonl` headers (first user prompt + recorded `cwd`) + legacy `sessions/<id>.jsonl` | Per-line JSONL transcript; Manicode-style single-array files read element-wise                    |
-| codex       | `~/.codex`                                                                                          | `session_index.jsonl` (`id`, `thread_name`\|`title`, `updated_at`) ∪ `sessions/YYYY/MM/DD/rollout-*.jsonl` + turn counts/activity from read-only `thread_history_1.sqlite`                                | Rollouts streamed line by line, keeping only `type: response_item` with `user`\|`assistant` roles |
-| copilot     | `~/.copilot`                                                                                        | `session-store.db` (SQLite) + `open-sessions-state.json` registry                                                                                                                                         | Turns built from DB rows (role/content/timestamp)                                                 |
-| grok        | `~/.grok`                                                                                           | `sessions/<encoded-cwd>/<id>/` dirs + `active_sessions.json` for open sessions; `session_search.sqlite` for search                                                                                        | `chat_history.jsonl` per session dir                                                              |
-| antigravity | `~/.gemini`                                                                                         | `antigravity/brain/<id>/` dirs + `conversations/<id>.db`; costs in `conversation_summaries.db`                                                                                                            | `brain/<id>/…/logs/transcript.jsonl` (newer nests under `.system_generated/`)                     |
-| hermes      | `~/.hermes`                                                                                         | `sessions/<id>.jsonl` + `terminal-sessions/<id>.jsonl`; `state.db`                                                                                                                                        | Same JSONL files, lines → turns                                                                   |
-| opencode    | `~/.local/share/opencode/opencode.db`                                                               | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB: join/message/part table layouts tried in order                                           |
-| kilo        | `~/.local/share/kilo/kilo.db`                                                                       | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB, same fallback order                                                                      |
+| Harness     | Store                                 | Listing source                                                                                                                                                                                            | Transcript source                                                                                 |
+| ----------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| claude      | `~/.claude`                           | `history.jsonl` (`sessionId`, `display`, `project`, `timestamp`\|`created_at` as epoch or ISO) ∪ `projects/<slug>/<id>.jsonl` headers (first user prompt + recorded `cwd`) + legacy `sessions/<id>.jsonl` | Per-line JSONL transcript; Manicode-style single-array files read element-wise                    |
+| codex       | `~/.codex`                            | `session_index.jsonl` (`id`, `thread_name`\|`title`, `updated_at`) ∪ `sessions/YYYY/MM/DD/rollout-*.jsonl` + turn counts/activity from read-only `thread_history_1.sqlite`                                | Rollouts streamed line by line, keeping only `type: response_item` with `user`\|`assistant` roles |
+| copilot     | `~/.copilot`                          | `session-store.db` (SQLite) + `open-sessions-state.json` registry                                                                                                                                         | Turns built from DB rows (role/content/timestamp)                                                 |
+| grok        | `~/.grok`                             | `sessions/<encoded-cwd>/<id>/` dirs + `active_sessions.json` for open sessions; `session_search.sqlite` for search                                                                                        | `chat_history.jsonl` per session dir                                                              |
+| antigravity | `~/.gemini`                           | `antigravity/brain/<id>/` dirs + `conversations/<id>.db`; costs in `conversation_summaries.db`                                                                                                            | `brain/<id>/…/logs/transcript.jsonl` (newer nests under `.system_generated/`)                     |
+| hermes      | `~/.hermes`                           | `sessions/<id>.jsonl` + `terminal-sessions/<id>.jsonl`; `state.db`                                                                                                                                        | Same JSONL files, lines → turns                                                                   |
+| opencode    | `~/.local/share/opencode/opencode.db` | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB: join/message/part table layouts tried in order                                           |
+| kilo        | `~/.local/share/kilo/kilo.db`         | SQLite via shared `sqlite_store`                                                                                                                                                                          | Same DB, same fallback order                                                                      |
 
 Shared mapping (`sessions/adapters/transcript*.rs`, used by every reader):
 `parse_value` detects the canonical role, extracts text blocks and ISO
@@ -152,7 +158,8 @@ dropped) — corrupt lines are skipped, and purge deletes only inside the store
 - Secrets are _used_, never _returned_: `vault_http_request` injects the active
   key, fails over the pool on 401/402/403/429, strips auth response headers and
   scrubs secrets from the body; `vault_exec` allowlists bare binary names with
-  no shell and scrubs output.
+  no shell, validates the per-binary policy before resolution, resolves the
+  name through the process and login-shell `PATH`, and scrubs output.
 - Both blind calls sit in `vault-blind-ops`, withheld from every window until
   a confirmed UI caller exists; `reveal_mcp_secret` (one value, explicit click)
   is the only path that returns a secret to the UI.

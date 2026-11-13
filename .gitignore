@@ -61,3 +61,6 @@ packaging/flatpak/files/
 
 # Orquestra audits
 .orquestra/audits/
+
+# Local agent instructions: kept on disk, never published.
+/AGENTS.md

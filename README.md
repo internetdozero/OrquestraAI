@@ -21,10 +21,11 @@ OrquestraAI is a desktop app and CLI for managing several AI coding agents from 
 - **Idea Vault and blackboard:** a task list and shared notes for coordinating agents.
 - **Janitor:** watches memory and temporary files and cleans up orphaned agent processes.
 - **Signed updates:** the in-app updater and the installer only accept releases whose checksums were signed for that exact version.
+- **Portable runtime:** external tools are resolved through the login shell's `PATH` as well as the process environment, so `nvm`, `mise`, Homebrew and `~/.local/bin` installs work when the app is launched from the menu. Anything missing is reported with the exact install command.
 
 ## Install
 
-Published binaries: **Linux x86_64**, **macOS Apple Silicon** and **macOS Intel**. Windows is compile-checked in CI but not distributed yet.
+Published binaries: **Linux x86_64**, **Linux aarch64**, **macOS Apple Silicon**, **macOS Intel** and **Windows x86_64** (an NSIS installer plus the bare executable the in-app updater replaces).
 
 ```bash
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
@@ -35,7 +36,7 @@ The installer:
 1. Resolves the latest GitHub release and downloads the binary, `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`.
 2. Verifies the minisign signature with the embedded release key **before** trusting any checksum. This needs [`minisign`](https://jedisct1.github.io/minisign/) or Python 3 with PyNaCl (`python3-nacl` on Debian/Ubuntu). Installation stops if neither is available or the signature is invalid.
 3. Checks the binary's SHA-256 and installs it to `~/.local/bin/orquestra`.
-4. On Linux, checks the binary's glibc symbol versions and the WebKitGTK/libsoup libraries, and installs the missing libraries through the package manager using `sudo`. Pass `--no-auto-deps` to skip the library step and install them yourself.
+4. On Linux, checks the binary's glibc symbol versions and the WebKitGTK/libsoup libraries, then the runtime tools (`xdg-utils` or `gio`, `git`, `python3` with `venv`), and installs what is missing through the package manager using `sudo`. Pass `--no-auto-deps` to skip the install step and manage them yourself.
 
 Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. See [docs/install.md](docs/install.md) for the version table and what to do on an older distribution.
 
@@ -71,16 +72,16 @@ orquestra idea list --project MyProject
 
 ## Supported harnesses
 
-| Harness            | Skills                    | Instructions                   | Sessions / config                     |
-| :----------------- | :------------------------ | :----------------------------- | :------------------------------------ |
-| Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md`   | transcript logs, `mcp_config.json`    |
-| OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite`, rollouts   |
-| Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`             |
-| OpenCode           | `skills.paths` in config  | native                         | `opencode.jsonc`, `opencode.db`       |
-| Kilo Code          | `skills.paths` in config  | native                         | `kilo.jsonc`, `kilo.db`               |
-| GitHub Copilot CLI | `~/.copilot/skills`       | native                         | `session-store.db`                    |
-| Hermes Agent       | `~/.hermes/skills`        | native                         | `state.db`                            |
-| xAI Grok           | `~/.grok/skills`          | native                         | `chat_history.jsonl`                  |
+| Harness            | Skills                    | Instructions                 | Sessions / config                   |
+| :----------------- | :------------------------ | :--------------------------- | :---------------------------------- |
+| Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md` | transcript logs, `mcp_config.json`  |
+| OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`         | `thread_history_1.sqlite`, rollouts |
+| Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`        | `projects/<slug>/*.jsonl`           |
+| OpenCode           | `skills.paths` in config  | native                       | `opencode.jsonc`, `opencode.db`     |
+| Kilo Code          | `skills.paths` in config  | native                       | `kilo.jsonc`, `kilo.db`             |
+| GitHub Copilot CLI | `~/.copilot/skills`       | native                       | `session-store.db`                  |
+| Hermes Agent       | `~/.hermes/skills`        | native                       | `state.db`                          |
+| xAI Grok           | `~/.grok/skills`          | native                       | `chat_history.jsonl`                |
 
 Only user-level files are managed. Workspace `.agents` folders are not imported.
 

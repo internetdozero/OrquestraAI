@@ -20,11 +20,11 @@ O OrquestraAI é um app desktop e uma CLI para gerenciar vários agentes de cód
 - **Cofre de credenciais:** chaves de API cifradas em repouso com AES-256-GCM. A chave de cifragem fica no keyring do sistema. Agentes podem usar as chaves por um proxy cego de HTTP/exec sem vê-las, e chaves copiadas na interface saem do clipboard após 20 segundos.
 - **Idea Vault e blackboard:** lista de tarefas e notas compartilhadas para coordenar agentes.
 - **Janitor:** monitora memória e arquivos temporários e limpa processos de agentes órfãos.
-- **Atualizações assinadas:** o atualizador do app e o instalador só aceitam releases cujos checksums foram assinados para aquela versão exata.
+- **Runtime portátil:** ferramentas externas são resolvidas pelo `PATH` do login shell além do ambiente do processo, então instalações via `nvm`, `mise`, Homebrew e `~/.local/bin` funcionam quando o app é aberto pelo menu. O que faltar é reportado com o comando exato de instalação.
 
 ## Instalação
 
-Binários publicados: **Linux x86_64**, **macOS Apple Silicon** e **macOS Intel**. O Windows é compilado no CI, mas ainda não é distribuído.
+Binários publicados: **Linux x86_64**, **Linux aarch64**, **macOS Apple Silicon**, **macOS Intel** e **Windows x86_64** (instalador NSIS e o executável avulso que o atualizador substitui).
 
 ```bash
 curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
@@ -35,7 +35,7 @@ O instalador:
 1. Resolve a release mais recente do GitHub e baixa o binário, o `SHA256SUMS.txt` e o `SHA256SUMS.txt.minisig`.
 2. Verifica a assinatura minisign com a chave de release embutida **antes** de confiar em qualquer checksum. Isso exige o [`minisign`](https://jedisct1.github.io/minisign/) ou Python 3 com PyNaCl (`python3-nacl` no Debian/Ubuntu). A instalação para se nenhum dos dois estiver disponível ou se a assinatura for inválida.
 3. Confere o SHA-256 do binário e instala em `~/.local/bin/orquestra`.
-4. No Linux, verifica as bibliotecas WebKitGTK/libsoup e instala as que faltarem pelo gerenciador de pacotes usando `sudo`. Use `--no-auto-deps` para pular essa etapa e instalar as bibliotecas você mesmo.
+4. No Linux, verifica as bibliotecas WebKitGTK/libsoup e também as ferramentas de runtime (`xdg-utils` ou `gio`, `git`, `python3` com `venv`), instalando o que faltar pelo gerenciador de pacotes usando `sudo`. Use `--no-auto-deps` para pular a instalação e cuidar disso você mesmo.
 
 Para diagnosticar uma instalação Linux existente sem baixar de novo:
 
@@ -69,16 +69,16 @@ orquestra idea list --project MeuProjeto
 
 ## Harnesses suportados
 
-| Harness            | Skills                    | Instruções                     | Sessões / config                      |
-| :----------------- | :------------------------ | :----------------------------- | :------------------------------------ |
-| Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md`   | logs de transcript, `mcp_config.json` |
-| OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`           | `thread_history_1.sqlite`, rollouts   |
-| Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`          | `projects/<slug>/*.jsonl`             |
-| OpenCode           | `skills.paths` na config  | nativo                         | `opencode.jsonc`, `opencode.db`       |
-| Kilo Code          | `skills.paths` na config  | nativo                         | `kilo.jsonc`, `kilo.db`               |
-| GitHub Copilot CLI | `~/.copilot/skills`       | nativo                         | `session-store.db`                    |
-| Hermes Agent       | `~/.hermes/skills`        | nativo                         | `state.db`                            |
-| xAI Grok           | `~/.grok/skills`          | nativo                         | `chat_history.jsonl`                  |
+| Harness            | Skills                    | Instruções                   | Sessões / config                      |
+| :----------------- | :------------------------ | :--------------------------- | :------------------------------------ |
+| Antigravity (AGY)  | `~/.gemini/config/skills` | `~/.gemini/config/AGENTS.md` | logs de transcript, `mcp_config.json` |
+| OpenAI Codex       | `~/.codex/skills`         | `~/.codex/AGENTS.md`         | `thread_history_1.sqlite`, rollouts   |
+| Claude Code        | `~/.claude/skills`        | `~/.claude/CLAUDE.md`        | `projects/<slug>/*.jsonl`             |
+| OpenCode           | `skills.paths` na config  | nativo                       | `opencode.jsonc`, `opencode.db`       |
+| Kilo Code          | `skills.paths` na config  | nativo                       | `kilo.jsonc`, `kilo.db`               |
+| GitHub Copilot CLI | `~/.copilot/skills`       | nativo                       | `session-store.db`                    |
+| Hermes Agent       | `~/.hermes/skills`        | nativo                       | `state.db`                            |
+| xAI Grok           | `~/.grok/skills`          | nativo                       | `chat_history.jsonl`                  |
 
 Só arquivos de nível de usuário são gerenciados. Pastas `.agents` de workspace não são importadas.
 

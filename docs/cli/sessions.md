@@ -1,6 +1,6 @@
 # OrquestraAI CLI: Sessions Management & Observability
 
-`orquestra sessions <subcommand>` provides granular command-line management and real-time observability across all agent conversations stored by the nine supported harnesses.
+`orquestra sessions <subcommand>` provides granular command-line management and real-time observability across all agent conversations stored by the eight supported harnesses.
 
 ---
 

@@ -6,7 +6,7 @@ The `orquestra mcp` subcommand family provides granular command-line lifecycle m
 
 ## 1. Overview & Architecture
 
-OrquestraAI acts as a centralized **orchestration hub** for MCP servers across multiple AI coding harnesses (e.g., Claude Desktop, Cursor, Gemini Code Assist, Codex CLI, Windsurf, OpenCode).
+OrquestraAI acts as a centralized **orchestration hub** for MCP servers across the supported AI coding harnesses (Antigravity/AGY, Claude Code, Codex CLI, Copilot CLI, OpenCode, Kilo Code and Grok).
 
 ### Key Architectural Pillars:
 
@@ -226,9 +226,9 @@ orquestra mcp deploy [OPTIONS]
 
 ```text
 MCP deployment completed:
-  Updated: ~/.config/Cursor/mcp.json
-  Updated: ~/.config/Claude/claude_desktop_config.json
-  Unchanged: ~/.gemini/settings.json
+  Updated: ~/.claude.json
+  Updated: ~/.gemini/config/mcp_config.json
+  Unchanged: ~/.codex/config.toml
   Total synced harnesses: 3
 ```
 
@@ -249,13 +249,13 @@ orquestra mcp targets [OPTIONS]
 **Human Output Example:**
 
 ```text
-TARGET      STATUS         CONFIG PATH
-claude      Installed      ~/.config/Claude/claude_desktop_config.json
-cursor      Installed      ~/.config/Cursor/mcp.json
-gemini      Installed      ~/.gemini/settings.json
-codex       Not Installed  ~/.codex/mcp.json
-windsurf    Installed      ~/.codeium/windsurf/mcp_config.json
-opencode    Not Installed  ~/.config/opencode/mcp.json
+TARGET       STATUS         CONFIG PATH
+antigravity  Installed      ~/.gemini/config/mcp_config.json
+claude       Installed      ~/.claude.json
+codex        Not Installed  ~/.codex/config.toml
+copilot      Installed      ~/.copilot/mcp-config.json
+opencode     Not Installed  ~/.config/opencode/opencode.jsonc
+kilo         Installed      ~/.config/kilo/kilo.jsonc
 ```
 
 ---

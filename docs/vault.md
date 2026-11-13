@@ -9,6 +9,14 @@ fall back to a `0600` key file beside the secrets with a loud once-per-process
 warning. Files stay `0600`; integration tests never touch the real keyring
 (`ORQUESTRA_KEYRING_DISABLE=1` plus a temp-root guard in `at_rest::key`).
 
+A live D-Bus session is not treated as a live Secret Service. The backend
+performs one bounded probe (three seconds) the first time the key is needed
+and falls back to the file key when no provider answers, so a minimal WM with
+dbus but no gnome-keyring/kwallet — or a Flatpak without
+`--talk-name=org.freedesktop.secrets` — degrades with a reported reason
+instead of blocking on provider activation. Settings → About shows the
+backend and the reason.
+
 ## Why `.migrate-bak` files exist
 
 The alpha.5 encryption rollout migrated plaintext files in place: the

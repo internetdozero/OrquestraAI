@@ -362,6 +362,8 @@ orquestra vault proxy-http \
 
 Executes a bare allowlisted binary in a subprocess with secrets injected strictly into environment variables. Shell strings, pipes, redirections, and non-allowlisted binaries are rejected before invocation. Output streams are scrubbed.
 
+The binary is resolved through the process `PATH` and then the login shell's `PATH` (plus `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew), so CLIs installed by a version manager work when the app was opened from the menu. The allowlist and the per-binary subcommand policy are checked against the bare name **before** resolution; a path supplied through IPC is still refused.
+
 ```bash
 orquestra vault proxy-exec <service> [--key-number N] [--] <argv...>
 ```

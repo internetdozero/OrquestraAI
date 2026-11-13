@@ -7,21 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.1.0-alpha.9] - 2026-11-13
+
+> **Freebuff support removed.** Freebuff now keeps skills, MCPs and global
+> instructions in its cloud account, so the folder-based harness integration no
+> longer had any effect. The harness, its session adapters, its MCP target, its
+> instruction/skill links and the cloud-session badge are gone. The remaining
+> eight harnesses keep full skills, MCP and `AGENTS.md` support, and existing
+> `~/.agents` content is left untouched — it is no longer adopted or
+> quarantined.
 
 ### Added
 
+- **Capability Probe:** Settings → About now reports every external program the app shells out to — `git`, `python` (with `venv`/`ensurepip`), `node` and the desktop opener — with the exact install command for the platform. It also names the Flatpak sandbox, where host binaries are invisible, instead of offering actions that cannot work.
+- **Flatpak Channel:** The release publishes `OrquestraAI-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load. The manifest grants `org.freedesktop.secrets` and `xdg-run/keyring`, and the build installs and smoke-tests the bundle before publishing it.
 - **Bridge Backup Retention:** Keep the three newest `pre-fusion-*` recovery directories after a fully successful bridge; preserve failed-run and unrelated backups.
-- **Flatpak Channel:** The release publishes `OrquestraAI-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load.
+- **Wayland Software Rendering:** `ORQUESTRA_WEBKIT_SOFTWARE=1` sets `WEBKIT_DISABLE_DMABUF_RENDERER` before the window is created, for NVIDIA/Wayland sessions where WebKitGTK opens a blank window. `GDK_BACKEND` is still never overridden.
+- **Bundle Guard:** `npm run check:bundle` runs after every production build and fails if developer fixtures or their absolute paths appear in `dist/`.
+
+### Changed
+
+- **Portable Executable Resolution:** A single resolver in `orquestra-core` searches the process `PATH` and then the login shell's `PATH` plus `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew, and reads the Windows user `PATH` from `HKCU\Environment`. The desktop shell and `vault exec` share it, so tools installed by nvm, mise or Homebrew work when the app is launched from the menu.
+- **Linux Launcher:** The generated `.desktop` entry uses the absolute executable path (the `.AppImage` file when running from one) with Desktop Entry quoting instead of a bare `orquestra` command. Inside Flatpak the app no longer writes a launcher that would shadow the exported one.
+- **Open Links and Folders:** Falls back across `gio open`, `xdg-open`, `kde-open6/5`, `sensible-browser`/`x-www-browser` and the common file managers instead of requiring `xdg-utils`.
+- **Installer Runtime Tools:** `install.sh` and `--check-deps` now diagnose and (unless `--no-auto-deps`) install `xdg-utils` or `gio`, `git` and `python3` with `venv`, naming the package per distribution.
+- **Debian Package Dependencies:** The `.deb` declares WebKitGTK 4.1, GTK 3, libsoup 3, libayatana-appindicator, librsvg and `xdg-utils`, so `dpkg -i` resolves them instead of leaving a binary that cannot start.
+- **Faster Views:** Ideas and sessions are served from TTL caches with stale-while-revalidate, the remaining caches expire instead of living forever, harness mounts are cached and views prefetch on hover. `src/lib/perf.ts` records boot and view-switch timings.
+- **Shared Agents Skills:** `~/.agents/skills` is tracked as a secondary skills source for Codex and Grok, so skills installed there are not silently ignored.
 
 ### Removed
 
-- **Freebuff Harness Support:** Freebuff now keeps skills, MCPs and global instructions in its cloud account, so the folder-based harness integration no longer had an effect. The harness, its session adapters, its MCP target, its instruction/skill links and the cloud-session badge are gone; the other eight harnesses keep full skills, MCP and `AGENTS.md` support. Existing `~/.agents` content is left untouched and is no longer adopted or quarantined.
+- **Freebuff Harness Support:** The harness, session adapter, MCP target, instruction/skill links and cloud-session badge were removed (63 files). `~/.agents` stays on disk but is no longer adopted, quarantined or projected; Codex and Grok read its skills as a secondary source only.
 
 ### Fixed
 
+- **Keyring Probe and Fallback:** A live D-Bus session no longer implies a live Secret Service. The vault performs one bounded probe (3 s) and falls back to the `0600` key file with a reported reason instead of blocking on provider activation.
+- **Python MCP Installs:** `python3 -m venv` is checked before cloning, so Debian/Ubuntu without `python3-venv` get an actionable message instead of `ensurepip is not available`; the Microsoft Store `python` alias is refused on Windows.
+- **`skills export --tar`:** The archive is written in-process with `tar` + `flate2`, matching the backup path, so it works on Windows builds without `tar.exe` and on minimal Linux images.
+- **macOS First Launch:** Probing `git` no longer opens the Xcode Command Line Tools dialog; the shim at `/usr/bin/git` is reported as missing (with `xcode-select --install`) when the tools are absent.
+- **Desktop Cache Refresh:** Tries `kbuildsycoca6` and `kbuildsycoca5`, only runs installed helpers, and logs one warning naming the command and the consequence instead of discarding every error.
+- **Developer Fixtures Out of Production:** Mock sessions, ideas, MCP catalogs and their `/home/operator` paths moved behind a dev-only dynamic import; the production bundle no longer emits them.
 - **Windows App Identity:** The Start Menu shortcut now carries `System.AppUserModel.ID`, so the window, the tray icon and the Start Menu entry group as one app instead of by executable path, and a shortcut written by an older build is refreshed once instead of being treated as current forever.
 - **Linux Compatibility Gate:** The `debian:11` and `rockylinux:8` jobs assert the diagnosis (a measurable glibc requirement and a report that names the Flatpak) instead of failing on the documented baseline, so only an unmeasurable requirement turns the pipeline red.
+
+### Security
+
+- The Flatpak sandbox now reaches the OS keyring (`--talk-name=org.freedesktop.secrets`, `--filesystem=xdg-run/keyring`); without a provider the vault degrades explicitly instead of silently.
+- `vault exec` validates the bare allowlisted name and the per-binary subcommand policy **before** resolving it, so IPC still cannot supply a path and the login-shell lookup only chooses among binaries with an allowed name.
 
 ## [0.1.0-alpha.8] - 2026-11-07
 
