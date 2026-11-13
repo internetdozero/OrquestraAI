@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Manual Flatpak Check:** `Remote Build & Release` accepts `build_flatpak`, which wraps the published Linux binary in the Flathub builder and fails the run on a packaging error without building the platform matrix or publishing a release. It is the way to validate the recipe without cutting a tag.
+
 ### Fixed
 
 - **Flatpak Packaging:** The release job now runs in Flathub's builder image and builds through the Flathub action, because Ubuntu 22.04's `flatpak-builder` 1.2 still calls the legacy `appstream-compose` binary that GNOME SDK 47 dropped. `v0.1.0-alpha.9` was published without the Flatpak asset for that reason; the binary, `.deb` and installer channels are unaffected.

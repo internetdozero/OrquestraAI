@@ -3,6 +3,11 @@ name: Remote Build & Release
 on:
   workflow_dispatch:
     inputs:
+      build_flatpak:
+        description: "Build only the Flatpak bundle from the latest release binary? (no build matrix, no release)"
+        required: false
+        type: boolean
+        default: false
       create_release:
         description: "Publish as a GitHub Release?"
         required: false
@@ -18,6 +23,9 @@ permissions:
 jobs:
   build:
     name: Build (${{ matrix.platform.name }})
+    # `build_flatpak` reuses the binary from the latest release: packaging is
+    # what gets validated, so no platform is rebuilt.
+    if: inputs.build_flatpak != true
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
@@ -274,21 +282,48 @@ jobs:
     # Remove it once this job has shipped a bundle from a real tag.
     name: Flatpak bundle (x86_64)
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
+    # A tag or a release needs the freshly built artifact. `build_flatpak`
+    # skips the matrix entirely and wraps the binary already on the release
+    # page, so a packaging problem is visible without cutting a tag.
+    if: |
+      inputs.build_flatpak == true ||
+      (needs.build.result == 'success' &&
+       (startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true))
     runs-on: ubuntu-22.04
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
       options: --privileged
-    continue-on-error: true
+    # A manual packaging check must fail loudly; tag builds stay tolerant until
+    # this job has shipped a bundle from a real tag.
+    continue-on-error: ${{ inputs.build_flatpak != true }}
     steps:
       - name: Checkout repository (packaging recipe)
         uses: actions/checkout@v7
 
-      - name: Download the Linux x86_64 artifact
+      - name: Download the Linux x86_64 artifact (this run)
+        if: inputs.build_flatpak != true
         uses: actions/download-artifact@v8
         with:
           name: orquestra-linux-x86_64
           path: artifact
+
+      # Manual runs wrap the published binary instead of rebuilding it, so the
+      # bundle is exercised against exactly what users download.
+      - name: Download the published Linux x86_64 binary
+        if: inputs.build_flatpak == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifact
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" \
+            -o /tmp/release.json
+          asset_id=$(python3 -c 'import json; a=json.load(open("/tmp/release.json"))["assets"]; print(next(x["id"] for x in a if x["name"] == "orquestra-linux-x86_64"))')
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" \
+            -o artifact/orquestra-linux-x86_64
+          chmod +x artifact/orquestra-linux-x86_64
 
       # The manifest resolves `path: files/...` beside itself, so the staging
       # tree is produced first and the action builds from the manifest.
