@@ -19,6 +19,7 @@ import { useToast } from "./hooks/useToast";
 import { ensureMcpCatalog, refreshMcpCatalog } from "./lib/mcpCache";
 import { dropSkillsCache } from "./lib/skillsCache";
 import { setMinimizeToTray } from "./lib/tauri";
+import { perfBoot, perfViewSwitch } from "./lib/perf";
 import {
   preloadBackground,
   preloadEssentials,
@@ -193,7 +194,11 @@ export default function App() {
     if (!isTauri || !skillsReady) return;
 
     let cancelled = false;
-    void preloadBackground(() => cancelled);
+    void preloadBackground(() => cancelled)
+      .then(() => {
+        if (!cancelled) perfBoot("preload-done");
+      })
+      .catch(() => undefined);
     // Warm the split view/modal chunks while idle so the first tab switch
     // rarely hits the Suspense fallback.
     void preloadViewChunks(() => cancelled);
@@ -239,6 +244,15 @@ export default function App() {
 
   const essentialsReady = !isTauri || (skillsReady && !presets.loading);
 
+  // Boot timing: `boot:shell` is the first interactive frame, `boot:preload-done`
+  // the end of the idle warm-up. Inert unless performance marks are enabled.
+  const shellMarked = useRef(false);
+  useEffect(() => {
+    if (!essentialsReady || shellMarked.current) return;
+    shellMarked.current = true;
+    perfBoot("shell");
+  }, [essentialsReady]);
+
   // Harnesses the bridge could not find are dimmed in the skills scope tabs.
   const installedHarnessIds = useMemo(
     () =>
@@ -255,6 +269,8 @@ export default function App() {
   const selectView = (next: ActiveView) => {
     if (next === view) return;
 
+    // Start of the switch: the view reports back when it shows real data.
+    perfViewSwitch(next);
     setView(next);
     setQuery("");
     clearError();

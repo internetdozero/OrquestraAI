@@ -8,6 +8,7 @@ import {
   updateMcpServers,
 } from "../lib/mcpCache";
 import type { McpServer, McpTarget } from "../lib/mcps";
+import { perfViewPainted } from "../lib/perf";
 
 function toMessage(cause: unknown, fallback: string): string {
   if (typeof cause === "string") return cause;
@@ -39,11 +40,13 @@ export function useMcpCatalog(isTauri: boolean, reloadToken: number) {
       }
 
       if (!force && readMcpCache() === null) setLoading(true);
+      if (readMcpCache() !== null) perfViewPainted("mcps", "cache");
       try {
         const next = force ? await refreshMcpCatalog() : await ensureMcpCatalog();
         setServers(next.servers);
         setTargets(next.targets);
         setError(null);
+        perfViewPainted("mcps", "load");
       } catch (cause) {
         setError(t.mcps.readFailed(toMessage(cause, t.common.unexpected)));
       } finally {

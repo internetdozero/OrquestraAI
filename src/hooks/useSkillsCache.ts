@@ -10,6 +10,7 @@ import {
 } from "../lib/skillsCache";
 import { loadSkillsScope } from "../lib/skillsLoader";
 import { devMockMode } from "../lib/fixtures";
+import { perfViewPainted } from "../lib/perf";
 
 function toMessage(cause: unknown, fallback: string): string {
   if (typeof cause === "string") return cause;
@@ -65,6 +66,8 @@ export function useSkillsCache(scope: string, isTauri: boolean) {
         if (request !== requestRef.current) return;
         setSkills(items);
         setError(null);
+        // Ignored when this mount already painted from the scope cache.
+        perfViewPainted("skills", "load");
       } catch (cause) {
         if (request !== requestRef.current) return;
         setError(toMessage(cause, t.common.unexpected));
@@ -81,6 +84,9 @@ export function useSkillsCache(scope: string, isTauri: boolean) {
   // A fresh cache paints as-is. Only a missing or stale scope hits the core,
   // and a stale one keeps its cards up while that read finishes.
   useEffect(() => {
+    // The grid painted from the scope cache during render; report it as the
+    // switch's first data. A cold scope reports when its read lands instead.
+    if (hasSkillsCache(scope)) perfViewPainted("skills", "cache");
     if (hasSkillsCache(scope) && !isSkillsCacheStale(scope)) {
       setLoading(false);
       return;

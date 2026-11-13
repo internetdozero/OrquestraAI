@@ -75,6 +75,7 @@ export function useIdeas(options: {
     enabled: active,
     fallback: EMPTY_CATALOG,
     load: loadIdeasCatalog,
+    perfView: "ideas",
   });
 
   const notesResource = useCachedResource<BlackboardNote[]>({

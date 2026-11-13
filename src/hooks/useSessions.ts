@@ -91,6 +91,7 @@ export function useSessions(options: {
     enabled,
     fallback: EMPTY_SESSIONS,
     load: getUnifiedSessions,
+    perfView: "sessions",
   });
 
   const policyResource = useCachedResource<RetentionPolicy | null>({

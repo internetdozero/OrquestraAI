@@ -6,6 +6,7 @@ import {
   reloadCacheValue,
   writeCacheValue,
 } from "../lib/dataCache";
+import { perfViewPainted } from "../lib/perf";
 
 export interface CachedResourceOptions<T> {
   /** Cache identity; switching keys adopts the other entry during render. */
@@ -18,6 +19,8 @@ export interface CachedResourceOptions<T> {
   fallback: T;
   /** One core read. Stable identity is not required: it is kept in a ref. */
   load: () => Promise<T>;
+  /** View id to time: reports cache-vs-load on the switch that opened it. */
+  perfView?: string;
 }
 
 /**
@@ -38,7 +41,7 @@ export interface CachedResourceOptions<T> {
  * applies an optimistic value that in-flight replies cannot overwrite.
  */
 export function useCachedResource<T>(options: CachedResourceOptions<T>) {
-  const { key, ttlMs, enabled, fallback } = options;
+  const { key, ttlMs, enabled, fallback, perfView } = options;
 
   // The loader closes over props (locale, callbacks); a ref keeps `run` stable
   // so an unrelated re-render never restarts the read.
@@ -88,6 +91,9 @@ export function useCachedResource<T>(options: CachedResourceOptions<T>) {
         if (request !== requestRef.current) return;
         setData(next);
         setError(null);
+        // Only a cold read is the switch's first data; a repaint from cache was
+        // already reported when this hook mounted.
+        if (perfView && cached === null) perfViewPainted(perfView, "load");
       } catch (cause) {
         if (request === requestRef.current) setError(cause);
       } finally {
@@ -97,13 +103,16 @@ export function useCachedResource<T>(options: CachedResourceOptions<T>) {
         }
       }
     },
-    [enabled, key, ttlMs],
+    [enabled, key, ttlMs, perfView],
   );
 
   // Mount (and key change): serve the cache, revalidate only when stale.
   useEffect(() => {
+    // The cache already painted during render, so this is the switch's first
+    // data even when a revalidation follows in the background.
+    if (perfView && readCacheValue<T>(key) !== null) perfViewPainted(perfView, "cache");
     void run("ensure");
-  }, [run]);
+  }, [run, perfView, key]);
 
   return {
     data,

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useI18n } from "./useI18n";
 import { ensureAgentsText, readAgentsCache, writeAgentsCache } from "../lib/agentsCache";
 import { writeMasterAgentsMd } from "../lib/tauri";
+import { perfViewPainted } from "../lib/perf";
 
 /** Draft and save state for the master `~/.orquestra/AGENTS.md`. */
 export function useAgentsFile(options: {
@@ -23,10 +24,12 @@ export function useAgentsFile(options: {
     if (!isTauri) return;
 
     if (readAgentsCache() === null) setLoading(true);
+    if (readAgentsCache() !== null) perfViewPainted("agents", "cache");
     try {
       const text = await ensureAgentsText();
       setContent(text);
       setSavedContent(text);
+      perfViewPainted("agents", "load");
       onClear();
     } catch (cause) {
       onError(t.agents.loadFailed(message(cause, t.common.unexpected)));

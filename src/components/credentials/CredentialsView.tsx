@@ -18,6 +18,7 @@ import {
 import { useI18n } from "../../hooks/useI18n.ts";
 import { useTimedClipboard } from "../../hooks/useTimedClipboard.ts";
 import { ensureVaultCatalog, readVaultCache, refreshVaultCatalog } from "../../lib/vaultCache.ts";
+import { perfViewPainted } from "../../lib/perf.ts";
 import { AddCredentialModal } from "../vault/AddCredentialModal.tsx";
 import {
   CredentialsHeader,
@@ -71,10 +72,12 @@ export function CredentialsView({
         return;
       }
       if (!force && readVaultCache() === null) setLoading(true);
+      if (readVaultCache() !== null) perfViewPainted("credentials", "cache");
       try {
         const next = force ? await refreshVaultCatalog() : await ensureVaultCatalog();
         setPresets(next.presets);
         setServices(next.services);
+        perfViewPainted("credentials", "load");
       } catch (err: unknown) {
         onError(err instanceof Error ? err.message : String(err));
       } finally {

@@ -4,7 +4,11 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { I18nProvider } from "./i18n/I18nContext";
 import { useI18n } from "./hooks/useI18n";
+import { installPerfConsole } from "./lib/perf";
 import "./index.css";
+
+// Console handle for the opt-in boot/view timings (`__orquestraPerf`).
+installPerfConsole();
 
 const container = document.getElementById("root");
 
