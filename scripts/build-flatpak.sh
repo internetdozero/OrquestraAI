@@ -7,8 +7,14 @@
 # script wraps that exact binary in a Flatpak, which runs it inside the GNOME
 # runtime and therefore supplies glibc, GTK 3 and WebKitGTK itself.
 #
-# Usage: scripts/build-flatpak.sh <binary> [output-file]
+# Usage: scripts/build-flatpak.sh [--stage-only] <binary> [output-file]
 #
+#   --stage-only   copy the binary, desktop file, metainfo and icons into
+#                  packaging/flatpak/files/ and stop. CI uses this to let the
+#                  Flathub builder action run flatpak-builder itself, which
+#                  ships 1.4 instead of Ubuntu 22.04's 1.2 (the old builder
+#                  calls the `appstream-compose` binary that GNOME SDK 47
+#                  no longer contains).
 #   <binary>       the artifact to wrap (`orquestra-linux-x86_64` from the
 #                  release, or target/release/orquestra-ai)
 #   [output-file]  defaults to ./OrquestraAI-x86_64.flatpak
@@ -22,7 +28,13 @@
 # the release already signs and checksums.
 set -euo pipefail
 
-binary=${1:?usage: scripts/build-flatpak.sh <binary> [output-file]}
+stage_only=0
+if [ "${1:-}" = "--stage-only" ]; then
+    stage_only=1
+    shift
+fi
+
+binary=${1:?usage: scripts/build-flatpak.sh [--stage-only] <binary> [output-file]}
 output=${2:-OrquestraAI-x86_64.flatpak}
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 manifest_dir="$root/packaging/flatpak"
@@ -38,33 +50,25 @@ version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$root/src-tauri/Cargo.toml" | h
     echo "error: could not read the version from src-tauri/Cargo.toml" >&2
     exit 1
 }
-for tool in flatpak flatpak-builder; do
-    command -v "$tool" >/dev/null 2>&1 || {
-        echo "error: $tool is not installed (Flatpak packaging needs both)" >&2
-        echo "       Debian/Ubuntu: sudo apt-get install -y flatpak flatpak-builder" >&2
-        echo "       Arch:          sudo pacman -S flatpak flatpak-builder" >&2
-        exit 1
-    }
-done
-# `flatpak list --columns=ref` spells a runtime as
-# `<id>/<arch>/<branch>`, e.g. `org.gnome.Platform/x86_64/47`.
-for ref in org.gnome.Platform org.gnome.Sdk; do
-    if ! flatpak list --runtime --columns=ref 2>/dev/null | grep -q "^${ref}/.*/47$"; then
-        echo "error: the runtime the manifest pins is not installed: ${ref}//47" >&2
-        echo "       run: flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47" >&2
-        exit 1
-    fi
-done
-
-# Staging goes to the project's scratch root, never /tmp.
-work=$(mktemp -d "${TMPDIR:-/var/tmp}/orquestra-flatpak.XXXXXXXXXX")
-cleanup() {
-    status=$?
-    rm -rf "$work" 2>/dev/null || true
-    rm -rf "$manifest_dir/files" 2>/dev/null || true
-    exit "$status"
-}
-trap cleanup EXIT INT TERM
+if [ "$stage_only" = 0 ]; then
+    for tool in flatpak flatpak-builder; do
+        command -v "$tool" >/dev/null 2>&1 || {
+            echo "error: $tool is not installed (Flatpak packaging needs both)" >&2
+            echo "       Debian/Ubuntu: sudo apt-get install -y flatpak flatpak-builder" >&2
+            echo "       Arch:          sudo pacman -S flatpak flatpak-builder" >&2
+            exit 1
+        }
+    done
+    # `flatpak list --columns=ref` spells a runtime as
+    # `<id>/<arch>/<branch>`, e.g. `org.gnome.Platform/x86_64/47`.
+    for ref in org.gnome.Platform org.gnome.Sdk; do
+        if ! flatpak list --runtime --columns=ref 2>/dev/null | grep -q "^${ref}/.*/47$"; then
+            echo "error: the runtime the manifest pins is not installed: ${ref}//47" >&2
+            echo "       run: flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47" >&2
+            exit 1
+        fi
+    done
+fi
 
 # The manifest resolves `path: files/...` next to itself, so the staging tree
 # lives beside it. It is removed on the way out (and ignored by git).
@@ -82,6 +86,21 @@ install -m 644 "$root/src-tauri/icons/64x64.png" "$files/64x64.png"
 install -m 644 "$root/src-tauri/icons/128x128.png" "$files/128x128.png"
 install -m 644 "$root/src-tauri/icons/128x128@2x.png" "$files/256x256.png"
 install -m 644 "$root/src-tauri/icons/icon.png" "$files/512x512.png"
+
+if [ "$stage_only" = 1 ]; then
+    echo "== staged $app_id $version in $files"
+    exit 0
+fi
+
+# Staging goes to the project's scratch root, never /tmp.
+work=$(mktemp -d "${TMPDIR:-/var/tmp}/orquestra-flatpak.XXXXXXXXXX")
+cleanup() {
+    status=$?
+    rm -rf "$work" 2>/dev/null || true
+    rm -rf "$manifest_dir/files" 2>/dev/null || true
+    exit "$status"
+}
+trap cleanup EXIT INT TERM
 
 echo "== building $app_id $version from $binary"
 # `--user` needs no root; `--disable-rofiles-fuse` drops the FUSE requirement,

@@ -37,7 +37,7 @@ O instalador:
 3. Confere o SHA-256 do binário e instala em `~/.local/bin/orquestra`.
 4. No Linux, verifica as bibliotecas WebKitGTK/libsoup e também as ferramentas de runtime (`xdg-utils` ou `gio`, `git`, `python3` com `venv`), instalando o que faltar pelo gerenciador de pacotes usando `sudo`. Use `--no-auto-deps` para pular a instalação e cuidar disso você mesmo.
 
-O suporte de distribuição depende da glibc: a release é compilada no Ubuntu 22.04, então Debian 11, Ubuntu 20.04 e RHEL/Rocky 8 param no loader. A mesma release também publica um bundle Flatpak que roda nessas distribuições. Veja [docs/install.md](docs/install.md) para a tabela de versões e o canal Flatpak.
+O suporte de distribuição depende da glibc: a release é compilada no Ubuntu 22.04, então Debian 11, Ubuntu 20.04 e RHEL/Rocky 8 param no loader. Um bundle Flatpak feito do mesmo binário roda nessas distribuições. Veja [docs/install.md](docs/install.md) para a tabela de versões e o canal Flatpak.
 
 Para diagnosticar uma instalação Linux existente sem baixar de novo:
 

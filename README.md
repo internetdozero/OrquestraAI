@@ -38,7 +38,7 @@ The installer:
 3. Checks the binary's SHA-256 and installs it to `~/.local/bin/orquestra`.
 4. On Linux, checks the binary's glibc symbol versions and the WebKitGTK/libsoup libraries, then the runtime tools (`xdg-utils` or `gio`, `git`, `python3` with `venv`), and installs what is missing through the package manager using `sudo`. Pass `--no-auto-deps` to skip the install step and manage them yourself.
 
-Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. The same release also ships a Flatpak bundle that runs there. See [docs/install.md](docs/install.md) for the version table and the Flatpak channel.
+Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. A Flatpak bundle built from the same binary runs there. See [docs/install.md](docs/install.md) for the version table and the Flatpak channel.
 
 To diagnose an existing Linux install without downloading again:
 

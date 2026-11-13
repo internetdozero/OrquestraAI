@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Flatpak Packaging:** The release job now runs in Flathub's builder image and builds through the Flathub action, because Ubuntu 22.04's `flatpak-builder` 1.2 still calls the legacy `appstream-compose` binary that GNOME SDK 47 dropped. `v0.1.0-alpha.9` was published without the Flatpak asset for that reason; the binary, `.deb` and installer channels are unaffected.
+
 ## [0.1.0-alpha.9] - 2026-11-13
 
 > **Freebuff support removed.** Freebuff now keeps skills, MCPs and global

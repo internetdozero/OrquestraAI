@@ -72,6 +72,10 @@ recorded, expected outcome there, not a regression.
   flatpak run ai.orquestra.desktop
   ```
 
+  If the asset is missing from the latest release page, the packaging job
+  failed: the binary and `.deb` channels are unaffected and the bundle returns
+  with the next release.
+
   Two consequences of the sandbox are worth knowing before installing. The
   app manages user-level harness files (`~/.claude`, `~/.codex`, `~/.agents`,
   `~/.orquestra`), so the manifest declares `--filesystem=home`: a narrower

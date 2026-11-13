@@ -263,6 +263,12 @@ jobs:
     # GNOME runtime supplies glibc and WebKitGTK 4.1, which is what a
     # distribution older than Ubuntu 22.04 cannot provide.
     #
+    # Ubuntu 22.04's flatpak-builder is 1.2, which still runs the legacy
+    # `appstream-compose` binary; GNOME SDK 47 no longer ships it, so the
+    # build died with `bwrap: execvp appstream-compose`. The job runs inside
+    # Flathub's builder image instead, where flatpak-builder 1.4 composes with
+    # `appstreamcli`, and lets the Flathub action drive the build.
+    #
     # `continue-on-error` while the recipe is new: a packaging failure must be
     # loud, but withholding the artifacts that already work would be worse.
     # Remove it once this job has shipped a bundle from a real tag.
@@ -270,6 +276,9 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
     runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
+      options: --privileged
     continue-on-error: true
     steps:
       - name: Checkout repository (packaging recipe)
@@ -281,32 +290,34 @@ jobs:
           name: orquestra-linux-x86_64
           path: artifact
 
-      - name: Install Flatpak tooling and the runtime the manifest pins
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
-          flatpak remote-add --user --if-not-exists flathub \
-            https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y --noninteractive flathub \
-            org.gnome.Platform//47 org.gnome.Sdk//47
-
-      - name: Build the self-contained bundle
+      # The manifest resolves `path: files/...` beside itself, so the staging
+      # tree is produced first and the action builds from the manifest.
+      - name: Stage the bundle contents
         run: |
           chmod +x artifact/orquestra-linux-x86_64
-          ./scripts/build-flatpak.sh artifact/orquestra-linux-x86_64 OrquestraAI-x86_64.flatpak
+          ./scripts/build-flatpak.sh --stage-only artifact/orquestra-linux-x86_64
+
+      - name: Build the self-contained bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: OrquestraAI.flatpak
+          manifest-path: packaging/flatpak/ai.orquestra.desktop.yml
+          arch: x86_64
+          cache-key: flatpak-builder-${{ hashFiles('packaging/flatpak/**', 'scripts/build-flatpak.sh') }}
 
       # Proves the bundle is installable and that the binary starts from its
       # own runtime instead of the runner's system libraries.
       - name: Install and smoke-test the bundle
         run: |
-          flatpak install --user -y --noninteractive --bundle OrquestraAI-x86_64.flatpak
+          bundle=$(ls OrquestraAI-*.flatpak | head -1)
+          flatpak install --user -y --noninteractive --bundle "$bundle"
           flatpak run --command=orquestra ai.orquestra.desktop --help
 
       - name: Upload the Flatpak bundle
         uses: actions/upload-artifact@v7
         with:
           name: orquestra-linux-flatpak
-          path: OrquestraAI-x86_64.flatpak
+          path: OrquestraAI-*.flatpak
           retention-days: 14
 
   release:
