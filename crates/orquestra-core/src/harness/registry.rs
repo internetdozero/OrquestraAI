@@ -61,6 +61,11 @@ pub const HARNESSES: &[HarnessSpec] = &[
                 action: SecondaryAction::Quarantine,
                 rationale: "Stale marketplace cache of plugin skills",
             },
+            SecondarySpec {
+                rel: ".agents/skills",
+                action: SecondaryAction::Quarantine,
+                rationale: "Shared ~/.agents/skills path is scanned by Codex and Grok outside their managed projections",
+            },
         ],
         note: Some("Internal .system folders are moved into the projection first"),
     },
@@ -176,6 +181,11 @@ pub const HARNESSES: &[HarnessSpec] = &[
                 rel: ".grok/installed-plugins",
                 action: SecondaryAction::Quarantine,
                 rationale: "Third-party plugin bundles Grok loads on startup",
+            },
+            SecondarySpec {
+                rel: ".agents/skills",
+                action: SecondaryAction::Quarantine,
+                rationale: "Shared ~/.agents/skills path is scanned by Codex and Grok outside their managed projections",
             },
         ],
         note: None,

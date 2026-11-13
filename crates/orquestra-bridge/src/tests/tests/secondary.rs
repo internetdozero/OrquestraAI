@@ -38,8 +38,8 @@ fn fusion_neutralises_secondary_discovery_paths() {
     );
     test.skill(".codex/.tmp/marketplaces/ponytail/skills", "ponytail-audit");
 
-    // The shared root Codex and Grok read. No harness projects into it any
-    // more, so fusion must leave it exactly as the `skills` CLI wrote it.
+    // Codex and Grok both scan this root in addition to their managed
+    // projections. Fusion must adopt its contents, back it up and empty it.
     test.skill(".agents/skills", "orca-cli");
     test.write(".agents/.skill-lock.json", "{\n  \"version\": 3\n}\n");
 
@@ -91,6 +91,7 @@ fn fusion_neutralises_secondary_discovery_paths() {
             "feature-dev",
             "latex-compile",
             "legacy-antigravity-guide",
+            "orca-cli",
             "ponytail-audit",
             "ponytail-debt",
             "threat-model",
@@ -155,12 +156,29 @@ fn fusion_neutralises_secondary_discovery_paths() {
     assert!(backup
         .join("grok/.grok__installed-plugins/ponytail/skills/ponytail-debt/SKILL.md")
         .is_file());
-    // The shared root is nobody's projection: Codex and Grok read it, but
-    // fusion neither empties it nor adopts from it.
-    assert!(!is_link(&test.home.join(".agents/skills")));
-    assert!(test.home.join(".agents/skills/orca-cli/SKILL.md").is_file());
-    assert!(!test.paths.vault.join("orca-cli").exists());
-    // The shared root's own bookkeeping stays where the CLI expects it.
+    // Both harnesses declare the shared root as a secondary discovery path;
+    // the first one moves its contents once, and the second sees it empty.
+    for id in ["codex", "grok"] {
+        let status = report
+            .harnesses
+            .iter()
+            .find(|status| status.id == id)
+            .unwrap();
+        assert!(status
+            .secondary_paths
+            .iter()
+            .any(|path| path.path.ends_with(".agents/skills") && path.cleared));
+    }
+    // The shared root's skill was adopted into the vault, then the original
+    // folder was emptied and backed up so neither harness loads a parallel copy.
+    let shared_root = test.home.join(".agents/skills");
+    assert!(shared_root.is_dir());
+    assert!(fs::read_dir(&shared_root).unwrap().next().is_none());
+    assert!(test.paths.vault.join("orca-cli/SKILL.md").is_file());
+    assert!(backup
+        .join("codex/.agents__skills/orca-cli/SKILL.md")
+        .is_file());
+    // The CLI's own bookkeeping stays where it expects it.
     assert!(test.home.join(".agents/.skill-lock.json").is_file());
 
     // Grok resolves its built-ins through the projection instead of a
@@ -204,7 +222,7 @@ fn fusion_neutralises_secondary_discovery_paths() {
     assert!(report
         .quarantined
         .contains(&".codex/vendor_imports/skills".to_string()));
-    assert!(!report.quarantined.contains(&".agents/skills".to_string()));
+    assert!(report.quarantined.contains(&".agents/skills".to_string()));
     assert!(report
         .quarantined
         .contains(&".grok/bundled/skills".to_string()));

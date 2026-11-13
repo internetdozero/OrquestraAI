@@ -33,6 +33,8 @@ export const bridge = {
   backupConnect: "Fazer backup e conectar",
   linkingHarnesses: "Vinculando harnesses…",
   rationales: {
+    sharedAgentSkills:
+      "Codex e Grok também leem ~/.agents/skills, fora das projeções gerenciadas; o bridge arquiva e esvazia essa cópia paralela",
     vendorBuiltins:
       "Built-ins do fornecedor vêm com o app; arquivados no cofre para ~/.gemini/config/skills continuar sendo a única fonte do usuário",
     codexVendor: "Checkout de fornecedor que o Codex indexa ao lado de ~/.codex/skills",

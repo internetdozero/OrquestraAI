@@ -109,9 +109,14 @@ mod tests {
     }
 
     #[test]
-    fn a_path_no_harness_links_has_no_owner() {
-        // `None` is meaningful: fusion reads it as "not a projection of ours"
-        // and leaves the path alone instead of deferring to a harness.
+    fn shared_agent_root_is_secondary_for_codex_and_grok_not_a_primary_owner() {
         assert_eq!(primary_owner(".agents/skills").map(|owner| owner.id), None);
+        for id in ["codex", "grok"] {
+            let harness = find(id).expect("registered");
+            assert!(harness.secondary.iter().any(|entry| {
+                entry.rel == ".agents/skills"
+                    && entry.action == super::super::SecondaryAction::Quarantine
+            }));
+        }
     }
 }

@@ -31,6 +31,8 @@ export const bridge: TranslationSchema["bridge"] = {
   backupConnect: "Back up & Connect",
   linkingHarnesses: "Linking harnesses…",
   rationales: {
+    sharedAgentSkills:
+      "Shared ~/.agents/skills path is scanned by Codex and Grok outside their managed projections",
     vendorBuiltins:
       "Vendor built-ins ship with the app; archived in the vault so ~/.gemini/config/skills stays the only user source",
     codexVendor: "Curated vendor checkout Codex indexes beside ~/.codex/skills",

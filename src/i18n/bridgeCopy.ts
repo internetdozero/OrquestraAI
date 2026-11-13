@@ -3,6 +3,8 @@ import type { TranslationSchema } from "./locales/pt";
 /** Rust ships these sentences verbatim; the UI translates the known set. */
 export function bridgeRationale(t: TranslationSchema, raw: string): string {
   switch (raw) {
+    case "Shared ~/.agents/skills path is scanned by Codex and Grok outside their managed projections":
+      return t.bridge.rationales.sharedAgentSkills;
     case "Vendor built-ins ship with the app; archived in the vault so ~/.gemini/config/skills stays the only user source":
       return t.bridge.rationales.vendorBuiltins;
     case "Curated vendor checkout Codex indexes beside ~/.codex/skills":
