@@ -195,10 +195,11 @@ jobs:
     # see this: it lists libraries, not symbol versions. This job runs the
     # published artifact's own requirement check inside the distributions the
     # old release was reported broken on, so the limitation is measured rather
-    # than assumed.
+    # than assumed, and the fallback it prints (`flatpak`, built by the
+    # `flatpak` job below) is the supported channel there.
     #
-    # Deliberately not a `needs` of the release job: a compatibility failure
-    # must be visible, not silently block an otherwise valid release.
+    # Deliberately not a `needs` of the release job: this measures a known
+    # baseline, it does not gate publishing.
     name: Linux compatibility (glibc)
     needs: build
     if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
@@ -228,14 +229,89 @@ jobs:
           name: orquestra-linux-x86_64
           path: artifact
 
-      - name: Check the binary against this distribution's glibc
+      # Both outcomes are correct, one is not: exit 0 means this distribution
+      # can load the binary, exit 1 means it cannot and the report must name
+      # the Flatpak. Exit 2 means the requirement could not be measured at all,
+      # which is the only real regression here — it would let a loader crash
+      # reach a user with no warning.
+      - name: Measure the binary against this distribution's glibc
+        shell: bash
         run: |
           chmod +x artifact/orquestra-linux-x86_64
-          ./scripts/check-glibc.sh artifact/orquestra-linux-x86_64
+          status=0
+          report=$(./scripts/check-glibc.sh artifact/orquestra-linux-x86_64 2>&1) || status=$?
+          printf '%s\n' "$report"
+          case "$status" in
+            0) echo "::notice::this distribution meets the release glibc baseline" ;;
+            1)
+              if ! printf '%s\n' "$report" | grep -qi 'flatpak'; then
+                echo "::error::the refusal does not point at the Flatpak fallback"
+                exit 1
+              fi
+              echo "::notice::below the baseline, as documented; the Flatpak carries its own runtime"
+              ;;
+            *)
+              echo "::error::the glibc requirement could not be measured (exit $status)"
+              exit 1
+              ;;
+          esac
+
+  flatpak:
+    # The supported channel below the release's glibc baseline. Nothing is
+    # compiled here: `scripts/build-flatpak.sh` wraps the already-built Linux
+    # artifact, so the bundle carries the exact bytes the release signs. The
+    # GNOME runtime supplies glibc and WebKitGTK 4.1, which is what a
+    # distribution older than Ubuntu 22.04 cannot provide.
+    #
+    # `continue-on-error` while the recipe is new: a packaging failure must be
+    # loud, but withholding the artifacts that already work would be worse.
+    # Remove it once this job has shipped a bundle from a real tag.
+    name: Flatpak bundle (x86_64)
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - name: Checkout repository (packaging recipe)
+        uses: actions/checkout@v7
+
+      - name: Download the Linux x86_64 artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: orquestra-linux-x86_64
+          path: artifact
+
+      - name: Install Flatpak tooling and the runtime the manifest pins
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub \
+            org.gnome.Platform//47 org.gnome.Sdk//47
+
+      - name: Build the self-contained bundle
+        run: |
+          chmod +x artifact/orquestra-linux-x86_64
+          ./scripts/build-flatpak.sh artifact/orquestra-linux-x86_64 OrquestraAI-x86_64.flatpak
+
+      # Proves the bundle is installable and that the binary starts from its
+      # own runtime instead of the runner's system libraries.
+      - name: Install and smoke-test the bundle
+        run: |
+          flatpak install --user -y --noninteractive --bundle OrquestraAI-x86_64.flatpak
+          flatpak run --command=orquestra ai.orquestra.desktop --help
+
+      - name: Upload the Flatpak bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: orquestra-linux-flatpak
+          path: OrquestraAI-x86_64.flatpak
+          retention-days: 14
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, flatpak]
     if: startsWith(github.ref, 'refs/tags/v') || inputs.create_release == true
     runs-on: ubuntu-22.04
     steps:
@@ -245,6 +321,17 @@ jobs:
       - name: Download all build artifacts
         uses: actions/download-artifact@v8
         with:
+          path: artifacts
+
+      # A separate, named download because `download-artifact` without a name
+      # skips artifacts of jobs that ran with `continue-on-error`. Missing is
+      # acceptable: the release then ships without the Flatpak and the failed
+      # job above is the record of why.
+      - name: Download the Flatpak bundle (absent when its job failed)
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: orquestra-linux-flatpak
           path: artifacts
 
       - name: Prepare Unified Release Directory & Checksums

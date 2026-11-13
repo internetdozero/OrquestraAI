@@ -129,8 +129,11 @@ check_linux_glibc() {
     if glibc_older "$available" "$required"; then
         echo "❌ This binary requires glibc ${required}, but this system provides ${available}." >&2
         echo "   The loader would fail with 'GLIBC_${required} not found'." >&2
-        echo "   Use a distribution with glibc >= ${required}, or install the Flatpak" >&2
-        echo "   build, which carries its own runtime." >&2
+        echo "   Install the Flatpak bundle instead: it carries its own runtime, so the" >&2
+        echo "   host glibc does not matter (docs/install.md explains the tradeoffs):" >&2
+        echo "     curl -fLO https://github.com/${REPO}/releases/latest/download/OrquestraAI-x86_64.flatpak" >&2
+        echo "     flatpak install --user ./OrquestraAI-x86_64.flatpak" >&2
+        echo "   Building from source on this distribution also works." >&2
         return 1
     fi
     echo "✓ glibc ${available} can run this binary (needs ${required})."

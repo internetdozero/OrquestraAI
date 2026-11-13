@@ -8,6 +8,11 @@
 #[path = "../../../../src-tauri/src/windows_shell.rs"]
 mod shell;
 
+/// The shell's `desktop_shortcut` stamps the shortcut with the same id the
+/// process declares, so the shim has to expose it under the real path
+/// (`crate::windows_shell::APP_USER_MODEL_ID`).
+pub(crate) use shell::APP_USER_MODEL_ID;
+
 /// What startup calls once, plus the URL path `open_url` uses on Windows.
 pub fn identity() {
     shell::declare_app_identity();

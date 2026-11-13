@@ -66,9 +66,32 @@ chmodSync(join(binDir, "curl"), 0o755);
 writeFileSync(join(binDir, "minisign"), "#!/bin/sh\nexit 0\n");
 chmodSync(join(binDir, "minisign"), 0o755);
 
+// `objdump -T` is what the installer reads the binary's versioned glibc
+// symbols from. Text fixtures have none, so without this stub every run would
+// skip the check; `OLD_GLIBC` makes it report a requirement the fake `ldd`
+// below cannot satisfy.
+writeFileSync(
+  join(binDir, "objdump"),
+  `#!/bin/sh
+if [ "$OLD_GLIBC" = "1" ]; then
+  printf '%s\\n' '0000000000000000  w   DF *UND*\t0000000000000000  GLIBC_2.34  pthread_create'
+fi
+exit 0
+`,
+);
+chmodSync(join(binDir, "objdump"), 0o755);
+
 writeFileSync(
   join(binDir, "ldd"),
   `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  if [ "$OLD_GLIBC" = "1" ]; then
+    printf '%s\\n' 'ldd (GNU libc) 2.31'
+  else
+    printf '%s\\n' 'ldd (GNU libc) 2.35'
+  fi
+  exit 0
+fi
 if [ "$LDD_MODE" = "missing" ]; then
   printf '%s\\n' 'libwebkit2gtk-4.1.so.0 => not found' 'libgtk-3.so.0 => not found'
 elif [ "$LDD_MODE" = "auto-install" ]; then
@@ -156,6 +179,22 @@ test("runtime dependencies can be checked after installation without downloading
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /libwebkit2gtk-4\.1\.so\.0/);
   assert.match(result.stderr, /libgtk-3\.so\.0/);
+  assert.equal(readFileSync(installedBinary, "utf8"), "existing installation\n");
+});
+
+test("installer refuses a binary this glibc cannot load and names the Flatpak", () => {
+  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  writeFileSync(installedBinary, "existing installation\n");
+  chmodSync(installedBinary, 0o755);
+
+  const result = runInstaller(["--check-deps"], { OLD_GLIBC: "1" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /requires glibc 2\.34/);
+  // The loader cannot be fixed by installing a package, so the message has to
+  // name the channel that does work. It is the same text CI asserts on the
+  // debian:11 and rockylinux:8 jobs.
+  assert.match(result.stderr, /flatpak install --user/);
+  assert.match(result.stderr, /OrquestraAI-x86_64\.flatpak/);
   assert.equal(readFileSync(installedBinary, "utf8"), "existing installation\n");
 });
 

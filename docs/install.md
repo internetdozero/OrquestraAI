@@ -49,21 +49,41 @@ and no package install fixes that.
 
 The installer reads the binary's own versioned symbols (`objdump -T`) and
 compares them with `ldd --version` before replacing an installed binary, so the
-failure is reported as a version mismatch instead of a loader crash. The same
-check runs in CI against the published artifact
-(`scripts/check-glibc.sh`, job `linux-compat`), so a regression shows up in the
-build, not in a user's terminal.
+failure is reported as a version mismatch with the Flatpak command to use
+instead of a loader crash. The same check runs in CI against the published
+artifact (`scripts/check-glibc.sh`, job `linux-compat`), which fails only when
+the requirement cannot be measured — a distribution below the baseline is the
+recorded, expected outcome there, not a regression.
 
 ### Running on an older distribution
 
-Two paths exist, and neither is a package you can install today:
+- **Flatpak** is the supported channel there. The release publishes
+  `OrquestraAI-x86_64.flatpak`, built from the same binary as every other
+  channel (`.github/workflows/build.yml`, job `flatpak`) and wrapped by
+  `packaging/flatpak/ai.orquestra.desktop.yml`. It runs inside the GNOME 47
+  runtime, which supplies glibc, GTK 3 and WebKitGTK 4.1 itself, so the host
+  only needs a working `flatpak`:
 
-- **Flatpak** carries its own runtime, so it is not tied to the host glibc.
-  Packaging is tracked as task #34; until it ships, there is no Flatpak build.
+  ```sh
+  curl -fLO https://github.com/internetdozero/OrquestraAI/releases/latest/download/OrquestraAI-x86_64.flatpak
+  flatpak install --user ./OrquestraAI-x86_64.flatpak
+  flatpak run ai.orquestra.desktop
+  ```
+
+  Two consequences of the sandbox are worth knowing before installing. The
+  app manages user-level harness files (`~/.claude`, `~/.codex`, `~/.agents`,
+  `~/.orquestra`), so the manifest declares `--filesystem=home`: a narrower
+  share would leave every harness read-only. And in-app updates cannot replace
+  a binary inside `/app`, so the updater reports a permission error and the
+  Flatpak is updated by installing the newer bundle.
+
+  The tray icon needs a StatusNotifier host. When the desktop has none,
+  closing the window exits instead of leaving a headless process
+  (`src-tauri/src/tray.rs`).
+
 - **Build from source** on the target distribution (`cargo build --release`
   with that distribution's WebKitGTK development package) produces a binary
-  linked against its own glibc, which is what an operator on Debian 11 needs
-  right now.
+  linked against its own glibc.
 
 An AppImage is not a solution for this class of failure: an AppImage still
 links the host glibc, so it fails the same way.

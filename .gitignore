@@ -53,5 +53,11 @@ PRD.md
 # stays portable and auto-includes this file when present.
 .cargo/config.local.toml
 
+# Flatpak packaging output: `scripts/build-flatpak.sh` stages the binary,
+# launcher and icons beside the manifest and writes the bundle into the repo
+# root. Neither is source.
+packaging/flatpak/files/
+*.flatpak
+
 # Orquestra audits
 .orquestra/audits/

@@ -1,0 +1,69 @@
+# Flatpak recipe: the Linux channel that carries its own runtime.
+#
+# The release binary is linked against glibc 2.35 and WebKitGTK 4.1 because it
+# is built on Ubuntu 22.04. No distribution older than that can load it — the
+# loader stops at `GLIBC_2.34 not found` before `main` runs — and no package
+# install fixes a symbol version. This bundle does: it runs inside the GNOME
+# runtime, which supplies glibc, GTK 3 and WebKitGTK 4.1 itself, so the host
+# only needs a working `flatpak`.
+#
+# `scripts/build-flatpak.sh` stages the binary, launcher, metainfo and icons
+# under `files/` and builds this manifest; CI runs the same script against the
+# published Linux artifact. Nothing is compiled here: the binary is copied, so
+# the Flatpak is reproducible from the exact `.deb`/bare-binary the release
+# already signs.
+id: ai.orquestra.desktop
+runtime: org.gnome.Platform
+runtime-version: "47"
+sdk: org.gnome.Sdk
+command: orquestra
+
+finish-args:
+  # Window surfaces.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # WebKitGTK renders through the GPU.
+  - --device=dri
+  # MCP servers, the updater and the vault proxy reach the network.
+  - --share=network
+  # OrquestraAI manages user-level harness files: ~/.claude, ~/.codex,
+  # ~/.agents, ~/.orquestra and the per-harness stores. The whole home
+  # directory is shared because those paths are operator configuration, not
+  # app-private state; narrowing it would make every harness read-only.
+  - --filesystem=home
+  # Tray icon through the StatusNotifier host. When no host exists the app
+  # exits on window close instead of hiding (src-tauri/src/tray.rs), so a
+  # sandbox without a tray never leaves a headless process.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=xdg-run/tray-icon:create
+
+modules:
+  - name: orquestra
+    buildsystem: simple
+    sources:
+      - type: file
+        path: files/orquestra
+      - type: file
+        path: files/ai.orquestra.desktop.desktop
+      - type: file
+        path: files/ai.orquestra.desktop.metainfo.xml
+      - type: file
+        path: files/32x32.png
+      - type: file
+        path: files/64x64.png
+      - type: file
+        path: files/128x128.png
+      - type: file
+        path: files/256x256.png
+      - type: file
+        path: files/512x512.png
+    build-commands:
+      - install -Dm755 orquestra /app/bin/orquestra
+      - install -Dm644 ai.orquestra.desktop.desktop /app/share/applications/ai.orquestra.desktop.desktop
+      - install -Dm644 ai.orquestra.desktop.metainfo.xml /app/share/metainfo/ai.orquestra.desktop.metainfo.xml
+      - install -Dm644 32x32.png /app/share/icons/hicolor/32x32/apps/ai.orquestra.desktop.png
+      - install -Dm644 64x64.png /app/share/icons/hicolor/64x64/apps/ai.orquestra.desktop.png
+      - install -Dm644 128x128.png /app/share/icons/hicolor/128x128/apps/ai.orquestra.desktop.png
+      - install -Dm644 256x256.png /app/share/icons/hicolor/256x256/apps/ai.orquestra.desktop.png
+      - install -Dm644 512x512.png /app/share/icons/hicolor/512x512/apps/ai.orquestra.desktop.png

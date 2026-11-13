@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Flatpak Channel:** The release publishes `OrquestraAI-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load.
+
+### Fixed
+
+- **Windows App Identity:** The Start Menu shortcut now carries `System.AppUserModel.ID`, so the window, the tray icon and the Start Menu entry group as one app instead of by executable path, and a shortcut written by an older build is refreshed once instead of being treated as current forever.
+- **Linux Compatibility Gate:** The `debian:11` and `rockylinux:8` jobs assert the diagnosis (a measurable glibc requirement and a report that names the Flatpak) instead of failing on the documented baseline, so only an unmeasurable requirement turns the pipeline red.
+
 ## [0.1.0-alpha.8] - 2026-11-07
 
 ### Added
