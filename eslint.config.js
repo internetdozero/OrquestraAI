@@ -55,6 +55,7 @@ export default tseslint.config(
         Headers: "readonly",
         URL: "readonly",
         console: "readonly",
+        setTimeout: "readonly",
       },
     },
   },
