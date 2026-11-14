@@ -127,12 +127,21 @@ mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
 
+    /// Unique per call, not just per timestamp: macOS resolves the clock to
+    /// microseconds, so parallel tests that asked twice in a row could share a
+    /// directory and clobber each other's fixtures.
     fn scratch() -> PathBuf {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        std::env::temp_dir().join(format!("ownhub-backup-retention-{unique}"))
+        let sequence = NEXT.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "ownhub-backup-retention-{}-{unique}-{sequence}",
+            std::process::id()
+        ))
     }
 
     #[test]
