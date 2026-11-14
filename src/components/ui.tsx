@@ -174,15 +174,6 @@ export function SpacerDiv({
   return <div ref={ref} {...props} />;
 }
 
-/** First paint of a lazily-split view while its chunk loads. */
-export function ViewFallback() {
-  return (
-    <div role="status" aria-label="Loading view">
-      <SkeletonGrid />
-    </div>
-  );
-}
-
 /** Dismissible inline error banner. */
 export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   const { t } = useI18n();

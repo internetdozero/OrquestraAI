@@ -56,27 +56,6 @@ export function preloadSettings(): Promise<void> {
 }
 
 /**
- * Warm the lazily-split view/modal chunks during idle time so the first
- * tab switch rarely hits the Suspense fallback. Fire-and-forget: dynamic
- * imports are cached by the module loader, and a rejection is ignored —
- * the fallback covers a cache miss.
- *
- * The modals are not here: their chunks start at module load in `App`, since
- * one of them can be clicked at any moment.
- */
-export async function preloadViewChunks(isCancelled: () => boolean): Promise<void> {
-  await whenIdle(isCancelled);
-  if (isCancelled()) return;
-  await Promise.allSettled([
-    import("../components/McpView"),
-    import("../components/AgentsView"),
-    import("../components/sessions/SessionsView"),
-    import("../components/ideas/IdeasView"),
-    import("../components/credentials/CredentialsView"),
-  ]);
-}
-
-/**
  * Warm the data behind one view, for a hover or keyboard focus on its sidebar
  * entry: a click that follows lands on a filled cache instead of a skeleton.
  * Never rejects — a failed warm just means the view loads itself as before.

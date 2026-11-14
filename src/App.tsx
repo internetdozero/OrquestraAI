@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { BootScreen } from "./components/BootScreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -7,7 +7,6 @@ import { PresetBar } from "./components/PresetBar";
 import { Sidebar } from "./components/Sidebar";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
-import { ViewFallback } from "./components/ui";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
@@ -24,43 +23,25 @@ import {
   preloadBackground,
   preloadEssentials,
   preloadSettings,
-  preloadViewChunks,
   preloadViewData,
 } from "./lib/preloadResources";
 import { useCoreStatus } from "./lib/tauri";
 import { cn } from "./lib/utils";
 import type { ActiveView } from "./lib/views";
-// The three dialogs are static on purpose: each hangs off the sidebar footer
-// or the status bar and can be clicked in the first frames after boot. Lazy
-// splits made that first click land on the Suspense fallback — the whole
-// window dims behind a spinner while the module arrives — and the shell is a
-// desktop window that loads from disk, so the ~48 KB belong here.
+// Every view and dialog is static on purpose. Splitting them put a Suspense
+// boundary in front of each first click: the app dimmed behind a spinner (the
+// dialogs) or a skeleton grid (the views) for ~300 ms while the module
+// arrived, and only the second visit looked instant, with the module cached.
+// The shell is a desktop window that loads from disk, so the bytes belong
+// here; a click now paints the next view in the same frame.
 import { BridgeModal } from "./components/BridgeModal";
+import { AgentsView } from "./components/AgentsView";
+import { CredentialsView } from "./components/credentials/CredentialsView";
+import { IdeasView } from "./components/ideas/IdeasView";
 import { JanitorModal } from "./components/JanitorModal";
+import { McpView } from "./components/McpView";
+import { SessionsView } from "./components/sessions/SessionsView";
 import { SettingsModal } from "./components/settings/SettingsModal";
-
-/** Secondary views and modals load on demand: the first paint only needs
- *  the shell around SkillsView. Idle preloading (see `preloadViewChunks`)
- *  warms these chunks so tab switches rarely hit the Suspense fallback. */
-const IdeasView = lazy(() =>
-  import("./components/ideas/IdeasView").then((module) => ({ default: module.IdeasView })),
-);
-const AgentsView = lazy(() =>
-  import("./components/AgentsView").then((module) => ({ default: module.AgentsView })),
-);
-const SessionsView = lazy(() =>
-  import("./components/sessions/SessionsView").then((module) => ({
-    default: module.SessionsView,
-  })),
-);
-const CredentialsView = lazy(() =>
-  import("./components/credentials/CredentialsView").then((module) => ({
-    default: module.CredentialsView,
-  })),
-);
-const McpView = lazy(() =>
-  import("./components/McpView").then((module) => ({ default: module.McpView })),
-);
 
 /**
  * Application shell: owns the active platform view and the data the header
@@ -197,9 +178,6 @@ export default function App() {
         if (!cancelled) perfBoot("preload-done");
       })
       .catch(() => undefined);
-    // Warm the split view/modal chunks while idle so the first tab switch
-    // rarely hits the Suspense fallback.
-    void preloadViewChunks(() => cancelled);
     return () => {
       cancelled = true;
     };
@@ -368,65 +346,63 @@ export default function App() {
               reload: t.common.reloadApp,
             }}
           >
-            <Suspense fallback={<ViewFallback />}>
-              {view === "ideas" ? (
-                <IdeasView
-                  isTauri={isTauri}
-                  onToast={showToast}
-                  onError={setError}
-                  reloadToken={reloadToken}
-                />
-              ) : view === "agents" ? (
-                <AgentsView
-                  isTauri={isTauri}
-                  error={error}
-                  onToast={showToast}
-                  onError={setError}
-                  onClear={clearError}
-                  reloadToken={reloadToken}
-                />
-              ) : view === "sessions" ? (
-                <SessionsView
-                  isTauri={isTauri}
-                  notifyOnPurge={prefs.settings.notifyOnPurge}
-                  onToast={showToast}
-                  onError={setError}
-                  reloadToken={reloadToken}
-                />
-              ) : view === "credentials" ? (
-                <CredentialsView
-                  isTauri={isTauri}
-                  onToast={showToast}
-                  onError={setError}
-                  reloadToken={reloadToken}
-                />
-              ) : view === "mcps" ? (
-                <McpView
-                  isTauri={isTauri}
-                  onToast={showToast}
-                  onActiveCountChange={setMcpCount}
-                  reloadToken={reloadToken}
-                  query={query}
-                  onQueryChange={setQuery}
-                />
-              ) : (
-                <SkillsView
-                  isTauri={isTauri}
-                  harnessCounts={summaries.counts}
-                  harnessTotal={summaries.total}
-                  installedHarnessIds={installedHarnessIds}
-                  query={query}
-                  onQueryChange={setQuery}
-                  reloadToken={reloadToken}
-                  onStatsChange={setSkillStats}
-                  onSummaryStale={() => void summaries.refresh()}
-                  onBusyChange={setSkillsBusy}
-                  externalError={error}
-                  onDismissExternalError={clearError}
-                  onToast={showToast}
-                />
-              )}
-            </Suspense>
+            {view === "ideas" ? (
+              <IdeasView
+                isTauri={isTauri}
+                onToast={showToast}
+                onError={setError}
+                reloadToken={reloadToken}
+              />
+            ) : view === "agents" ? (
+              <AgentsView
+                isTauri={isTauri}
+                error={error}
+                onToast={showToast}
+                onError={setError}
+                onClear={clearError}
+                reloadToken={reloadToken}
+              />
+            ) : view === "sessions" ? (
+              <SessionsView
+                isTauri={isTauri}
+                notifyOnPurge={prefs.settings.notifyOnPurge}
+                onToast={showToast}
+                onError={setError}
+                reloadToken={reloadToken}
+              />
+            ) : view === "credentials" ? (
+              <CredentialsView
+                isTauri={isTauri}
+                onToast={showToast}
+                onError={setError}
+                reloadToken={reloadToken}
+              />
+            ) : view === "mcps" ? (
+              <McpView
+                isTauri={isTauri}
+                onToast={showToast}
+                onActiveCountChange={setMcpCount}
+                reloadToken={reloadToken}
+                query={query}
+                onQueryChange={setQuery}
+              />
+            ) : (
+              <SkillsView
+                isTauri={isTauri}
+                harnessCounts={summaries.counts}
+                harnessTotal={summaries.total}
+                installedHarnessIds={installedHarnessIds}
+                query={query}
+                onQueryChange={setQuery}
+                reloadToken={reloadToken}
+                onStatsChange={setSkillStats}
+                onSummaryStale={() => void summaries.refresh()}
+                onBusyChange={setSkillsBusy}
+                externalError={error}
+                onDismissExternalError={clearError}
+                onToast={showToast}
+              />
+            )}
           </ErrorBoundary>
         </main>
       </div>

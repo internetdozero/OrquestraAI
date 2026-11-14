@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Renamed to OwnHub:** the app, CLI (`ownhub`), Tauri identifier (`dev.ownanai.hub`), repository (`OwnAnAI/ownhub`) and Rust workspace crates (`ownhub-*`) now carry the new name. On first launch `~/.orquestra` is moved to `~/.ownhub` automatically; the legacy `ORQUESTRA_WEBKIT_SOFTWARE` and `ORQUESTRA_KEYRING_DISABLE` variables keep working as fallbacks.
 - **Settings and Store Warm at Boot:** the retention policy, the external-tool probe, the RTK version and the official store catalog are now read during the idle warm-up. Opening Settings or the store tab painted their defaults first and jumped when the IPC landed; both now paint from cache.
-- **Dialogs Open Instantly:** Settings, Janitor and the bridge dialog were lazily split with a Suspense fallback over the whole window, so the first click dimmed the app behind a spinner until the module arrived (later clicks, with the module cached, were fine). All three are part of the shell bundle now, and a click paints the dialog in a frame.
+- **Views and Dialogs Open Instantly:** every view (MCP, ideas, credentials, sessions, agents) and dialog was lazily split behind a Suspense boundary, so its first visit dimmed the app behind a spinner or showed a skeleton grid for ~300 ms while the module arrived — and only the second visit, with the module cached, looked instant. The shell now carries all of them and a click paints the next view in the same frame.
 - **Tighter Header:** the brand mark is smaller and sits closer to the product name.
 
 ### Fixed
