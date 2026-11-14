@@ -27,9 +27,9 @@ toml_edit = "0.22"
 # build never depends on a system libsqlite3; session stores are opened
 # read-only so a running agent keeps its locks.
 rusqlite = { version = "0.31", features = ["bundled"] }
-aes-gcm = "0.10.3"
+aes-gcm = "0.11.1"
 base64 = "0.23.1"
-rand = "0.9.5"
+rand = "0.10.3"
 # Bounded response streaming (`bytes_stream` + `StreamExt`); already a
 # reqwest transitive dep, so this adds no new crates.
 futures-util = { version = "0.3", default-features = false }
