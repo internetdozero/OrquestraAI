@@ -39,7 +39,7 @@ fn asset_url_pins_the_validated_release_tag() {
     let binary = release_asset_url(&version, "ownhub-linux-x86_64");
     assert_eq!(
         binary,
-        "https://github.com/internetdozero/OwnHub/releases/download/v0.1.0-alpha.3/ownhub-linux-x86_64"
+        "https://github.com/internetdozero/ownhub/releases/download/v0.1.0-alpha.3/ownhub-linux-x86_64"
     );
     assert!(!binary.contains("/releases/latest/"));
     let sums = release_asset_url(&version, "SHA256SUMS.txt");

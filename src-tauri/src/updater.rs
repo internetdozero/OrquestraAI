@@ -18,7 +18,7 @@ mod replace;
 
 pub use replace::purge_retired_binaries;
 
-const REPO: &str = "internetdozero/OwnHub";
+const REPO: &str = "internetdozero/ownhub";
 
 /// Summary of an upstream sync of installed official extensions.
 #[derive(Debug, Clone, Serialize)]

@@ -7,8 +7,8 @@ let isolate = 0;
 const coldWorker = async () =>
   (await import(`../workers/installer/worker.js?isolate=${(isolate += 1)}`)).default;
 
-const LATEST = "https://github.com/internetdozero/OwnHub/releases/latest";
-const RAW = "https://raw.githubusercontent.com/internetdozero/OwnHub/v1.2.3/install.sh";
+const LATEST = "https://github.com/internetdozero/ownhub/releases/latest";
+const RAW = "https://raw.githubusercontent.com/internetdozero/ownhub/v1.2.3/install.sh";
 const SCRIPT = "#!/bin/sh\necho ok\n";
 
 function colo() {
@@ -36,7 +36,7 @@ function github({ latest = [], raw = [] }) {
     if (next === "redirect") {
       return new Response(null, {
         status: 302,
-        headers: { location: "https://github.com/internetdozero/OwnHub/releases/tag/v1.2.3" },
+        headers: { location: "https://github.com/internetdozero/ownhub/releases/tag/v1.2.3" },
       });
     }
     if (next === "script") return new Response(SCRIPT, { status: 200 });

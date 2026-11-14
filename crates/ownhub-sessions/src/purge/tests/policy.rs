@@ -48,18 +48,20 @@ fn auto_purge_is_due_only_when_enabled_and_the_interval_has_passed() {
 #[test]
 fn the_scheduler_uses_each_harness_own_ttl() {
     let fixture = Fixture::new();
-    // Same age, two harnesses.
+    // Same age, two harnesses: 30 days old, relative to now (a fixed
+    // timestamp would age past the longer TTL and flip the expectation).
+    let aged_ms = crate::adapters::time::now_secs() * 1000 - 30 * 86_400_000;
     let sql = "CREATE TABLE session (id TEXT, title TEXT, directory TEXT, time_updated INTEGER);";
     fixture.database(
         ".local/share/opencode/opencode.db",
-        &format!("{sql} INSERT INTO session VALUES ('old', 'Old', '/work', 1789403075184);"),
+        &format!("{sql} INSERT INTO session VALUES ('old', 'Old', '/work', {aged_ms});"),
     );
     fixture.database(
         ".local/share/kilo/kilo.db",
-        &format!("{sql} INSERT INTO session VALUES ('old', 'Old', '/work', 1789403075184);"),
+        &format!("{sql} INSERT INTO session VALUES ('old', 'Old', '/work', {aged_ms});"),
     );
 
-    // Kilo keeps 30 days, OpenCode only 7: the session is old enough for
+    // Kilo keeps 60 days, OpenCode only 7: the session is old enough for
     // OpenCode and far too recent for Kilo.
     let selection = select_by_ttl(&fixture.store(), &|harness| {
         if harness == "kilo" {

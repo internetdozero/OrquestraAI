@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Renamed to OwnHub:** the app, CLI (`ownhub`), Tauri identifier (`dev.ownanai.hub`), repository (`internetdozero/ownhub`) and Rust workspace crates (`ownhub-*`) now carry the new name. On first launch `~/.orquestra` is moved to `~/.ownhub` automatically; the legacy `ORQUESTRA_WEBKIT_SOFTWARE` and `ORQUESTRA_KEYRING_DISABLE` variables keep working as fallbacks.
+
 ### Added
 
 - **Manual Flatpak Check:** `Remote Build & Release` accepts `build_flatpak`, which wraps the published Linux binary in the Flathub builder and fails the run on a packaging error without building the platform matrix or publishing a release. It is the way to validate the recipe without cutting a tag.

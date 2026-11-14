@@ -13,7 +13,7 @@
  * (repo redirect) and `/healthz`.
  */
 
-const REPO = "internetdozero/OwnHub";
+const REPO = "internetdozero/ownhub";
 const LATEST_RELEASE = `https://github.com/${REPO}/releases/latest`;
 const RAW_AT = (tag, asset) => `https://raw.githubusercontent.com/${REPO}/${tag}/${asset}`;
 const UA = "ownhub-installer-worker";

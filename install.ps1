@@ -44,7 +44,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$Repo = 'internetdozero/OwnHub'
+$Repo = 'internetdozero/ownhub'
 # Must equal src-tauri/src/update_sig.rs::RELEASE_PUBLIC_KEY and the value
 # embedded in install.sh: the same offline key signs every release.
 $ReleasePublicKey = 'RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1'
