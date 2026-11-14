@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.10] - 2026-11-14
+
 ### Changed
 
 - **Renamed to OwnHub:** the app, CLI (`ownhub`), Tauri identifier (`dev.ownanai.hub`), repository (`OwnAnAI/ownhub`) and Rust workspace crates (`ownhub-*`) now carry the new name. On first launch `~/.orquestra` is moved to `~/.ownhub` automatically; the legacy `ORQUESTRA_WEBKIT_SOFTWARE` and `ORQUESTRA_KEYRING_DISABLE` variables keep working as fallbacks.
