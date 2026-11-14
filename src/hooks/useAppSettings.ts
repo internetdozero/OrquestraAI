@@ -60,15 +60,15 @@ function upgraded(stored: Partial<AppSettings>): Partial<AppSettings> {
   if (upgradedThisSession) return stored;
   upgradedThisSession = true;
 
-  let firstRun = false;
+  let alreadyUpgraded: boolean;
   try {
-    firstRun = window.localStorage.getItem(SCHEMA_KEY) !== SCHEMA_VERSION;
-    if (firstRun) window.localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+    alreadyUpgraded = window.localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION;
+    if (!alreadyUpgraded) window.localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
   } catch {
     // Storage refused the marker: keep the stored choice rather than fight it.
     return stored;
   }
-  if (!firstRun || stored.accentColor !== "violet") return stored;
+  if (alreadyUpgraded || stored.accentColor !== "violet") return stored;
   // Omit the key entirely: an explicit `undefined` would win over the default
   // in the spread below and leave `data-accent` unset.
   const rest: Partial<AppSettings> = { ...stored };
