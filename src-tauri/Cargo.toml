@@ -1,6 +1,6 @@
 [package]
 name = "ownhub"
-version = "0.1.0-alpha.10"
+version = "0.1.0-alpha.11"
 description = "OwnHub — Universal AI Harness Administration Platform"
 authors = ["Operator"]
 edition = "2021"

@@ -1,7 +1,7 @@
 {
   "name": "ownhub",
   "private": true,
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.11",
   "type": "module",
   "description": "OwnHub — Universal AI Harness Administration Platform",
   "scripts": {
