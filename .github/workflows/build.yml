@@ -100,6 +100,7 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
+            libfuse2 \
             clang \
             mold
 
@@ -139,10 +140,10 @@ jobs:
             # open) and the Mach-O inside it (what the updater replaces).
             npx tauri build --bundles app,dmg
           elif [ "${{ matrix.platform.is_linux }}" = "true" ]; then
-            # The Debian package is the native channel for Linux; the binary
-            # is still copied out below, because that is what the updater and
-            # install.sh use.
-            npx tauri build --bundles deb
+            # The Debian package and AppImage are the native channels for
+            # Linux; the binary is still copied out below, because that is
+            # what the updater and install.sh use.
+            APPIMAGE_EXTRACT_AND_RUN=1 npx tauri build --bundles deb,appimage
           elif [ "${{ matrix.platform.is_windows }}" = "true" ]; then
             # NSIS rather than MSI: it needs no WiX download on the runner.
             npx tauri build --bundles nsis
@@ -157,8 +158,10 @@ jobs:
             cp target/release/ownhub bin-out/ownhub
           fi
           if [ "${{ matrix.platform.is_linux }}" = "true" ]; then
-            # `--bundles deb` writes the package, not the binary: publish both.
+            # `--bundles deb,appimage` writes the packages, not the bare
+            # binary: publish all of them.
             find target/release/bundle/deb -name '*.deb' -exec cp {} bin-out/ ';' 2>/dev/null || true
+            find target/release/bundle/appimage -name '*.AppImage' -exec cp {} bin-out/ ';' 2>/dev/null || true
           fi
           if [ "${{ matrix.platform.is_windows }}" = "true" ]; then
             # NSIS setup is the first-install channel; the bare `.exe` above is

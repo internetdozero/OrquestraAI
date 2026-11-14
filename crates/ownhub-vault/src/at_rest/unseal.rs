@@ -121,7 +121,7 @@ pub fn open_stored(
                                     path.display()
                                 ));
                             }
-                            if version == 1 || nested > 0 {
+                            if version == 1 || nested > 0 || envelope::is_legacy_marker(&value) {
                                 let resealed = seal_with_key(&kp, text.as_bytes(), aad)?;
                                 persist_sealed(path, &resealed)?;
                                 verify_reopen(paths, path, aad, Some(&text))?;
@@ -140,9 +140,22 @@ pub fn open_stored(
                         }
                     }
                 }
-                Err(error) => keyring_err = Some(error),
+                Err(error) => {
+                    if envelope::is_legacy_marker(&value) {
+                        if let Some(result) =
+                            try_legacy_keyring_unseal(paths, path, &value, aad, Some(kp))?
+                        {
+                            return Ok(result);
+                        }
+                    }
+                    keyring_err = Some(error);
+                }
             },
-            Ok(None) => {}
+            Ok(None) => {
+                if let Some(result) = try_legacy_keyring_unseal(paths, path, &value, aad, None)? {
+                    return Ok(result);
+                }
+            }
             Err(error) => {
                 key::warn_once(format!(
                     "OS keyring unreachable ({error}); trying the fallback key file"
@@ -235,6 +248,35 @@ pub fn open_stored(
             self_heal_no_key(paths, path, aad, err)
         }
     }
+}
+
+fn try_legacy_keyring_unseal(
+    paths: &OwnHubPaths,
+    path: &Path,
+    value: &serde_json::Value,
+    aad: &[u8],
+    existing_kp: Option<[u8; 32]>,
+) -> Result<Option<(String, bool)>, String> {
+    let Ok(Some(legacy_kp)) = key::read_legacy_keyring_key() else {
+        return Ok(None);
+    };
+    let Ok((plaintext, _)) = envelope::open(&legacy_kp, value, aad) else {
+        return Ok(None);
+    };
+    let text = String::from_utf8(plaintext)
+        .map_err(|error| format!("unsealed secrets are not valid text: {error}"))?;
+    let (text, _) = normalize_nested(&legacy_kp, &text, aad, path)?;
+    let active = match existing_kp {
+        Some(kp) => kp,
+        None => key::promote_fallback_to_keyring(&legacy_kp).unwrap_or(legacy_kp),
+    };
+    let resealed = seal_with_key(&active, text.as_bytes(), aad)?;
+    persist_sealed(path, &resealed)?;
+    verify_reopen(paths, path, aad, Some(&text))?;
+    let _ = key::mark_migrated(&paths.root);
+    key::cache_insert(&paths.root, active);
+    key::observe_keyring(&paths.root);
+    Ok(Some((text, false)))
 }
 
 fn refuse_plaintext(path: &Path) -> String {

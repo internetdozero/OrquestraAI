@@ -9,19 +9,29 @@ use super::fresh_key;
 
 #[cfg(not(test))]
 const SERVICE: &str = "ownhub";
+#[cfg(not(test))]
+const LEGACY_SERVICE: &str = "orquestra-ai";
 const ACCOUNT: &str = "at-rest-file-key";
 const MIGRATED_ACCOUNT: &str = "at-rest-migrated";
 
 #[cfg(not(test))]
 mod keyring_backend {
-    pub(super) fn get(account: &str) -> Result<Option<String>, String> {
-        let entry = keyring::Entry::new(super::SERVICE, account)
+    fn get_for_service(service: &str, account: &str) -> Result<Option<String>, String> {
+        let entry = keyring::Entry::new(service, account)
             .map_err(|error| format!("could not open the OS keyring entry: {error}"))?;
         match entry.get_password() {
             Ok(stored) => Ok(Some(stored)),
             Err(keyring::Error::NoEntry) => Ok(None),
             Err(error) => Err(format!("could not read the OS keyring entry: {error}")),
         }
+    }
+
+    pub(super) fn get(account: &str) -> Result<Option<String>, String> {
+        get_for_service(super::SERVICE, account)
+    }
+
+    pub(super) fn get_legacy(account: &str) -> Result<Option<String>, String> {
+        get_for_service(super::LEGACY_SERVICE, account)
     }
 
     pub(super) fn set(account: &str, value: &str) -> Result<(), String> {
@@ -83,6 +93,10 @@ mod keyring_backend {
 
     pub(super) fn fail_key_writes(fail: bool) {
         FAIL_KEY_WRITES.store(fail, Ordering::Relaxed);
+    }
+
+    pub(super) fn get_legacy(_account: &str) -> Result<Option<String>, String> {
+        Ok(None)
     }
 }
 
@@ -178,10 +192,8 @@ fn keyring_responds() -> bool {
         .unwrap_or(false)
 }
 
-/// Read-only keyring lookup. Never creates: `None` means no entry, `Err`
-/// means the backend failed (the caller warns once and tries fallback).
-pub(crate) fn read_keyring_key() -> Result<Option<[u8; 32]>, String> {
-    match keyring_backend::get(ACCOUNT)? {
+fn decode_keyring_key(stored: Option<String>) -> Result<Option<[u8; 32]>, String> {
+    match stored {
         None => Ok(None),
         Some(stored) => BASE64_STANDARD
             .decode(stored.trim())
@@ -192,6 +204,18 @@ pub(crate) fn read_keyring_key() -> Result<Option<[u8; 32]>, String> {
             })
             .map(Some),
     }
+}
+
+/// Read-only keyring lookup. Never creates: `None` means no entry, `Err`
+/// means the backend failed (the caller warns once and tries fallback).
+pub(crate) fn read_keyring_key() -> Result<Option<[u8; 32]>, String> {
+    decode_keyring_key(keyring_backend::get(ACCOUNT)?)
+}
+
+/// Read-only lookup of the legacy `orquestra-ai` keyring entry used prior
+/// to the OwnHub rename.
+pub(crate) fn read_legacy_keyring_key() -> Result<Option<[u8; 32]>, String> {
+    decode_keyring_key(keyring_backend::get_legacy(ACCOUNT)?)
 }
 
 /// Store key bytes in the keyring (promotion or first write).

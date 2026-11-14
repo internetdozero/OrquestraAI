@@ -47,7 +47,7 @@ pub(crate) use fallback::{fallback_exists, read_fallback_key, remove_fallback_ke
 pub(crate) use resolve::is_migrated;
 pub use resolve::key_status;
 pub(crate) use resolve::{file_key, mark_migrated, promote_fallback_to_keyring};
-pub(crate) use ring::{keyring_usable, read_keyring_key};
+pub(crate) use ring::{keyring_usable, read_keyring_key, read_legacy_keyring_key};
 #[cfg(test)]
 pub(crate) use ring::{
     test_keyring_clear, test_keyring_fail_key_writes, test_keyring_lock, test_keyring_raw,

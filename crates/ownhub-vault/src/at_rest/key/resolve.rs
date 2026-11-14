@@ -9,8 +9,8 @@ use crate::at_rest::envelope;
 
 use super::fallback::{create_fallback_key, fallback_exists, read_fallback_key};
 use super::ring::{
-    create_keyring_key, keyring_usable, migrated_flag, read_keyring_key, set_migrated_flag,
-    store_keyring_key,
+    create_keyring_key, keyring_usable, migrated_flag, read_keyring_key, read_legacy_keyring_key,
+    set_migrated_flag, store_keyring_key,
 };
 use super::{
     cache_get, cache_insert, observe_file_key, observe_keyring, observed_status, warn_once,
@@ -52,7 +52,14 @@ pub(crate) fn file_key(paths: &OwnHubPaths) -> Result<[u8; 32], String> {
                 observe_keyring(&paths.root);
                 return Ok(key);
             }
-            Ok(None) => {}
+            Ok(None) => {
+                if let Ok(Some(legacy)) = read_legacy_keyring_key() {
+                    let _ = store_keyring_key(&legacy);
+                    cache_insert(&paths.root, legacy);
+                    observe_keyring(&paths.root);
+                    return Ok(legacy);
+                }
+            }
             Err(error) => {
                 warn_once(format!(
                     "OS keyring unreachable ({error}); using a 0600 key file — \

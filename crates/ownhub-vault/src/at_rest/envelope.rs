@@ -17,6 +17,7 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use base64::prelude::*;
 
 const MARKER: &str = "ownhubSealed";
+const LEGACY_MARKER: &str = "orquestraSealed";
 const VERSION: u8 = 2;
 const PREV_VERSION: u8 = 1;
 const ALG: &str = "AES-256-GCM";
@@ -37,27 +38,33 @@ pub(super) fn is_envelope_bytes(bytes: &[u8]) -> bool {
         .unwrap_or(false)
 }
 
+fn seal_marker_value(value: &serde_json::Value) -> Option<&serde_json::Value> {
+    value.get(MARKER).or_else(|| value.get(LEGACY_MARKER))
+}
+
+/// True when the envelope uses the legacy `"orquestraSealed"` marker and
+/// should be re-sealed under `"ownhubSealed"`.
+pub(super) fn is_legacy_marker(value: &serde_json::Value) -> bool {
+    value.get(MARKER).is_none() && value.get(LEGACY_MARKER).is_some()
+}
+
 /// True when the value carries the seal marker with an unrecognized
 /// version. Those files must fail closed: sealing over them (or treating
 /// them as legacy plaintext) would nest or destroy a future envelope.
 pub(super) fn has_unknown_version(value: &serde_json::Value) -> bool {
-    value.get(MARKER).is_some() && sealed_version(value).is_none()
+    seal_marker_value(value).is_some() && sealed_version(value).is_none()
 }
 
 /// True when the parsed file value is one of our sealed envelopes (v1 or
 /// v2). Legacy files (`services` / `mcps` at the top level) never carry
 /// the marker.
 pub(super) fn is_sealed(value: &serde_json::Value) -> bool {
-    value
-        .get(MARKER)
-        .and_then(|marker| marker.as_u64())
-        .is_some_and(|marker| marker == u64::from(VERSION) || marker == u64::from(PREV_VERSION))
+    sealed_version(value).is_some()
 }
 
 /// Envelope version carried by a sealed value, if any.
 pub(super) fn sealed_version(value: &serde_json::Value) -> Option<u8> {
-    value
-        .get(MARKER)
+    seal_marker_value(value)
         .and_then(|marker| marker.as_u64())
         .and_then(|marker| u8::try_from(marker).ok())
         .filter(|version| *version == VERSION || *version == PREV_VERSION)
@@ -244,5 +251,25 @@ mod tests {
         let sealed_mcps = seal(&key, b"mcps-plaintext", AAD_MCPS).expect("seal mcps");
         let value_mcps: serde_json::Value = serde_json::from_str(&sealed_mcps).expect("JSON");
         assert!(open(&key, &value_mcps, AAD_VAULT).is_err());
+    }
+
+    #[test]
+    fn legacy_orquestra_sealed_envelope_opens() {
+        let key = test_key();
+        let sealed = seal(&key, b"legacy-secret", AAD_VAULT).expect("seal");
+        let mut value: serde_json::Value = serde_json::from_str(&sealed).expect("JSON");
+        assert!(!is_legacy_marker(&value));
+        let ver = value.as_object_mut().unwrap().remove(MARKER).unwrap();
+        value
+            .as_object_mut()
+            .unwrap()
+            .insert(LEGACY_MARKER.to_string(), ver);
+
+        assert!(is_sealed(&value));
+        assert!(is_legacy_marker(&value));
+        assert_eq!(sealed_version(&value), Some(VERSION));
+        let (plaintext, version) = open(&key, &value, AAD_VAULT).expect("open legacy");
+        assert_eq!(plaintext, b"legacy-secret");
+        assert_eq!(version, VERSION);
     }
 }
