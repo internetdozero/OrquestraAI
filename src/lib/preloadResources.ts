@@ -39,12 +39,39 @@ function whenIdle(isCancelled: () => boolean, timeoutMs = 3000): Promise<void> {
 }
 
 /**
+ * Everything the settings dialog reads: the retention policy, the tool
+ * probe, the RTK version and the store catalog. All four are cached with a
+ * TTL, so callers can warm them repeatedly for the cost of one read.
+ */
+function settingsReads(): Promise<unknown>[] {
+  return [loadRetentionPolicy(), probeExternalTools(), ensureRtkStatus(), ensureStoreCatalog()];
+}
+
+/**
+ * Warm the settings dialog ahead of a click: its chunk plus every read its
+ * tabs need. Fired on hover/focus of the sidebar button.
+ */
+export function preloadSettings(): Promise<void> {
+  return Promise.allSettled([
+    import("../components/settings/SettingsModal"),
+    ...settingsReads(),
+  ]).then(() => undefined);
+}
+
+/**
  * Warm the lazily-split view/modal chunks during idle time so the first
  * tab switch rarely hits the Suspense fallback. Fire-and-forget: dynamic
  * imports are cached by the module loader, and a rejection is ignored —
  * the fallback covers a cache miss.
+ *
+ * The settings dialog is the exception: it hangs off the sidebar footer, so
+ * it can be clicked at any moment — including before the first idle window,
+ * which is why clicking it used to dim the whole window behind the Suspense
+ * fallback. Start its chunk immediately; a module fetch is async and never
+ * blocks the thread.
  */
 export async function preloadViewChunks(isCancelled: () => boolean): Promise<void> {
+  void import("../components/settings/SettingsModal").catch(() => undefined);
   await whenIdle(isCancelled);
   if (isCancelled()) return;
   await Promise.allSettled([
@@ -54,7 +81,6 @@ export async function preloadViewChunks(isCancelled: () => boolean): Promise<voi
     import("../components/ideas/IdeasView"),
     import("../components/credentials/CredentialsView"),
     import("../components/JanitorModal"),
-    import("../components/settings/SettingsModal"),
     import("../components/BridgeModal"),
   ]);
 }
@@ -112,18 +138,11 @@ export async function preloadBackground(isCancelled: () => boolean): Promise<voi
   if (isCancelled()) return;
 
   // Settings and the official store are one click away and each of their
-  // tabs opened on a cold read: the retention policy, the external-tool
-  // probe, the RTK version and the store catalog. All four are cached with
-  // a TTL, so warming them here costs one read and keeps every tab from
+  // tabs opened on a cold read; warming them here keeps every tab from
   // flashing its defaults while the IPC resolves.
   await whenIdle(isCancelled);
   if (isCancelled()) return;
-  await Promise.allSettled([
-    loadRetentionPolicy(),
-    probeExternalTools(),
-    ensureRtkStatus(),
-    ensureStoreCatalog(),
-  ]);
+  await Promise.allSettled(settingsReads());
   if (isCancelled()) return;
 
   await whenIdle(isCancelled);

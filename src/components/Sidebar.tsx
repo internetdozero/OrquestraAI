@@ -13,6 +13,8 @@ interface SidebarProps {
   skillStats: { active: number; total: number };
   mcpCount: number;
   onOpenSettings: () => void;
+  /** Hover or focus on Settings: warm its chunk and the data its tabs read. */
+  onWarmSettings?: () => void;
   hasAppUpdate?: boolean;
 }
 
@@ -97,6 +99,7 @@ export function Sidebar({
   skillStats,
   mcpCount,
   onOpenSettings,
+  onWarmSettings,
   hasAppUpdate = false,
 }: SidebarProps) {
   const { t } = useI18n();
@@ -169,6 +172,8 @@ export function Sidebar({
         <button
           type="button"
           onClick={onOpenSettings}
+          onMouseEnter={onWarmSettings}
+          onFocus={onWarmSettings}
           title={t.settings.sidebarHint}
           aria-label={t.settings.sidebarAction}
           className="relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none"

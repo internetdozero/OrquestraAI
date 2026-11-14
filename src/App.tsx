@@ -23,6 +23,7 @@ import { perfBoot, perfViewSwitch } from "./lib/perf";
 import {
   preloadBackground,
   preloadEssentials,
+  preloadSettings,
   preloadViewChunks,
   preloadViewData,
 } from "./lib/preloadResources";
@@ -242,6 +243,13 @@ export default function App() {
     [isTauri],
   );
 
+  // Hovering Settings warms its chunk and tab data, so the click that follows
+  // opens the dialog instead of dimming the window behind a spinner.
+  const warmSettings = useCallback(() => {
+    if (!isTauri) return;
+    void preloadSettings().catch(() => undefined);
+  }, [isTauri]);
+
   const essentialsReady = !isTauri || (skillsReady && !presets.loading);
 
   // Boot timing: `boot:shell` is the first interactive frame, `boot:preload-done`
@@ -338,6 +346,7 @@ export default function App() {
           skillStats={{ active: skillStats.active, total: totalSkills }}
           mcpCount={mcpCount}
           onOpenSettings={() => setSettingsOpen(true)}
+          onWarmSettings={warmSettings}
           hasAppUpdate={hasAppUpdate}
         />
 
