@@ -6,6 +6,9 @@ import { ensureVaultCatalog } from "./vaultCache";
 import { ensureUnifiedSessions, loadRetentionPolicy } from "./sessions";
 import { hasSkillsCache } from "./skillsCache";
 import { loadSkillsScope } from "./skillsLoader";
+import { ensureRtkStatus } from "./rtkCache";
+import { ensureStoreCatalog } from "./storeCache";
+import { probeExternalTools } from "./tooling";
 
 /** What the first screen needs before the shell is shown. */
 export function preloadEssentials(): Promise<void> {
@@ -106,6 +109,21 @@ export async function preloadBackground(isCancelled: () => boolean): Promise<voi
   await whenIdle(isCancelled);
   if (isCancelled()) return;
   await ensureMcpCatalog().catch(() => undefined);
+  if (isCancelled()) return;
+
+  // Settings and the official store are one click away and each of their
+  // tabs opened on a cold read: the retention policy, the external-tool
+  // probe, the RTK version and the store catalog. All four are cached with
+  // a TTL, so warming them here costs one read and keeps every tab from
+  // flashing its defaults while the IPC resolves.
+  await whenIdle(isCancelled);
+  if (isCancelled()) return;
+  await Promise.allSettled([
+    loadRetentionPolicy(),
+    probeExternalTools(),
+    ensureRtkStatus(),
+    ensureStoreCatalog(),
+  ]);
   if (isCancelled()) return;
 
   await whenIdle(isCancelled);
