@@ -7,4 +7,4 @@ compatibility_date = "2026-10-01"
 
 # Custom domain + route are bound in the Cloudflare dashboard (or here):
 # hub.ownanai.dev/install.sh -> this worker.
-# routes = [{ pattern = "hub.ownanai.dev/install.sh", zone_name = "ownanai.dev" }]
+routes = [{ pattern = "hub.ownanai.dev/install.sh", zone_name = "ownanai.dev" }, { pattern = "hub.ownanai.dev/install.ps1", zone_name = "ownanai.dev" }]
