@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cyan Accent:** the `[data-accent="cyan"]` palette block was missing, so picking cyan painted whatever `:root` carried instead of its own colours — violet before the silver default, silver after it. The block now exists and all five accents resolve to distinct palettes.
 - **Legacy MCP Catalog Paths:** a catalog written before the rename pointed its commands at `~/.orquestra/...`, which no longer exists, so every MCP failed to spawn and clients reported a closed stdio (`Connection reset by peer`). Commands, args and env values are rebased onto `~/.ownhub` when the catalog loads.
 - **Flatpak Packaging:** the release job now runs in Flathub's builder image and builds through the Flathub action, because Ubuntu 22.04's `flatpak-builder` 1.2 still calls the legacy `appstream-compose` binary that GNOME SDK 47 dropped. `v0.1.0-alpha.9` was published without the Flatpak asset for that reason; the binary, `.deb` and installer channels are unaffected.
 - **macOS Test Isolation:** the bridge backup tests derived their scratch directory from the clock alone, and macOS resolves it to microseconds — parallel tests could share a directory and fail on an existing fixture. The path is now unique per process and call.
