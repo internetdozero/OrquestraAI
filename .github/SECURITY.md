@@ -10,6 +10,6 @@
 
 If you discover a security vulnerability within OwnHub, please report it privately through GitHub's [Private Vulnerability Reporting](https://github.com/OwnAnAI/ownhub/security/advisories/new) or contact the maintainers directly at:
 
-- Email: `contato@internetdozero.com.br`
+- Email: `security@ownanai.dev`
 
 Please do NOT file public GitHub issues for security vulnerabilities. We will review and address your report promptly.
