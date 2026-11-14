@@ -6,7 +6,6 @@ import {
   Download,
   ExternalLink,
   Loader2,
-  Orbit,
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
@@ -19,6 +18,7 @@ import { openExternalUrl } from "../../lib/tauri";
 import { probeExternalTools, type ToolReport } from "../../lib/tooling";
 import { checkLatestRelease, type ReleaseCheckResult } from "../../lib/updater";
 import { cn } from "../../lib/utils";
+import ownhubLogo from "../../assets/ownhub-logo.svg";
 
 interface AboutSettingsTabProps {
   status: CoreStatus | null;
@@ -107,13 +107,9 @@ export function AboutSettingsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5">
-        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-400/20 via-purple-500/10 to-indigo-500/10 ring-1 ring-violet-400/25">
-          <Orbit className="size-5 text-violet-300" />
-        </div>
+        <img src={ownhubLogo} alt="OwnHub" className="size-10 shrink-0 rounded-xl" draggable={false} />
         <div>
-          <p className="text-[13px] font-semibold text-zinc-100">
-            OwnHub<span className="text-violet-400">AI</span>
-          </p>
+          <p className="text-[13px] font-semibold text-zinc-100">OwnHub</p>
           <p className="font-mono text-[10.5px] text-zinc-500">
             {a.version} {status?.version ?? "0.1.0"} · {a.platform}{" "}
             {status?.platform ?? "browser-preview"}

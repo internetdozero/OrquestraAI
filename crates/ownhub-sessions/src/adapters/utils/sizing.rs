@@ -118,10 +118,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let scratch = ownhub_core::test_support::root().join(format!(
-            "ownhub-dir-size-{}-{unique}",
-            std::process::id()
-        ));
+        let scratch = ownhub_core::test_support::root()
+            .join(format!("ownhub-dir-size-{}-{unique}", std::process::id()));
         let outside = scratch.join("outside");
         let session = scratch.join("vault").join("session");
         fs::create_dir_all(&outside).expect("outside tree");

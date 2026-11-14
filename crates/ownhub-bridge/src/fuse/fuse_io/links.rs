@@ -123,10 +123,7 @@ pub(crate) fn file_linked_instructions(
 
 /// Re-point the file links collected above at the master the import just
 /// published, since a `rename` left them holding the old text.
-pub(crate) fn resync_file_links(
-    linked: &[std::path::PathBuf],
-    paths: &OwnHubPaths,
-) -> Vec<String> {
+pub(crate) fn resync_file_links(linked: &[std::path::PathBuf], paths: &OwnHubPaths) -> Vec<String> {
     let master = paths.agents_path();
     let mut errors = Vec::new();
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Orbit, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import ownhubLogo from "../assets/ownhub-logo.svg";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useI18n } from "../hooks/useI18n";
 import { cn } from "../lib/utils";
@@ -180,13 +181,15 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
           className="flex min-w-0 items-center gap-2.5"
           onDoubleClick={isTauri ? toggleMaximize : undefined}
         >
-          <div className="accent-bg-soft accent-border relative grid size-7 shrink-0 place-items-center rounded-lg border">
-            <div className="accent-bg-soft absolute inset-0 rounded-lg blur-md" />
-            <Orbit className="accent-text relative size-4" />
-          </div>
+          <img
+            src={ownhubLogo}
+            alt="OwnHub"
+            className="size-7 shrink-0 rounded-lg"
+            draggable={false}
+          />
           <div className="flex min-w-0 items-center gap-1.5">
             <h1 className="truncate text-[13px] font-semibold tracking-tight text-zinc-100">
-              OwnHub<span className="accent-text">AI</span>
+              OwnHub
             </h1>
             <span className="hidden rounded border border-white/10 bg-white/[0.03] px-1 font-mono text-[9px] text-zinc-500 sm:inline">
               v0.1.0

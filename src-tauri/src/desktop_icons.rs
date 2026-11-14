@@ -90,7 +90,9 @@ fn alias_entry(exec: &str) -> String {
 fn entry_for(name: &str, exec: &str) -> Option<String> {
     match name {
         "ownhub.desktop" => Some(desktop_entry(exec)),
-        "orquestra.desktop" | "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop"
+        "orquestra.desktop"
+        | "orquestra-ai.desktop"
+        | "ai.orquestra.desktop.desktop"
         | "dev.ownanai.hub.desktop" => Some(alias_entry(exec)),
         _ => None,
     }

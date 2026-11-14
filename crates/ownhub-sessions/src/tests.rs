@@ -21,10 +21,8 @@ impl TestRoot {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = ownhub_core::test_support::root().join(format!(
-            "ownhub-sessions-{}-{unique}",
-            std::process::id()
-        ));
+        let path = ownhub_core::test_support::root()
+            .join(format!("ownhub-sessions-{}-{unique}", std::process::id()));
         fs::create_dir_all(&path)
             .expect("create the sessions test workspace under the test scratch root");
         Self(path)

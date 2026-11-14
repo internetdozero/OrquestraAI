@@ -113,10 +113,7 @@ mod tests {
         let retired = retired_binary_path(&target);
         assert_eq!(retired.parent(), Some(dir.as_path()));
         let name = retired.file_name().unwrap().to_string_lossy().into_owned();
-        assert!(
-            name.starts_with(".ownhub.old-"),
-            "unexpected name {name}"
-        );
+        assert!(name.starts_with(".ownhub.old-"), "unexpected name {name}");
 
         std::fs::write(&retired, b"old").unwrap();
         std::fs::write(&target, b"new").unwrap();

@@ -49,7 +49,7 @@ OwnHub resolves this with the **Blind Vault** pattern:
 ## 2. Current State vs. Granular CLI Design
 
 | Capability               | Current State (`src-tauri/src/cli/native/vault.rs`) | New Granular Design (`ownhub vault <cmd>`)                                                   |
-| :----------------------- | :-------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| :----------------------- | :-------------------------------------------------- | :------------------------------------------------------------------------------------------- |
 | **List Services**        | Basic `vault list [--json]`                         | `ownhub vault list [--preset <P>] [--enabled-only] [--failing-only] [--search <S>] [--json]` |
 | **Inspect Service**      | _None_ (requires reading sealed file)               | `ownhub vault inspect <id> [--reveal] [--json]`                                              |
 | **Add / Update Service** | _None_ (UI modal only)                              | `ownhub vault set <id> --key <K> [--preset <P>] [--meta <K=V>] [--tag <T>] [--json]`         |

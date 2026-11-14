@@ -313,10 +313,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let dir = std::env::temp_dir().join(format!(
-            "ownhub-fuse-race-{}-{nanos}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("ownhub-fuse-race-{}-{nanos}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("scratch dir");
         let target = dir.join("config.json");
         // Distinct first bytes so any mix is detected, not just length.

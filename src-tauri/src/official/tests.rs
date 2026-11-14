@@ -29,10 +29,7 @@ fn skill_rule_matches_the_designated_set() {
 
 #[test]
 fn aliases_resolve_forward_and_stamp_official() {
-    assert_eq!(
-        canonical_skill_id("modular-start"),
-        "ownhub-modular-start"
-    );
+    assert_eq!(canonical_skill_id("modular-start"), "ownhub-modular-start");
     assert_eq!(
         canonical_skill_id("agent-orchestrator"),
         "ownhub-agent-orchestrator"

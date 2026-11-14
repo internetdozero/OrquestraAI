@@ -8,11 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-pub(super) fn adopt_existing(
-    paths: &OwnHubPaths,
-    home: &Path,
-    seed: &Path,
-) -> Result<(), String> {
+pub(super) fn adopt_existing(paths: &OwnHubPaths, home: &Path, seed: &Path) -> Result<(), String> {
     let mut catalog = load_catalog(paths, seed)?;
     let previously_managed = catalog.managed_ids.clone();
     let mut changed = false;

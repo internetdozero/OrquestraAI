@@ -211,10 +211,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!(
-            "ownhub-shortcut-{}-{unique}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("ownhub-shortcut-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -225,9 +223,7 @@ mod tests {
             Path::new(r"C:\Users\dev\Start Menu\Programs\OwnHub.lnk"),
             Path::new(r"C:\Users\dev\.local\bin\ownhub.exe"),
         );
-        assert!(
-            script.contains(r"CreateShortcut('C:\Users\dev\Start Menu\Programs\OwnHub.lnk')")
-        );
+        assert!(script.contains(r"CreateShortcut('C:\Users\dev\Start Menu\Programs\OwnHub.lnk')"));
         assert!(script.contains(r"$s.TargetPath = 'C:\Users\dev\.local\bin\ownhub.exe'"));
         assert!(
             script.contains(r"$s.WorkingDirectory = 'C:\Users\dev\.local\bin'"),

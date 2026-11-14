@@ -22,7 +22,13 @@ export const settings = {
     notifyOnPurgeHint: "Avisa quanto espaço foi liberado.",
     accentTitle: "Tema de destaque",
     accentHint: "Cor usada nos elementos ativos.",
-    accents: { emerald: "Esmeralda", cyan: "Ciano", violet: "Violeta", amber: "Âmbar" },
+    accents: {
+      emerald: "Esmeralda",
+      cyan: "Ciano",
+      violet: "Violeta",
+      amber: "Âmbar",
+      silver: "Prata",
+    },
   },
   storage: {
     pathsTitle: "Caminhos canônicos",

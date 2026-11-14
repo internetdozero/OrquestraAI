@@ -30,8 +30,7 @@ export const credentials = {
   loadingTitle: "Carregando credenciais…",
   loadingBody: "Lendo os pools mascarados do cofre.",
   needDesktopTitle: "Credenciais exigem o app desktop",
-  needDesktopBody:
-    "O cofre cego vive no núcleo Tauri; abra o OwnHub desktop para gerenciá-lo.",
+  needDesktopBody: "O cofre cego vive no núcleo Tauri; abra o OwnHub desktop para gerenciá-lo.",
   emptyTitle: "Nenhum serviço de credencial ainda",
   emptyBody:
     "Registre um pool de chaves e os agentes usam a API sem nunca ver o secret — o cofre injeta às cegas e limpa cada resposta.",

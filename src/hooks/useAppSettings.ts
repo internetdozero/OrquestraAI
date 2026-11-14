@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Locale } from "../i18n/I18nContext";
 import { useI18n } from "./useI18n";
 
-export type AccentColor = "emerald" | "cyan" | "violet" | "amber";
+export type AccentColor = "emerald" | "cyan" | "violet" | "amber" | "silver";
 
 export interface AppSettings {
   minimizeToTray: boolean;

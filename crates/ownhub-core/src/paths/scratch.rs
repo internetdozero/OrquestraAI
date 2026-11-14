@@ -216,8 +216,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let xdg =
-            std::env::temp_dir().join(format!("ownhub-xdg-{}-{nanos}", std::process::id()));
+        let xdg = std::env::temp_dir().join(format!("ownhub-xdg-{}-{nanos}", std::process::id()));
         let env = EnvGuard::capture("XDG_RUNTIME_DIR");
         env.set(Some(xdg.as_os_str()));
         let root = scratch_root();
@@ -234,10 +233,7 @@ mod tests {
         let root = scratch_root();
         // SAFETY: `getuid` takes no arguments and has no failure mode.
         let uid = unsafe { libc::getuid() };
-        assert_eq!(
-            root,
-            std::env::temp_dir().join(format!("ownhub-{uid}"))
-        );
+        assert_eq!(root, std::env::temp_dir().join(format!("ownhub-{uid}")));
     }
 
     /// Task #325: `ensure_scratch_root` creates the runtime dir `0700`.
@@ -251,10 +247,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let xdg = std::env::temp_dir().join(format!(
-            "ownhub-xdg-create-{}-{nanos}",
-            std::process::id()
-        ));
+        let xdg =
+            std::env::temp_dir().join(format!("ownhub-xdg-create-{}-{nanos}", std::process::id()));
         std::fs::create_dir_all(&xdg).expect("xdg dir");
         {
             let env = EnvGuard::capture("XDG_RUNTIME_DIR");

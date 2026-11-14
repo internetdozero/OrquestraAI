@@ -27,7 +27,7 @@ OwnHub acts as a centralized **orchestration hub** for MCP servers across the su
 ## 2. Current State vs. Granular CLI Design
 
 | Capability              | Legacy CLI / Flags                           | New Granular CLI (`ownhub mcp <cmd>`)                                         |
-| :---------------------- | :------------------------------------------- | :------------------------------------------------------------------------------- |
+| :---------------------- | :------------------------------------------- | :---------------------------------------------------------------------------- |
 | **Catalog Listing**     | `--mcp-status` (raw JSON dump only)          | `ownhub mcp list [--enabled-only] [--harness <H>] [--official-only] [--json]` |
 | **System Summary**      | Incomplete                                   | `ownhub mcp status [--json]`                                                  |
 | **Server Inspection**   | None (manual JSON parsing)                   | `ownhub mcp inspect <id> [--reveal] [--json]`                                 |

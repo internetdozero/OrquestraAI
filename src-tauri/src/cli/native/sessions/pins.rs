@@ -37,10 +37,7 @@ pub(super) fn unpin(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage(
-                "usage: ownhub sessions unpin <session-id> [--harness <id>] [--json]"
-                    .to_string(),
-            )
+            usage("usage: ownhub sessions unpin <session-id> [--harness <id>] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--harness"], &["--json"])?;

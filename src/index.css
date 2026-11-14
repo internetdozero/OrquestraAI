@@ -206,6 +206,18 @@
   --color-emerald-500: #f59e0b;
   --color-emerald-600: #d97706;
 }
+[data-accent="silver"] {
+  --accent-solid: #c9ccd1;
+  --accent-fg: #e4e4e7;
+  --accent-bg: rgb(201 204 209 / 0.12);
+  --accent-ring: rgb(201 204 209 / 0.4);
+  --accent-glow: rgb(201 204 209 / 0.55);
+  --color-emerald-200: #fafafa;
+  --color-emerald-300: #f4f4f5;
+  --color-emerald-400: #e4e4e7;
+  --color-emerald-500: #c9ccd1;
+  --color-emerald-600: #a1a1aa;
+}
 
 /* Theme-reactive accents for active/brand touchpoints. Plain classes (not
    utilities) so they combine freely with the Tailwind classes around them. */
@@ -238,4 +250,7 @@
 }
 [data-swatch="amber"] {
   background-color: #f59e0b;
+}
+[data-swatch="silver"] {
+  background-color: #c9ccd1;
 }

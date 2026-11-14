@@ -50,10 +50,7 @@ pub fn apply_global_selection(enabled: &[String]) -> Result<usize, String> {
 
 /// `apply_global_selection` against explicit paths, for tests and callers
 /// that already resolved the storage locations.
-pub fn apply_global_selection_at(
-    paths: &OwnHubPaths,
-    enabled: &[String],
-) -> Result<usize, String> {
+pub fn apply_global_selection_at(paths: &OwnHubPaths, enabled: &[String]) -> Result<usize, String> {
     let mut catalog = load_catalog(paths, &seed_catalog_path(&paths.root))?;
     let wanted: BTreeSet<&str> = enabled.iter().map(String::as_str).collect();
     let mut changed = 0usize;

@@ -169,8 +169,7 @@ pub(super) fn remove_key(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: ownhub vault remove-key <id> --key-number <N> [--yes] [--json]"
-                    .to_string(),
+                "usage: ownhub vault remove-key <id> --key-number <N> [--yes] [--json]".to_string(),
             )
         })?;
 

@@ -5,6 +5,4 @@
 //! every `crate::at_rest::…` call site — the MCP catalog's sealed store in
 //! particular — unchanged.
 
-pub(crate) use ownhub_vault::at_rest::{
-    open_stored, purge_migration_backup, seal_text, AAD_MCPS,
-};
+pub(crate) use ownhub_vault::at_rest::{open_stored, purge_migration_backup, seal_text, AAD_MCPS};

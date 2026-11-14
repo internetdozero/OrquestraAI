@@ -362,10 +362,7 @@ fn fuse_secondary(
     Ok(())
 }
 
-fn import_instructions(
-    paths: &OwnHubPaths,
-    imported: &[(String, String)],
-) -> Result<(), String> {
+fn import_instructions(paths: &OwnHubPaths, imported: &[(String, String)]) -> Result<(), String> {
     let mut merged = DEFAULT_AGENTS.to_string();
     let mut seen: Vec<String> = Vec::new();
 

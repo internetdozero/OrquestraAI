@@ -14,9 +14,7 @@ use super::vault::{skill_directories, skill_directory};
 use super::GLOBAL_SCOPE;
 use crate::harness::harness_ids;
 use crate::paths::{create_dir, OwnHubPaths};
-use ownhub_core::links::{
-    create_dir_link, is_dir_link, normalize, read_dir_link, remove_dir_link,
-};
+use ownhub_core::links::{create_dir_link, is_dir_link, normalize, read_dir_link, remove_dir_link};
 
 pub(super) fn set_global(paths: &OwnHubPaths, id: &str, enabled: bool) -> Result<(), String> {
     let vault_item = skill_directory(paths, id)?;

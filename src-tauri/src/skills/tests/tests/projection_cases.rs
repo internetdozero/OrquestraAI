@@ -37,10 +37,7 @@ fn monorepo_url_fragments_extract_and_sanitize() {
     let (repo, sub) = split_git_url(
         "https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub-modular-start",
     );
-    assert_eq!(
-        repo,
-        "https://github.com/OwnAnAI/ownhub-extensions.git"
-    );
+    assert_eq!(repo, "https://github.com/OwnAnAI/ownhub-extensions.git");
     assert_eq!(sub.as_deref(), Some("skills/ownhub-modular-start"));
 
     let (plain, none) = split_git_url("https://github.com/o/standalone.git");
@@ -63,8 +60,8 @@ fn monorepo_url_fragments_extract_and_sanitize() {
 fn monorepo_skill_discovery_finds_nested_layouts() {
     use super::subpath::locate_skill_dir;
 
-    let root = ownhub_core::test_support::root()
-        .join(format!("ownhub-tests-mono-{}", std::process::id()));
+    let root =
+        ownhub_core::test_support::root().join(format!("ownhub-tests-mono-{}", std::process::id()));
     if root.exists() {
         fs::remove_dir_all(&root).unwrap();
     }
@@ -96,10 +93,7 @@ fn unified_naming_stamps_legacy_and_canonical_ids() {
     ] {
         assert!(is_official_skill(id), "{id} should be official");
     }
-    assert_eq!(
-        canonical_skill_id("modular-start"),
-        "ownhub-modular-start"
-    );
+    assert_eq!(canonical_skill_id("modular-start"), "ownhub-modular-start");
     assert_eq!(canonical_skill_id("ownhub"), "ownhub");
     assert!(!is_official_skill("docker-helper"));
 }
@@ -173,10 +167,8 @@ fn a_symlinked_skill_file_is_not_listed_or_read() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = ownhub_core::test_support::root().join(format!(
-        "ownhub-skill-link-{}-{unique}",
-        std::process::id()
-    ));
+    let root = ownhub_core::test_support::root()
+        .join(format!("ownhub-skill-link-{}-{unique}", std::process::id()));
     let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),

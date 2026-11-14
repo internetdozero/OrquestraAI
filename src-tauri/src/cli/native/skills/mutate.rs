@@ -108,9 +108,7 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| {
-            usage("usage: ownhub skills delete <id> [--force] [--json]".to_string())
-        })?;
+        .ok_or_else(|| usage("usage: ownhub skills delete <id> [--force] [--json]".to_string()))?;
 
     let options = parse_options(&args[1..], &[], &["--force", "-f", "--json"])?;
     delete_skill(id.to_string()).map_err(CliError::Operation)?;

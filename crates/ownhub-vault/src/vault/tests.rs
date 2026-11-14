@@ -625,10 +625,8 @@ fn concurrent_vault_updates_lose_nothing() {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    let root = std::env::temp_dir().join(format!(
-        "ownhub-vault-race-{}-{nanos}",
-        std::process::id()
-    ));
+    let root =
+        std::env::temp_dir().join(format!("ownhub-vault-race-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&root).expect("scratch dir");
     let paths = OwnHubPaths {
         root: root.clone(),
@@ -961,10 +959,8 @@ fn noop_vault_update_skips_disk_write() {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    let root = std::env::temp_dir().join(format!(
-        "ownhub-vault-skip-{}-{nanos}",
-        std::process::id()
-    ));
+    let root =
+        std::env::temp_dir().join(format!("ownhub-vault-skip-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&root).expect("scratch dir");
     let paths = OwnHubPaths {
         root: root.clone(),

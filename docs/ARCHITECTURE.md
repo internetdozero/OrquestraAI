@@ -15,18 +15,18 @@ views - hooks - lib/*Cache.ts         lib.rs handler registry
 
 ## Module map
 
-| Area           | Frontend                                                  | Backend                                                      | Storage                                                                        |
-| -------------- | --------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Area           | Frontend                                                  | Backend                                                      | Storage                                                                  |
+| -------------- | --------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | Skills         | `SkillsView`, `useSkillsCache`, `skillsLoader`            | `skills/` (vault, projection, security, agents, vault_cache) | `~/.ownhub/skills/<id>/`, projections under `~/.ownhub/harnesses/<hid>/` |
-| MCP            | `McpView`, `useMcpCatalog`, `useMcpMutations`, `mcpCache` | `mcp/` (catalog, deploy, serializers)                        | `mcps.json` catalog; compiled harness configs                                  |
-| Presets        | `PresetEditModal`, presets bar                            | `presets/` (store, apply, builtins, naming)                  | `presets.json` (`custom` + `overrides`)                                        |
-| Bridge         | footer indicator                                          | `bridge/` (status, deploy, fuse)                             | symlinks + `backupDir` per deploy                                              |
-| Ideas          | `IdeasView`, `useIdeas`                                   | `ideas/` (store, ideas_repo, notes_repo, productivity)       | `ideas.db` (SQLite)                                                            |
-| Sessions       | `SessionsView`, `TranscriptFeed`, `useSessions`           | `sessions/` (adapters/*, policy, purge, scheduler)           | harness-native histories (read-only) + pins/policy                             |
-| Vault          | Credentials view, `AddCredentialModal`, `vault.ts`        | `vault/` (store, proxy, exec, http, presets, atomic)         | `vault.json` (`0600`), atomic writes                                           |
-| Updates        | `updater.ts`, settings tab                                | `updater.rs`, `update_sig.rs`                                | staged in scratch dir, atomic replace                                          |
-| System         | Janitor modal, settings                                   | `janitor/`, `desktop.rs`, `tray.rs`                          | sockets, `backups/`                                                            |
-| Official store | store UI                                                  | `official.rs`                                                | static curated data                                                            |
+| MCP            | `McpView`, `useMcpCatalog`, `useMcpMutations`, `mcpCache` | `mcp/` (catalog, deploy, serializers)                        | `mcps.json` catalog; compiled harness configs                            |
+| Presets        | `PresetEditModal`, presets bar                            | `presets/` (store, apply, builtins, naming)                  | `presets.json` (`custom` + `overrides`)                                  |
+| Bridge         | footer indicator                                          | `bridge/` (status, deploy, fuse)                             | symlinks + `backupDir` per deploy                                        |
+| Ideas          | `IdeasView`, `useIdeas`                                   | `ideas/` (store, ideas_repo, notes_repo, productivity)       | `ideas.db` (SQLite)                                                      |
+| Sessions       | `SessionsView`, `TranscriptFeed`, `useSessions`           | `sessions/` (adapters/*, policy, purge, scheduler)           | harness-native histories (read-only) + pins/policy                       |
+| Vault          | Credentials view, `AddCredentialModal`, `vault.ts`        | `vault/` (store, proxy, exec, http, presets, atomic)         | `vault.json` (`0600`), atomic writes                                     |
+| Updates        | `updater.ts`, settings tab                                | `updater.rs`, `update_sig.rs`                                | staged in scratch dir, atomic replace                                    |
+| System         | Janitor modal, settings                                   | `janitor/`, `desktop.rs`, `tray.rs`                          | sockets, `backups/`                                                      |
+| Official store | store UI                                                  | `official.rs`                                                | static curated data                                                      |
 
 Cross-cutting: `paths.rs` (single `OwnHubPaths` resolver + bootstrap),
 `exec_env.rs` (thin shell layer over `ownhub_core::exec`, which resolves

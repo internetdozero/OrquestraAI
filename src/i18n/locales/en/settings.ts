@@ -24,7 +24,13 @@ export const settings: TranslationSchema["settings"] = {
     notifyOnPurgeHint: "Reports how much space was reclaimed.",
     accentTitle: "Accent theme",
     accentHint: "Color used for active elements.",
-    accents: { emerald: "Emerald", cyan: "Cyan", violet: "Violet", amber: "Amber" },
+    accents: {
+      emerald: "Emerald",
+      cyan: "Cyan",
+      violet: "Violet",
+      amber: "Amber",
+      silver: "Silver",
+    },
   },
   storage: {
     pathsTitle: "Canonical paths",

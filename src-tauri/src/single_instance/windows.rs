@@ -35,9 +35,7 @@ fn owned() -> std::sync::MutexGuard<'static, Option<OwnedMutex>> {
 pub(super) fn mutex_name() -> Result<Vec<u16>, String> {
     let root = OwnHubPaths::resolve()?.root;
     let key = super::short_key(root.to_string_lossy().as_ref());
-    let mut name: Vec<u16> = format!("Local\\ownhub-{key}")
-        .encode_utf16()
-        .collect();
+    let mut name: Vec<u16> = format!("Local\\ownhub-{key}").encode_utf16().collect();
     name.push(0);
     Ok(name)
 }

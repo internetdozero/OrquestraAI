@@ -34,7 +34,8 @@ fn desktop_install_does_not_write_through_a_symlink() {
         "the desktop entry symlink must stay"
     );
     assert_eq!(std::fs::read_to_string(&outside).unwrap(), original);
-    let regular = std::fs::read_to_string(data.join("applications/dev.ownanai.hub.desktop")).unwrap();
+    let regular =
+        std::fs::read_to_string(data.join("applications/dev.ownanai.hub.desktop")).unwrap();
     assert!(regular.contains("Name=OwnHub"));
     let _ = std::fs::remove_dir_all(&root);
 }

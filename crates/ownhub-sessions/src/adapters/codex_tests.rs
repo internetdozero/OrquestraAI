@@ -9,10 +9,8 @@ fn sessions_symlink_is_not_listed_or_deleted() {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
         .unwrap_or(0);
-    let root = ownhub_core::test_support::root().join(format!(
-        "ownhub-codex-link-{}-{unique}",
-        std::process::id()
-    ));
+    let root = ownhub_core::test_support::root()
+        .join(format!("ownhub-codex-link-{}-{unique}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     let home = root.join("home");
     let outside = root.join("outside");
@@ -44,10 +42,8 @@ fn maintenance_lock_symlink_does_not_block_delete() {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
         .unwrap_or(0);
-    let root = ownhub_core::test_support::root().join(format!(
-        "ownhub-codex-lock-{}-{unique}",
-        std::process::id()
-    ));
+    let root = ownhub_core::test_support::root()
+        .join(format!("ownhub-codex-lock-{}-{unique}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     let home = root.join("home");
     let outside = root.join("outside");

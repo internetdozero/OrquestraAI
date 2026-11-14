@@ -60,8 +60,8 @@ ownhub vault list
 ownhub idea list --project MyProject
 ```
 
-| Command              | Covers                                                                      | Guide                                        |
-| :------------------- | :-------------------------------------------------------------------------- | :------------------------------------------- |
+| Command           | Covers                                                                      | Guide                                        |
+| :---------------- | :-------------------------------------------------------------------------- | :------------------------------------------- |
 | `ownhub sessions` | list, inspect, search, export, pin, purge, retention policy, watch          | [docs/cli/sessions.md](docs/cli/sessions.md) |
 | `ownhub skills`   | list, info, enable/disable, create, import (local or git), export, validate | [docs/cli/skills.md](docs/cli/skills.md)     |
 | `ownhub mcp`      | list, status, add/remove, enable/disable, deploy, list and call tools       | [docs/cli/mcp.md](docs/cli/mcp.md)           |

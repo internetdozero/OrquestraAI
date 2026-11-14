@@ -256,9 +256,7 @@ pub fn start_listener<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
                 record_pid(&lock);
             }
             None => {
-                return Err(
-                    "another OwnHub instance holds the single-instance lock".to_string(),
-                );
+                return Err("another OwnHub instance holds the single-instance lock".to_string());
             }
         }
     }

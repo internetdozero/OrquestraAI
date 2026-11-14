@@ -11,6 +11,7 @@ const ACCENTS: { id: AccentColor }[] = [
   { id: "cyan" },
   { id: "violet" },
   { id: "amber" },
+  { id: "silver" },
 ];
 
 function Toggle({

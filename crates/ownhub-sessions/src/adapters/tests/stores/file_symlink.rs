@@ -12,10 +12,8 @@ fn a_symlinked_session_file_is_not_sized_or_loaded() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let scratch = ownhub_core::test_support::root().join(format!(
-        "ownhub-file-size-{}-{unique}",
-        std::process::id()
-    ));
+    let scratch = ownhub_core::test_support::root()
+        .join(format!("ownhub-file-size-{}-{unique}", std::process::id()));
     fs::create_dir_all(&scratch).expect("scratch");
     let outside = scratch.join("outside.jsonl");
     let link = scratch.join("session.jsonl");

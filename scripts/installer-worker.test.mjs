@@ -93,9 +93,7 @@ test("installer worker mirrors the PowerShell installer from the same tag", asyn
     assert.match(response.headers.get("content-type"), /text\/plain/);
     assert.match(await response.text(), /Write-Host ok/);
     assert.ok(
-      calls.includes(
-        "https://raw.githubusercontent.com/OwnAnAI/ownhub/v1.2.3/install.ps1",
-      ),
+      calls.includes("https://raw.githubusercontent.com/OwnAnAI/ownhub/v1.2.3/install.ps1"),
     );
   } finally {
     globalThis.fetch = originalFetch;

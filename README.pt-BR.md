@@ -59,8 +59,8 @@ ownhub vault list
 ownhub idea list --project MeuProjeto
 ```
 
-| Comando              | Cobre                                                                                  | Guia                                         |
-| :------------------- | :------------------------------------------------------------------------------------- | :------------------------------------------- |
+| Comando           | Cobre                                                                                  | Guia                                         |
+| :---------------- | :------------------------------------------------------------------------------------- | :------------------------------------------- |
 | `ownhub sessions` | listar, inspecionar, buscar, exportar, fixar, limpar, política de retenção, acompanhar | [docs/cli/sessions.md](docs/cli/sessions.md) |
 | `ownhub skills`   | listar, info, ativar/desativar, criar, importar (local ou git), exportar, validar      | [docs/cli/skills.md](docs/cli/skills.md)     |
 | `ownhub mcp`      | listar, status, adicionar/remover, ativar/desativar, deploy, listar e chamar tools     | [docs/cli/mcp.md](docs/cli/mcp.md)           |

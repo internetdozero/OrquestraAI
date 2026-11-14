@@ -18,13 +18,9 @@ fn skill_at(root: &Path, rel: &str) {
 
 #[test]
 fn fragments_split_and_sanitize() {
-    let (repo, sub) = split_git_url(
-        "https://github.com/OwnAnAI/ownhub-extensions.git#skills/modular-start",
-    );
-    assert_eq!(
-        repo,
-        "https://github.com/OwnAnAI/ownhub-extensions.git"
-    );
+    let (repo, sub) =
+        split_git_url("https://github.com/OwnAnAI/ownhub-extensions.git#skills/modular-start");
+    assert_eq!(repo, "https://github.com/OwnAnAI/ownhub-extensions.git");
     assert_eq!(sub.as_deref(), Some("skills/modular-start"));
 
     let (plain, none) = split_git_url("https://github.com/o/r.git");
