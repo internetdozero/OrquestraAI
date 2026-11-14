@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **OrquestraAI** will be documented in this file.
+All notable changes to **OwnHub** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -30,15 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Capability Probe:** Settings → About now reports every external program the app shells out to — `git`, `python` (with `venv`/`ensurepip`), `node` and the desktop opener — with the exact install command for the platform. It also names the Flatpak sandbox, where host binaries are invisible, instead of offering actions that cannot work.
-- **Flatpak Channel:** The release publishes `OrquestraAI-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load. The manifest grants `org.freedesktop.secrets` and `xdg-run/keyring`, and the build installs and smoke-tests the bundle before publishing it.
+- **Flatpak Channel:** The release publishes `OwnHub-x86_64.flatpak`, wrapping the Linux binary with the GNOME 47 runtime so Debian 11, Ubuntu 20.04, RHEL/Rocky 8 and Amazon Linux 2 can run it despite their older glibc and WebKitGTK 4.0; the installer names the exact Flatpak command when it refuses a binary the host cannot load. The manifest grants `org.freedesktop.secrets` and `xdg-run/keyring`, and the build installs and smoke-tests the bundle before publishing it.
 - **Bridge Backup Retention:** Keep the three newest `pre-fusion-*` recovery directories after a fully successful bridge; preserve failed-run and unrelated backups.
-- **Wayland Software Rendering:** `ORQUESTRA_WEBKIT_SOFTWARE=1` sets `WEBKIT_DISABLE_DMABUF_RENDERER` before the window is created, for NVIDIA/Wayland sessions where WebKitGTK opens a blank window. `GDK_BACKEND` is still never overridden.
+- **Wayland Software Rendering:** `OWNHUB_WEBKIT_SOFTWARE=1` sets `WEBKIT_DISABLE_DMABUF_RENDERER` before the window is created, for NVIDIA/Wayland sessions where WebKitGTK opens a blank window. `GDK_BACKEND` is still never overridden.
 - **Bundle Guard:** `npm run check:bundle` runs after every production build and fails if developer fixtures or their absolute paths appear in `dist/`.
 
 ### Changed
 
-- **Portable Executable Resolution:** A single resolver in `orquestra-core` searches the process `PATH` and then the login shell's `PATH` plus `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew, and reads the Windows user `PATH` from `HKCU\Environment`. The desktop shell and `vault exec` share it, so tools installed by nvm, mise or Homebrew work when the app is launched from the menu.
-- **Linux Launcher:** The generated `.desktop` entry uses the absolute executable path (the `.AppImage` file when running from one) with Desktop Entry quoting instead of a bare `orquestra` command. Inside Flatpak the app no longer writes a launcher that would shadow the exported one.
+- **Portable Executable Resolution:** A single resolver in `ownhub-core` searches the process `PATH` and then the login shell's `PATH` plus `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew, and reads the Windows user `PATH` from `HKCU\Environment`. The desktop shell and `vault exec` share it, so tools installed by nvm, mise or Homebrew work when the app is launched from the menu.
+- **Linux Launcher:** The generated `.desktop` entry uses the absolute executable path (the `.AppImage` file when running from one) with Desktop Entry quoting instead of a bare `ownhub` command. Inside Flatpak the app no longer writes a launcher that would shadow the exported one.
 - **Open Links and Folders:** Falls back across `gio open`, `xdg-open`, `kde-open6/5`, `sensible-browser`/`x-www-browser` and the common file managers instead of requiring `xdg-utils`.
 - **Installer Runtime Tools:** `install.sh` and `--check-deps` now diagnose and (unless `--no-auto-deps`) install `xdg-utils` or `gio`, `git` and `python3` with `venv`, naming the package per distribution.
 - **Debian Package Dependencies:** The `.deb` declares `libwebkit2gtk-4.1-0`, `libgtk-3-0`, `libsoup-3.0-0`, `libayatana-appindicator3-1`, `librsvg2-2` and `xdg-utils`, so `dpkg -i` resolves them instead of leaving a binary that cannot start.
@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Debian Package:** The Linux build publishes a `.deb` alongside the tarball.
 - **RTK PATH Guidance:** The RTK installer reports the exact `export`/`setx` line when its target directory is not on `PATH`.
 - **Multiplatform Path Shortening:** `shortenPath` supports both Windows (`C:\Users\...`) and Unix (`/home/...`) paths seamlessly in the frontend UI and Janitor modals, backed by unit tests.
-- **Ideas CLI Filter Discovery:** Explicit `--status all` documentation and test coverage for `orquestra idea list`, surfacing the default `open` filter behavior.
+- **Ideas CLI Filter Discovery:** Explicit `--status all` documentation and test coverage for `ownhub idea list`, surfacing the default `open` filter behavior.
 
 ### Fixed
 
@@ -92,11 +92,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Freebuff Cloud Sessions Handling & Badging:** Detects Freebuff Desktop sessions processed remotely in Codebuff Cloud (`execution_target = 'cloud'`). Sessions pending local sync display an informative cloud badge (`Nuvem (não sincronizada)` / `Cloud (unsynced)`) and tooltip in the UI, and inspecting their transcript returns clear diagnostic guidance directing the user to open them in Freebuff Desktop to sync messages.
 - **Granular Native CLI Subcommands:** Comprehensive CLI families matching the full desktop and agent capabilities:
-  - `orquestra mcp`: `list`, `status`, `inspect`, `add`, `remove`, `enable`, `disable`, `deploy`, `targets`, `test-connection`, `tools-list`, and dynamic `call-tool` execution with table, wide, and JSON outputs.
-  - `orquestra ideas` & `board`: Granular task lifecycle, status transitions, search, metrics, and blackboard noticeboard operations.
-  - `orquestra sessions`: `list`, `inspect`, `export` (full Markdown/JSON transcripts), `pin`/`unpin`, `purge` (with dry-run estimations), `delete`, `policy`, and live activity `watch`.
-  - `orquestra skills`: `list`, `info`, `enable`, `disable`, `batch` toggles, `summary`, `validate`, `create`, `import` (local folders and git URLs with `#subpath`), `export`, `content`, and safe `delete`.
-  - `orquestra vault`: Granular blind credential operations, multi-key pool management (`add-key`, `remove-key`, `set-primary`), pointer rotation (`rotate`), provider verification (`test`), presets discovery (`presets`), and security auditing (`audit`).
+  - `ownhub mcp`: `list`, `status`, `inspect`, `add`, `remove`, `enable`, `disable`, `deploy`, `targets`, `test-connection`, `tools-list`, and dynamic `call-tool` execution with table, wide, and JSON outputs.
+  - `ownhub ideas` & `board`: Granular task lifecycle, status transitions, search, metrics, and blackboard noticeboard operations.
+  - `ownhub sessions`: `list`, `inspect`, `export` (full Markdown/JSON transcripts), `pin`/`unpin`, `purge` (with dry-run estimations), `delete`, `policy`, and live activity `watch`.
+  - `ownhub skills`: `list`, `info`, `enable`, `disable`, `batch` toggles, `summary`, `validate`, `create`, `import` (local folders and git URLs with `#subpath`), `export`, `content`, and safe `delete`.
+  - `ownhub vault`: Granular blind credential operations, multi-key pool management (`add-key`, `remove-key`, `set-primary`), pointer rotation (`rotate`), provider verification (`test`), presets discovery (`presets`), and security auditing (`audit`).
 - **Blind Vault Key Pinning & Selection:** Support selecting specific key numbers or tags when dispatching blind HTTP and exec requests, preserving active default key pointers.
 - **Credentials Vault Import:** Direct import and resealing of vault credentials from JSON files with AES-256-GCM encryption.
 - **Timed Clipboard Clearing:** Automatic timed clipboard clearing (60s) when revealing and copying credential keys in the UI.
@@ -118,9 +118,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kept scoped ElevenLabs keys active on 401 response during credential verification.
 - Corrected provider connection checks and latency measurements for blind vault credentials.
 - Freebuff bridge detection now uses its global `~/.agents` root and ignores optional skill or instruction paths whose parent directories are absent.
-- Existing MCPs are adopted from the global Freebuff and Gemini configuration files, including URL-based servers such as Exa and command-based servers such as REA. Activating an official MCP installs it into Orquestra's private environment, and the install work no longer blocks the UI.
+- Existing MCPs are adopted from the global Freebuff and Gemini configuration files, including URL-based servers such as Exa and command-based servers such as REA. Activating an official MCP installs it into OwnHub's private environment, and the install work no longer blocks the UI.
 - MCP Store errors now surface the installation failure details instead of leaving a server inactive without explanation.
-- Harness bridge deployment keeps skill originals in Orquestra's vault, backs up replaced native files, and leaves harness discovery paths linked to the managed projection. Gemini built-in skill paths are archived so they cannot bypass that projection.
+- Harness bridge deployment keeps skill originals in OwnHub's vault, backs up replaced native files, and leaves harness discovery paths linked to the managed projection. Gemini built-in skill paths are archived so they cannot bypass that projection.
 
 ## [0.1.0-alpha.6] - 2026-11-04
 
@@ -166,15 +166,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Virtualized transcript feed** with debounced search for large conversations.
 - **Bundle splitting:** lazy-loading of secondary modals and dialogs, reducing startup time.
 - **Batched projection resolution** (`projected_ids`), replacing hundreds of per-path canonicalization calls with a single disk pass.
-- **Reliable single instance** via an OS-level lock (`.orquestra.lock`) with socket teardown and signal cleanup on restart.
+- **Reliable single instance** via an OS-level lock (`.ownhub.lock`) with socket teardown and signal cleanup on restart.
 - **Concurrent atomic writes** with unique per-thread, per-process temporary suffixes (`unique_tmp_suffix`), preventing interleaved bytes on overlapping IPC writes.
 - **Vault health status dots** with a theme-independent color ramp.
 - **Idea Vault upgrades:** monospace `#id` chips, a `NEW` indicator for recent tasks, Enter-key confirmation, and SWR cache persistence.
 - **Animation guardrail:** automated pre-commit check (`scripts/check-card-motion.mjs`) rejecting unnecessary `transition: all` in the UI.
-- **Official `orquestra-web-search` MCP** integration and registration.
+- **Official `ownhub-web-search` MCP** integration and registration.
 - **`~/.agents/skills` as the canonical skill root**, without collisions with other harnesses.
 - **Active security audit:** recursive inspection of executable scripts at install time, with UI badges before installation.
-- **Legacy alias suppression:** automatic hiding of legacy folders when the canonical `orquestra-*` package is active.
+- **Legacy alias suppression:** automatic hiding of legacy folders when the canonical `ownhub-*` package is active.
 - **Frontend Error Boundaries** with recovery and structured backend logging.
 
 ### Changed
@@ -198,15 +198,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Official Skills Suite Modernization & Canonical Alignment:**
-  - Modernized the 4 official core skills (`orquestra`, `orquestra-modular-start`, `orquestra-agent-orchestrator`, `orquestra-smart-build-router`) in the official monorepo `internetdozero/orquestra-extensions`.
+  - Modernized the 4 official core skills (`ownhub`, `ownhub-modular-start`, `ownhub-agent-orchestrator`, `ownhub-smart-build-router`) in the official monorepo `internetdozero/ownhub-extensions`.
   - Registered `@internetdozero` UI/UX skills (`lean-screen` and `ux-best-practices`) as official first-class skills in `src-tauri/src/official.rs`.
   - Integrated Idea Vault task lifecycle (#251-#256), multi-harness fleet protocols (`session-relay`, `janitor`), `rtk` command efficiency, and Zero-Heat Cloud Builds.
-  - Repaired broken symlinks in local vault (`~/.orquestra/skills-library/`) and harness projections.
+  - Repaired broken symlinks in local vault (`~/.ownhub/skills-library/`) and harness projections.
   - Consolidated GitHub footprint: removed 11 redundant standalone repositories in favor of the canonical monorepo.
 - **Community Skills & MCP Hub (#229):** In-app discovery catalog for community skills and MCP servers with category and tier filters (`all`, `official`, `community`), 1-click install, and instant projection into active harness scopes.
 - **Static Skill Security Audit:** Recursive directory inspector flagging external executable scripts (`.sh`, `.bash`, `.py`, `.js`, `scripts/`, `bin/`) and surfacing UI security badges before installation.
 - **Freebuff Desktop Deduplication Pass (#210):** Worktree resolver correlating 36-char SQLite thread UUIDs with 8-char prefix worktree directories; eliminates double-counting disk usage and reclaims dormant worktrees upon thread deletion.
-- **Official Extensions Monorepo Architecture (#212):** Core support for `internetdozero/orquestra-extensions` with subpath anchor extraction (`#skills/...`, `#mcps/...`), deep monorepo folder discovery, and fallback repository routing.
+- **Official Extensions Monorepo Architecture (#212):** Core support for `internetdozero/ownhub-extensions` with subpath anchor extraction (`#skills/...`, `#mcps/...`), deep monorepo folder discovery, and fallback repository routing.
 - **Ideas Backlog & Notion-Style Productivity Upgrades:**
   - One-click "Copy for AI Agent" across Kanban cards, list view rows, and detail modal formatting ideas into markdown prompts ready for agent dispatch.
   - Interactive Notion-style column sorting in list view (`title`, `priority`, `category`, `updated`).
@@ -231,7 +231,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Linux Desktop Integration & Auto-Launcher:** Automated creation of `.desktop` launcher and multi-resolution application icons (`16x16` up to `512x512`) on initial app startup and direct script install for Wayland and X11 docks.
 - **Visual Validation Suite & Multi-Harness Fixtures (#228):** In-app fixture gallery and transcript feed validation suite for all 9 AI harnesses.
-- **Branded Install Pipeline:** One-line installer hosted at `curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash` with Cloudflare Edge Function routing.
+- **Branded Install Pipeline:** One-line installer hosted at `curl -fsSL https://ownhub.internetdozero.com.br/install.sh | bash` with Cloudflare Edge Function routing.
 - **Fail-Closed Installer Security:** Strictly single-entry SHA-256 validation with fail-closed integrity checks in `install.sh`.
 - **Zero-Dependency Structured Logging:** Lightweight `src-tauri/src/log.rs` (`log_error!`, `log_warn!`, `log_info!`) with UTC timestamps and call-site module paths, replacing raw `eprintln!` calls.
 - **Automated CI Test Pipeline:** Added `.github/workflows/ci.yml` running full workspace cargo tests, clippy with `-D warnings`, npm unit tests, and TypeScript typechecking on every push and PR.
@@ -270,7 +270,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Initial Alpha Launch
 
-- Official first public alpha release of the OrquestraAI desktop control plane and headless CLI.
+- Official first public alpha release of the OwnHub desktop control plane and headless CLI.
 - Unified Harness Bridge supporting skills projection and master `AGENTS.md` synchronization.
 - Cross-harness MCP server management and mission presets.
 - Janitor System & Memory Guard for orphan process sweeping and RAM preservation.

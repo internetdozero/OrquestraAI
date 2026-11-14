@@ -3,7 +3,7 @@ import type { TranslationSchema } from "../pt";
 /** English mirror of `pt/settings.ts`. A missing or extra key fails the build. */
 export const settings: TranslationSchema["settings"] = {
   title: "Settings",
-  subtitle: "OrquestraAI preferences",
+  subtitle: "OwnHub preferences",
   close: "Close settings",
   reset: "Reset defaults",
   resetDone: "Settings reset to defaults",
@@ -63,7 +63,7 @@ export const settings: TranslationSchema["settings"] = {
     copyFailed: (detail: string) => `Could not copy: ${detail}`,
     updatesTitle: "Updates",
     autoCheckAppTitle: "Check for app updates on launch",
-    autoCheckAppDesc: "Automatically check GitHub for new OrquestraAI desktop releases.",
+    autoCheckAppDesc: "Automatically check GitHub for new OwnHub desktop releases.",
     autoCheckExtTitle: "Check for official extension updates",
     autoCheckExtDesc: "Check for upstream improvements to installed official skills and MCPs.",
     checkNow: "Check for updates now",
@@ -74,7 +74,7 @@ export const settings: TranslationSchema["settings"] = {
     updateNow: "Update now",
     updatingApp: "Downloading and installing update…",
     downloadingUpdate: "Downloading release and verifying SHA-256 checksum...",
-    updateAppSuccess: "Update installed! Restart OrquestraAI to apply.",
+    updateAppSuccess: "Update installed! Restart OwnHub to apply.",
     updateAppFailed: (detail: string) => `Update failed: ${detail}`,
     restart: "Restart",
     syncExtensions: "Sync official extensions",

@@ -1,8 +1,8 @@
 use super::*;
 
 fn scratch(label: &str) -> PathBuf {
-    let root = orquestra_core::test_support::root()
-        .join(format!("orquestra-subpath-{label}-{}", std::process::id()));
+    let root = ownhub_core::test_support::root()
+        .join(format!("ownhub-subpath-{label}-{}", std::process::id()));
     if root.exists() {
         let _ = fs::remove_dir_all(&root);
     }
@@ -19,11 +19,11 @@ fn skill_at(root: &Path, rel: &str) {
 #[test]
 fn fragments_split_and_sanitize() {
     let (repo, sub) = split_git_url(
-        "https://github.com/internetdozero/orquestra-extensions.git#skills/modular-start",
+        "https://github.com/internetdozero/ownhub-extensions.git#skills/modular-start",
     );
     assert_eq!(
         repo,
-        "https://github.com/internetdozero/orquestra-extensions.git"
+        "https://github.com/internetdozero/ownhub-extensions.git"
     );
     assert_eq!(sub.as_deref(), Some("skills/modular-start"));
 

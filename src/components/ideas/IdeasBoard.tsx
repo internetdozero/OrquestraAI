@@ -29,7 +29,7 @@ const COLUMNS = [
 const COMPLETED_PAGE = 5;
 
 /** localStorage key shielding user-opened columns across remounts/restarts. */
-const STORAGE_KEY_USER_OPENED = "orquestra:ideas:user_opened_columns";
+const STORAGE_KEY_USER_OPENED = "ownhub:ideas:user_opened_columns";
 
 /** Best-effort read of the persisted set; denied storage falls back to empty. */
 function readUserOpened(): ReadonlySet<string> {

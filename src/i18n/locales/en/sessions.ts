@@ -55,7 +55,7 @@ export const sessions: TranslationSchema["sessions"] = {
   confirmPurge: "Confirm purge",
   estimating: "Estimating…",
   retentionTitle: "Auto-retention",
-  retentionBody: "Rules live in ~/.orquestra; pins are never touched.",
+  retentionBody: "Rules live in ~/.ownhub; pins are never touched.",
   enableAuto: "Enable auto-purge",
   intervalHours: "Interval (hours)",
   defaultTtl: "Default retention (days)",

@@ -182,7 +182,7 @@ export function SettingsModal({
         </div>
 
         <footer className="flex items-center justify-between gap-3 border-t border-white/[0.06] bg-white/[0.015] px-5 py-2.5">
-          <p className="font-mono text-[10px] text-zinc-600">~/.orquestra · v0.1.0</p>
+          <p className="font-mono text-[10px] text-zinc-600">~/.ownhub · v0.1.0</p>
           <button
             type="button"
             onClick={() => {

@@ -1,7 +1,7 @@
-//! macOS desktop registration: an `OrquestraAI.app` bundle in `~/Applications`.
+//! macOS desktop registration: an `OwnHub.app` bundle in `~/Applications`.
 //!
 //! macOS has no XDG launcher files. What makes an app appear in Launchpad,
-//! Spotlight, the Dock and `open -a OrquestraAI` is a bundle: a directory with
+//! Spotlight, the Dock and `open -a OwnHub` is a bundle: a directory with
 //! `Contents/Info.plist` and an executable inside `Contents/MacOS`. The release
 //! pipeline ships a raw Mach-O today (a real signed bundle is task #21), so the
 //! app creates the bundle wrapper itself, once, on first launch.
@@ -17,8 +17,8 @@ const ICON_ICNS: &[u8] = include_bytes!("../icons/icon.icns");
 /// Destination directory under the operator's home.
 #[cfg(target_os = "macos")]
 const APPS_DIR: &str = "Applications";
-const BUNDLE_NAME: &str = "OrquestraAI.app";
-const EXECUTABLE_NAME: &str = "orquestra";
+const BUNDLE_NAME: &str = "OwnHub.app";
+const EXECUTABLE_NAME: &str = "ownhub";
 
 /// `Info.plist` for the wrapper.
 ///
@@ -32,11 +32,11 @@ pub(super) fn info_plist(version: &str) -> String {
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>OrquestraAI</string>
+    <string>OwnHub</string>
     <key>CFBundleDisplayName</key>
-    <string>OrquestraAI</string>
+    <string>OwnHub</string>
     <key>CFBundleIdentifier</key>
-    <string>ai.orquestra.desktop</string>
+    <string>dev.ownanai.hub</string>
     <key>CFBundleExecutable</key>
     <string>{EXECUTABLE_NAME}</string>
     <key>CFBundleIconFile</key>
@@ -138,10 +138,10 @@ pub(crate) fn ensure_macos_bundle() {
     install_bundle(&home.join(APPS_DIR), &exe);
 }
 
-/// A signed `OrquestraAI.app` already registers itself; wrapping it again
+/// A signed `OwnHub.app` already registers itself; wrapping it again
 /// would produce a second, unsigned copy in the Dock.
 ///
-/// The installer links `~/.local/bin/orquestra` at the executable inside the
+/// The installer links `~/.local/bin/ownhub` at the executable inside the
 /// bundle, and `current_exe` reports that link rather than its target, so the
 /// resolved path is checked too.
 pub(super) fn is_inside_bundle(exe: &std::path::Path) -> bool {
@@ -164,7 +164,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         let root =
-            std::env::temp_dir().join(format!("orquestra-bundle-{}-{unique}", std::process::id()));
+            std::env::temp_dir().join(format!("ownhub-bundle-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&root).unwrap();
         root
     }
@@ -172,17 +172,17 @@ mod tests {
     #[test]
     fn bundle_carries_plist_icon_and_a_link_to_the_binary() {
         let root = sandbox();
-        let exe = root.join("orquestra-ai");
+        let exe = root.join("ownhub");
         std::fs::write(&exe, b"binary").unwrap();
 
         assert!(
             install_bundle(&root.join("Applications"), &exe),
             "first run writes"
         );
-        let contents = root.join("Applications/OrquestraAI.app/Contents");
+        let contents = root.join("Applications/OwnHub.app/Contents");
         let plist = std::fs::read_to_string(contents.join("Info.plist")).unwrap();
         assert!(
-            plist.contains("<string>ai.orquestra.desktop</string>"),
+            plist.contains("<string>dev.ownanai.hub</string>"),
             "{plist}"
         );
         assert!(plist.contains(&format!("<string>{}</string>", env!("CARGO_PKG_VERSION"))));
@@ -210,25 +210,25 @@ mod tests {
     #[test]
     fn a_bundled_binary_is_not_wrapped_twice() {
         assert!(is_inside_bundle(std::path::Path::new(
-            "/Applications/OrquestraAI.app/Contents/MacOS/orquestra"
+            "/Applications/OwnHub.app/Contents/MacOS/ownhub"
         )));
         assert!(!is_inside_bundle(std::path::Path::new(
-            "/Users/dev/.local/bin/orquestra-ai"
+            "/Users/dev/.local/bin/ownhub"
         )));
     }
 
-    /// The installer's `orquestra` command is a symlink into the bundle, and
+    /// The installer's `ownhub` command is a symlink into the bundle, and
     /// `current_exe` may report the link itself.
     #[cfg(unix)]
     #[test]
     fn a_cli_link_into_the_bundle_counts_as_bundled() {
         let root = sandbox();
-        let bundle_bin = root.join("Applications/OrquestraAI.app/Contents/MacOS");
+        let bundle_bin = root.join("Applications/OwnHub.app/Contents/MacOS");
         std::fs::create_dir_all(&bundle_bin).unwrap();
-        let exe = bundle_bin.join("orquestra-ai");
+        let exe = bundle_bin.join("ownhub");
         std::fs::write(&exe, b"binary").unwrap();
 
-        let shim = root.join("orquestra");
+        let shim = root.join("ownhub");
         std::os::unix::fs::symlink(&exe, &shim).unwrap();
         assert!(
             is_inside_bundle(&shim),

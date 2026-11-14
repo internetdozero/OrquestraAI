@@ -1,4 +1,4 @@
-# OrquestraAI Architecture
+# OwnHub Architecture
 
 Single-binary Tauri 2 desktop app. A React shell owns all UI state; a Rust core
 owns all disk, process and secret access. The two meet at exactly one boundary:
@@ -17,7 +17,7 @@ views - hooks - lib/*Cache.ts         lib.rs handler registry
 
 | Area           | Frontend                                                  | Backend                                                      | Storage                                                                        |
 | -------------- | --------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Skills         | `SkillsView`, `useSkillsCache`, `skillsLoader`            | `skills/` (vault, projection, security, agents, vault_cache) | `~/.orquestra/skills/<id>/`, projections under `~/.orquestra/harnesses/<hid>/` |
+| Skills         | `SkillsView`, `useSkillsCache`, `skillsLoader`            | `skills/` (vault, projection, security, agents, vault_cache) | `~/.ownhub/skills/<id>/`, projections under `~/.ownhub/harnesses/<hid>/` |
 | MCP            | `McpView`, `useMcpCatalog`, `useMcpMutations`, `mcpCache` | `mcp/` (catalog, deploy, serializers)                        | `mcps.json` catalog; compiled harness configs                                  |
 | Presets        | `PresetEditModal`, presets bar                            | `presets/` (store, apply, builtins, naming)                  | `presets.json` (`custom` + `overrides`)                                        |
 | Bridge         | footer indicator                                          | `bridge/` (status, deploy, fuse)                             | symlinks + `backupDir` per deploy                                              |
@@ -28,8 +28,8 @@ views - hooks - lib/*Cache.ts         lib.rs handler registry
 | System         | Janitor modal, settings                                   | `janitor/`, `desktop.rs`, `tray.rs`                          | sockets, `backups/`                                                            |
 | Official store | store UI                                                  | `official.rs`                                                | static curated data                                                            |
 
-Cross-cutting: `paths.rs` (single `OrquestraPaths` resolver + bootstrap),
-`exec_env.rs` (thin shell layer over `orquestra_core::exec`, which resolves
+Cross-cutting: `paths.rs` (single `OwnHubPaths` resolver + bootstrap),
+`exec_env.rs` (thin shell layer over `ownhub_core::exec`, which resolves
 binaries through the process and login-shell `PATH`), `tooling/`
 (capability probe: git, python+venv, node, opener, with install hints),
 `desktop_backup.rs` (in-process `tar.gz`, also used by `skills export --tar`),
@@ -38,7 +38,7 @@ binaries through the process and login-shell `PATH`), `tooling/`
 
 ## Startup sequence (`lib.rs run()`)
 
-1. `OrquestraPaths::resolve().bootstrap()` — create `~/.orquestra` layout.
+1. `OwnHubPaths::resolve().bootstrap()` — create `~/.ownhub` layout.
    Failure is logged, never fatal.
 2. `desktop::ensure_desktop_integration()` — the single owner of desktop
    registration: Linux `.desktop` entries plus hicolor icons under
@@ -85,7 +85,7 @@ opt-ins. `list_mcps` incrementally adopts definitions from the global
 `~/.agents/mcp.json`, `~/.gemini/config/mcp_config.json`, and
 `~/.gemini/settings.json`; it does not scan workspace `.agents` folders or
 cloud-only account entries. Official servers are installed into a private
-Orquestra environment when activated, then compiled into each enabled harness
+OwnHub environment when activated, then compiled into each enabled harness
 config. Long installs run in a blocking worker so they do not freeze the UI.
 Store actions show progress and surface install errors; blank descriptions get
 a localized UI hint to inspect the server's tools.
@@ -93,7 +93,7 @@ a localized UI hint to inspect the server's tools.
 ## Bridge harness lifecycle
 
 The bridge makes every supported harness (codex, claude, copilot, …) see the
-same OrquestraAI-managed skills, MCP configs and instructions.
+same OwnHub-managed skills, MCP configs and instructions.
 
 - **Detect** (`get_bridge_status`): for each known harness id, check
   `installed` (native dir exists?), `supported`, and whether the skills /
@@ -101,7 +101,7 @@ same OrquestraAI-managed skills, MCP configs and instructions.
   stored action (`adoptOnly` | `project` | `quarantine`) plus a `cleared` flag.
 - **Deploy** (`deploy_harness_bridge`): `paths.bootstrap()`, then per harness —
   back up the native dir into `backupDir`, symlink skills/config/instructions
-  into `~/.orquestra/harnesses/<id>/`, and apply secondary actions (adopt
+  into `~/.ownhub/harnesses/<id>/`, and apply secondary actions (adopt
   into the vault, quarantine aside, or clear). The `BridgeReport` counts
   `total / bridged / adopted / quarantined / instructionsImported` and carries
   `warnings[]` / `errors[]`; originals are always recoverable from `backupDir`.
@@ -114,7 +114,7 @@ same OrquestraAI-managed skills, MCP configs and instructions.
 Per-harness adapters (`sessions/adapters/`: codex, claude, copilot, grok,
 antigravity, opencode, kilo, hermes, + `transcript`, `utils`, `fsops`)
 translate native histories into `UnifiedSession` / `TranscriptTurn`. Reads are
-async (worktree sizing walks `node_modules`). OrquestraAI-owned layers on top:
+async (worktree sizing walks `node_modules`). OwnHub-owned layers on top:
 
 - **pins** (`policy::toggle_pin`) overlaid as `isPinned`/`pinLabel`;
 - **retention** (`get/save_retention_policy`, defaults on first run);

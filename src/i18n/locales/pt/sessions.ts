@@ -53,7 +53,7 @@ export const sessions = {
   confirmPurge: "Confirmar expurgo",
   estimating: "Estimando…",
   retentionTitle: "Retenção automática",
-  retentionBody: "Regras salvas em ~/.orquestra; fixas nunca são tocadas.",
+  retentionBody: "Regras salvas em ~/.ownhub; fixas nunca são tocadas.",
   enableAuto: "Ativar expurgo automático",
   intervalHours: "Intervalo (horas)",
   defaultTtl: "Retenção padrão (dias)",

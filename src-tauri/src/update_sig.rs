@@ -18,7 +18,7 @@ pub const SUMS_SIGNATURE_ASSET: &str = "SHA256SUMS.txt.minisig";
 /// Embedded release public key (minisign `.pub` format). The matching secret
 /// key lives only in the `UPDATE_SIGNING_SEED` GitHub Actions secret and the
 /// maintainer's offline copy — never in this repo.
-const RELEASE_PUBLIC_KEY: &str = "untrusted comment: orquestra release signing key\nRWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1";
+const RELEASE_PUBLIC_KEY: &str = "untrusted comment: ownhub release signing key\nRWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1";
 
 /// Verify a detached minisign signature over the exact `SHA256SUMS.txt` bytes
 /// and bind it to `expected_version` (the validated update target, no `v`).
@@ -95,23 +95,25 @@ mod tests {
     use super::*;
 
     /// Throwaway test key — NEVER the release key. Its seed is a fixed public
-    /// fixture (`b"ORQUESTRA-TEST-KEY-v1-0000000000"`); vectors below were
-    /// produced offline with PyNaCl in stock minisign prehashed mode.
-    const TEST_PUBLIC_KEY: &str = "untrusted comment: orquestra test release key\nRWQBAgMEBQYHCHD4dL1cWtvSBFcWvyLCYMLOty7K7jKwKWNhmGmVzLR5";
+    /// fixture (`b"ORQUESTRA-TEST-KEY-v1-0000000000"`, kept under the
+    /// pre-rename name so the keypair stays stable); vectors below were
+    /// produced offline with PyNaCl in stock minisign prehashed mode and
+    /// regenerated for the `ownhub-linux-x86_64` asset name.
+    const TEST_PUBLIC_KEY: &str = "untrusted comment: ownhub test release key\nRWQBAgMEBQYHCHD4dL1cWtvSBFcWvyLCYMLOty7K7jKwKWNhmGmVzLR5";
     const SUMS_LEGIT: &str =
-        "fd9bf630dd91899266fa7bbf05f069a832bcd52bea1841ab5770a76db076712b  orquestra-linux-x86_64\n";
-    const SIG_LEGIT: &str = "untrusted comment: signature from orquestra test release key\nRUQBAgMEBQYHCOvNknYMLfOEIdhrsgmccfoicEqYitSA8dmbpl9D6+yKiWcYU8IB2tlppo29q90cpuh3IFgRtyoW7PwbJ+XSEA8=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\nbfL/M7JLtFxdnhSK5p1dy3q0D0n2EyY+YQro0Q7ux+1ZeQ7CKScCnP7iN5QHYL/Q2C/gok4fwcKh4aoK00I8BA==";
+        "fd9bf630dd91899266fa7bbf05f069a832bcd52bea1841ab5770a76db076712b  ownhub-linux-x86_64\n";
+    const SIG_LEGIT: &str = "untrusted comment: signature from ownhub test release key\nRUQBAgMEBQYHCO2RToRzWNRAGxKImbauHteYLKzRi1pW3Vh9uFOo8xryjltKZruzR/M4+x1P/hciZ3jVC28S+800ILp9vsY5hQo=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\ngyUiAgGgG2XAHsrjCH+eHPP2hx+j/FOxlCkbj2b7dqrTczfr94UxIvShuROkPMVPIZUvZYkLGmRtqM8IPGoyCw==";
     /// Forged checksums matching a tampered binary (valid SHA-256, no key).
     const SUMS_ATTACKER: &str =
-        "6586fbdaf0b6d56dad3e94a49c2515abc2573df65d84fea3dbc73dc226d37d1a  orquestra-linux-x86_64\n";
+        "6586fbdaf0b6d56dad3e94a49c2515abc2573df65d84fea3dbc73dc226d37d1a  ownhub-linux-x86_64\n";
 
     /// Throwaway version-bound test key (seed `b"ORQUESTRA-VERSION-TEST-000000001"`,
     /// keynum `0x02 * 8`, vectors produced offline with PyNaCl): the same
     /// prehashed format `scripts/sign-release.py` emits, including the
     /// `version=` trusted-comment binding.
-    const VERSIONED_PUBLIC_KEY: &str = "untrusted comment: orquestra version-bound test release key\nRUQCAgICAgICAk0QGDmXR7u7JJV+Q5P0XjGFpcW6SXmj1cF3TheI4J9O";
-    const SIG_V5: &str = "untrusted comment: signature from orquestra version-bound test key\nRUQCAgICAgICAqtAXm0EZpilTWSEuLUtvjIvstCiOqe+20BVjBIs11LwC4Y12tVuq37XUrE8N8I7QMXqQ72Tvx6R6pQcyPu8RAM=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\tversion=0.1.0-alpha.5\nZ9yh4HGn8RggRkQC3u7mDivZfrTB7hM8tpWOoEWPnqbXrAkk5yMDh+NxmXCqEXtiOMch37BuHBpz1ECzAcl/Dw==";
-    const SIG_V4: &str = "untrusted comment: signature from orquestra version-bound test key\nRUQCAgICAgICAqtAXm0EZpilTWSEuLUtvjIvstCiOqe+20BVjBIs11LwC4Y12tVuq37XUrE8N8I7QMXqQ72Tvx6R6pQcyPu8RAM=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\tversion=0.1.0-alpha.4\n+N1ydzUTfnf+p9S3fQ9rzkeZyVxqWGYlejZQMsU3+PbDt8Rnh4uviBrs3rhshxqF4UI2U788iG2PJE04gRWKDA==";
+    const VERSIONED_PUBLIC_KEY: &str = "untrusted comment: ownhub version-bound test release key\nRUQCAgICAgICAk0QGDmXR7u7JJV+Q5P0XjGFpcW6SXmj1cF3TheI4J9O";
+    const SIG_V5: &str = "untrusted comment: signature from ownhub version-bound test key\nRUQCAgICAgICAr5ZfDJsKD1mQue0KWuonmNO63BVYod8ZC7sbep4pn2NZI5CrrsLPBkm/tm5/kI+5cEwTxjLEoKaGn3ikME+3gA=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\tversion=0.1.0-alpha.5\nOiK6PIusflIfiJBL3axfLpBFyw2NVBTKmaK/S//mmhLpEKGVzX6UVJ3qDr5xSWuq4L+eoX0x+8ZYdo6yycJWDg==";
+    const SIG_V4: &str = "untrusted comment: signature from ownhub version-bound test key\nRUQCAgICAgICAr5ZfDJsKD1mQue0KWuonmNO63BVYod8ZC7sbep4pn2NZI5CrrsLPBkm/tm5/kI+5cEwTxjLEoKaGn3ikME+3gA=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\tversion=0.1.0-alpha.4\nKE4QfDCLt2t8f4BJ4wV6ToceGAmnpg7H/hX3o54ohHLM/akClrMIItWP45u8C/n/bxTDVnAaHAqIt3PnmirBAw==";
 
     #[test]
     fn valid_signature_accepts() {

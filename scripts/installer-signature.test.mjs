@@ -6,14 +6,14 @@ import { join, resolve } from "node:path";
 import { after, test } from "node:test";
 import { createHash } from "node:crypto";
 
-const scratchRoot = process.env.ORQUESTRA_TEST_TMP || os.tmpdir();
+const scratchRoot = process.env.OWNHUB_TEST_TMP || os.tmpdir();
 mkdirSync(scratchRoot, { recursive: true });
-const fixtureRoot = mkdtempSync(join(scratchRoot, "orquestra-installer-signature-"));
+const fixtureRoot = mkdtempSync(join(scratchRoot, "ownhub-installer-signature-"));
 const fixtureDir = join(fixtureRoot, "fixtures");
 const binDir = join(fixtureRoot, "bin");
 const homeDir = join(fixtureRoot, "home");
 const tempDir = join(fixtureRoot, "tmp");
-const assetName = "orquestra-linux-x86_64";
+const assetName = "ownhub-linux-x86_64";
 const assetPath = join(fixtureDir, assetName);
 const sumsPath = join(fixtureDir, "SHA256SUMS.txt");
 const signaturePath = join(fixtureDir, "SHA256SUMS.txt.minisig");
@@ -43,7 +43,7 @@ while [ "$#" -gt 0 ]; do
 done
 case "$url" in
   */releases/latest)
-    printf '%s' 'https://github.com/internetdozero/OrquestraAI/releases/tag/v1.2.3'
+    printf '%s' 'https://github.com/internetdozero/OwnHub/releases/tag/v1.2.3'
     ;;
   */releases/download/v1.2.3/SHA256SUMS.txt)
     cp "$FIXTURE_DIR/SHA256SUMS.txt" "$output"
@@ -160,7 +160,7 @@ test("installer requires signatures and binds them to the selected tag", () => {
   );
   result = runInstaller();
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(readFileSync(join(homeDir, ".local/bin/orquestra"), "utf8"), "fixture binary\n");
+  assert.equal(readFileSync(join(homeDir, ".local/bin/ownhub"), "utf8"), "fixture binary\n");
 });
 
 test("installer allows unsigned legacy releases only with explicit opt-in", () => {
@@ -171,7 +171,7 @@ test("installer allows unsigned legacy releases only with explicit opt-in", () =
 });
 
 test("runtime dependencies can be checked after installation without downloading again", () => {
-  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  const installedBinary = join(homeDir, ".local/bin/ownhub");
   writeFileSync(installedBinary, "existing installation\n");
   chmodSync(installedBinary, 0o755);
 
@@ -183,7 +183,7 @@ test("runtime dependencies can be checked after installation without downloading
 });
 
 test("installer refuses a binary this glibc cannot load and names the Flatpak", () => {
-  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  const installedBinary = join(homeDir, ".local/bin/ownhub");
   writeFileSync(installedBinary, "existing installation\n");
   chmodSync(installedBinary, 0o755);
 
@@ -194,7 +194,7 @@ test("installer refuses a binary this glibc cannot load and names the Flatpak", 
   // name the channel that does work. It is the same text CI asserts on the
   // debian:11 and rockylinux:8 jobs.
   assert.match(result.stderr, /flatpak install --user/);
-  assert.match(result.stderr, /OrquestraAI-x86_64\.flatpak/);
+  assert.match(result.stderr, /OwnHub-x86_64\.flatpak/);
   assert.equal(readFileSync(installedBinary, "utf8"), "existing installation\n");
 });
 
@@ -203,7 +203,7 @@ test("installer refuses to replace the current binary when runtime libraries are
     signaturePath,
     "untrusted comment: test\nAAAA\ntrusted comment: timestamp=123\tfile=SHA256SUMS.txt\tversion=1.2.3\nAAAA\n",
   );
-  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  const installedBinary = join(homeDir, ".local/bin/ownhub");
   writeFileSync(installedBinary, "existing installation\n");
   chmodSync(installedBinary, 0o755);
 
@@ -219,7 +219,7 @@ test("installer automatically installs missing runtime libraries when supported 
     signaturePath,
     "untrusted comment: test\nAAAA\ntrusted comment: timestamp=123\tfile=SHA256SUMS.txt\tversion=1.2.3\nAAAA\n",
   );
-  const installedBinary = join(homeDir, ".local/bin/orquestra");
+  const installedBinary = join(homeDir, ".local/bin/ownhub");
   writeFileSync(installedBinary, "old binary\n");
   chmodSync(installedBinary, 0o755);
 

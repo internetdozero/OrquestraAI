@@ -7,7 +7,7 @@
     "batch_set_mcp_all",
     "core_status",
     "create_idea",
-    "create_orquestra_backup",
+    "create_ownhub_backup",
     "delete_idea",
     "delete_mcp",
     "delete_preset",
@@ -116,7 +116,7 @@
       "pick_folder",
       "open_url",
       "open_in_file_manager",
-      "create_orquestra_backup",
+      "create_ownhub_backup",
       "probe_external_tools",
       "set_minimize_to_tray"
     ],

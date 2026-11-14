@@ -66,7 +66,7 @@ pub(super) fn note_get(args: &[String]) -> Result<String, CliError> {
     let id_str = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra idea note-get <id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub idea note-get <id> [--json]".to_string()))?;
 
     let id = id_str
         .parse::<i64>()
@@ -82,7 +82,7 @@ pub(super) fn note_read(args: &[String]) -> Result<String, CliError> {
     let id_str = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra idea note-read <id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub idea note-read <id> [--json]".to_string()))?;
 
     let id = id_str
         .parse::<i64>()

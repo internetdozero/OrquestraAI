@@ -9,7 +9,7 @@ pub(super) fn export(args: &[String]) -> Result<String, CliError> {
     let session_id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra sessions export <session-id> [--harness <id>] [--format <markdown|json>] [--output <path>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub sessions export <session-id> [--harness <id>] [--format <markdown|json>] [--output <path>] [--json]".to_string()))?;
 
     let options = parse_options(
         &args[1..],

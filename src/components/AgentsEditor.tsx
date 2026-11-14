@@ -103,7 +103,7 @@ export function AgentsEditor({
         <div className="flex items-center justify-between border-b border-white/[0.05] bg-white/[0.015] px-3 py-2">
           <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-zinc-400">
             <span className="size-2 shrink-0 rounded-full bg-emerald-400/80" />
-            <span className="truncate">~/.orquestra/AGENTS.md</span>
+            <span className="truncate">~/.ownhub/AGENTS.md</span>
           </div>
           <div className="flex shrink-0 items-center gap-3 font-mono text-[10px] text-zinc-600">
             <span>{t.agents.lineCount(lineCount)}</span>

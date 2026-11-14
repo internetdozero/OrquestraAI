@@ -1,6 +1,6 @@
 //! Process-global environment isolation for the crate's unit tests.
 //!
-//! Unit tests share one process, so a test that reads `~/.orquestra` sees
+//! Unit tests share one process, so a test that reads `~/.ownhub` sees
 //! whatever the machine's real `HOME` holds — and a sibling test that briefly
 //! repoints `XDG_DATA_HOME` can make that read resolve a different at-rest key
 //! mid-flight, which surfaces as `wrong key or corrupted file` on a fresh CI
@@ -30,7 +30,7 @@ pub(crate) fn isolated_home() -> MutexGuard<'static, ()> {
         .unwrap_or_else(|poisoned| poisoned.into_inner());
 
     SCRATCH_HOME.get_or_init(|| {
-        let home = orquestra_core::test_support::scratch("lib-home");
+        let home = ownhub_core::test_support::scratch("lib-home");
         std::fs::create_dir_all(&home).expect("create the scratch HOME for unit tests");
         // The store lives under `HOME`, but the at-rest key and the harness
         // layouts resolve through the platform's directory variables too, so
@@ -49,7 +49,7 @@ pub(crate) fn isolated_home() -> MutexGuard<'static, ()> {
             std::env::set_var("LOCALAPPDATA", &localappdata);
             // The OS keyring is global per account, so a scratch suite must
             // never read or create the operator's real entry.
-            std::env::set_var("ORQUESTRA_KEYRING_DISABLE", "1");
+            std::env::set_var("OWNHUB_KEYRING_DISABLE", "1");
         }
         home
     });

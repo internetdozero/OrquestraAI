@@ -1,21 +1,21 @@
-# Orquestra CLI — Skills Management (`orquestra skills`)
+# OwnHub CLI — Skills Management (`ownhub skills`)
 
-Comprehensive specification and operational guide for the granular Skills CLI in OrquestraAI.
+Comprehensive specification and operational guide for the granular Skills CLI in OwnHub.
 
 ---
 
 ## 1. Overview & Architecture
 
-In OrquestraAI, **Skills** are autonomous capability packages provided to AI agents across the supported harnesses (Antigravity/AGY, Claude Code, Codex CLI, Copilot CLI, OpenCode, Kilo Code, Hermes Agent and Grok).
+In OwnHub, **Skills** are autonomous capability packages provided to AI agents across the supported harnesses (Antigravity/AGY, Claude Code, Codex CLI, Copilot CLI, OpenCode, Kilo Code, Hermes Agent and Grok).
 
 ### Domain Model & Storage Layout
 
 - **Single Source of Truth (Vault):**
-  - Path: `~/.orquestra/skills-library/<skill-id>/` (resolved via `OrquestraPaths::vault`).
+  - Path: `~/.ownhub/skills-library/<skill-id>/` (resolved via `OwnHubPaths::vault`).
   - Marker file: Every skill directory must contain a valid `SKILL.md` (constant `SKILL_FILE = "SKILL.md"`).
   - Metadata: Parsed from YAML frontmatter (`name`, `description`, `category`) and body markdown.
 - **Scope-based Projections:**
-  - Path: `~/.orquestra/active/<scope>/<skill-id>` (resolved via `OrquestraPaths::projection_dir`).
+  - Path: `~/.ownhub/active/<scope>/<skill-id>` (resolved via `OwnHubPaths::projection_dir`).
   - Active skills exist as directory links targeting the vault directory: a
     symlink on Linux and macOS, an NTFS junction on Windows (creating a
     Windows symlink needs elevation or Developer Mode). See
@@ -28,7 +28,7 @@ In OrquestraAI, **Skills** are autonomous capability packages provided to AI age
     - Any files inside `scripts/` or `bin/` directories.
   - Bounded walk (max depth 4, max 500 files, skipping `.git`, `node_modules`, `target`) flags `has_scripts` and populates `script_files` for operator visibility.
 - **Master Instructions:**
-  - Path: `~/.orquestra/AGENTS.md`. Linked into harnesses during fusion.
+  - Path: `~/.ownhub/AGENTS.md`. Linked into harnesses during fusion.
 
 ---
 
@@ -39,16 +39,16 @@ In OrquestraAI, **Skills** are autonomous capability packages provided to AI age
 Prior to this specification, skill management was primarily exposed via:
 
 1. **Tauri IPC Commands:** `list_skills`, `set_skill_state`, `batch_set_all`, `read_skill_content`, `save_skill_content`, `delete_skill`, `import_skill`, `import_skill_from_git`, `harness_summary`.
-2. **MCP Tools (`orquestra-core`):** `orquestra_list_skills`, `orquestra_enable_skill`, `orquestra_disable_skill`, `orquestra_create_skill`, `orquestra_delete_skill`.
-3. **Native CLI (`dispatch_native_cli`):** Only implemented roots for `ideas`, `sessions`, `bridge`, and `vault`. Headless shell scripts or automated CI had **no** direct `orquestra skills` CLI command and had to rely on manual directory inspections or GUI operations.
+2. **MCP Tools (`ownhub-core`):** `ownhub_list_skills`, `ownhub_enable_skill`, `ownhub_disable_skill`, `ownhub_create_skill`, `ownhub_delete_skill`.
+3. **Native CLI (`dispatch_native_cli`):** Only implemented roots for `ideas`, `sessions`, `bridge`, and `vault`. Headless shell scripts or automated CI had **no** direct `ownhub skills` CLI command and had to rely on manual directory inspections or GUI operations.
 
 ### The Granular CLI Design
 
-The `orquestra skills` command suite brings full native CLI parity to the terminal, scripting pipelines, and autonomous builder agents.
+The `ownhub skills` command suite brings full native CLI parity to the terminal, scripting pipelines, and autonomous builder agents.
 
 Key capabilities:
 
-- **Zero GUI dependency:** Operates completely headlessly against `~/.orquestra`.
+- **Zero GUI dependency:** Operates completely headlessly against `~/.ownhub`.
 - **Dual Output Modes:** Clean, aligned human-readable tables/summaries by default, and strict, typed `--json` output for automated tooling.
 - **Deep Validation & Security Scans:** Inspects YAML frontmatter, detects path traversal attempts, and checks executable scripts before or after installation.
 - **Monorepo Git & Local Imports:** Clone-and-import with subpath discovery or explicit anchors (`repo.git#subpath`).
@@ -61,7 +61,7 @@ Key capabilities:
 Root command:
 
 ```bash
-orquestra skills <subcommand> [arguments] [options]
+ownhub skills <subcommand> [arguments] [options]
 ```
 
 ### General Options
@@ -91,7 +91,7 @@ orquestra skills <subcommand> [arguments] [options]
 
 ## 4. Subcommand Specifications & Practical Examples
 
-### 4.1. `orquestra skills list`
+### 4.1. `ownhub skills list`
 
 Lists all skills discovered in the vault, evaluated for a target scope.
 
@@ -106,21 +106,21 @@ Lists all skills discovered in the vault, evaluated for a target scope.
 
 ```bash
 # Human readable list for global scope
-orquestra skills list
+ownhub skills list
 
 # Output:
 # ID                 NAME                   CATEGORY       SCOPE    SCRIPTS  OFFICIAL
 # hardware-opt       Hardware Optimization  system         global   no       yes
-# orquestra          Orquestra Ecosystem    orchestration  global   no       yes
+# ownhub          OwnHub Ecosystem    orchestration  global   no       yes
 # web-search         Web Search Tool        tools          global   yes      no
 
 # JSON filtered by harness
-orquestra skills list --scope claude --json
+ownhub skills list --scope claude --json
 ```
 
 ---
 
-### 4.2. `orquestra skills info` / `orquestra skills inspect`
+### 4.2. `ownhub skills info` / `ownhub skills inspect`
 
 Inspects a single skill in depth, including token estimations, detailed frontmatter, detected script files, and projection status across all supported harnesses.
 
@@ -131,15 +131,15 @@ Inspects a single skill in depth, including token estimations, detailed frontmat
 **Example:**
 
 ```bash
-orquestra skills info orquestra-core
+ownhub skills info ownhub-core
 
 # Output:
-# Skill: orquestra-core
-# Name: Orquestra Core MCP Tools
+# Skill: ownhub-core
+# Name: OwnHub Core MCP Tools
 # Category: orchestration
 # Official: yes
 # Tokens: ~1,240
-# Path: /home/user/.orquestra/skills-library/orquestra-core
+# Path: /home/user/.ownhub/skills-library/ownhub-core
 # Scripts Detected: 2 files
 #   - scripts/bootstrap.sh
 #   - scripts/sync.py
@@ -153,7 +153,7 @@ orquestra skills info orquestra-core
 
 ---
 
-### 4.3. `orquestra skills enable` & `orquestra skills disable`
+### 4.3. `ownhub skills enable` & `ownhub skills disable`
 
 Controls symlink projection for a skill.
 
@@ -173,42 +173,42 @@ Controls symlink projection for a skill.
 
 ```bash
 # Enable universally across all agents
-orquestra skills enable hardware-optimization --scope global
+ownhub skills enable hardware-optimization --scope global
 
 # Enable only for Gemini
-orquestra skills enable research-agent --scope gemini
+ownhub skills enable research-agent --scope gemini
 
 # Disable in Gemini
-orquestra skills disable research-agent --scope gemini
+ownhub skills disable research-agent --scope gemini
 ```
 
 ---
 
-### 4.4. `orquestra skills batch`
+### 4.4. `ownhub skills batch`
 
 Performs bulk projection changes for an entire scope.
 
-- **Syntax:** `orquestra skills batch <enable|disable> [--scope <scope>] [--json]`
+- **Syntax:** `ownhub skills batch <enable|disable> [--scope <scope>] [--json]`
 - **Examples:**
 
 ```bash
 # Enable all vault skills for Codex harness
-orquestra skills batch enable --scope codex
+ownhub skills batch enable --scope codex
 
 # Disable all harness-specific skills for Claude (inherited global skills remain active)
-orquestra skills batch disable --scope claude
+ownhub skills batch disable --scope claude
 ```
 
 ---
 
-### 4.5. `orquestra skills summary`
+### 4.5. `ownhub skills summary`
 
 Returns a fast overview of active vs total skills per harness and global baseline.
 
 **Example:**
 
 ```bash
-orquestra skills summary
+ownhub skills summary
 
 # Output:
 # SCOPE     ACTIVE  TOTAL
@@ -220,7 +220,7 @@ orquestra skills summary
 
 ---
 
-### 4.6. `orquestra skills validate`
+### 4.6. `ownhub skills validate`
 
 Performs static analysis on a skill directory (in-vault or arbitrary filesystem path) to verify standard compliance before deployment or distribution.
 
@@ -235,14 +235,14 @@ Performs static analysis on a skill directory (in-vault or arbitrary filesystem 
 **Example:**
 
 ```bash
-orquestra skills validate ./my-new-skill --json
+ownhub skills validate ./my-new-skill --json
 ```
 
 ---
 
-### 4.7. `orquestra skills create` / `orquestra skills scaffold`
+### 4.7. `ownhub skills create` / `ownhub skills scaffold`
 
-Scaffolds a compliant skill directory in `~/.orquestra/skills-library/<id>/`.
+Scaffolds a compliant skill directory in `~/.ownhub/skills-library/<id>/`.
 
 - **Arguments:** `<id>`: Unique skill identifier (kebab-case alphanumeric).
 - **Options:**
@@ -256,7 +256,7 @@ Scaffolds a compliant skill directory in `~/.orquestra/skills-library/<id>/`.
 **Example:**
 
 ```bash
-orquestra skills create custom-linter \
+ownhub skills create custom-linter \
   --name "Custom Linter" \
   --description "Project-specific linting rules and autofix scripts." \
   --category "quality" \
@@ -266,14 +266,14 @@ orquestra skills create custom-linter \
 
 ---
 
-### 4.8. `orquestra skills import`
+### 4.8. `ownhub skills import`
 
 Imports an external skill into the master vault.
 
 - **Supports:**
-  - Local folders: `orquestra skills import /path/to/skill-folder`
-  - Git repositories: `orquestra skills import https://github.com/org/repo.git`
-  - Monorepo subpaths: `orquestra skills import https://github.com/org/repo.git#skills/sub-skill`
+  - Local folders: `ownhub skills import /path/to/skill-folder`
+  - Git repositories: `ownhub skills import https://github.com/org/repo.git`
+  - Monorepo subpaths: `ownhub skills import https://github.com/org/repo.git#skills/sub-skill`
 - **Options:**
   - `--enable`: Automatically projects after import.
   - `--scope <scope>`: Scope to enable into if `--enable` is passed (default: `global`).
@@ -282,24 +282,24 @@ Imports an external skill into the master vault.
 **Example:**
 
 ```bash
-orquestra skills import https://github.com/internetdozero/orquestra-extensions.git#skills/docker-tools --enable
+ownhub skills import https://github.com/internetdozero/ownhub-extensions.git#skills/docker-tools --enable
 ```
 
 ---
 
-### 4.9. `orquestra skills export`
+### 4.9. `ownhub skills export`
 
 Exports a skill from the vault to an external folder or tarball archive.
 
 **Example:**
 
 ```bash
-orquestra skills export hardware-optimization --out /tmp/exported-skills/ --tar
+ownhub skills export hardware-optimization --out /tmp/exported-skills/ --tar
 ```
 
 ---
 
-### 4.10. `orquestra skills content get` & `content set`
+### 4.10. `ownhub skills content get` & `content set`
 
 Read or atomically update the raw `SKILL.md` content.
 
@@ -307,20 +307,20 @@ Read or atomically update the raw `SKILL.md` content.
 
 ```bash
 # Print raw SKILL.md to stdout
-orquestra skills content get orquestra
+ownhub skills content get ownhub
 
 # Replace content from a file
-orquestra skills content set orquestra --file ./updated-SKILL.md
+ownhub skills content set ownhub --file ./updated-SKILL.md
 
 # Pipe content through stdin
-cat new-skill.md | orquestra skills content set orquestra --file -
+cat new-skill.md | ownhub skills content set ownhub --file -
 ```
 
 ---
 
-### 4.11. `orquestra skills delete`
+### 4.11. `ownhub skills delete`
 
-Permanently unlinks a skill from all active projections and removes its directory from `~/.orquestra/skills-library/`.
+Permanently unlinks a skill from all active projections and removes its directory from `~/.ownhub/skills-library/`.
 
 - **Arguments:** `<id>`
 - **Options:**
@@ -330,7 +330,7 @@ Permanently unlinks a skill from all active projections and removes its director
 **Example:**
 
 ```bash
-orquestra skills delete obsolete-skill --force
+ownhub skills delete obsolete-skill --force
 ```
 
 ---

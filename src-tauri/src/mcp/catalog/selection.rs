@@ -5,14 +5,14 @@ use std::collections::{BTreeSet, HashMap};
 use super::super::deploy::deploy_current;
 use super::{ensure_active_official, load_catalog, save_catalog, seed_catalog_path};
 use crate::harness::{self, GLOBAL_SCOPE};
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 /// Enable or disable every server for one scope in a single atomic write.
 /// `None` (or `global`) flips `global_enabled` on all servers; a harness id
 /// adds/removes that harness from every server's `enabled_harnesses` without
 /// touching `global_enabled` (so Global inheritance stays intact).
 pub fn batch_set_mcp_all(harness_id: Option<&str>, enabled: bool) -> Result<(), String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let scope = harness_id.unwrap_or(GLOBAL_SCOPE);
 
     if scope != GLOBAL_SCOPE && !harness::is_mcp_target(scope) {
@@ -44,14 +44,14 @@ pub fn batch_set_mcp_all(harness_id: Option<&str>, enabled: bool) -> Result<(), 
 /// it even when the preset drops it globally. Returns how many servers
 /// changed global state. The caller deploys afterwards, once.
 pub fn apply_global_selection(enabled: &[String]) -> Result<usize, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     apply_global_selection_at(&paths, enabled)
 }
 
 /// `apply_global_selection` against explicit paths, for tests and callers
 /// that already resolved the storage locations.
 pub fn apply_global_selection_at(
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
     enabled: &[String],
 ) -> Result<usize, String> {
     let mut catalog = load_catalog(paths, &seed_catalog_path(&paths.root))?;
@@ -81,14 +81,14 @@ pub fn apply_global_selection_at(
 pub fn apply_harness_selections(
     harness_mcps: &HashMap<String, Vec<String>>,
 ) -> Result<usize, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     apply_harness_selections_at(&paths, harness_mcps)
 }
 
 /// `apply_harness_selections` against explicit paths, for tests and callers
 /// that already resolved the storage locations.
 fn apply_harness_selections_at(
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
     harness_mcps: &HashMap<String, Vec<String>>,
 ) -> Result<usize, String> {
     let mut catalog = load_catalog(paths, &seed_catalog_path(&paths.root))?;

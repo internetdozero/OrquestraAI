@@ -9,7 +9,7 @@ pub(super) fn policy(args: &[String]) -> Result<String, CliError> {
         Some("show") | None => show(&args[args.first().map_or(0, |_| 1)..]),
         Some("set") => set(&args[1..]),
         _ => Err(usage(
-            "usage: orquestra sessions policy <show|set> [options]".to_string(),
+            "usage: ownhub sessions policy <show|set> [options]".to_string(),
         )),
     }
 }

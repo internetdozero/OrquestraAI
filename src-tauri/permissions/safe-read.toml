@@ -33,7 +33,7 @@ permissions = [
   "allow-pick-folder",
   "allow-open-url",
   "allow-open-in-file-manager",
-  "allow-create-orquestra-backup",
+  "allow-create-ownhub-backup",
   "allow-probe-external-tools",
   "allow-set-minimize-to-tray",
 ]

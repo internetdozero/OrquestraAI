@@ -1,4 +1,4 @@
-//! Symlink projections under `~/.orquestra/active/<scope>`.
+//! Symlink projections under `~/.ownhub/active/<scope>`.
 //!
 //! A skill is enabled for a scope exactly when that scope's folder holds a
 //! valid symlink to the vault entry. Global is authoritative: its links are
@@ -13,12 +13,12 @@ use std::path::Path;
 use super::vault::{skill_directories, skill_directory};
 use super::GLOBAL_SCOPE;
 use crate::harness::harness_ids;
-use crate::paths::{create_dir, OrquestraPaths};
-use orquestra_core::links::{
+use crate::paths::{create_dir, OwnHubPaths};
+use ownhub_core::links::{
     create_dir_link, is_dir_link, normalize, read_dir_link, remove_dir_link,
 };
 
-pub(super) fn set_global(paths: &OrquestraPaths, id: &str, enabled: bool) -> Result<(), String> {
+pub(super) fn set_global(paths: &OwnHubPaths, id: &str, enabled: bool) -> Result<(), String> {
     let vault_item = skill_directory(paths, id)?;
     let mut failures = Vec::new();
 
@@ -49,14 +49,14 @@ pub(super) fn set_global(paths: &OrquestraPaths, id: &str, enabled: bool) -> Res
 /// untouched. Preset application uses this instead of `set_global(..., false)`
 /// so a skill dropped from a preset stays available in harnesses that
 /// project it, while the universal baseline converges on the preset.
-pub(super) fn clear_global_baseline(paths: &OrquestraPaths, id: &str) -> Result<(), String> {
+pub(super) fn clear_global_baseline(paths: &OwnHubPaths, id: &str) -> Result<(), String> {
     // Rejects unknown ids and traversal attempts, mirroring `set_global`.
     skill_directory(paths, id)?;
     unlink_skill(&paths.global_dir(), id)
 }
 
 pub(super) fn set_scope(
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
     id: &str,
     scope: &str,
     enabled: bool,
@@ -77,7 +77,7 @@ pub(super) fn set_scope(
     }
 }
 
-pub(super) fn batch_from(paths: &OrquestraPaths, scope: &str, enabled: bool) -> Result<(), String> {
+pub(super) fn batch_from(paths: &OwnHubPaths, scope: &str, enabled: bool) -> Result<(), String> {
     let global_dir = paths.global_dir();
     // One `read_dir` for the inherited check instead of two `canonicalize`
     // calls per skill (see `projected_ids`).
@@ -137,7 +137,7 @@ fn ensure_link(vault_item: &Path, projection: &Path) -> Result<(), String> {
 
     match fs::symlink_metadata(projection) {
         Ok(_) if is_dir_link(projection) => {
-            if orquestra_core::links::resolves_to(projection, &target) {
+            if ownhub_core::links::resolves_to(projection, &target) {
                 return Ok(());
             }
             remove_dir_link(projection).map_err(|error| {
@@ -237,10 +237,10 @@ pub(super) fn unlink_skill(directory: &Path, id: &str) -> Result<(), String> {
 
 /// Historical skill ids that still resolve to their canonical vault folder.
 const LEGACY_ALIASES: [(&str, &str); 4] = [
-    ("modular-start", "orquestra-modular-start"),
-    ("agent-orchestrator", "orquestra-agent-orchestrator"),
-    ("autonomous-audit", "orquestra-autonomous-audit"),
-    ("smart-build-router", "orquestra-smart-build-router"),
+    ("modular-start", "ownhub-modular-start"),
+    ("agent-orchestrator", "ownhub-agent-orchestrator"),
+    ("autonomous-audit", "ownhub-autonomous-audit"),
+    ("smart-build-router", "ownhub-smart-build-router"),
 ];
 
 /// Every skill id projected in `projection_dir`, read with a single
@@ -315,7 +315,7 @@ pub(super) fn is_projected(projection_dir: &Path, vault: &Path, id: &str) -> boo
     let check_link = |name: &str| -> bool {
         // `resolves_to` canonicalizes and normalizes both sides, and refuses
         // anything that is not a directory link (symlink or junction).
-        orquestra_core::links::resolves_to(&projection_dir.join(name), &vault_item)
+        ownhub_core::links::resolves_to(&projection_dir.join(name), &vault_item)
     };
 
     if check_link(id) {

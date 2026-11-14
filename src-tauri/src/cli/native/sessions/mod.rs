@@ -1,4 +1,4 @@
-//! Granular CLI management for OrquestraAI Sessions (`orquestra sessions …`).
+//! Granular CLI management for OwnHub Sessions (`ownhub sessions …`).
 
 use super::{usage, CliError};
 
@@ -15,7 +15,7 @@ mod search;
 mod tests;
 mod watch;
 
-const USAGE: &str = "usage: orquestra sessions <list|inspect|pin|unpin|tail|watch|handoff|search|delete|export|purge|policy> [options]";
+const USAGE: &str = "usage: ownhub sessions <list|inspect|pin|unpin|tail|watch|handoff|search|delete|export|purge|policy> [options]";
 
 pub(super) fn is_session_active(harness: &str, session_id: &str) -> bool {
     let Ok(home) = crate::sessions::adapters::home() else {

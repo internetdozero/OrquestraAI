@@ -186,7 +186,7 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
             <h1 className="truncate text-[13px] font-semibold tracking-tight text-zinc-100">
-              Orquestra<span className="accent-text">AI</span>
+              OwnHub<span className="accent-text">AI</span>
             </h1>
             <span className="hidden rounded border border-white/10 bg-white/[0.03] px-1 font-mono text-[9px] text-zinc-500 sm:inline">
               v0.1.0

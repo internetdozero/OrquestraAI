@@ -2,7 +2,7 @@
 
 use super::super::{parse_options, rendered, usage, CliError};
 use super::{parse_key_number, paths};
-use orquestra_vault::vault::service::{self, SaveServiceInput};
+use ownhub_vault::vault::service::{self, SaveServiceInput};
 use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
@@ -11,7 +11,7 @@ pub(super) fn set(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra vault set <id> [options]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub vault set <id> [options]".to_string()))?;
 
     let options = parse_options(
         &args[1..],
@@ -113,7 +113,7 @@ pub(super) fn add_key(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra vault add-key <id> --key <secret> [--tag <tag>] [--json]"
+                "usage: ownhub vault add-key <id> --key <secret> [--tag <tag>] [--json]"
                     .to_string(),
             )
         })?;
@@ -169,7 +169,7 @@ pub(super) fn remove_key(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra vault remove-key <id> --key-number <N> [--yes] [--json]"
+                "usage: ownhub vault remove-key <id> --key-number <N> [--yes] [--json]"
                     .to_string(),
             )
         })?;
@@ -192,7 +192,7 @@ pub(super) fn remove(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra vault remove <id> [--yes] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub vault remove <id> [--yes] [--json]".to_string()))?;
 
     let options = parse_options(&args[1..], &[], &["--yes", "-y", "--json"])?;
     service::delete_service(&paths()?, id).map_err(CliError::Operation)?;
@@ -218,7 +218,7 @@ fn toggle_helper(args: &[String], desired: Option<bool>, verb: &str) -> Result<S
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage(format!("usage: orquestra vault {verb} <id> [--json]")))?;
+        .ok_or_else(|| usage(format!("usage: ownhub vault {verb} <id> [--json]")))?;
     let options = parse_options(&args[1..], &[], &["--json"])?;
     let paths = paths()?;
     let next_state = match desired {
@@ -247,7 +247,7 @@ pub(super) fn set_enabled(args: &[String]) -> Result<String, CliError> {
         [id, state, flag] if flag == "--json" => (id.as_str(), state.as_str(), true),
         _ => {
             return Err(usage(
-                "usage: orquestra vault set-enabled <id> <on|off> [--json]".to_string(),
+                "usage: ownhub vault set-enabled <id> <on|off> [--json]".to_string(),
             ))
         }
     };
@@ -270,7 +270,7 @@ pub(super) fn set_primary(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra vault set-primary <id> --key-number <N> [--json]".to_string())
+            usage("usage: ownhub vault set-primary <id> --key-number <N> [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--key-number"], &["--json"])?;
@@ -286,7 +286,7 @@ pub(super) fn rotate(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra vault rotate <id> [--next] [--key-number <N> --new-key <secret>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub vault rotate <id> [--next] [--key-number <N> --new-key <secret>] [--json]".to_string()))?;
 
     let options = parse_options(
         &args[1..],
@@ -354,7 +354,7 @@ pub(super) fn rotate(args: &[String]) -> Result<String, CliError> {
     }
 
     Err(usage(
-        "usage: orquestra vault rotate <id> [--next] [--key-number <N> --new-key <secret>]"
+        "usage: ownhub vault rotate <id> [--next] [--key-number <N> --new-key <secret>]"
             .to_string(),
     ))
 }

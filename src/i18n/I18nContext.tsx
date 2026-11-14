@@ -16,7 +16,7 @@ export type Locale = "pt" | "en";
 /** Every locale the switcher offers, in display order. */
 export const LOCALES: Locale[] = ["pt", "en"];
 
-const STORAGE_KEY = "orquestra_locale";
+const STORAGE_KEY = "ownhub_locale";
 
 const DICTIONARIES: Record<Locale, TranslationSchema> = { pt, en };
 

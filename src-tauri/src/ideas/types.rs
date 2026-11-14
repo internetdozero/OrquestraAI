@@ -1,7 +1,7 @@
 //! Wire types for the native Idea Vault module.
 //!
 //! Shapes mirror the Python `idea-vault` MCP (`record_idea` /
-//! `post_board_note`) so agents keep working while OrquestraAI reads and
+//! `post_board_note`) so agents keep working while OwnHub reads and
 //! mutates the same SQLite rows natively. Everything serializes camelCase,
 //! like the rest of the IPC surface.
 

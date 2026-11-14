@@ -2,15 +2,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 // The headless entry point shares the workspace log macros with the library,
-// which re-exports them from `orquestra-core`.
-pub use orquestra_core::log_error;
+// which re-exports them from `ownhub-core`.
+pub use ownhub_core::log_error;
 
 /// Opt-in software rendering for WebKitGTK: `WEBKIT_DISABLE_DMABUF_RENDERER`
 /// fixes the blank window / crash seen with the proprietary NVIDIA driver on
 /// Wayland. An explicit value from the operator always wins.
 #[cfg(target_os = "linux")]
 fn maybe_disable_dmabuf() {
-    let requested = std::env::var("ORQUESTRA_WEBKIT_SOFTWARE")
+    // The pre-OwnHub variable name is honoured as a fallback so existing
+    // shell exports keep working after the rename.
+    let requested = std::env::var("OWNHUB_WEBKIT_SOFTWARE")
+        .or_else(|_| std::env::var("ORQUESTRA_WEBKIT_SOFTWARE"))
         .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
     if !requested || std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some() {
@@ -62,14 +65,14 @@ fn main() {
     // Headless operator entry points: the same bridge code the UI invokes,
     // usable from a terminal so fusion can be scripted or verified over SSH.
     let args: Vec<String> = std::env::args().collect();
-    if let Some(result) = orquestra_ai_lib::dispatch_native_cli(&args[1..]) {
+    if let Some(result) = ownhub_lib::dispatch_native_cli(&args[1..]) {
         match result {
             Ok(output) => println!("{output}"),
-            Err(orquestra_ai_lib::CliError::Usage(error)) => {
+            Err(ownhub_lib::CliError::Usage(error)) => {
                 crate::log_error!("{error}");
                 std::process::exit(2);
             }
-            Err(orquestra_ai_lib::CliError::Operation(error)) => {
+            Err(ownhub_lib::CliError::Operation(error)) => {
                 crate::log_error!("{error}");
                 std::process::exit(1);
             }
@@ -78,7 +81,7 @@ fn main() {
     }
     match args.get(1).map(String::as_str) {
         Some("--bridge-status") => {
-            match orquestra_ai_lib::bridge_status_json() {
+            match ownhub_lib::bridge_status_json() {
                 Ok(json) => println!("{json}"),
                 Err(error) => {
                     crate::log_error!("{error}");
@@ -88,7 +91,7 @@ fn main() {
             return;
         }
         Some("--bridge-deploy") => {
-            match orquestra_ai_lib::deploy_bridge_json() {
+            match ownhub_lib::deploy_bridge_json() {
                 Ok(report) => {
                     println!("{report}");
                 }
@@ -100,7 +103,7 @@ fn main() {
             return;
         }
         Some("--mcp-status") => {
-            match orquestra_ai_lib::mcp_status_json() {
+            match ownhub_lib::mcp_status_json() {
                 Ok(json) => println!("{json}"),
                 Err(error) => {
                     crate::log_error!("{error}");
@@ -113,7 +116,7 @@ fn main() {
             // --mcp-set <id> <global|harness> <on|off>
             let (Some(id), Some(scope), Some(state)) = (args.get(2), args.get(3), args.get(4))
             else {
-                crate::log_error!("usage: orquestra --mcp-set <id> <global|harness> <on|off>");
+                crate::log_error!("usage: ownhub --mcp-set <id> <global|harness> <on|off>");
                 std::process::exit(2);
             };
 
@@ -126,7 +129,7 @@ fn main() {
                 }
             };
 
-            match orquestra_ai_lib::set_mcp_state_cli(id, scope, enabled) {
+            match ownhub_lib::set_mcp_state_cli(id, scope, enabled) {
                 Ok(json) => println!("{json}"),
                 Err(error) => {
                     crate::log_error!("{error}");
@@ -138,11 +141,11 @@ fn main() {
         Some("--preset") => {
             // --preset <id> (e.g. --preset stealth)
             let Some(id) = args.get(2) else {
-                crate::log_error!("usage: orquestra --preset <id>");
+                crate::log_error!("usage: ownhub --preset <id>");
                 std::process::exit(2);
             };
 
-            match orquestra_ai_lib::apply_preset_json(id) {
+            match ownhub_lib::apply_preset_json(id) {
                 Ok(report) => println!("{report}"),
                 Err(error) => {
                     crate::log_error!("{error}");
@@ -152,7 +155,7 @@ fn main() {
             return;
         }
         Some("--mcp-deploy") => {
-            match orquestra_ai_lib::deploy_mcp_json() {
+            match ownhub_lib::deploy_mcp_json() {
                 Ok(report) => {
                     println!("{report}");
                 }
@@ -165,8 +168,8 @@ fn main() {
         }
         Some("--help" | "-h") => {
             println!(
-                "OrquestraAI — universal AI harness control plane\n\n\
-                 Usage: orquestra [legacy flags] | idea <sub> | sessions <sub> |\n\
+                "OwnHub — universal AI harness control plane\n\n\
+                 Usage: ownhub [legacy flags] | idea <sub> | sessions <sub> |\n\
                                    bridge <sub> | vault <sub> | mcp <sub> | skills <sub>\n\n\
                  \x20 (no flag)        Launch the desktop control plane\n\
                  \x20 --bridge-status   Print harness link state as JSON\n\
@@ -202,9 +205,9 @@ fn main() {
         }
     }
 
-    if let Ok(true) = orquestra_ai_lib::single_instance::try_activate_existing() {
+    if let Ok(true) = ownhub_lib::single_instance::try_activate_existing() {
         return;
     }
 
-    orquestra_ai_lib::run()
+    ownhub_lib::run()
 }

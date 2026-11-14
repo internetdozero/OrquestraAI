@@ -14,7 +14,7 @@ fn main() {
             panic!(
                 "\n\n\
                 ========================================================================\n\
-                ❌ [OrquestraAI Guardrail] Direct 'cargo build --release' is forbidden!\n\
+                ❌ [OwnHub Guardrail] Direct 'cargo build --release' is forbidden!\n\
                 ========================================================================\n\
                 Direct cargo build does not embed the frontend assets properly and\n\
                 causes the release binary to fail at runtime with:\n\
@@ -31,7 +31,7 @@ fn main() {
             println!("cargo:warning=dist/index.html is missing! Triggering 'npm run build' automatically...");
             let npm_bin = resolve_npm_command().unwrap_or_else(|| {
                 panic!(
-                    "\n\n❌ [OrquestraAI Guardrail]\n\
+                    "\n\n❌ [OwnHub Guardrail]\n\
                     Frontend assets are required for release builds, but 'npm' was not found in PATH!\n\
                     Please install Node.js/npm or build the frontend manually ('npm run build').\n"
                 );
@@ -48,7 +48,7 @@ fn main() {
                 }
                 _ => {
                     panic!(
-                        "\n\n❌ [OrquestraAI Guardrail]\n\
+                        "\n\n❌ [OwnHub Guardrail]\n\
                         Frontend assets are required for release builds, but 'npm run build' failed!\n\
                         Build aborted to prevent generating a broken binary.\n\
                         Please fix frontend build errors or run 'npm run build' manually.\n"
@@ -83,7 +83,7 @@ fn main() {
             "pick_folder",
             "open_url",
             "open_in_file_manager",
-            "create_orquestra_backup",
+            "create_ownhub_backup",
             "set_minimize_to_tray",
             "harness_summary",
             "read_master_agents_md",

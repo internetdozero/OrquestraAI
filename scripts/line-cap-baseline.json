@@ -1,5 +1,5 @@
 {
-  "crates/orquestra-vault/src/vault/proxy.rs": 422,
-  "crates/orquestra-vault/src/vault/store.rs": 562,
-  "crates/orquestra-vault/src/vault/tests.rs": 1336
+  "crates/ownhub-vault/src/vault/proxy.rs": 422,
+  "crates/ownhub-vault/src/vault/store.rs": 562,
+  "crates/ownhub-vault/src/vault/tests.rs": 1336
 }

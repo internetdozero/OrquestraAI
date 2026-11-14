@@ -15,13 +15,13 @@
 use std::fs;
 use std::path::PathBuf;
 
-use orquestra_ai_lib::sessions::adapters::utils::dir_size;
+use ownhub_lib::sessions::adapters::utils::dir_size;
 
 const SESSIONS: usize = 50;
 const REAL_BYTES: u64 = 2 * 2048;
 
 fn scratch() -> PathBuf {
-    std::env::temp_dir().join(format!("orquestra-dir-bench-{}", std::process::id()))
+    std::env::temp_dir().join(format!("ownhub-dir-bench-{}", std::process::id()))
 }
 
 fn write_sized(path: &PathBuf, bytes: usize) {

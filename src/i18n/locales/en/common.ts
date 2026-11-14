@@ -117,7 +117,7 @@ export const agents: TranslationSchema["agents"] = {
     "The master AGENTS.md is served by the Rust core. Run the app with npm run tauri dev to edit and save it.",
   loadFailed: (detail: string) => `Could not load AGENTS.md: ${detail}`,
   saveFailed: (detail: string) => `Could not save AGENTS.md: ${detail}`,
-  savedToast: "AGENTS.md saved to ~/.orquestra/AGENTS.md",
+  savedToast: "AGENTS.md saved to ~/.ownhub/AGENTS.md",
 };
 
 export const store: TranslationSchema["store"] = {
@@ -125,7 +125,7 @@ export const store: TranslationSchema["store"] = {
   libraryTab: "Library",
   storeTab: "Official Store",
   title: "Official Store",
-  subtitle: "Skills and MCP servers maintained by OrquestraAI, with one-click install.",
+  subtitle: "Skills and MCP servers maintained by OwnHub, with one-click install.",
   install: "Install",
   enable: "Enable",
   add: "Add",

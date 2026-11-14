@@ -19,7 +19,7 @@ pub struct SweepReport {
 /// platform can report one. `None` means liveness is *unavailable* — not
 /// empty — and no socket may be judged dead on that basis.
 pub(super) fn sweep_at(
-    orquestra_root: &Path,
+    ownhub_root: &Path,
     scratch_root: &Path,
     active_sockets: Option<&str>,
     now: SystemTime,
@@ -29,7 +29,7 @@ pub(super) fn sweep_at(
         removed_count: 0,
         status: String::new(),
     };
-    clean_sockets(orquestra_root, active_sockets, &mut report)?;
+    clean_sockets(ownhub_root, active_sockets, &mut report)?;
     clean_scratch(scratch_root, now, &mut report)?;
     report.reclaimed_mb = (report.reclaimed_mb * 10.0).round() / 10.0;
     // Say why socket cleanup was skipped instead of leaving an operator to
@@ -69,7 +69,7 @@ fn clean_sockets(
 ) -> Result<(), String> {
     // An absent table proves only that this platform cannot tell us which
     // sockets are alive. Deleting on that gap used to unlink a running
-    // instance's `orquestra.sock` on macOS, where `/proc/net/unix` does not
+    // instance's `ownhub.sock` on macOS, where `/proc/net/unix` does not
     // exist: the caller passed an empty string and every socket looked dead.
     let Some(active) = active else {
         return Ok(());

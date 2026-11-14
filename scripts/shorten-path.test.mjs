@@ -30,8 +30,8 @@ test("shortenPath on Windows paths", () => {
   assert.equal(shortenPath("C:/Users/admin/.agents/mcp.json"), "~/.agents/mcp.json");
   assert.equal(shortenPath("D:\\Users\\developer"), "~");
   assert.equal(
-    shortenPath("E:\\Users\\alice\\AppData\\Local\\Orquestra\\state.json"),
-    "~/AppData/Local/Orquestra/state.json",
+    shortenPath("E:\\Users\\alice\\AppData\\Local\\OwnHub\\state.json"),
+    "~/AppData/Local/OwnHub/state.json",
   );
 });
 

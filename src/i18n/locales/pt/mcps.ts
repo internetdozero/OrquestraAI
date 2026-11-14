@@ -3,7 +3,7 @@ export const mcps = {
   registryTitle: "Registro MCP",
   headerChip: "Registro MCP",
   subtitle:
-    "Um catálogo em ~/.orquestra/mcps.json, compilado no dialeto de cada harness. O Global é a linha de base; um harness pode aderir por cima dele.",
+    "Um catálogo em ~/.ownhub/mcps.json, compilado no dialeto de cada harness. O Global é a linha de base; um harness pode aderir por cima dele.",
   active: "Ativos",
   scopeTokens: "Tokens do escopo",
   sortMcps: "Ordenar servidores",
@@ -30,7 +30,7 @@ export const mcps = {
   reading: "Lendo o catálogo…",
   emptyTitle: "Nenhum servidor MCP ainda",
   emptyBody:
-    "Adicione o primeiro servidor e o OrquestraAI o compilará em cada harness instalado que tenha um adaptador.",
+    "Adicione o primeiro servidor e o OwnHub o compilará em cada harness instalado que tenha um adaptador.",
   exploreStoreAction: "Explorar loja oficial",
   addManualAction: "Adicionar manualmente",
   targets: "Destinos",

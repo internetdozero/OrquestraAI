@@ -1,4 +1,4 @@
-//! Single instance guard: ensures only one OrquestraAI GUI process runs at a
+//! Single instance guard: ensures only one OwnHub GUI process runs at a
 //! time, focusing the existing window when the user launches the app again.
 //!
 //! Three layers, in order of authority:
@@ -45,10 +45,10 @@ use std::thread;
 use tauri::Manager;
 use tauri::{AppHandle, Runtime};
 
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
-const SOCKET_NAME: &str = "orquestra.sock";
-const LOCK_NAME: &str = "orquestra.lock";
+const SOCKET_NAME: &str = "ownhub.sock";
+const LOCK_NAME: &str = "ownhub.lock";
 
 /// The primary's exclusive lock, held for the whole process lifetime.
 /// The `File` must stay open: closing it releases the `flock`. Keyed by
@@ -72,10 +72,10 @@ fn release_foreign_lock(lock: &Path) {
     }
 }
 
-/// The handshake socket lives in the runtime root, not in `~/.orquestra`.
+/// The handshake socket lives in the runtime root, not in `~/.ownhub`.
 ///
 /// A Unix socket path is capped at `sizeof(sun_path)` bytes (108 on Linux,
-/// 104 on macOS); `~/.orquestra/orquestra.sock` overflows it as soon as the
+/// 104 on macOS); `~/.ownhub/ownhub.sock` overflows it as soon as the
 /// home directory is long, and the bind then fails with `ENAMETOOLONG`. The
 /// runtime root is short, per-uid and already verified `0700`, so only this
 /// process's own user can connect.
@@ -84,7 +84,7 @@ fn release_foreign_lock(lock: &Path) {
 /// (tests, or two profiles) must not hand each other their windows. The
 /// lockfile stays next to the configs — regular files have no length limit.
 pub fn socket_path() -> Result<PathBuf, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let key = short_key(paths.root.to_string_lossy().as_ref());
     Ok(crate::paths::ensure_scratch_root()?.join(format!("{key}-{SOCKET_NAME}")))
 }
@@ -104,7 +104,7 @@ fn short_key(input: &str) -> String {
 }
 
 fn lock_path() -> Result<PathBuf, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     Ok(paths.root.join(LOCK_NAME))
 }
 
@@ -257,7 +257,7 @@ pub fn start_listener<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
             }
             None => {
                 return Err(
-                    "another OrquestraAI instance holds the single-instance lock".to_string(),
+                    "another OwnHub instance holds the single-instance lock".to_string(),
                 );
             }
         }
@@ -298,7 +298,7 @@ pub fn start_listener<R: Runtime>(_app: AppHandle<R>) -> Result<(), String> {
     if windows::acquire()? {
         Ok(())
     } else {
-        Err("another OrquestraAI instance is already running".to_string())
+        Err("another OwnHub instance is already running".to_string())
     }
 }
 

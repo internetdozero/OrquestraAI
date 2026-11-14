@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { FolderOpen, HardDrive, Save } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
-import { createOrquestraBackup, openInFileManager } from "../../lib/tauri";
+import { createOwnHubBackup, openInFileManager } from "../../lib/tauri";
 
 const PATHS = [
-  { key: "root", path: "~/.orquestra" },
-  { key: "vault", path: "~/.orquestra/skills-library" },
-  { key: "active", path: "~/.orquestra/active" },
-  { key: "master", path: "~/.orquestra/AGENTS.md" },
+  { key: "root", path: "~/.ownhub" },
+  { key: "vault", path: "~/.ownhub/skills-library" },
+  { key: "active", path: "~/.ownhub/active" },
+  { key: "master", path: "~/.ownhub/AGENTS.md" },
 ] as const;
 
 /** Read-only canonical paths plus native open-folder and backup actions. */
@@ -27,7 +27,7 @@ export function StorageSettingsTab({
   const openFolder = async () => {
     if (!isTauri) return;
     try {
-      await openInFileManager("~/.orquestra");
+      await openInFileManager("~/.ownhub");
       onToast(s.opened);
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
@@ -39,7 +39,7 @@ export function StorageSettingsTab({
     if (!isTauri || busy) return;
     setBusy(true);
     try {
-      const archive = await createOrquestraBackup();
+      const archive = await createOwnHubBackup();
       onToast(s.backedUpTo(archive));
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);

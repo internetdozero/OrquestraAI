@@ -1,12 +1,12 @@
-# OrquestraAI CLI: Sessions Management & Observability
+# OwnHub CLI: Sessions Management & Observability
 
-`orquestra sessions <subcommand>` provides granular command-line management and real-time observability across all agent conversations stored by the eight supported harnesses.
+`ownhub sessions <subcommand>` provides granular command-line management and real-time observability across all agent conversations stored by the eight supported harnesses.
 
 ---
 
 ## 1. Overview & Purpose
 
-OrquestraAI unifies agent sessions across multiple AI coding harnesses:
+OwnHub unifies agent sessions across multiple AI coding harnesses:
 
 - **Claude Code** (`claude`)
 - **Antigravity** (`antigravity`)
@@ -17,10 +17,10 @@ OrquestraAI unifies agent sessions across multiple AI coding harnesses:
 - **Hermes** (`hermes`)
 - **xAI Grok** (`grok`)
 
-Session histories are stored natively by each harness in SQLite databases, JSONL files, or directory trees. The Sessions subsystem in OrquestraAI:
+Session histories are stored natively by each harness in SQLite databases, JSONL files, or directory trees. The Sessions subsystem in OwnHub:
 
 1. **Scans Read-Only:** Queries stores without modifying harness schemas or interrupting running agents.
-2. **Maintains Policy & Pins:** Keeps operator pins and retention rules safely in `~/.orquestra/sessions_policy.json` (sidecar architecture).
+2. **Maintains Policy & Pins:** Keeps operator pins and retention rules safely in `~/.ownhub/sessions_policy.json` (sidecar architecture).
 3. **Provides Unified Observability:** Parses transcripts, tracks agent liveness, and extracts cross-agent handoff contexts.
 4. **Enforces Safe Retention:** Implements dry-run purge estimation, active session locking guards, and vacuum page reclamation.
 
@@ -32,14 +32,14 @@ Session histories are stored natively by each harness in SQLite databases, JSONL
 
 In the current codebase (`src-tauri/src/cli/native/sessions.rs`), only two subcommands exist:
 
-- `orquestra sessions list [--harness <id>] [--search <term>] [--pinned-only] [--json]`
-- `orquestra sessions purge [--harness <id>] [--older-than-days <n>] [--session-id <id>] [--yes] [--json]`
+- `ownhub sessions list [--harness <id>] [--search <term>] [--pinned-only] [--json]`
+- `ownhub sessions purge [--harness <id>] [--older-than-days <n>] [--session-id <id>] [--yes] [--json]`
 
-Other session capabilities exist in `crates/orquestra-sessions` and the `orquestra-session-relay` MCP server, but are not exposed through the native CLI.
+Other session capabilities exist in `crates/ownhub-sessions` and the `ownhub-session-relay` MCP server, but are not exposed through the native CLI.
 
 ### New Granular Design
 
-The expanded CLI elevates `orquestra sessions` into a complete operator control plane:
+The expanded CLI elevates `ownhub sessions` into a complete operator control plane:
 
 - **Discovery & Querying:** `list`, `search`, `inspect`
 - **Protection & Retention:** `pin`, `unpin`, `purge`, `policy`
@@ -54,7 +54,7 @@ All subcommands support human-readable formatted terminal output by default and 
 ## 3. Command Syntax & Subcommands
 
 ```bash
-orquestra sessions <subcommand> [arguments] [options]
+ownhub sessions <subcommand> [arguments] [options]
 ```
 
 ### 3.1 `list`
@@ -62,7 +62,7 @@ orquestra sessions <subcommand> [arguments] [options]
 Lists sessions across one or all installed harnesses.
 
 ```bash
-orquestra sessions list [options]
+ownhub sessions list [options]
 ```
 
 **Options:**
@@ -78,8 +78,8 @@ orquestra sessions list [options]
 **Example:**
 
 ```bash
-orquestra sessions list --harness claude --limit 10
-orquestra sessions list --pinned-only --json
+ownhub sessions list --harness claude --limit 10
+ownhub sessions list --pinned-only --json
 ```
 
 ---
@@ -89,7 +89,7 @@ orquestra sessions list --pinned-only --json
 Displays detailed metadata and recent transcript turns of a specific session.
 
 ```bash
-orquestra sessions inspect [<session-id>] [options]
+ownhub sessions inspect [<session-id>] [options]
 ```
 
 **Options:**
@@ -104,8 +104,8 @@ orquestra sessions inspect [<session-id>] [options]
 **Example:**
 
 ```bash
-orquestra sessions inspect latest --harness antigravity
-orquestra sessions inspect c9e31d4b-7033-4f9e-a812 --max-turns 20 --compact
+ownhub sessions inspect latest --harness antigravity
+ownhub sessions inspect c9e31d4b-7033-4f9e-a812 --max-turns 20 --compact
 ```
 
 ---
@@ -115,7 +115,7 @@ orquestra sessions inspect c9e31d4b-7033-4f9e-a812 --max-turns 20 --compact
 Pins a session to protect it from automated or accidental purge.
 
 ```bash
-orquestra sessions pin <session-id> [options]
+ownhub sessions pin <session-id> [options]
 ```
 
 **Options:**
@@ -128,7 +128,7 @@ orquestra sessions pin <session-id> [options]
 **Example:**
 
 ```bash
-orquestra sessions pin session-2026-11-05-01 --harness claude --label "Release v1.2 audit"
+ownhub sessions pin session-2026-11-05-01 --harness claude --label "Release v1.2 audit"
 ```
 
 ---
@@ -138,7 +138,7 @@ orquestra sessions pin session-2026-11-05-01 --harness claude --label "Release v
 Removes the pin protection from a session, allowing standard retention rules to apply.
 
 ```bash
-orquestra sessions unpin <session-id> [options]
+ownhub sessions unpin <session-id> [options]
 ```
 
 **Options:**
@@ -150,7 +150,7 @@ orquestra sessions unpin <session-id> [options]
 **Example:**
 
 ```bash
-orquestra sessions unpin session-2026-11-05-01 --harness claude
+ownhub sessions unpin session-2026-11-05-01 --harness claude
 ```
 
 ---
@@ -160,8 +160,8 @@ orquestra sessions unpin session-2026-11-05-01 --harness claude
 Monitors active agent turns and events in real time or inspects the tail of a session.
 
 ```bash
-orquestra sessions tail [<session-id>] [options]
-orquestra sessions watch [options]
+ownhub sessions tail [<session-id>] [options]
+ownhub sessions watch [options]
 ```
 
 **Options:**
@@ -175,8 +175,8 @@ orquestra sessions watch [options]
 **Example:**
 
 ```bash
-orquestra sessions tail --harness antigravity --limit 5
-orquestra sessions watch --follow
+ownhub sessions tail --harness antigravity --limit 5
+ownhub sessions watch --follow
 ```
 
 ---
@@ -186,7 +186,7 @@ orquestra sessions watch --follow
 Generates a structured executive brief for handing over context from one agent/harness to another.
 
 ```bash
-orquestra sessions handoff [<session-id>] [options]
+ownhub sessions handoff [<session-id>] [options]
 ```
 
 **Options:**
@@ -199,8 +199,8 @@ orquestra sessions handoff [<session-id>] [options]
 **Example:**
 
 ```bash
-orquestra sessions handoff latest --source-harness claude
-orquestra sessions handoff latest --harness antigravity --target-harness codex
+ownhub sessions handoff latest --source-harness claude
+ownhub sessions handoff latest --harness antigravity --target-harness codex
 ```
 
 ---
@@ -210,7 +210,7 @@ orquestra sessions handoff latest --harness antigravity --target-harness codex
 Searches across conversation histories, project workspaces, and message content.
 
 ```bash
-orquestra sessions search <query> [options]
+ownhub sessions search <query> [options]
 ```
 
 **Options:**
@@ -225,8 +225,8 @@ orquestra sessions search <query> [options]
 **Example:**
 
 ```bash
-orquestra sessions search "database migration" --content
-orquestra sessions search "OrquestraAI" --harness claude --limit 5
+ownhub sessions search "database migration" --content
+ownhub sessions search "OwnHub" --harness claude --limit 5
 ```
 
 ---
@@ -236,7 +236,7 @@ orquestra sessions search "OrquestraAI" --harness claude --limit 5
 Surgically deletes an individual session across all files and SQLite stores of the harness.
 
 ```bash
-orquestra sessions delete <session-id> [options]
+ownhub sessions delete <session-id> [options]
 ```
 
 **Options:**
@@ -255,7 +255,7 @@ orquestra sessions delete <session-id> [options]
 **Example:**
 
 ```bash
-orquestra sessions delete sess_abc123 --harness codex --yes
+ownhub sessions delete sess_abc123 --harness codex --yes
 ```
 
 ---
@@ -265,7 +265,7 @@ orquestra sessions delete sess_abc123 --harness codex --yes
 Exports a session's metadata and transcript into a Markdown or JSON file.
 
 ```bash
-orquestra sessions export <session-id> [options]
+ownhub sessions export <session-id> [options]
 ```
 
 **Options:**
@@ -279,8 +279,8 @@ orquestra sessions export <session-id> [options]
 **Example:**
 
 ```bash
-orquestra sessions export latest --harness claude --format markdown --output ./session-export.md
-orquestra sessions export sess_abc123 --harness antigravity --format json
+ownhub sessions export latest --harness claude --format markdown --output ./session-export.md
+ownhub sessions export sess_abc123 --harness antigravity --format json
 ```
 
 ---
@@ -290,7 +290,7 @@ orquestra sessions export sess_abc123 --harness antigravity --format json
 Cleans up expired sessions based on age and harness filters, with safe dry-run estimation.
 
 ```bash
-orquestra sessions purge [options]
+ownhub sessions purge [options]
 ```
 
 **Options:**
@@ -305,20 +305,20 @@ orquestra sessions purge [options]
 
 ```bash
 # Dry run
-orquestra sessions purge --older-than-days 30
+ownhub sessions purge --older-than-days 30
 # Execution
-orquestra sessions purge --older-than-days 30 --harness claude --yes
+ownhub sessions purge --older-than-days 30 --harness claude --yes
 ```
 
 ---
 
 ### 3.11 `policy`
 
-Inspects or configures the retention policy in `~/.orquestra/sessions_policy.json`.
+Inspects or configures the retention policy in `~/.ownhub/sessions_policy.json`.
 
 ```bash
-orquestra sessions policy show [options]
-orquestra sessions policy set [options]
+ownhub sessions policy show [options]
+ownhub sessions policy set [options]
 ```
 
 **`policy set` Options:**
@@ -332,8 +332,8 @@ orquestra sessions policy set [options]
 **Example:**
 
 ```bash
-orquestra sessions policy show
-orquestra sessions policy set --default-ttl 15 --auto-purge on --interval 24 --override codex=7
+ownhub sessions policy show
+ownhub sessions policy set --default-ttl 15 --auto-purge on --interval 24 --override codex=7
 ```
 
 ---
@@ -362,6 +362,6 @@ src-tauri/src/cli/native/sessions/
 
 ### 4.2 Shared Backend Crates
 
-- Rely on `crates/orquestra-sessions` (`adapters`, `policy`, `purge`, `types`).
+- Rely on `crates/ownhub-sessions` (`adapters`, `policy`, `purge`, `types`).
 - Respect zero-panic rules (`#![deny(clippy::unwrap_used)]`).
 - All subcommands must return `Result<String, CliError>`.

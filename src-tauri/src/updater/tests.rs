@@ -7,25 +7,25 @@ use super::*;
 fn asset_names_match_the_release_matrix() {
     assert_eq!(
         asset_candidates("linux", "x86_64").expect("linux"),
-        vec!["orquestra-linux-x86_64", "orquestra-ai"]
+        vec!["ownhub-linux-x86_64", "ownhub"]
     );
     assert_eq!(
         asset_candidates("macos", "aarch64").expect("macos"),
-        vec!["orquestra-macos-arm64"]
+        vec!["ownhub-macos-arm64"]
     );
     assert_eq!(
         asset_candidates("macos", "x86_64").expect("macos intel"),
-        vec!["orquestra-macos-x86_64"]
+        vec!["ownhub-macos-x86_64"]
     );
     assert_eq!(
         asset_candidates("linux", "aarch64").expect("linux arm64"),
-        vec!["orquestra-linux-aarch64"]
+        vec!["ownhub-linux-aarch64"]
     );
     // Windows updates replace the executable in place, exactly like the Unix
     // rows: publishing an MSI is a first-install channel, not an update one.
     assert_eq!(
         asset_candidates("windows", "x86_64").expect("windows"),
-        vec!["orquestra-windows-x86_64.exe"]
+        vec!["ownhub-windows-x86_64.exe"]
     );
     // Only x86_64 is published; never guess an asset for an unpublished arch.
     assert!(asset_candidates("windows", "aarch64").is_err());
@@ -36,10 +36,10 @@ fn asset_names_match_the_release_matrix() {
 #[test]
 fn asset_url_pins_the_validated_release_tag() {
     let version = validate_version("v0.1.0-alpha.3").expect("tag");
-    let binary = release_asset_url(&version, "orquestra-linux-x86_64");
+    let binary = release_asset_url(&version, "ownhub-linux-x86_64");
     assert_eq!(
         binary,
-        "https://github.com/internetdozero/OrquestraAI/releases/download/v0.1.0-alpha.3/orquestra-linux-x86_64"
+        "https://github.com/internetdozero/OwnHub/releases/download/v0.1.0-alpha.3/ownhub-linux-x86_64"
     );
     assert!(!binary.contains("/releases/latest/"));
     let sums = release_asset_url(&version, "SHA256SUMS.txt");
@@ -84,26 +84,26 @@ fn downgrades_and_replays_are_refused() {
 
 #[test]
 fn checksum_parsing_is_exact_and_unambiguous() {
-    let dir = crate::paths::fresh_scratch_dir("orquestra-updater-test").expect("scratch");
+    let dir = crate::paths::fresh_scratch_dir("ownhub-updater-test").expect("scratch");
     let sums = dir.join("SHA256SUMS.txt");
-    fs::write(&sums, "abc123  orquestra-linux-x86_64\n Antenna\n").expect("write");
+    fs::write(&sums, "abc123  ownhub-linux-x86_64\n Antenna\n").expect("write");
     assert_eq!(
-        expected_hash(&sums, "orquestra-linux-x86_64").expect("hash"),
+        expected_hash(&sums, "ownhub-linux-x86_64").expect("hash"),
         "abc123"
     );
     assert!(expected_hash(&sums, "missing-binary").is_err());
     fs::write(
         &sums,
-        "abc123  orquestra-linux-x86_64\ndef456 *orquestra-linux-x86_64\n",
+        "abc123  ownhub-linux-x86_64\ndef456 *ownhub-linux-x86_64\n",
     )
     .expect("rewrite");
-    assert!(expected_hash(&sums, "orquestra-linux-x86_64").is_err());
+    assert!(expected_hash(&sums, "ownhub-linux-x86_64").is_err());
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn sha256_of_matches_the_nist_vector_without_external_tools() {
-    let dir = crate::paths::fresh_scratch_dir("orquestra-updater-hash").expect("scratch");
+    let dir = crate::paths::fresh_scratch_dir("ownhub-updater-hash").expect("scratch");
     let file = dir.join("input.bin");
     fs::write(&file, b"abc").expect("write");
     assert_eq!(
@@ -116,7 +116,7 @@ fn sha256_of_matches_the_nist_vector_without_external_tools() {
 
 #[test]
 fn staging_uses_the_secure_runtime_root() {
-    let staging = Staging::fresh("orquestra-update-test").expect("staging");
+    let staging = Staging::fresh("ownhub-update-test").expect("staging");
     let root = crate::paths::ensure_scratch_root().expect("runtime root");
     assert_eq!(root, crate::paths::scratch_root());
     assert!(staging.0.starts_with(&root));

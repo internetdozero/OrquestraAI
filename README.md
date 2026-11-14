@@ -1,20 +1,20 @@
-# OrquestraAI
+# OwnHub
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)](CHANGELOG.md)
-[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-emerald.svg)](https://github.com/internetdozero/OrquestraAI/releases/latest)
+[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-emerald.svg)](https://github.com/internetdozero/OwnHub/releases/latest)
 
 [Leia em Português](README.pt-BR.md)
 
-OrquestraAI is a desktop app and CLI for managing several AI coding agents from one place. It keeps skills, MCP servers, instruction files, sessions and credentials consistent across Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), GitHub Copilot CLI, Hermes Agent, OpenCode and Kilo Code.
+OwnHub is a desktop app and CLI for managing several AI coding agents from one place. It keeps skills, MCP servers, instruction files, sessions and credentials consistent across Claude Code, OpenAI Codex, xAI Grok, Antigravity (AGY), GitHub Copilot CLI, Hermes Agent, OpenCode and Kilo Code.
 
 > [!WARNING]
 > **Alpha software.** Config formats, IPC commands and CLI output may change between releases. Pin automation to a tagged release.
 
 ## Features
 
-- **Skills vault:** one library in `~/.orquestra/skills-library`, projected into each harness through symlinks or native config entries.
-- **MCP registry:** enable MCP servers globally or per harness. Existing Gemini/Antigravity definitions are adopted, and official servers are installed into a private environment under `~/.orquestra/mcp-servers/`.
+- **Skills vault:** one library in `~/.ownhub/skills-library`, projected into each harness through symlinks or native config entries.
+- **MCP registry:** enable MCP servers globally or per harness. Existing Gemini/Antigravity definitions are adopted, and official servers are installed into a private environment under `~/.ownhub/mcp-servers/`.
 - **Unified instructions:** one master `AGENTS.md` linked to each harness's instruction path.
 - **Sessions:** browse, search, export, pin and purge conversation histories from every supported harness.
 - **Credentials vault:** API keys encrypted at rest with AES-256-GCM. The encryption key lives in the OS keyring. Agents can use keys through a blind HTTP/exec proxy without seeing them, and keys copied in the UI are cleared from the clipboard after 20 seconds.
@@ -28,14 +28,14 @@ OrquestraAI is a desktop app and CLI for managing several AI coding agents from 
 Published binaries: **Linux x86_64**, **Linux aarch64**, **macOS Apple Silicon**, **macOS Intel** and **Windows x86_64** (an NSIS installer plus the bare executable the in-app updater replaces).
 
 ```bash
-curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash
+curl -fsSL https://ownhub.internetdozero.com.br/install.sh | bash
 ```
 
 The installer:
 
 1. Resolves the latest GitHub release and downloads the binary, `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`.
 2. Verifies the minisign signature with the embedded release key **before** trusting any checksum. This needs [`minisign`](https://jedisct1.github.io/minisign/) or Python 3 with PyNaCl (`python3-nacl` on Debian/Ubuntu). Installation stops if neither is available or the signature is invalid.
-3. Checks the binary's SHA-256 and installs it to `~/.local/bin/orquestra`.
+3. Checks the binary's SHA-256 and installs it to `~/.local/bin/ownhub`.
 4. On Linux, checks the binary's glibc symbol versions and the WebKitGTK/libsoup libraries, then the runtime tools (`xdg-utils` or `gio`, `git`, `python3` with `venv`), and installs what is missing through the package manager using `sudo`. Pass `--no-auto-deps` to skip the install step and manage them yourself.
 
 Distribution support depends on glibc: the release is built on Ubuntu 22.04, so Debian 11, Ubuntu 20.04 and RHEL/Rocky 8 stop at the loader. A Flatpak bundle built from the same binary runs there. See [docs/install.md](docs/install.md) for the version table and the Flatpak channel.
@@ -43,32 +43,32 @@ Distribution support depends on glibc: the release is built on Ubuntu 22.04, so 
 To diagnose an existing Linux install without downloading again:
 
 ```bash
-curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps
+curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh -s -- --check-deps
 ```
 
-Binaries and release notes are on the [Releases page](https://github.com/internetdozero/OrquestraAI/releases). Changes are listed in the [CHANGELOG](CHANGELOG.md).
+Binaries and release notes are on the [Releases page](https://github.com/internetdozero/OwnHub/releases). Changes are listed in the [CHANGELOG](CHANGELOG.md).
 
 ## CLI
 
 The same binary runs headless subcommands. Add `--json` for machine-readable output.
 
 ```bash
-orquestra sessions list --harness claude
-orquestra skills list --scope claude
-orquestra mcp status
-orquestra vault list
-orquestra idea list --project MyProject
+ownhub sessions list --harness claude
+ownhub skills list --scope claude
+ownhub mcp status
+ownhub vault list
+ownhub idea list --project MyProject
 ```
 
 | Command              | Covers                                                                      | Guide                                        |
 | :------------------- | :-------------------------------------------------------------------------- | :------------------------------------------- |
-| `orquestra sessions` | list, inspect, search, export, pin, purge, retention policy, watch          | [docs/cli/sessions.md](docs/cli/sessions.md) |
-| `orquestra skills`   | list, info, enable/disable, create, import (local or git), export, validate | [docs/cli/skills.md](docs/cli/skills.md)     |
-| `orquestra mcp`      | list, status, add/remove, enable/disable, deploy, list and call tools       | [docs/cli/mcp.md](docs/cli/mcp.md)           |
-| `orquestra vault`    | credentials, key pools, rotation, provider tests, blind proxy, audit        | [docs/cli/vault.md](docs/cli/vault.md)       |
-| `orquestra idea`     | idea lifecycle, search, metrics, blackboard notes                           | [docs/cli/ideas.md](docs/cli/ideas.md)       |
+| `ownhub sessions` | list, inspect, search, export, pin, purge, retention policy, watch          | [docs/cli/sessions.md](docs/cli/sessions.md) |
+| `ownhub skills`   | list, info, enable/disable, create, import (local or git), export, validate | [docs/cli/skills.md](docs/cli/skills.md)     |
+| `ownhub mcp`      | list, status, add/remove, enable/disable, deploy, list and call tools       | [docs/cli/mcp.md](docs/cli/mcp.md)           |
+| `ownhub vault`    | credentials, key pools, rotation, provider tests, blind proxy, audit        | [docs/cli/vault.md](docs/cli/vault.md)       |
+| `ownhub idea`     | idea lifecycle, search, metrics, blackboard notes                           | [docs/cli/ideas.md](docs/cli/ideas.md)       |
 
-`orquestra --help` lists the bridge and MCP shortcuts (`--bridge-status`, `--bridge-deploy`, `--mcp-status`, `--mcp-set`, `--mcp-deploy`, `--preset`).
+`ownhub --help` lists the bridge and MCP shortcuts (`--bridge-status`, `--bridge-deploy`, `--mcp-status`, `--mcp-set`, `--mcp-deploy`, `--preset`).
 
 ## Supported harnesses
 
@@ -95,8 +95,8 @@ sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
 ```
 
 ```bash
-git clone https://github.com/internetdozero/OrquestraAI.git
-cd OrquestraAI
+git clone https://github.com/internetdozero/OwnHub.git
+cd OwnHub
 npm install
 npm run dev:tauri        # desktop app in development mode
 ```
@@ -112,7 +112,7 @@ cargo test --workspace
 
 Stack: Tauri v2 and a Rust workspace (`crates/`: core, harness, vault, bridge, sessions) with a React 19 + TypeScript + Vite frontend styled with Tailwind CSS v4. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/IPC_API.md](docs/IPC_API.md), [docs/vault.md](docs/vault.md) and [docs/security.md](docs/security.md).
 
-Official skills and MCP servers live in [internetdozero/orquestra-extensions](https://github.com/internetdozero/orquestra-extensions).
+Official skills and MCP servers live in [internetdozero/ownhub-extensions](https://github.com/internetdozero/ownhub-extensions).
 
 ## License
 

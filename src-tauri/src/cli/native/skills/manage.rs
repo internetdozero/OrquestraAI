@@ -1,7 +1,7 @@
 //! Skill management: create, scaffold, import, export, and content.
 
 use super::super::{parse_options, rendered, usage, CliError};
-use crate::paths::{copy_dir_all, OrquestraPaths};
+use crate::paths::{copy_dir_all, OwnHubPaths};
 use crate::skills::{
     import_skill, import_skill_from_git, read_skill_content, save_skill_content, set_skill_state,
 };
@@ -13,7 +13,7 @@ pub(super) fn create(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills create <id> [--name <str>] [--description <str>] [--category <cat>] [--with-scripts] [--enable] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub skills create <id> [--name <str>] [--description <str>] [--category <cat>] [--with-scripts] [--enable] [--json]".to_string()))?;
 
     let options = parse_options(
         &args[1..],
@@ -33,7 +33,7 @@ pub(super) fn create(args: &[String]) -> Result<String, CliError> {
     let with_scripts = options.has("--with-scripts");
     let enable_after = options.has("--enable");
 
-    let paths = OrquestraPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
+    let paths = OwnHubPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
     let skill_dir = paths.vault.join(id);
     if skill_dir.exists() {
         return Err(CliError::Operation(format!(
@@ -86,7 +86,7 @@ pub(super) fn import(args: &[String]) -> Result<String, CliError> {
     let source = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills import <path|url> [--subpath <path>] [--scope <scope>] [--enable] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub skills import <path|url> [--subpath <path>] [--scope <scope>] [--enable] [--json]".to_string()))?;
 
     let options = parse_options(
         &args[1..],
@@ -128,14 +128,14 @@ pub(super) fn export(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra skills export <id> [--out <dir>] [--tar] [--json]".to_string())
+            usage("usage: ownhub skills export <id> [--out <dir>] [--tar] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--out"], &["--tar", "--json"])?;
     let out_dir = options.one("--out")?.unwrap_or_else(|| ".".to_string());
     let tar = options.has("--tar");
 
-    let paths = OrquestraPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
+    let paths = OwnHubPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
     let src_dir = paths.vault.join(id);
     if !src_dir.is_dir() {
         return Err(CliError::Operation(format!(
@@ -171,7 +171,7 @@ pub(super) fn content(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra skills content <get|set> <id> [options]".to_string())
+            usage("usage: ownhub skills content <get|set> <id> [options]".to_string())
         })?;
 
     match action.as_str() {
@@ -179,13 +179,13 @@ pub(super) fn content(args: &[String]) -> Result<String, CliError> {
             let id = args
                 .get(1)
                 .filter(|a| !a.starts_with('-'))
-                .ok_or_else(|| usage("usage: orquestra skills content get <id>".to_string()))?;
+                .ok_or_else(|| usage("usage: ownhub skills content get <id>".to_string()))?;
             let raw = read_skill_content(id.to_string()).map_err(CliError::Operation)?;
             Ok(raw)
         }
         "set" => {
             let id = args.get(1).filter(|a| !a.starts_with('-')).ok_or_else(|| {
-                usage("usage: orquestra skills content set <id> --file <path> [--json]".to_string())
+                usage("usage: ownhub skills content set <id> --file <path> [--json]".to_string())
             })?;
             let options = parse_options(&args[2..], &["--file"], &["--json"])?;
             let file_target = options.required("--file")?;

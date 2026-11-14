@@ -1,0 +1,337 @@
+//! Operations behind the desktop shell's IPC commands.
+//!
+//! Every function takes the resolved storage layout, so the shell keeps only
+//! argument marshalling and the `#[tauri::command]` boundary.
+
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use ownhub_core::paths::OwnHubPaths;
+use serde::Serialize;
+
+use super::atomic::update_vault;
+use super::exec;
+use super::store::{
+    load_vault, mask_key, purge_migration_backup as purge_store_backup, resolve_key_number,
+    resolve_saved_tag, to_public, validate_id, KeyHealth, VaultFile, VaultKey, VaultService,
+    VaultServicePublic,
+};
+
+const MAX_IMPORT_BYTES: usize = 16 * 1024 * 1024;
+
+/// Masked services: names, active index, counts, health. No secrets.
+pub fn list_services(paths: &OwnHubPaths) -> Result<Vec<VaultServicePublic>, String> {
+    let vault = load_vault(paths)?;
+    Ok(vault.services.values().map(to_public).collect())
+}
+
+/// Reveal one raw credential only after an explicit operator action.
+pub fn reveal_key(paths: &OwnHubPaths, id: &str, index: usize) -> Result<String, String> {
+    let vault = load_vault(paths)?;
+    let service = vault
+        .services
+        .get(id)
+        .ok_or_else(|| format!("unknown vault service: {id}"))?;
+    service
+        .keys
+        .get(index)
+        .map(|key| key.secret.clone())
+        .ok_or_else(|| format!("key index {index} out of range for {id}"))
+}
+
+/// Import a plaintext or locally encrypted vault JSON, merging services by
+/// id. The active vault is only written after the complete import validates.
+pub fn import_services(
+    paths: &OwnHubPaths,
+    content: &str,
+) -> Result<Vec<VaultServicePublic>, String> {
+    if content.len() > MAX_IMPORT_BYTES {
+        return Err("the credential file is too large to import (16 MB maximum)".to_string());
+    }
+    let plaintext = crate::at_rest::open_import_text(paths, content, crate::at_rest::AAD_VAULT)?;
+    let mut imported: VaultFile = serde_json::from_str(&plaintext)
+        .map_err(|error| format!("the credential JSON has an invalid vault structure: {error}"))?;
+    if imported.services.is_empty() {
+        return Err("the credential file contains no services".to_string());
+    }
+    for (id, service) in &mut imported.services {
+        validate_id(id)?;
+        if service.id != *id {
+            return Err(format!("service id does not match its vault entry: {id}"));
+        }
+        if service.keys.is_empty() || service.keys.iter().any(|key| key.secret.trim().is_empty()) {
+            return Err(format!("service {id} has no valid credential keys"));
+        }
+        service.active = service.active.min(service.keys.len() - 1);
+        for (index, key) in service.keys.iter_mut().enumerate() {
+            key.id = format!("key-{index}");
+        }
+    }
+    let imported_ids: Vec<String> = imported.services.keys().cloned().collect();
+
+    update_vault(paths, |vault| {
+        vault.services.extend(imported.services);
+        Ok(imported_ids
+            .iter()
+            .filter_map(|id| vault.services.get(id).map(to_public))
+            .collect())
+    })
+}
+
+/// Everything needed to register or replace one service.
+pub struct SaveServiceInput {
+    pub id: String,
+    pub label: String,
+    pub preset: String,
+    pub description: Option<String>,
+    /// Raw secrets from the editor; a key equal to the stored mask keeps the
+    /// secret already on disk, so the drawer can round-trip safely.
+    pub keys: Vec<String>,
+    pub custom_header: Option<String>,
+    pub custom_prefix: Option<String>,
+    pub custom_env: Option<String>,
+    pub meta: Option<HashMap<String, String>>,
+    pub key_tags: Option<Vec<Option<String>>>,
+}
+
+/// Register or replace a service with 1+ keys, preserving stored secrets and
+/// key health for anything the editor sent back as a mask.
+pub fn save_service(
+    paths: &OwnHubPaths,
+    input: SaveServiceInput,
+) -> Result<VaultServicePublic, String> {
+    validate_id(&input.id)?;
+    let id = input.id;
+    let kept: Vec<String> = input
+        .keys
+        .into_iter()
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
+        .collect();
+    if kept.is_empty() {
+        return Err("a vault service needs at least one key".to_string());
+    }
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    // Snapshot the previous entry for mask/tag preservation WITHOUT holding
+    // the vault across the write: the insert below reloads fresh under lock.
+    let previous = load_vault(paths)?.services.remove(&id);
+    let mut next_keys: Vec<VaultKey> = Vec::new();
+    let wanted_tags: Vec<Option<String>> = input.key_tags.unwrap_or_default();
+    for (index, secret) in kept.iter().enumerate() {
+        // Preserve stored secret when the UI sends back its own mask.
+        let mut resolved = secret.clone();
+        if let Some(prev_key) = previous.as_ref().and_then(|prev| prev.keys.get(index)) {
+            if mask_key(&prev_key.secret) == *secret {
+                resolved = prev_key.secret.clone();
+            }
+        }
+        let (health, failures, cooldown, prev_tag) = previous
+            .as_ref()
+            .and_then(|prev| prev.keys.iter().find(|key| key.secret == resolved))
+            .map(|key| {
+                (
+                    key.health,
+                    key.failures,
+                    key.cooldown_until_ms,
+                    key.tag.clone(),
+                )
+            })
+            .unwrap_or((KeyHealth::Healthy, 0, 0, None));
+        // Positional fallback for callers that round-trip masks without tags.
+        let positional = previous
+            .as_ref()
+            .and_then(|prev| prev.keys.get(index))
+            .and_then(|prev_key| {
+                if mask_key(&prev_key.secret) == *secret {
+                    prev_key.tag.clone()
+                } else {
+                    None
+                }
+            });
+        let tag = resolve_saved_tag(wanted_tags.get(index), prev_tag.or(positional));
+        next_keys.push(VaultKey {
+            id: format!("key-{index}"),
+            secret: resolved,
+            tag,
+            health,
+            cooldown_until_ms: cooldown,
+            failures,
+        });
+    }
+    let active = previous
+        .as_ref()
+        .map(|prev| prev.active.min(next_keys.len().saturating_sub(1)))
+        .unwrap_or(0);
+    let service = VaultService {
+        id: id.clone(),
+        label: if input.label.trim().is_empty() {
+            id.clone()
+        } else {
+            input.label
+        },
+        // The editor round-trips masks, not the kill-switch: keep whatever
+        // the toggle set, defaulting new services to enabled.
+        enabled: previous.as_ref().map(|prev| prev.enabled).unwrap_or(true),
+        preset: input.preset,
+        description: input.description.unwrap_or_default(),
+        keys: next_keys,
+        active,
+        custom_header: input.custom_header,
+        custom_prefix: input.custom_prefix,
+        custom_env: input.custom_env,
+        meta: input.meta.unwrap_or_default(),
+        updated_at_ms: now,
+    };
+    let public = to_public(&service);
+    update_vault(paths, |vault| {
+        vault.services.insert(id.clone(), service.clone());
+        Ok(to_public(&service))
+    })?;
+    Ok(public)
+}
+
+/// Remove one service from the vault.
+pub fn delete_service(paths: &OwnHubPaths, id: &str) -> Result<(), String> {
+    update_vault(paths, |vault| {
+        if vault.services.remove(id).is_none() {
+            return Err(format!("unknown vault service: {id}"));
+        }
+        Ok(())
+    })
+}
+
+/// Flip the operator kill-switch: disabled services stay listed (masked)
+/// but the blind proxy and exec refuse them, so agents only ever reach
+/// enabled services.
+pub fn set_service_enabled(
+    paths: &OwnHubPaths,
+    id: &str,
+    enabled: bool,
+) -> Result<VaultServicePublic, String> {
+    update_vault(paths, |vault| {
+        let service = vault
+            .services
+            .get_mut(id)
+            .ok_or_else(|| format!("unknown vault service: {id}"))?;
+        service.enabled = enabled;
+        Ok(to_public(service))
+    })
+}
+
+/// Designate the primary key index for a service.
+pub fn set_primary(
+    paths: &OwnHubPaths,
+    id: &str,
+    index: usize,
+) -> Result<VaultServicePublic, String> {
+    update_vault(paths, |vault| {
+        let service = vault
+            .services
+            .get_mut(id)
+            .ok_or_else(|| format!("unknown vault service: {id}"))?;
+        if index >= service.keys.len() {
+            return Err(format!("key index {index} out of range for {id}"));
+        }
+        service.active = index;
+        Ok(to_public(service))
+    })
+}
+
+/// Remove one key from a pool (re-indexes, keeps a valid primary).
+pub fn remove_key(
+    paths: &OwnHubPaths,
+    id: &str,
+    index: usize,
+) -> Result<VaultServicePublic, String> {
+    update_vault(paths, |vault| {
+        let service = vault
+            .services
+            .get_mut(id)
+            .ok_or_else(|| format!("unknown vault service: {id}"))?;
+        if service.keys.len() <= 1 {
+            return Err(format!(
+                "cannot remove the last key of {id}; delete the service instead"
+            ));
+        }
+        if index >= service.keys.len() {
+            return Err(format!("key index {index} out of range for {id}"));
+        }
+        service.keys.remove(index);
+        service.active = service.active.min(service.keys.len().saturating_sub(1));
+        Ok(to_public(service))
+    })
+}
+
+#[cfg(test)]
+#[path = "enabled_tests.rs"]
+mod tests;
+
+/// Blind exec response: exit code + scrubbed output streams.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultExecResult {
+    pub code: i32,
+    pub stdout: String,
+    pub stderr: String,
+    pub used_key_index: usize,
+}
+
+/// Blind exec: spawn with env-injected secrets, scrub output.
+/// `command` accepts ONLY a string array: `argv[0]` must be a bare name on
+/// the exec allowlist (`exec::ALLOWED_BINARIES`) and runs with no shell, so
+/// shell strings, pipes and redirections are rejected instead of executed.
+pub fn execute(
+    paths: &OwnHubPaths,
+    service: &str,
+    command: &serde_json::Value,
+) -> Result<VaultExecResult, String> {
+    execute_with_key_number(paths, service, command, None)
+}
+
+/// Execute a blind command with the active key or one explicitly selected key.
+pub fn execute_with_key_number(
+    paths: &OwnHubPaths,
+    service: &str,
+    command: &serde_json::Value,
+    key_number: Option<usize>,
+) -> Result<VaultExecResult, String> {
+    let vault = load_vault(paths)?;
+    let current = vault
+        .services
+        .get(service)
+        .ok_or_else(|| format!("unknown vault service: {service}"))?;
+    if current.keys.is_empty() {
+        return Err(format!("vault service {service} has no keys"));
+    }
+    if !current.enabled {
+        return Err(format!("vault service {service} is disabled"));
+    }
+    let used = resolve_key_number(key_number, current.keys.len(), current.active)?;
+    let secret = current
+        .keys
+        .get(used)
+        .map(|key| key.secret.clone())
+        .unwrap_or_default();
+    let (code, stdout, stderr) = exec::run_command(current, &secret, command)?;
+    Ok(VaultExecResult {
+        code,
+        stdout,
+        stderr,
+        used_key_index: used,
+    })
+}
+
+/// Schema-level gate: the vault must parse before anything may be purged.
+pub fn ensure_readable(paths: &OwnHubPaths) -> Result<(), String> {
+    load_vault(paths).map(|_| ())
+}
+
+/// Zeroize and unlink the vault's `.migrate-bak` plaintext backup. The
+/// sealed-file gate lives in the at-rest layer, so this never destroys the
+/// only readable copy.
+pub fn purge_migration_backup(paths: &OwnHubPaths) -> Result<bool, String> {
+    purge_store_backup(paths)
+}

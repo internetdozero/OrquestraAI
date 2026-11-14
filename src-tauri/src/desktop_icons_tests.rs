@@ -12,8 +12,8 @@ fn desktop_install_does_not_write_through_a_symlink() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let root = orquestra_core::test_support::root().join(format!(
-        "orquestra-desktop-link-{}-{unique}",
+    let root = ownhub_core::test_support::root().join(format!(
+        "ownhub-desktop-link-{}-{unique}",
         std::process::id()
     ));
     let data = root.join("share");
@@ -21,7 +21,7 @@ fn desktop_install_does_not_write_through_a_symlink() {
     let outside = root.join("outside.txt");
     let original = "ssh-private\n";
     std::fs::write(&outside, original).unwrap();
-    let link = data.join("applications/orquestra.desktop");
+    let link = data.join("applications/ownhub.desktop");
     std::os::unix::fs::symlink(&outside, &link).unwrap();
 
     desktop_icons::install_linux_assets(&data);
@@ -34,8 +34,8 @@ fn desktop_install_does_not_write_through_a_symlink() {
         "the desktop entry symlink must stay"
     );
     assert_eq!(std::fs::read_to_string(&outside).unwrap(), original);
-    let regular = std::fs::read_to_string(data.join("applications/orquestra-ai.desktop")).unwrap();
-    assert!(regular.contains("Name=OrquestraAI"));
+    let regular = std::fs::read_to_string(data.join("applications/dev.ownanai.hub.desktop")).unwrap();
+    assert!(regular.contains("Name=OwnHub"));
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -45,8 +45,8 @@ fn desktop_install_does_not_write_into_a_symlinked_applications_dir() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let root = orquestra_core::test_support::root().join(format!(
-        "orquestra-desktop-dir-link-{}-{unique}",
+    let root = ownhub_core::test_support::root().join(format!(
+        "ownhub-desktop-dir-link-{}-{unique}",
         std::process::id()
     ));
     let data = root.join("share");
@@ -59,7 +59,7 @@ fn desktop_install_does_not_write_into_a_symlinked_applications_dir() {
     desktop_icons::install_linux_assets(&data);
 
     assert!(
-        !outside.join("orquestra.desktop").exists(),
+        !outside.join("ownhub.desktop").exists(),
         "install must not create a launcher in the symlink target"
     );
     assert!(std::fs::symlink_metadata(&link)
@@ -78,8 +78,8 @@ fn desktop_install_reports_change_only_once() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let data = orquestra_core::test_support::root().join(format!(
-        "orquestra-desktop-idem-{}-{unique}",
+    let data = ownhub_core::test_support::root().join(format!(
+        "ownhub-desktop-idem-{}-{unique}",
         std::process::id()
     ));
 
@@ -88,7 +88,7 @@ fn desktop_install_reports_change_only_once() {
         "first install writes launcher and icons"
     );
     assert_eq!(
-        std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap(),
+        std::fs::read_to_string(data.join("applications/ownhub.desktop")).unwrap(),
         desktop_icons::desktop_entry(&desktop_icons::launch_exec()),
     );
     assert!(
@@ -100,7 +100,7 @@ fn desktop_install_reports_change_only_once() {
 }
 
 /// Only the canonical launcher is menu-visible: the technical aliases
-/// carry `NoDisplay=true`, so GNOME/KDE/XFCE show a single OrquestraAI
+/// carry `NoDisplay=true`, so GNOME/KDE/XFCE show a single OwnHub
 /// icon. A pre-dedup alias (canonical text from an older install)
 /// converges to hidden on the next run.
 #[test]
@@ -109,17 +109,22 @@ fn desktop_alias_entries_stay_hidden_from_menus() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let data = orquestra_core::test_support::root().join(format!(
-        "orquestra-desktop-nodisplay-{}-{unique}",
+    let data = ownhub_core::test_support::root().join(format!(
+        "ownhub-desktop-nodisplay-{}-{unique}",
         std::process::id()
     ));
 
     assert!(desktop_icons::install_linux_assets(&data));
-    let canonical = std::fs::read_to_string(data.join("applications/orquestra.desktop")).unwrap();
+    let canonical = std::fs::read_to_string(data.join("applications/ownhub.desktop")).unwrap();
     assert!(!canonical.contains("NoDisplay"), "canonical stays visible");
-    for alias in ["orquestra-ai.desktop", "ai.orquestra.desktop.desktop"] {
+    for alias in [
+        "orquestra.desktop",
+        "orquestra-ai.desktop",
+        "ai.orquestra.desktop.desktop",
+        "dev.ownanai.hub.desktop",
+    ] {
         let text = std::fs::read_to_string(data.join(format!("applications/{alias}"))).unwrap();
-        assert!(text.contains("Name=OrquestraAI"));
+        assert!(text.contains("Name=OwnHub"));
         assert!(
             text.lines().any(|line| line == "NoDisplay=true"),
             "{alias} must stay hidden from menus"

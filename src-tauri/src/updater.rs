@@ -18,7 +18,7 @@ mod replace;
 
 pub use replace::purge_retired_binaries;
 
-const REPO: &str = "internetdozero/OrquestraAI";
+const REPO: &str = "internetdozero/OwnHub";
 
 /// Summary of an upstream sync of installed official extensions.
 #[derive(Debug, Clone, Serialize)]
@@ -57,7 +57,7 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
     let version = validate_version(&target_version)?;
     require_newer_version(&version)?;
     let assets = asset_candidates(std::env::consts::OS, std::env::consts::ARCH)?;
-    let staging = Staging::fresh("orquestra-update")?;
+    let staging = Staging::fresh("ownhub-update")?;
 
     // Pin the tag the operator confirmed. `releases/latest` can move between
     // the UI check and this call, and the success string would still name
@@ -124,7 +124,7 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
         target
             .file_name()
             .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "orquestra".to_string()),
+            .unwrap_or_else(|| "ownhub".to_string()),
         crate::paths::unique_tmp_suffix()
     ));
     fs::copy(&binary_path, &sibling)
@@ -210,14 +210,14 @@ fn release_asset_url(version: &str, asset: &str) -> String {
 /// Release asset candidates per platform; Linux keeps the legacy alias.
 fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
     match (os, arch) {
-        ("linux", "x86_64") => Ok(vec!["orquestra-linux-x86_64", "orquestra-ai"]),
-        ("linux", "aarch64") => Ok(vec!["orquestra-linux-aarch64"]),
-        ("macos", "aarch64") => Ok(vec!["orquestra-macos-arm64"]),
-        ("macos", "x86_64") => Ok(vec!["orquestra-macos-x86_64"]),
+        ("linux", "x86_64") => Ok(vec!["ownhub-linux-x86_64", "ownhub"]),
+        ("linux", "aarch64") => Ok(vec!["ownhub-linux-aarch64"]),
+        ("macos", "aarch64") => Ok(vec!["ownhub-macos-arm64"]),
+        ("macos", "x86_64") => Ok(vec!["ownhub-macos-x86_64"]),
         // Windows ships the bare executable, like every other row: the MSI/NSIS
         // installer is for first install, and an in-place update must not run
         // one (it would relaunch the installer mid-session).
-        ("windows", "x86_64") => Ok(vec!["orquestra-windows-x86_64.exe"]),
+        ("windows", "x86_64") => Ok(vec!["ownhub-windows-x86_64.exe"]),
         _ => Err(format!("unsupported platform for updates: {os}-{arch}")),
     }
 }

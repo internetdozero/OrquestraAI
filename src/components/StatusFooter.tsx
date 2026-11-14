@@ -79,7 +79,7 @@ export function StatusFooter({
 
         <div className="hidden items-center gap-1.5 font-mono text-[10.5px] text-zinc-600 lg:flex">
           <FolderTree className="size-3" />
-          ~/.orquestra/active
+          ~/.ownhub/active
         </div>
 
         <div className="flex items-center gap-2">

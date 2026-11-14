@@ -7,7 +7,7 @@ pub(super) fn pin(args: &[String]) -> Result<String, CliError> {
     let session_id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra sessions pin <session-id> [--harness <id>] [--label <text>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub sessions pin <session-id> [--harness <id>] [--label <text>] [--json]".to_string()))?;
 
     let options = parse_options(&args[1..], &["--harness", "--label"], &["--json"])?;
     let harness = resolve_harness(session_id, options.one("--harness")?)?;
@@ -38,7 +38,7 @@ pub(super) fn unpin(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra sessions unpin <session-id> [--harness <id>] [--json]"
+                "usage: ownhub sessions unpin <session-id> [--harness <id>] [--json]"
                     .to_string(),
             )
         })?;

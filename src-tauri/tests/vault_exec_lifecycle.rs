@@ -4,7 +4,7 @@
 
 mod common;
 
-use orquestra_ai_lib::vault::{vault_delete_service, vault_exec, vault_save_service};
+use ownhub_lib::vault::{vault_delete_service, vault_exec, vault_save_service};
 
 const SECRET: &str = "sk-it-lifecycle-abcdef123456";
 

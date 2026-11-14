@@ -1,4 +1,4 @@
-//! Granular CLI management for Model Context Protocol (MCP) servers (`orquestra mcp …`).
+//! Granular CLI management for Model Context Protocol (MCP) servers (`ownhub mcp …`).
 
 use super::{usage, CliError};
 
@@ -10,7 +10,7 @@ mod protocol;
 #[cfg(test)]
 mod tests;
 
-const USAGE: &str = "usage: orquestra mcp <list|status|inspect|add|remove|enable|disable|set-state|deploy|targets|test-connection|tools-list|call-tool> [options]";
+const USAGE: &str = "usage: ownhub mcp <list|status|inspect|add|remove|enable|disable|set-state|deploy|targets|test-connection|tools-list|call-tool> [options]";
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     match args.first().map(String::as_str) {

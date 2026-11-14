@@ -13,7 +13,7 @@ function Write-Lines([string]$Path, [string[]]$Lines) {
     [System.IO.File]::WriteAllLines($Path, $Lines)
 }
 
-$root = Join-Path ([System.IO.Path]::GetTempPath()) ("orquestra-install-test-" + [guid]::NewGuid().ToString('N'))
+$root = Join-Path ([System.IO.Path]::GetTempPath()) ("ownhub-install-test-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 try {
     $sums = Join-Path $root 'SHA256SUMS.txt'
@@ -23,25 +23,25 @@ try {
     $otherHash = 'b' * 64
     $duplicateHash = 'c' * 64
     $sumLines = @()
-    $sumLines += "$assetHash  orquestra-windows-x86_64.exe"
+    $sumLines += "$assetHash  ownhub-windows-x86_64.exe"
     $sumLines += "$otherHash  SHA256SUMS.txt"
     Write-Lines -Path $sums -Lines $sumLines
 
-    $actual = Get-ExpectedChecksum $sums 'orquestra-windows-x86_64.exe'
+    $actual = Get-ExpectedChecksum $sums 'ownhub-windows-x86_64.exe'
     if ($actual -ne $assetHash) { throw 'checksum parser returned the wrong asset hash' }
 
     # A release that lists the same asset twice cannot be pinned.
-    $sumLines += "$duplicateHash  orquestra-windows-x86_64.exe"
+    $sumLines += "$duplicateHash  ownhub-windows-x86_64.exe"
     Write-Lines -Path $sums -Lines $sumLines
     $ambiguous = $false
-    try { Get-ExpectedChecksum $sums 'orquestra-windows-x86_64.exe' | Out-Null }
+    try { Get-ExpectedChecksum $sums 'ownhub-windows-x86_64.exe' | Out-Null }
     catch { $ambiguous = $true }
     if (-not $ambiguous) { throw 'checksum parser accepted duplicate asset entries' }
 
     $signature = 'RUQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     $global = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
     $sigLines = @()
-    $sigLines += 'untrusted comment: signature from orquestra release key'
+    $sigLines += 'untrusted comment: signature from ownhub release key'
     $sigLines += $signature
     $sigLines += "trusted comment: timestamp=1730000000`tfile=SHA256SUMS.txt`tversion=0.1.0-alpha.7"
     $sigLines += $global
@@ -55,7 +55,7 @@ try {
 
     # A second `version=` field must not let an older tag ride along.
     $duplicateLines = @()
-    $duplicateLines += 'untrusted comment: signature from orquestra release key'
+    $duplicateLines += 'untrusted comment: signature from ownhub release key'
     $duplicateLines += $signature
     $duplicateLines += "trusted comment: timestamp=1730000000`tfile=SHA256SUMS.txt`tversion=0.1.0-alpha.7`tversion=0.1.0-alpha.8"
     $duplicateLines += $global

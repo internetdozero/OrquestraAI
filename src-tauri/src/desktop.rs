@@ -1,17 +1,19 @@
 //! Native desktop actions: opening URLs and folders in the system browser /
-//! file manager, and snapshotting `~/.orquestra` into a real backup archive.
+//! file manager, and snapshotting `~/.ownhub` into a real backup archive.
 //!
 //! The webview blocks `<a target="_blank">`, so external links and folder
 //! reveals go through these commands. Every path is resolved against `HOME`
 //! and validated before anything launches: `open_in_file_manager` only
-//! reveals locations inside `~/.orquestra`, and non-`http(s)` URLs are
+//! reveals locations inside `~/.ownhub`, and non-`http(s)` URLs are
 //! rejected so a crafted string can never escape into a local handler.
 
 use std::path::{Path, PathBuf};
 
 /// Root everything here is confined to.
-fn orquestra_root() -> Result<PathBuf, String> {
-    Ok(crate::paths::require_home("locate ~/.orquestra")?.join(".orquestra"))
+fn ownhub_root() -> Result<PathBuf, String> {
+    Ok(crate::paths::storage_root(&crate::paths::require_home(
+        "locate ~/.ownhub",
+    )?))
 }
 
 /// Open an external HTTP(S) URL in the default system browser.
@@ -100,12 +102,12 @@ fn browser_candidates(os: &str, url: &str) -> Result<Vec<(&'static str, Vec<Stri
     }
 }
 
-/// Reveal a directory inside `~/.orquestra` in the native file manager.
+/// Reveal a directory inside `~/.ownhub` in the native file manager.
 /// `~` prefixes resolve against `HOME`; anything outside the root or that
 /// does not exist is refused. Files reveal their parent folder.
 #[tauri::command]
 pub fn open_in_file_manager(path: String) -> Result<(), String> {
-    let root = orquestra_root()?;
+    let root = ownhub_root()?;
     let expanded = if let Some(rest) = path.strip_prefix("~/") {
         crate::paths::require_home("expand ~")?.join(rest)
     } else {
@@ -119,7 +121,7 @@ pub fn open_in_file_manager(path: String) -> Result<(), String> {
         .canonicalize()
         .map_err(|_| format!("{} does not exist yet", root.display()))?;
     if !target.starts_with(&canonical_root) {
-        return Err("Only paths inside ~/.orquestra can be opened".to_string());
+        return Err("Only paths inside ~/.ownhub can be opened".to_string());
     }
 
     // Revealing means showing the folder: a file resolves to its parent.
@@ -165,14 +167,14 @@ fn file_manager_candidates(
     }
 }
 
-/// Snapshot `~/.orquestra` (configs, presets, vault, projections) into a
-/// `tar.gz` under `~/.orquestra/backups/`, excluding previous backups.
+/// Snapshot `~/.ownhub` (configs, presets, vault, projections) into a
+/// `tar.gz` under `~/.ownhub/backups/`, excluding previous backups.
 /// Returns the archive path so the UI can toast the real destination.
 /// Archive and directory are locked to owner-only (`0600`/`0700`) inside
 /// [`crate::desktop_backup`]: the tarball embeds cleartext vault secrets.
 #[tauri::command]
-pub fn create_orquestra_backup() -> Result<String, String> {
-    let root = orquestra_root()?;
+pub fn create_ownhub_backup() -> Result<String, String> {
+    let root = ownhub_root()?;
     if !root.is_dir() {
         return Err(format!("{} does not exist yet", root.display()));
     }
@@ -212,7 +214,7 @@ pub fn ensure_desktop_integration() {}
 /// Register the app with the current desktop, once per launch.
 ///
 /// Linux installs `.desktop` entries and hicolor icons and refreshes the
-/// caches; macOS writes an `OrquestraAI.app` bundle into `~/Applications`;
+/// caches; macOS writes an `OwnHub.app` bundle into `~/Applications`;
 /// Windows writes a Start Menu shortcut. All of it runs on a detached worker
 /// thread so the first window never waits on file writes or cache refreshes,
 /// and every write is content-compared first, so a steady-state launch costs
@@ -261,8 +263,8 @@ mod tests {
 
     #[test]
     fn file_manager_reveals_the_item_in_finder_and_parent_on_other_platforms() {
-        let target = Path::new("/home/user/.orquestra/config.json");
-        let parent = Path::new("/home/user/.orquestra");
+        let target = Path::new("/home/user/.ownhub/config.json");
+        let parent = Path::new("/home/user/.ownhub");
 
         let macos = file_manager_candidates("macos", target, parent).unwrap();
         assert_eq!(macos[0].0, "open");

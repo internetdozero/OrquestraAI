@@ -171,7 +171,7 @@ fn payload_shapes_match_the_frozen_contract() {
     assert_keys(
         "BridgeReport",
         keys_of(&BridgeReport {
-            backup_dir: Some("~/.orquestra/backups/pre-fusion-1".to_string()),
+            backup_dir: Some("~/.ownhub/backups/pre-fusion-1".to_string()),
             bridged: 6,
             total: 9,
             harnesses: vec![harness_status()],

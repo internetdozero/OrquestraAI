@@ -22,9 +22,9 @@ use std::process::Command;
 use crate::windows_shell::APP_USER_MODEL_ID;
 
 /// Shortcut name shown in the Start menu.
-const SHORTCUT_NAME: &str = "OrquestraAI.lnk";
+const SHORTCUT_NAME: &str = "OwnHub.lnk";
 /// Sidecar recording which script produced the shortcut.
-const STAMP_NAME: &str = "OrquestraAI.lnk.stamp";
+const STAMP_NAME: &str = "OwnHub.lnk.stamp";
 
 /// Path relative to `%APPDATA%`.
 #[cfg(windows)]
@@ -38,7 +38,7 @@ const PROGRAMS_DIR: &str = "Microsoft/Windows/Start Menu/Programs";
 /// that ships with Windows, so no toolchain is installed and no binary is
 /// shipped. `PKEY_AppUserModel_ID` is the fixed GUID/PID pair below.
 const APP_MODEL_HELPER: &str = r#"
-Add-Type -Namespace Orquestra -Name AppModel -MemberDefinition @'
+Add-Type -Namespace OwnHub -Name AppModel -MemberDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
@@ -101,9 +101,9 @@ pub(super) fn shortcut_script(link: &Path, exe: &Path) -> String {
          $s.TargetPath = {target}; \
          $s.WorkingDirectory = {working_dir}; \
          $s.IconLocation = {target} + ',0'; \
-         $s.Description = 'OrquestraAI'; \
+         $s.Description = 'OwnHub'; \
          $s.Save(); \
-         [Orquestra.AppModel.Store]::Set({link}, '{aumid}')",
+         [OwnHub.AppModel.Store]::Set({link}, '{aumid}')",
         helper = APP_MODEL_HELPER,
         link = quote(link),
         aumid = APP_USER_MODEL_ID,
@@ -212,7 +212,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         let dir = std::env::temp_dir().join(format!(
-            "orquestra-shortcut-{}-{unique}",
+            "ownhub-shortcut-{}-{unique}",
             std::process::id()
         ));
         std::fs::create_dir_all(&dir).unwrap();
@@ -222,13 +222,13 @@ mod tests {
     #[test]
     fn script_points_at_the_exe_and_escapes_quotes() {
         let script = shortcut_script(
-            Path::new(r"C:\Users\dev\Start Menu\Programs\OrquestraAI.lnk"),
-            Path::new(r"C:\Users\dev\.local\bin\orquestra-ai.exe"),
+            Path::new(r"C:\Users\dev\Start Menu\Programs\OwnHub.lnk"),
+            Path::new(r"C:\Users\dev\.local\bin\ownhub.exe"),
         );
         assert!(
-            script.contains(r"CreateShortcut('C:\Users\dev\Start Menu\Programs\OrquestraAI.lnk')")
+            script.contains(r"CreateShortcut('C:\Users\dev\Start Menu\Programs\OwnHub.lnk')")
         );
-        assert!(script.contains(r"$s.TargetPath = 'C:\Users\dev\.local\bin\orquestra-ai.exe'"));
+        assert!(script.contains(r"$s.TargetPath = 'C:\Users\dev\.local\bin\ownhub.exe'"));
         assert!(
             script.contains(r"$s.WorkingDirectory = 'C:\Users\dev\.local\bin'"),
             "the shortcut must start in the binary's directory: {script}"
@@ -241,11 +241,11 @@ mod tests {
     #[test]
     fn script_stamps_the_app_user_model_id_on_the_shortcut() {
         let script = shortcut_script(
-            Path::new(r"C:\Users\dev\Programs\OrquestraAI.lnk"),
-            Path::new(r"C:\Users\dev\orquestra-ai.exe"),
+            Path::new(r"C:\Users\dev\Programs\OwnHub.lnk"),
+            Path::new(r"C:\Users\dev\ownhub.exe"),
         );
         assert!(
-            script.contains(r#"[Orquestra.AppModel.Store]::Set('C:\Users\dev\Programs\OrquestraAI.lnk', 'ai.orquestra.desktop')"#),
+            script.contains(r#"[OwnHub.AppModel.Store]::Set('C:\Users\dev\Programs\OwnHub.lnk', 'dev.ownanai.hub')"#),
             "{script}"
         );
         // PKEY_AppUserModel_ID and the IPropertyStore IID: a wrong pair writes
@@ -259,11 +259,11 @@ mod tests {
     #[test]
     fn an_apostrophe_in_the_path_is_escaped() {
         let script = shortcut_script(
-            Path::new(r"C:\Users\o'brien\Programs\OrquestraAI.lnk"),
-            Path::new(r"C:\Users\o'brien\orquestra-ai.exe"),
+            Path::new(r"C:\Users\o'brien\Programs\OwnHub.lnk"),
+            Path::new(r"C:\Users\o'brien\ownhub.exe"),
         );
         assert!(
-            script.contains(r"'C:\Users\o''brien\orquestra-ai.exe'"),
+            script.contains(r"'C:\Users\o''brien\ownhub.exe'"),
             "{script}"
         );
         assert!(
@@ -279,10 +279,10 @@ mod tests {
         let dir = sandbox();
         let link = dir.join(SHORTCUT_NAME);
         std::fs::write(&link, b"existing").unwrap();
-        let script = shortcut_script(&link, Path::new("orquestra-ai.exe"));
+        let script = shortcut_script(&link, Path::new("ownhub.exe"));
         std::fs::write(dir.join(STAMP_NAME), fingerprint(&script)).unwrap();
 
-        assert!(!install_shortcut(&dir, Path::new("orquestra-ai.exe")));
+        assert!(!install_shortcut(&dir, Path::new("ownhub.exe")));
         assert_eq!(std::fs::read(&link).unwrap(), b"existing");
 
         let _ = std::fs::remove_dir_all(&dir);
@@ -295,7 +295,7 @@ mod tests {
         let dir = sandbox();
         let link = dir.join(SHORTCUT_NAME);
         let stamp = dir.join(STAMP_NAME);
-        let script = shortcut_script(&link, Path::new("orquestra-ai.exe"));
+        let script = shortcut_script(&link, Path::new("ownhub.exe"));
 
         assert!(needs_refresh(&link, &stamp, &script), "no shortcut yet");
         std::fs::write(&link, b"old").unwrap();

@@ -3,9 +3,9 @@
 #
 # Two steps, because the code splits in two:
 #
-#   1. The portable crates (`orquestra-core`, `orquestra-bridge`) cross-compile
+#   1. The portable crates (`ownhub-core`, `ownhub-bridge`) cross-compile
 #      for real, so they are checked and linted for the Windows target.
-#   2. The desktop shell (`orquestra-ai`) cannot: `ring`'s build script and
+#   2. The desktop shell (`ownhub`) cannot: `ring`'s build script and
 #      `rusqlite`'s bundled SQLite need a Windows C toolchain. Its
 #      `#[cfg(windows)]` modules are therefore compiled through the staging
 #      crate in `tools/windows-typecheck`, which `#[path]`-includes the real
@@ -29,8 +29,8 @@ fi
 # library target: the repository's lint gate is `cargo clippy --workspace`,
 # and older test helpers do not satisfy today's pedantic lints.
 echo "== portable crates, cross-compiled for $TARGET"
-cargo check -p orquestra-core -p orquestra-bridge --all-targets --target "$TARGET"
-cargo clippy -p orquestra-core -p orquestra-bridge --target "$TARGET" -- -D warnings
+cargo check -p ownhub-core -p ownhub-bridge --all-targets --target "$TARGET"
+cargo clippy -p ownhub-core -p ownhub-bridge --target "$TARGET" -- -D warnings
 
 echo "== shimmed shell modules, cross-compiled for $TARGET"
 # `-D warnings` so the staging crate cannot go stale by accumulating unused

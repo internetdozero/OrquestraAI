@@ -3,7 +3,7 @@
 use super::super::{parse_options, rendered, usage, CliError};
 use super::paths;
 use crate::vault::vault_purge_migration_backups;
-use orquestra_vault::vault::service::list_services;
+use ownhub_vault::vault::service::list_services;
 #[cfg(unix)]
 use std::fs;
 
@@ -42,7 +42,7 @@ pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
     let healthy_keys: usize = services
         .iter()
         .flat_map(|s| &s.key_health)
-        .filter(|h| matches!(h, orquestra_vault::vault::KeyHealth::Healthy))
+        .filter(|h| matches!(h, ownhub_vault::vault::KeyHealth::Healthy))
         .count();
     let degraded_keys = total_keys.saturating_sub(healthy_keys);
 
@@ -73,7 +73,7 @@ pub(super) fn audit(args: &[String]) -> Result<String, CliError> {
         "[FAIL - expected 0600]"
     };
     let bak_str = if lingering_backups {
-        "[WARN - run 'orquestra vault audit purge-backups --confirm' to zeroize]"
+        "[WARN - run 'ownhub vault audit purge-backups --confirm' to zeroize]"
     } else {
         "[PASS - none lingering]"
     };

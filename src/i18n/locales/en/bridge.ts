@@ -27,7 +27,7 @@ export const bridge: TranslationSchema["bridge"] = {
   warnSecondary:
     "Secondary discovery locations — vendor checkouts, plugin marketplaces, and bundled skill repositories — are archived into the vault, then emptied or replaced with the projection link so no skill loads behind your back.",
   linkPlan: "Link plan",
-  masterLabel: "master AGENTS.md · ~/.orquestra/AGENTS.md",
+  masterLabel: "master AGENTS.md · ~/.ownhub/AGENTS.md",
   reversible: "Reversible from the backup folder",
   backupConnect: "Back up & Connect",
   linkingHarnesses: "Linking harnesses…",

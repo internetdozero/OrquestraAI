@@ -1,55 +1,55 @@
-# Orquestra CLI — Model Context Protocol (`mcp`)
+# OwnHub CLI — Model Context Protocol (`mcp`)
 
-The `orquestra mcp` subcommand family provides granular command-line lifecycle management, inspection, testing, and tool execution for Model Context Protocol (MCP) servers configured in OrquestraAI.
+The `ownhub mcp` subcommand family provides granular command-line lifecycle management, inspection, testing, and tool execution for Model Context Protocol (MCP) servers configured in OwnHub.
 
 ---
 
 ## 1. Overview & Architecture
 
-OrquestraAI acts as a centralized **orchestration hub** for MCP servers across the supported AI coding harnesses (Antigravity/AGY, Claude Code, Codex CLI, Copilot CLI, OpenCode, Kilo Code and Grok).
+OwnHub acts as a centralized **orchestration hub** for MCP servers across the supported AI coding harnesses (Antigravity/AGY, Claude Code, Codex CLI, Copilot CLI, OpenCode, Kilo Code and Grok).
 
 ### Key Architectural Pillars:
 
-1. **Master Catalog Single Source of Truth (`~/.orquestra/mcps.json`):**
+1. **Master Catalog Single Source of Truth (`~/.ownhub/mcps.json`):**
    - The master catalog stores all server definitions (command, args, env, headers, URLs, enabled targets).
-   - Encrypted at rest using **AES-256-GCM** (via `orquestra_vault` / `at_rest` crate) and written with strict permissions (`0600`).
+   - Encrypted at rest using **AES-256-GCM** (via `ownhub_vault` / `at_rest` crate) and written with strict permissions (`0600`).
 2. **Multi-Harness Projection (`deploy`):**
-   - Whenever an MCP server is added, removed, or toggled, OrquestraAI translates the canonical representation into each target harness's native config dialect (e.g. `claude_desktop_config.json`, `gemini/settings.json`, `cursor/mcp.json`).
+   - Whenever an MCP server is added, removed, or toggled, OwnHub translates the canonical representation into each target harness's native config dialect (e.g. `claude_desktop_config.json`, `gemini/settings.json`, `cursor/mcp.json`).
    - Foreign/unmanaged entries in those configs are preserved untouched.
 3. **Vault Secret Interpolation:**
    - Environment variables and headers can reference blind vault credentials (`${VAULT:SERVICE_KEY}` or `.env` entries).
    - Plaintext tokens are masked during normal inspection and only decrypted at execution/runtime or upon explicit authenticated operator reveal.
 4. **Official Hub & Extensions:**
-   - Curated servers (`orquestra-idea-vault`, `orquestra-session-relay`, `orquestra-cloudflare`, `orquestra-core`, `orquestra-janitor`) are tagged as official and managed with automated installation fallbacks.
+   - Curated servers (`ownhub-idea-vault`, `ownhub-session-relay`, `ownhub-cloudflare`, `ownhub-core`, `ownhub-janitor`) are tagged as official and managed with automated installation fallbacks.
 
 ---
 
 ## 2. Current State vs. Granular CLI Design
 
-| Capability              | Legacy CLI / Flags                           | New Granular CLI (`orquestra mcp <cmd>`)                                         |
+| Capability              | Legacy CLI / Flags                           | New Granular CLI (`ownhub mcp <cmd>`)                                         |
 | :---------------------- | :------------------------------------------- | :------------------------------------------------------------------------------- |
-| **Catalog Listing**     | `--mcp-status` (raw JSON dump only)          | `orquestra mcp list [--enabled-only] [--harness <H>] [--official-only] [--json]` |
-| **System Summary**      | Incomplete                                   | `orquestra mcp status [--json]`                                                  |
-| **Server Inspection**   | None (manual JSON parsing)                   | `orquestra mcp inspect <id> [--reveal] [--json]`                                 |
-| **Server Registration** | UI only                                      | `orquestra mcp add --id <id> --name <name> --command <cmd> [options] [--json]`   |
-| **Server Deletion**     | UI only                                      | `orquestra mcp remove <id> [--json]`                                             |
-| **Scope Toggling**      | `--mcp-set <id> <global\|harness> <on\|off>` | `orquestra mcp enable <id> [--harness <H>]` / `disable` / `set-state`            |
-| **Harness Deploy**      | `--mcp-deploy`                               | `orquestra mcp deploy [--json]`                                                  |
-| **Target Discovery**    | UI only                                      | `orquestra mcp targets [--json]`                                                 |
-| **Connection Probe**    | None                                         | `orquestra mcp test-connection <id> [--timeout <ms>] [--json]`                   |
-| **Tool Introspection**  | None                                         | `orquestra mcp tools-list <id> [--timeout <ms>] [--json]`                        |
-| **Tool Invocation**     | None                                         | `orquestra mcp call-tool <id> <tool> [--args <json>] [--json]`                   |
+| **Catalog Listing**     | `--mcp-status` (raw JSON dump only)          | `ownhub mcp list [--enabled-only] [--harness <H>] [--official-only] [--json]` |
+| **System Summary**      | Incomplete                                   | `ownhub mcp status [--json]`                                                  |
+| **Server Inspection**   | None (manual JSON parsing)                   | `ownhub mcp inspect <id> [--reveal] [--json]`                                 |
+| **Server Registration** | UI only                                      | `ownhub mcp add --id <id> --name <name> --command <cmd> [options] [--json]`   |
+| **Server Deletion**     | UI only                                      | `ownhub mcp remove <id> [--json]`                                             |
+| **Scope Toggling**      | `--mcp-set <id> <global\|harness> <on\|off>` | `ownhub mcp enable <id> [--harness <H>]` / `disable` / `set-state`            |
+| **Harness Deploy**      | `--mcp-deploy`                               | `ownhub mcp deploy [--json]`                                                  |
+| **Target Discovery**    | UI only                                      | `ownhub mcp targets [--json]`                                                 |
+| **Connection Probe**    | None                                         | `ownhub mcp test-connection <id> [--timeout <ms>] [--json]`                   |
+| **Tool Introspection**  | None                                         | `ownhub mcp tools-list <id> [--timeout <ms>] [--json]`                        |
+| **Tool Invocation**     | None                                         | `ownhub mcp call-tool <id> <tool> [--args <json>] [--json]`                   |
 
 ---
 
 ## 3. Subcommand Reference
 
-### 3.1 `orquestra mcp list`
+### 3.1 `ownhub mcp list`
 
 Lists all MCP servers registered in the master catalog.
 
 ```bash
-orquestra mcp list [OPTIONS]
+ownhub mcp list [OPTIONS]
 ```
 
 **Options:**
@@ -65,20 +65,20 @@ orquestra mcp list [OPTIONS]
 
 ```text
 ID                      NAME             SCOPE               COMMAND        STATUS
-orquestra-idea-vault    Idea Vault       global, gemini      idea-vault     active (official)
-orquestra-session-relay Session Relay    global              session-relay  active (official)
+ownhub-idea-vault    Idea Vault       global, gemini      idea-vault     active (official)
+ownhub-session-relay Session Relay    global              session-relay  active (official)
 github-context          GitHub MCP       cursor              npx            active
 custom-postgres         Postgres DB      disabled            docker         inactive
 ```
 
 ---
 
-### 3.2 `orquestra mcp status`
+### 3.2 `ownhub mcp status`
 
 Provides a holistic diagnostic health status of the MCP subsystem.
 
 ```bash
-orquestra mcp status [OPTIONS]
+ownhub mcp status [OPTIONS]
 ```
 
 **Options:**
@@ -98,12 +98,12 @@ MCP Subsystem Status:
 
 ---
 
-### 3.3 `orquestra mcp inspect <id>`
+### 3.3 `ownhub mcp inspect <id>`
 
 Inspects full configuration details of a specific MCP server. Alias: `info`.
 
 ```bash
-orquestra mcp inspect <id> [OPTIONS]
+ownhub mcp inspect <id> [OPTIONS]
 ```
 
 **Options:**
@@ -130,12 +130,12 @@ Status:       active (2 harnesses)
 
 ---
 
-### 3.4 `orquestra mcp add`
+### 3.4 `ownhub mcp add`
 
 Registers a new MCP server in the catalog and immediately projects it into targeted harness configs.
 
 ```bash
-orquestra mcp add --id <id> --name <name> --command <cmd> [OPTIONS]
+ownhub mcp add --id <id> --name <name> --command <cmd> [OPTIONS]
 ```
 
 **Required Options:**
@@ -158,7 +158,7 @@ orquestra mcp add --id <id> --name <name> --command <cmd> [OPTIONS]
 **Example:**
 
 ```bash
-orquestra mcp add \
+ownhub mcp add \
   --id sqlite-db \
   --name "SQLite Database" \
   --command "uvx" \
@@ -169,12 +169,12 @@ orquestra mcp add \
 
 ---
 
-### 3.5 `orquestra mcp remove <id>`
+### 3.5 `ownhub mcp remove <id>`
 
 Removes an MCP server from the catalog and purges its definition from all harness configuration files. Alias: `delete`.
 
 ```bash
-orquestra mcp remove <id> [OPTIONS]
+ownhub mcp remove <id> [OPTIONS]
 ```
 
 **Options:**
@@ -189,17 +189,17 @@ Removed MCP server 'sqlite-db' from catalog and purged from 2 harness configurat
 
 ---
 
-### 3.6 `orquestra mcp enable` / `disable` / `set-state`
+### 3.6 `ownhub mcp enable` / `disable` / `set-state`
 
 Controls the active scope of an MCP server.
 
 ```bash
 # Convenient toggle shortcuts:
-orquestra mcp enable <id> [--global] [--harness <name>] [--json]
-orquestra mcp disable <id> [--global] [--harness <name>] [--json]
+ownhub mcp enable <id> [--global] [--harness <name>] [--json]
+ownhub mcp disable <id> [--global] [--harness <name>] [--json]
 
 # Explicit state command:
-orquestra mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]
+ownhub mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]
 ```
 
 **Flags:**
@@ -210,12 +210,12 @@ orquestra mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]
 
 ---
 
-### 3.7 `orquestra mcp deploy`
+### 3.7 `ownhub mcp deploy`
 
 Recompiles and projects the master catalog (`mcps.json`) into all installed harness configuration files.
 
 ```bash
-orquestra mcp deploy [OPTIONS]
+ownhub mcp deploy [OPTIONS]
 ```
 
 **Options:**
@@ -234,12 +234,12 @@ MCP deployment completed:
 
 ---
 
-### 3.8 `orquestra mcp targets`
+### 3.8 `ownhub mcp targets`
 
 Lists all supported AI harness targets, their local installation status, and configuration file paths.
 
 ```bash
-orquestra mcp targets [OPTIONS]
+ownhub mcp targets [OPTIONS]
 ```
 
 **Options:**
@@ -260,12 +260,12 @@ kilo         Installed      ~/.config/kilo/kilo.jsonc
 
 ---
 
-### 3.9 `orquestra mcp test-connection <id>`
+### 3.9 `ownhub mcp test-connection <id>`
 
 Validates whether an MCP server is reachable and responsive without opening an interactive agent session.
 
 ```bash
-orquestra mcp test-connection <id> [OPTIONS]
+ownhub mcp test-connection <id> [OPTIONS]
 ```
 
 **Diagnostics Executed:**
@@ -283,7 +283,7 @@ orquestra mcp test-connection <id> [OPTIONS]
 **Human Output Example:**
 
 ```text
-Server 'orquestra-idea-vault': OK
+Server 'ownhub-idea-vault': OK
   Protocol Version: 2024-11-05
   Server Implementation: idea-vault v0.4.1
   Roundtrip Latency: 14ms
@@ -292,12 +292,12 @@ Server 'orquestra-idea-vault': OK
 
 ---
 
-### 3.10 `orquestra mcp tools-list <id>`
+### 3.10 `ownhub mcp tools-list <id>`
 
 Discovers and lists all tools exposed by the specified MCP server using the `tools/list` protocol method.
 
 ```bash
-orquestra mcp tools-list <id> [OPTIONS]
+ownhub mcp tools-list <id> [OPTIONS]
 ```
 
 **Options:**
@@ -308,7 +308,7 @@ orquestra mcp tools-list <id> [OPTIONS]
 **Human Output Example:**
 
 ```text
-Tools for 'orquestra-idea-vault' (4 tools found):
+Tools for 'ownhub-idea-vault' (4 tools found):
   • record_idea: Capture a new idea in the local SQLite vault
   • list_ideas: Query ideas with optional filters by project, status, limit
   • update_idea_status: Transition workflow state (todo, in_progress, completed)
@@ -317,12 +317,12 @@ Tools for 'orquestra-idea-vault' (4 tools found):
 
 ---
 
-### 3.11 `orquestra mcp call-tool <id> <tool-name>`
+### 3.11 `ownhub mcp call-tool <id> <tool-name>`
 
 Directly executes an MCP tool via `tools/call` JSON-RPC request and outputs the result.
 
 ```bash
-orquestra mcp call-tool <id> <tool-name> [OPTIONS]
+ownhub mcp call-tool <id> <tool-name> [OPTIONS]
 ```
 
 **Options:**
@@ -334,7 +334,7 @@ orquestra mcp call-tool <id> <tool-name> [OPTIONS]
 **Example:**
 
 ```bash
-orquestra mcp call-tool orquestra-idea-vault list_ideas --args '{"project":"OrquestraAI","limit":2}'
+ownhub mcp call-tool ownhub-idea-vault list_ideas --args '{"project":"OwnHub","limit":2}'
 ```
 
 **Human Output Example:**
@@ -342,8 +342,8 @@ orquestra mcp call-tool orquestra-idea-vault list_ideas --args '{"project":"Orqu
 ```text
 Tool 'list_ideas' succeeded:
 [
-  { "id": 14, "project": "OrquestraAI", "title": "CLI: orquestra mcp granular control", "status": "todo" },
-  { "id": 12, "project": "OrquestraAI", "title": "Session Relay SQLite cleanup", "status": "completed" }
+  { "id": 14, "project": "OwnHub", "title": "CLI: ownhub mcp granular control", "status": "todo" },
+  { "id": 12, "project": "OwnHub", "title": "Session Relay SQLite cleanup", "status": "completed" }
 ]
 ```
 
@@ -361,9 +361,9 @@ The CLI follows standard Unix exit code conventions:
 
 ```bash
 # Find all tools across active servers that support project management:
-for server in $(orquestra mcp list --enabled-only --json | jq -r '.[].id'); do
+for server in $(ownhub mcp list --enabled-only --json | jq -r '.[].id'); do
   echo "=== Tools in $server ==="
-  orquestra mcp tools-list "$server" --json | jq -r '.tools[].name'
+  ownhub mcp tools-list "$server" --json | jq -r '.tools[].name'
 done
 ```
 
@@ -371,6 +371,6 @@ done
 
 ## 5. Security & Isolation Considerations
 
-1. **Vault Encryption:** The catalog file `mcps.json` is protected by AES-256-GCM. Manual filesystem inspection will show an encrypted envelope. Always use `orquestra mcp inspect <id> --reveal` from an authenticated terminal to inspect decrypted credentials.
+1. **Vault Encryption:** The catalog file `mcps.json` is protected by AES-256-GCM. Manual filesystem inspection will show an encrypted envelope. Always use `ownhub mcp inspect <id> --reveal` from an authenticated terminal to inspect decrypted credentials.
 2. **Path Sanitization:** Executable paths and arguments undergo strict escaping and argument array passing (`Command::args`) to prevent shell injection vulnerabilities.
 3. **Non-Interactive Guardrail:** Remote tool invocations run within isolated subprocesses without allocating pseudo-terminals or inherited stdin unless explicitly requested.

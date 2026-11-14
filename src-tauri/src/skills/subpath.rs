@@ -2,7 +2,7 @@
 //!
 //! A git URL may carry a `#subpath` fragment pointing at the skill folder
 //! inside a monorepo, e.g.
-//! `https://github.com/internetdozero/orquestra-extensions.git#skills/foo`.
+//! `https://github.com/internetdozero/ownhub-extensions.git#skills/foo`.
 //! The fragment is stripped before `git clone` and resolved as the primary
 //! target inside the staging tree. Without a fragment, discovery checks the
 //! repo root, one level down (standalone layout), then standard monorepo
@@ -234,7 +234,7 @@ pub(crate) fn refresh_skill_dir(
             return Ok(());
         }
     }
-    let staging = crate::paths::fresh_scratch_dir("orquestra-sync")?;
+    let staging = crate::paths::fresh_scratch_dir("ownhub-sync")?;
     let result = refresh_from_clone(&staging, vault_dir, primary_url, fallback_url);
     let _ = fs::remove_dir_all(&staging);
     result

@@ -11,7 +11,7 @@ import { compareIdeas } from "../src/lib/ideas.ts";
 
 const idea = (overrides = {}) => ({
   id: 1,
-  project: "OrquestraAI",
+  project: "OwnHub",
   title: "Untitled",
   description: "",
   category: "feature",

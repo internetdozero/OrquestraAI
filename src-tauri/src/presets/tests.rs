@@ -23,7 +23,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         let root = std::env::temp_dir().join(format!(
-            "orquestra-presets-{label}-{}-{unique}",
+            "ownhub-presets-{label}-{}-{unique}",
             std::process::id()
         ));
         fs::create_dir_all(&root).unwrap();
@@ -105,7 +105,7 @@ mod tests {
                 "github".to_string(),
                 "rea".to_string(),
                 "idea-vault".to_string(),
-                "orquestra-core".to_string(),
+                "ownhub-core".to_string(),
             ],
             harness_skills: Default::default(),
             harness_mcps: Default::default(),
@@ -136,7 +136,7 @@ mod tests {
         assert_eq!(
             warnings.len(),
             3,
-            "rea, idea-vault and orquestra-core are missing"
+            "rea, idea-vault and ownhub-core are missing"
         );
     }
 
@@ -357,8 +357,8 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let root = orquestra_core::test_support::root().join(format!(
-            "orquestra-presets-link-{}-{unique}",
+        let root = ownhub_core::test_support::root().join(format!(
+            "ownhub-presets-link-{}-{unique}",
             std::process::id()
         ));
         let store = root.join("store");

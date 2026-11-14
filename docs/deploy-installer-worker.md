@@ -1,7 +1,7 @@
 # Installer Edge Worker — Deploy Guide
 
-`https://orquestra.internetdozero.com.br/install.sh` and
-`https://orquestra.internetdozero.com.br/install.ps1` are served by the
+`https://ownhub.internetdozero.com.br/install.sh` and
+`https://ownhub.internetdozero.com.br/install.ps1` are served by the
 Cloudflare Worker in `workers/installer/worker.js`, never by pasted copies:
 every request resolves the latest GitHub release tag and serves that
 installer at the tag byte-identical, with a SHA-256 `ETag`,
@@ -25,17 +25,17 @@ accepted and trimmed.
 
 ## Custom domain
 
-Bind `orquestra.internetdozero.com.br/*` (or the two `/install.*` paths) to
-the `orquestra-installer` worker in the Cloudflare dashboard (or uncomment
+Bind `ownhub.internetdozero.com.br/*` (or the two `/install.*` paths) to
+the `ownhub-installer` worker in the Cloudflare dashboard (or uncomment
 the `routes` line in `workers/installer/wrangler.toml`).
 
 ## Cache behavior
 
 - Tag lookups are memoized for 5 minutes; installer bytes are edge-cached
-  for 5 minutes and keyed with an `x-orquestra-tag` header.
+  for 5 minutes and keyed with an `x-ownhub-tag` header.
 - Publishing a new release converges without manual purging: the next
   lookup resolves the new tag, the cached entry's tag no longer matches,
   and the worker refetches upstream.
-- `curl -s https://orquestra.internetdozero.com.br/install.sh | sha256sum`
+- `curl -s https://ownhub.internetdozero.com.br/install.sh | sha256sum`
   and the same for `install.ps1` must equal each file's hash at the tag; the
   deploy script checks both.

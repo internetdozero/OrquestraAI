@@ -1,6 +1,6 @@
 //! Master catalog storage: seeding, CRUD, and enabled-state mutation.
 //!
-//! The catalog lives at `~/.orquestra/mcps.json` and always carries API
+//! The catalog lives at `~/.ownhub/mcps.json` and always carries API
 //! tokens, so it is sealed with AES-256-GCM (see `crate::at_rest`) and
 //! written `0600`. Neither this module nor any other owns
 //! the harness configs: mutations here always hand off to [`super::deploy`].
@@ -16,7 +16,7 @@ use super::secrets::mask_server;
 use super::McpServer;
 use crate::harness::{self, GLOBAL_SCOPE};
 use crate::official::is_official_mcp;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 mod gemini_import;
 mod install;
@@ -32,18 +32,18 @@ pub use selection::{apply_global_selection, apply_harness_selections, batch_set_
 /// Optional one-time dataset used to seed the catalog on first launch.
 ///
 /// User-scoped by design: `<root>/seed-mcps.json`, overridable with
-/// `ORQUESTRA_SEED_MCP_CATALOG` for operators carrying an external dataset.
+/// `OWNHUB_SEED_MCP_CATALOG` for operators carrying an external dataset.
 /// A world-writable default (the old `/mnt/amnesic` path) would let any
 /// local user plant malicious MCP servers into someone else's first
 /// launch; whatever path resolves here must additionally pass the symlink
 /// refusal in [`seed_catalog`].
 pub(super) fn seed_catalog_path(root: &Path) -> PathBuf {
-    std::env::var_os("ORQUESTRA_SEED_MCP_CATALOG")
+    std::env::var_os("OWNHUB_SEED_MCP_CATALOG")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("seed-mcps.json"))
 }
 
-/// Master catalog file name inside `~/.orquestra`.
+/// Master catalog file name inside `~/.ownhub`.
 const CATALOG_FILE: &str = "mcps.json";
 
 /// The catalog plus the bookkeeping needed to clean up after deletions.
@@ -52,7 +52,7 @@ const CATALOG_FILE: &str = "mcps.json";
 pub(super) struct Catalog {
     #[serde(default)]
     pub(super) mcps: BTreeMap<String, McpServer>,
-    /// Ids OrquestraAI has written into harness configs, so a server that is
+    /// Ids OwnHub has written into harness configs, so a server that is
     /// disabled or deleted is removed from those files instead of lingering
     /// there forever. Foreign entries are never touched because they are never
     /// in here.
@@ -62,7 +62,7 @@ pub(super) struct Catalog {
 
 pub(super) fn ensure_active_official(
     catalog: &mut Catalog,
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
 ) -> Result<(), String> {
     for server in catalog
         .mcps
@@ -78,7 +78,7 @@ pub(super) fn ensure_active_official(
 /// official flag is stamped here so catalogs written before the tier
 /// existed still report correctly.
 pub fn list_mcps() -> Result<Vec<McpServer>, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let home = crate::bridge::home_dir()?;
     let seed = seed_catalog_path(&paths.root);
     gemini_import::adopt_existing(&paths, &home, &seed)?;
@@ -105,7 +105,7 @@ pub fn list_mcps_masked() -> Result<Vec<McpServer>, String> {
 
 /// Return a single secret only after an explicit operator reveal action.
 pub fn reveal_mcp_secret(id: &str, key: &str) -> Result<String, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     let server = catalog
         .mcps
@@ -138,7 +138,7 @@ pub fn reveal_mcp_secret(id: &str, key: &str) -> Result<String, String> {
 /// Project or un-project one server. `None` (or `global`) edits the baseline
 /// that every adapted harness inherits; a harness id edits that harness alone.
 pub fn set_mcp_state(id: &str, harness_id: Option<&str>, enabled: bool) -> Result<(), String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
     let scope = harness_id.unwrap_or(GLOBAL_SCOPE);
 
@@ -178,12 +178,12 @@ pub fn set_mcp_state(id: &str, harness_id: Option<&str>, enabled: bool) -> Resul
     deploy_current(&paths)
 }
 
-pub(super) fn catalog_path(paths: &OrquestraPaths) -> PathBuf {
+pub(super) fn catalog_path(paths: &OwnHubPaths) -> PathBuf {
     paths.root.join(CATALOG_FILE)
 }
 
 /// Read the master catalog, seeding it from the audited dataset on first run.
-pub(super) fn load_catalog(paths: &OrquestraPaths, seed: &Path) -> Result<Catalog, String> {
+pub(super) fn load_catalog(paths: &OwnHubPaths, seed: &Path) -> Result<Catalog, String> {
     let path = catalog_path(paths);
     refuse_catalog_symlink(&path, "read")?;
     let content = match fs::read_to_string(&path) {
@@ -253,7 +253,7 @@ pub(super) fn seed_catalog(seed: &Path) -> Result<Catalog, String> {
     Ok(catalog)
 }
 
-pub(super) fn save_catalog(paths: &OrquestraPaths, catalog: &Catalog) -> Result<(), String> {
+pub(super) fn save_catalog(paths: &OwnHubPaths, catalog: &Catalog) -> Result<(), String> {
     let path = catalog_path(paths);
     refuse_catalog_symlink(&path, "replace")?;
     let mut content = serde_json::to_string_pretty(catalog)

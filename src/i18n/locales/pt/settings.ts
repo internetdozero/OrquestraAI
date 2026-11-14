@@ -1,7 +1,7 @@
 /** Settings modal: general, storage, retention, janitor and about tabs. */
 export const settings = {
   title: "Configurações",
-  subtitle: "Preferências do OrquestraAI",
+  subtitle: "Preferências do OwnHub",
   close: "Fechar configurações",
   reset: "Restaurar padrões",
   resetDone: "Configurações restauradas",
@@ -62,7 +62,7 @@ export const settings = {
     updatesTitle: "Atualizações",
     autoCheckAppTitle: "Verificar atualizações do app ao iniciar",
     autoCheckAppDesc:
-      "Verifica automaticamente no GitHub por novas versões do OrquestraAI para desktop.",
+      "Verifica automaticamente no GitHub por novas versões do OwnHub para desktop.",
     autoCheckExtTitle: "Verificar atualizações das extensões oficiais",
     autoCheckExtDesc: "Busca melhorias do upstream para as skills oficiais e MCPs instalados.",
     checkNow: "Verificar atualizações agora",
@@ -73,7 +73,7 @@ export const settings = {
     updateNow: "Atualizar agora",
     updatingApp: "Baixando e instalando atualização…",
     downloadingUpdate: "Baixando versão e validando integridade SHA-256...",
-    updateAppSuccess: "Atualização instalada! Reinicie o OrquestraAI para aplicar.",
+    updateAppSuccess: "Atualização instalada! Reinicie o OwnHub para aplicar.",
     updateAppFailed: (detail: string) => `Falha ao atualizar: ${detail}`,
     restart: "Reiniciar",
     syncExtensions: "Sincronizar extensões oficiais",

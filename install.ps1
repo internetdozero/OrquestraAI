@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    OrquestraAI installer for Windows.
+    OwnHub installer for Windows.
 
 .DESCRIPTION
     The PowerShell counterpart of install.sh, with the same trust model: the
@@ -18,7 +18,7 @@
 
 .PARAMETER InstallDir
     Destination directory. Defaults to
-    %LOCALAPPDATA%\Programs\OrquestraAI, which needs no elevation.
+    %LOCALAPPDATA%\Programs\OwnHub, which needs no elevation.
 
 .PARAMETER CheckDeps
     Only verify the installed executable; do not download anything.
@@ -27,7 +27,7 @@
     Do not add the install directory to the user PATH.
 
 .EXAMPLE
-    irm https://orquestra.internetdozero.com.br/install.ps1 | iex
+    irm https://ownhub.internetdozero.com.br/install.ps1 | iex
 
 .EXAMPLE
     .\install.ps1 -CheckDeps
@@ -35,7 +35,7 @@
 [CmdletBinding()]
 param(
     [string]$Version,
-    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\OrquestraAI'),
+    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\OwnHub'),
     [switch]$CheckDeps,
     [switch]$NoPathUpdate,
     [switch]$TestOnly
@@ -44,12 +44,12 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$Repo = 'internetdozero/OrquestraAI'
+$Repo = 'internetdozero/OwnHub'
 # Must equal src-tauri/src/update_sig.rs::RELEASE_PUBLIC_KEY and the value
 # embedded in install.sh: the same offline key signs every release.
 $ReleasePublicKey = 'RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1'
-$Asset = 'orquestra-windows-x86_64.exe'
-$BinaryName = 'orquestra.exe'
+$Asset = 'ownhub-windows-x86_64.exe'
+$BinaryName = 'ownhub.exe'
 
 function Write-Step([string]$Message) { Write-Host "==> $Message" }
 function Write-Ok([string]$Message) { Write-Host "OK  $Message" -ForegroundColor Green }
@@ -154,7 +154,7 @@ function Get-ExpectedChecksum([string]$SumsPath, [string]$FileName) {
 function Test-Installed {
     $binary = Join-Path $InstallDir $BinaryName
     if (-not (Test-Path $binary)) {
-        throw "OrquestraAI is not installed at $binary"
+        throw "OwnHub is not installed at $binary"
     }
     # There is no `--version` flag: an unknown argument starts the GUI. A
     # documented headless flag proves the executable runs without opening a
@@ -196,7 +196,7 @@ $releaseVersion = $tag.TrimStart('v')
 $base = "https://github.com/$Repo/releases/download/$tag"
 Write-Step "Release: $tag"
 
-$staging = Join-Path ([System.IO.Path]::GetTempPath()) ("orquestra-install-" + [guid]::NewGuid().ToString('N'))
+$staging = Join-Path ([System.IO.Path]::GetTempPath()) ("ownhub-install-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $staging -Force | Out-Null
 try {
     $sums = Join-Path $staging 'SHA256SUMS.txt'
@@ -222,7 +222,7 @@ try {
     $target = Join-Path $InstallDir $BinaryName
     # Stage beside the target, then move: a failed copy must not leave a
     # half-written executable where the old one was.
-    $staged = Join-Path $InstallDir ('.orquestra-install-' + [guid]::NewGuid().ToString('N'))
+    $staged = Join-Path $InstallDir ('.ownhub-install-' + [guid]::NewGuid().ToString('N'))
     Copy-Item -Path $download -Destination $staged -Force
     Unblock-File -Path $staged -ErrorAction SilentlyContinue
     Move-Item -Path $staged -Destination $target -Force
@@ -231,8 +231,8 @@ try {
     if (-not $NoPathUpdate) { Add-ToUserPath $InstallDir }
 
     Write-Host ''
-    Write-Ok "OrquestraAI $releaseVersion is installed."
-    Write-Host 'Run "orquestra" in a new terminal to start the control plane.'
+    Write-Ok "OwnHub $releaseVersion is installed."
+    Write-Host 'Run "ownhub" in a new terminal to start the control plane.'
 }
 finally {
     Remove-Item -Path $staging -Recurse -Force -ErrorAction SilentlyContinue

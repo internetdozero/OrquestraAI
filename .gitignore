@@ -59,8 +59,8 @@ PRD.md
 packaging/flatpak/files/
 *.flatpak
 
-# Orquestra audits
-.orquestra/audits/
+# OwnHub audits
+.ownhub/audits/
 
 # Local agent instructions: kept on disk, never published.
 /AGENTS.md

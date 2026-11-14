@@ -99,5 +99,5 @@ export function sortSkills(items: SkillItem[], mode: SortMode): SkillItem[] {
   }
 }
 
-export const vaultPath = "~/.orquestra/skills-library";
-export const projectionPath = "~/.orquestra/active";
+export const vaultPath = "~/.ownhub/skills-library";
+export const projectionPath = "~/.ownhub/active";

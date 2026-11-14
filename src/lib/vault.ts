@@ -147,7 +147,7 @@ const mockPresets: VaultPreset[] = MOCK_PRESET_TABLE.map(([id, label, descriptio
   label,
   header: "authorization",
   prefix: "Bearer ",
-  extraHeaders: id === "github" ? [["user-agent", "OrquestraAI"]] : [],
+  extraHeaders: id === "github" ? [["user-agent", "OwnHub"]] : [],
   envVar: `${id.toUpperCase()}_API_KEY`,
   description,
   keyUrl,

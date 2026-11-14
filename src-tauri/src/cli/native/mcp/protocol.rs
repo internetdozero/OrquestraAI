@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use super::super::{parse_options, parse_u32, rendered, usage, CliError};
 use crate::mcp::{list_mcps, parse_dotenv, McpServer};
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 fn get_resolved_server(id: &str) -> Result<McpServer, CliError> {
     let servers = list_mcps().map_err(CliError::Operation)?;
@@ -21,7 +21,7 @@ fn get_resolved_server(id: &str) -> Result<McpServer, CliError> {
         .find(|s| s.id == id)
         .ok_or_else(|| CliError::Operation(format!("unknown MCP server: {id}")))?;
 
-    let paths = OrquestraPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
+    let paths = OwnHubPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
     let dotenv_path = paths.root.join(".env");
     let dotenv = match fs::read_to_string(&dotenv_path) {
         Ok(content) => parse_dotenv(&content),
@@ -36,7 +36,7 @@ pub(super) fn test_connection(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|arg| !arg.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra mcp test-connection <id> [--timeout <ms>] [--json]".to_string())
+            usage("usage: ownhub mcp test-connection <id> [--timeout <ms>] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--timeout"], &["--json"])?;
@@ -116,7 +116,7 @@ pub(super) fn tools_list(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|arg| !arg.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra mcp tools-list <id> [--timeout <ms>] [--json]".to_string())
+            usage("usage: ownhub mcp tools-list <id> [--timeout <ms>] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--timeout"], &["--json"])?;
@@ -169,12 +169,12 @@ pub(super) fn call_tool(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra mcp call-tool <id> <tool-name> [--args <json>] [--timeout <ms>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub mcp call-tool <id> <tool-name> [--args <json>] [--timeout <ms>] [--json]".to_string()))?;
 
     let tool_name = args
         .get(1)
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra mcp call-tool <id> <tool-name> [--args <json>] [--timeout <ms>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub mcp call-tool <id> <tool-name> [--args <json>] [--timeout <ms>] [--json]".to_string()))?;
 
     let options = parse_options(&args[2..], &["--args", "--timeout"], &["--json"])?;
     let timeout_ms = parse_u32(&options, "--timeout")?.unwrap_or(15000) as u64;
@@ -281,7 +281,7 @@ fn run_stdio_exchange(
         "params": {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
-            "clientInfo": { "name": "orquestra-cli", "version": "0.1.0" }
+            "clientInfo": { "name": "ownhub-cli", "version": "0.1.0" }
         }
     });
 

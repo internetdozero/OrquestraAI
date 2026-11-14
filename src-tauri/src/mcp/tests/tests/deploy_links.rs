@@ -12,8 +12,8 @@ fn deploy_does_not_follow_a_config_directory_symlink() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = orquestra_core::test_support::root().join(format!(
-        "orquestra-mcp-dir-link-{}-{unique}",
+    let base = ownhub_core::test_support::root().join(format!(
+        "ownhub-mcp-dir-link-{}-{unique}",
         std::process::id()
     ));
     let home = base.join("home");
@@ -25,7 +25,7 @@ fn deploy_does_not_follow_a_config_directory_symlink() {
     fs::write(&outside_file, original).unwrap();
     std::os::unix::fs::symlink(&outside, home.join(".config/opencode")).unwrap();
 
-    let root = base.join("orquestra");
+    let root = base.join("ownhub");
     let seed = base.join("seed.json");
     fs::write(
         &seed,
@@ -43,7 +43,7 @@ fn deploy_does_not_follow_a_config_directory_symlink() {
 "#,
     )
     .unwrap();
-    let paths = crate::paths::OrquestraPaths {
+    let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),
         root,

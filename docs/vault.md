@@ -7,7 +7,7 @@ a per-install file key. The key lives in the OS keyring (Secret Service on
 Linux, Keychain on macOS, Credential Manager on Windows); headless hosts
 fall back to a `0600` key file beside the secrets with a loud once-per-process
 warning. Files stay `0600`; integration tests never touch the real keyring
-(`ORQUESTRA_KEYRING_DISABLE=1` plus a temp-root guard in `at_rest::key`).
+(`OWNHUB_KEYRING_DISABLE=1` plus a temp-root guard in `at_rest::key`).
 
 A live D-Bus session is not treated as a live Secret Service. The backend
 performs one bounded probe (three seconds) the first time the key is needed

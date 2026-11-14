@@ -1,4 +1,4 @@
-//! Granular CLI management for Idea Vault and Blackboard Notes (`orquestra idea …`).
+//! Granular CLI management for Idea Vault and Blackboard Notes (`ownhub idea …`).
 
 use super::{usage, CliError};
 
@@ -8,7 +8,7 @@ mod render;
 #[cfg(test)]
 mod tests;
 
-const USAGE: &str = "usage: orquestra idea <list|get|add|update|status|delete|search|projects|export-md|metrics|note-post|note-list|note-get|note-read|note-clear> [options]";
+const USAGE: &str = "usage: ownhub idea <list|get|add|update|status|delete|search|projects|export-md|metrics|note-post|note-list|note-get|note-read|note-clear> [options]";
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     match args.first().map(String::as_str) {

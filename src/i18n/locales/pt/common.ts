@@ -120,7 +120,7 @@ export const agents = {
     "O AGENTS.md mestre é servido pelo núcleo em Rust. Execute o app com npm run tauri dev para editar e salvar.",
   loadFailed: (detail: string) => `Não foi possível carregar o AGENTS.md: ${detail}`,
   saveFailed: (detail: string) => `Não foi possível salvar o AGENTS.md: ${detail}`,
-  savedToast: "AGENTS.md salvo em ~/.orquestra/AGENTS.md",
+  savedToast: "AGENTS.md salvo em ~/.ownhub/AGENTS.md",
 };
 
 export const store = {
@@ -128,7 +128,7 @@ export const store = {
   libraryTab: "Biblioteca",
   storeTab: "Loja oficial",
   title: "Loja oficial",
-  subtitle: "Skills e servidores MCP mantidos pelo OrquestraAI, com instalação em um clique.",
+  subtitle: "Skills e servidores MCP mantidos pelo OwnHub, com instalação em um clique.",
   install: "Instalar",
   enable: "Ativar",
   add: "Adicionar",

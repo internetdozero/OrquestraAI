@@ -1,4 +1,4 @@
-//! Persistence for custom presets in `~/.orquestra/presets.json`.
+//! Persistence for custom presets in `~/.ownhub/presets.json`.
 //!
 //! The file only holds operator-created profiles plus which preset was applied
 //! last; the built-ins are compiled in. A missing file is normal on first run
@@ -13,9 +13,9 @@ use std::path::{Path, PathBuf};
 use super::{builtins, validate_id, Preset};
 
 pub(super) use super::naming::unique_id;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
-/// Custom preset file inside `~/.orquestra`.
+/// Custom preset file inside `~/.ownhub`.
 const PRESETS_FILE: &str = "presets.json";
 
 /// On-disk shape: the operator's profiles, overrides for built-ins, and the applied one.
@@ -95,7 +95,7 @@ pub fn save_preset(name: String, description: Option<String>) -> Result<Preset, 
 pub fn delete_preset(id: &str) -> Result<(), String> {
     if builtins::all().iter().any(|preset| preset.id == id) {
         return Err(format!(
-            "“{id}” ships with OrquestraAI and cannot be deleted"
+            "“{id}” ships with OwnHub and cannot be deleted"
         ));
     }
 
@@ -237,7 +237,7 @@ pub(super) fn remember_active(id: &str) -> Result<(), String> {
 }
 
 fn root() -> Result<PathBuf, String> {
-    Ok(OrquestraPaths::resolve()?.root)
+    Ok(OwnHubPaths::resolve()?.root)
 }
 
 fn file_path(root: &Path) -> PathBuf {

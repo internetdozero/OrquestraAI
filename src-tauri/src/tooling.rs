@@ -26,7 +26,7 @@ mod capabilities;
 /// Directory holding crash reports: `<store root>/logs`, beside the state the
 /// app already owns on every platform.
 pub fn log_dir() -> Option<PathBuf> {
-    crate::paths::OrquestraPaths::resolve()
+    crate::paths::OwnHubPaths::resolve()
         .ok()
         .map(|paths| paths.root.join("logs"))
 }
@@ -131,7 +131,7 @@ pub fn install_panic_hook() {
                 &std::backtrace::Backtrace::force_capture().to_string(),
             );
             if let Ok(path) = written {
-                eprintln!("orquestra: panic report written to {}", path.display());
+                eprintln!("ownhub: panic report written to {}", path.display());
             }
         }
         previous(info);
@@ -154,7 +154,7 @@ fn write_report(
     // two threads append instead of overwriting each other's diagnosis.
     let path = directory.join(format!("crash-{stamp}.log"));
     let header = format!(
-        "orquestra-ai {version} panic\n\
+        "ownhub {version} panic\n\
          when: {when} (unix {stamp})\n\
          where: {location}\n\
          platform: {platform}\n\
@@ -248,7 +248,7 @@ mod tests {
     /// tool was never installed.
     #[test]
     fn missing_tool_is_reported_as_a_disabled_capability() {
-        let empty_path = std::env::temp_dir().join("orquestra-probe-no-bin");
+        let empty_path = std::env::temp_dir().join("ownhub-probe-no-bin");
         assert!(!empty_path.exists(), "the fixture path must not exist");
 
         let report = report_with(Some(empty_path.as_os_str()));

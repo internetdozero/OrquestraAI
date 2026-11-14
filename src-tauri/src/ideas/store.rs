@@ -45,7 +45,7 @@ use super::types::{BlackboardNote, IdeaItem};
 
 /// Database path, honoring `IDEA_VAULT_DB_PATH` and the platform data root.
 ///
-/// The root comes from [`orquestra_core::paths::data_dir`], the same resolver
+/// The root comes from [`ownhub_core::paths::data_dir`], the same resolver
 /// every other store uses: `XDG_DATA_HOME` on Linux, `~/Library/Application
 /// Support` on macOS and `%LOCALAPPDATA%` on Windows. An empty override is
 /// ignored, so a shell that exports `IDEA_VAULT_DB_PATH=` still gets the
@@ -58,7 +58,7 @@ pub fn resolve_db_path() -> Result<PathBuf, String> {
         return Ok(PathBuf::from(trimmed));
     }
 
-    let data_dir = orquestra_core::paths::data_dir()
+    let data_dir = ownhub_core::paths::data_dir()
         .ok_or_else(|| "cannot locate the home directory for the idea vault".to_string())?;
     Ok(data_dir.join("idea-vault/ideas.sqlite3"))
 }

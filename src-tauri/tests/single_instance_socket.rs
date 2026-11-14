@@ -11,11 +11,11 @@ mod common;
 
 use std::os::unix::net::UnixListener;
 
-use orquestra_ai_lib::paths::OrquestraPaths;
-use orquestra_ai_lib::single_instance::{socket_path, try_activate_existing};
+use ownhub_lib::paths::OwnHubPaths;
+use ownhub_lib::single_instance::{socket_path, try_activate_existing};
 
 fn store_root() -> std::path::PathBuf {
-    OrquestraPaths::resolve().expect("resolve paths").root
+    OwnHubPaths::resolve().expect("resolve paths").root
 }
 
 fn socket() -> std::path::PathBuf {
@@ -23,7 +23,7 @@ fn socket() -> std::path::PathBuf {
 }
 
 fn lock_path() -> std::path::PathBuf {
-    store_root().join("orquestra.lock")
+    store_root().join("ownhub.lock")
 }
 
 #[test]

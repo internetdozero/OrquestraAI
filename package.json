@@ -1,9 +1,9 @@
 {
-  "name": "orquestra-ai",
+  "name": "ownhub",
   "private": true,
   "version": "0.1.0-alpha.9",
   "type": "module",
-  "description": "OrquestraAI — Universal AI Harness Administration Platform",
+  "description": "OwnHub — Universal AI Harness Administration Platform",
   "scripts": {
     "dev": "vite",
     "build": "npm run check:ui && tsc --noEmit && vite build && npm run check:bundle",

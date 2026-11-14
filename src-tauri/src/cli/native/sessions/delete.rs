@@ -9,7 +9,7 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let session_id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra sessions delete <session-id> --harness <id> [--yes] [--force] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub sessions delete <session-id> --harness <id> [--yes] [--force] [--json]".to_string()))?;
 
     let options = parse_options(
         &args[1..],

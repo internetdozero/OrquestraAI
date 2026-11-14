@@ -1,7 +1,7 @@
 [package]
-name = "orquestra-ai"
+name = "ownhub"
 version = "0.1.0-alpha.9"
-description = "OrquestraAI — Universal AI Harness Administration Platform"
+description = "OwnHub — Universal AI Harness Administration Platform"
 authors = ["Operator"]
 edition = "2021"
 rust-version = "1.77.2"
@@ -11,7 +11,7 @@ rust-version = "1.77.2"
 # exist for mobile targets and would emit an extra ~850 MB of .a/.so output
 # plus a second full codegen pass per crate.
 [lib]
-name = "orquestra_ai_lib"
+name = "ownhub_lib"
 crate-type = ["rlib"]
 
 [features]
@@ -27,15 +27,15 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Foundational types (harness registry, storage paths, common errors). The
 # `paths` and `harness` modules here are thin re-exports of this crate.
-orquestra-core = { path = "../crates/orquestra-core" }
+ownhub-core = { path = "../crates/ownhub-core" }
 # Harness config adapters: one MCP server, one dialect per harness.
-orquestra-harness = { path = "../crates/orquestra-harness" }
+ownhub-harness = { path = "../crates/ownhub-harness" }
 # Credential vault, at-rest encryption and the blind HTTP/exec proxies.
-orquestra-vault = { path = "../crates/orquestra-vault" }
+ownhub-vault = { path = "../crates/ownhub-vault" }
 # Harness fusion: backups, projections and fleet status.
-orquestra-bridge = { path = "../crates/orquestra-bridge" }
+ownhub-bridge = { path = "../crates/ownhub-bridge" }
 # Unified session catalog: the eight harness adapters and their wire types.
-orquestra-sessions = { path = "../crates/orquestra-sessions" }
+ownhub-sessions = { path = "../crates/ownhub-sessions" }
 # `tray-icon` is the Tauri v2 system tray panel: `src-tauri/src/tray.rs` builds
 # the persistent icon, its Show/Hide, Bridge Status and Quit menu.
 tauri = { version = "2", features = ["tray-icon"] }
@@ -52,10 +52,10 @@ serde_json.workspace = true
 serde_yaml = "0.9"
 json5.workspace = true
 # The idea vault's own database; the session stores moved to
-# `orquestra-sessions`, which shares the same bundled engine.
+# `ownhub-sessions`, which shares the same bundled engine.
 rusqlite.workspace = true
 # Download transport for the updater; the blind vault proxy in
-# `orquestra-vault` uses the same configuration.
+# `ownhub-vault` uses the same configuration.
 reqwest.workspace = true
 minisign-verify = "0.3.0"
 # Strict `target_version > CARGO_PKG_VERSION` anti-downgrade gate in the
@@ -85,11 +85,11 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [dev-dependencies]
-# Test fixtures share one scratch root (`orquestra_core::test_support`).
-orquestra-core = { path = "../crates/orquestra-core", features = ["test-support"] }
+# Test fixtures share one scratch root (`ownhub_core::test_support`).
+ownhub-core = { path = "../crates/ownhub-core", features = ["test-support"] }
 # Integration tests simulate a live peer by holding the lockfile `flock`.
 libc.workspace = true
-# Format-preserving TOML editing moved to `orquestra-harness`; the app only
+# Format-preserving TOML editing moved to `ownhub-harness`; the app only
 # needs it to parse the rendered `config.toml` in its deploy tests.
 toml_edit.workspace = true
 

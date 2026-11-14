@@ -1,7 +1,7 @@
 //! Official MCP servers for the Community & Official Hub.
 //!
 //! Split from [`crate::official`] to keep registry files small. Entries use
-//! unified `orquestra-*` ids with monorepo anchors (`#mcps/<id>`) plus the
+//! unified `ownhub-*` ids with monorepo anchors (`#mcps/<id>`) plus the
 //! individual repo as fallback and the pre-monorepo id for status matching.
 
 use crate::official::{OfficialMcpEntry, MONOREPO};
@@ -31,56 +31,56 @@ fn official_mcp(
 pub(crate) fn official_mcps() -> Vec<OfficialMcpEntry> {
     vec![
         official_mcp(
-            "orquestra-idea-vault",
+            "ownhub-idea-vault",
             "Idea Vault",
             "Local SQLite idea vault and inter-agent blackboard MCP server (stdio).",
-            "mcps/orquestra-idea-vault",
+            "mcps/ownhub-idea-vault",
             "https://github.com/internetdozero/idea-vault-mcp.git",
             "idea-vault",
             "idea-vault",
         ),
         official_mcp(
-            "orquestra-session-relay",
+            "ownhub-session-relay",
             "Session Relay",
             "Session handoff briefs from the stores Codex, Claude, Antigravity, OpenCode and Grok already keep (stdio, no cloud).",
-            "mcps/orquestra-session-relay",
+            "mcps/ownhub-session-relay",
             "https://github.com/internetdozero/session-relay-mcp.git",
             "session-relay",
             "session-relay",
         ),
         official_mcp(
-            "orquestra-janitor",
+            "ownhub-janitor",
             "Janitor",
             "Linux system health, orphan-process sweeper and transient cache cleaner for agentic workspaces (stdio, no network).",
-            "mcps/orquestra-janitor",
+            "mcps/ownhub-janitor",
             "https://github.com/internetdozero/janitor-mcp.git",
             "janitor",
             "janitor",
         ),
         official_mcp(
-            "orquestra-core",
-            "Orquestra Core",
-            "MCP control plane for OrquestraAI: project skills just in time, flip MCP servers, use stored vault credentials blind, read the master AGENTS.md and check harness links.",
-            "mcps/orquestra-core",
-            "https://github.com/internetdozero/orquestra-core-mcp.git",
-            "orquestra-core",
-            "orquestra-core",
+            "ownhub-core",
+            "OwnHub Core",
+            "MCP control plane for OwnHub: project skills just in time, flip MCP servers, use stored vault credentials blind, read the master AGENTS.md and check harness links.",
+            "mcps/ownhub-core",
+            "https://github.com/internetdozero/ownhub-core-mcp.git",
+            "ownhub-core",
+            "ownhub-core",
         ),
         official_mcp(
-            "orquestra-cloudflare",
+            "ownhub-cloudflare",
             "Cloudflare",
             "Cloudflare edge MCP server: Workers, KV, R2 and deployment tooling (stdio).",
-            "mcps/orquestra-cloudflare",
+            "mcps/ownhub-cloudflare",
             "https://github.com/internetdozero/cloudflare-mcp.git",
             "cloudflare",
             "cloudflare-mcp",
         ),
         official_mcp(
-            "orquestra-web-search",
+            "ownhub-web-search",
             "Web Search",
             "Exa-backed web search returning cited highlights for AI agents (stdio).",
-            "mcps/orquestra-web-search",
-            "https://github.com/internetdozero/orquestra-extensions.git",
+            "mcps/ownhub-web-search",
+            "https://github.com/internetdozero/ownhub-extensions.git",
             "web-search",
             "web-search",
         ),

@@ -4,7 +4,7 @@ import { ensureAgentsText, readAgentsCache, writeAgentsCache } from "../lib/agen
 import { writeMasterAgentsMd } from "../lib/tauri";
 import { perfViewPainted } from "../lib/perf";
 
-/** Draft and save state for the master `~/.orquestra/AGENTS.md`. */
+/** Draft and save state for the master `~/.ownhub/AGENTS.md`. */
 export function useAgentsFile(options: {
   isTauri: boolean;
   onToast: (message: string) => void;

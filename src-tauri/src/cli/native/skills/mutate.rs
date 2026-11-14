@@ -8,7 +8,7 @@ pub(super) fn enable(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra skills enable <id> [--scope <scope>] [--json]".to_string())
+            usage("usage: ownhub skills enable <id> [--scope <scope>] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--scope"], &["--json"])?;
@@ -33,7 +33,7 @@ pub(super) fn disable(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra skills disable <id> [--scope <scope>] [--force] [--json]"
+                "usage: ownhub skills disable <id> [--scope <scope>] [--force] [--json]"
                     .to_string(),
             )
         })?;
@@ -72,7 +72,7 @@ pub(super) fn batch(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra skills batch <enable|disable> [--scope <scope>] [--json]"
+                "usage: ownhub skills batch <enable|disable> [--scope <scope>] [--json]"
                     .to_string(),
             )
         })?;
@@ -109,7 +109,7 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra skills delete <id> [--force] [--json]".to_string())
+            usage("usage: ownhub skills delete <id> [--force] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &[], &["--force", "-f", "--json"])?;

@@ -1,7 +1,7 @@
 //! Importing external skill folders into the master vault.
 //!
 //! A skill is a folder holding a `SKILL.md`. Import verifies the source,
-//! copies it into `~/.orquestra/skills-library/<folder_name>` with path
+//! copies it into `~/.ownhub/skills-library/<folder_name>` with path
 //! traversal rejected, and returns the evaluated [`SkillItem`]. Imported
 //! skills start unprojected, exactly like seeded vault entries.
 
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use super::subpath::{clone_shallow, locate_skill_dir, split_git_url};
 use super::vault::{validate_id, SKILL_FILE};
 use super::{list_from, SkillItem, GLOBAL_SCOPE};
-use crate::paths::{copy_dir_all, open_paths, OrquestraPaths};
+use crate::paths::{copy_dir_all, open_paths, OwnHubPaths};
 
 /// Copy one skill folder into the vault and return its evaluated item.
 pub fn import_skill(source_path: String) -> Result<SkillItem, String> {
@@ -73,7 +73,7 @@ pub fn import_skill_from_git(url: String) -> Result<SkillItem, String> {
 }
 
 fn staging_dir() -> Result<PathBuf, String> {
-    let staging = crate::paths::fresh_scratch_dir("orquestra-git-import")?;
+    let staging = crate::paths::fresh_scratch_dir("ownhub-git-import")?;
     let repo = staging.join("repo");
     fs::create_dir_all(&repo)
         .map_err(|error| format!("failed to create {}: {error}", repo.display()))?;
@@ -133,7 +133,7 @@ fn import_dir(source: &Path) -> Result<SkillItem, String> {
 }
 
 /// Remove a half-copied destination on failure, then evaluate the new skill.
-fn finish(paths: &OrquestraPaths, id: &str, destination: &Path) -> Result<SkillItem, String> {
+fn finish(paths: &OwnHubPaths, id: &str, destination: &Path) -> Result<SkillItem, String> {
     match list_from(paths, GLOBAL_SCOPE)
         .into_iter()
         .flatten()
@@ -154,7 +154,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn import_refuses_a_symlinked_directory() {
-        let root = crate::paths::fresh_scratch_dir("orquestra-import-link").expect("scratch");
+        let root = crate::paths::fresh_scratch_dir("ownhub-import-link").expect("scratch");
         let outside = root.join("outside");
         fs::create_dir_all(&outside).expect("outside");
         fs::write(outside.join("SKILL.md"), "secret-outside\n").expect("skill");

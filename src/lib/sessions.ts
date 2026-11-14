@@ -23,7 +23,7 @@ export interface UnifiedSession {
   turnsCount: number;
   /** Estimated bytes on disk: session files plus content rows. */
   sizeBytes: number;
-  /** Protected from every purge; stored in ~/.orquestra, never in a harness. */
+  /** Protected from every purge; stored in ~/.ownhub, never in a harness. */
   isPinned: boolean;
   pinLabel: string | null;
   /** Execution target from harness (e.g. 'cloud' or 'local'). */

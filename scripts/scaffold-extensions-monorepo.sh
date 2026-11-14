@@ -1,12 +1,12 @@
 #!/bin/sh
-# Scaffold the `orquestra-extensions` monorepo: unified home for the official
+# Scaffold the `ownhub-extensions` monorepo: unified home for the official
 # skills (`skills/<id>/SKILL.md`) and MCP servers (`mcps/<id>/pyproject.toml`).
 #
 # Usage:
 #   ./scripts/scaffold-extensions-monorepo.sh [DEST]
 #   ./scripts/scaffold-extensions-monorepo.sh --with-subtrees DEST  # pull existing repos
 #
-# DEST defaults to ./orquestra-extensions. Never touches /tmp; all work
+# DEST defaults to ./ownhub-extensions. Never touches /tmp; all work
 # happens inside DEST. Idempotent: rerunning keeps existing SKILL.md files.
 set -eu
 
@@ -15,10 +15,10 @@ if [ "${1:-}" = "--with-subtrees" ]; then
   WITH_SUBTREES=1
   shift
 fi
-DEST="${1:-orquestra-extensions}"
+DEST="${1:-ownhub-extensions}"
 
-SKILLS="orquestra orquestra-modular-start orquestra-agent-orchestrator orquestra-smart-build-router"
-MCPS="orquestra-idea-vault orquestra-session-relay orquestra-janitor orquestra-core orquestra-cloudflare"
+SKILLS="ownhub ownhub-modular-start ownhub-agent-orchestrator ownhub-smart-build-router"
+MCPS="ownhub-idea-vault ownhub-session-relay ownhub-janitor ownhub-core ownhub-cloudflare"
 ORG="https://github.com/internetdozero"
 
 mkdir -p "$DEST/skills" "$DEST/mcps"
@@ -26,12 +26,12 @@ cd "$DEST"
 
 if [ ! -f README.md ]; then
   cat > README.md <<'EOF'
-# orquestra-extensions
+# ownhub-extensions
 
-Unified monorepo for the official OrquestraAI skills and MCP servers.
+Unified monorepo for the official OwnHub skills and MCP servers.
 
 - `skills/<skill-id>/SKILL.md` — one folder per skill, importable via
-  `orquestra-extensions.git#skills/<skill-id>`.
+  `ownhub-extensions.git#skills/<skill-id>`.
 - `mcps/<mcp-id>/` — one Python package per MCP server (`pyproject.toml`).
 
 Legacy standalone repos remain as pull-through fallbacks until every
@@ -43,7 +43,7 @@ if [ ! -f LICENSE ]; then
   cat > LICENSE <<'EOF'
 MIT License
 
-Copyright (c) OrquestraAI contributors
+Copyright (c) OwnHub contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -67,7 +67,7 @@ fi
 
 if [ ! -f AGENTS.md ]; then
   cat > AGENTS.md <<'EOF'
-# orquestra-extensions — agent guide
+# ownhub-extensions — agent guide
 
 - One skill per `skills/<skill-id>/` folder; the folder name is the vault id.
 - Every skill folder holds a `SKILL.md` with `name:` + `description:` frontmatter.
@@ -96,9 +96,9 @@ done
 
 # shellcheck disable=SC2086
 for mcp in $MCPS; do
-  cmd="$(printf '%s' "$mcp" | sed 's/^orquestra-//')"
+  cmd="$(printf '%s' "$mcp" | sed 's/^ownhub-//')"
   case "$mcp" in
-    orquestra-cloudflare) cmd="cloudflare-mcp" ;;
+    ownhub-cloudflare) cmd="cloudflare-mcp" ;;
   esac
   if [ ! -f "mcps/$mcp/pyproject.toml" ]; then
     mkdir -p "mcps/$mcp"
@@ -123,10 +123,10 @@ if [ "$WITH_SUBTREES" -eq 1 ]; then
   echo "Pulling standalone repos as subtrees (best effort)..."
   # shellcheck disable=SC2086
   for skill in $SKILLS; do
-    legacy="$(printf '%s' "$skill" | sed 's/^orquestra-//')"
+    legacy="$(printf '%s' "$skill" | sed 's/^ownhub-//')"
     case "$skill" in
-      orquestra) repo="$ORG/orquestra.git" ;;
-      orquestra-smart-build-router) continue ;;
+      ownhub) repo="$ORG/ownhub.git" ;;
+      ownhub-smart-build-router) continue ;;
       *) repo="$ORG/$legacy.git" ;;
     esac
     if [ ! -f "skills/$skill/SKILL.md" ] || grep -q "TODO: one-line" "skills/$skill/SKILL.md"; then

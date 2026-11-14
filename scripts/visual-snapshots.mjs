@@ -23,7 +23,7 @@ const PORT = 1422;
 const APP_URL = `http://127.0.0.1:${PORT}/?fixtures=1`;
 const GOLDEN =
   process.env.SNAPSHOT_FILE || join(ROOT, "scripts/__snapshots__/transcript-drawers.json");
-const TMP = process.env.ORQUESTRA_VISUAL_TMP || os.tmpdir();
+const TMP = process.env.OWNHUB_VISUAL_TMP || os.tmpdir();
 const HARNESSES = [
   "antigravity",
   "grok",
@@ -169,7 +169,7 @@ function firstDifference(actual, expected, path = "") {
 
 async function main() {
   mkdirSync(TMP, { recursive: true });
-  const profile = mkdtempSync(join(TMP, "orquestra-visual-"));
+  const profile = mkdtempSync(join(TMP, "ownhub-visual-"));
   const shots = join(TMP, "visual-snapshots");
   mkdirSync(shots, { recursive: true });
 

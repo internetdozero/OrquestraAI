@@ -4,10 +4,10 @@ use std::collections::BTreeSet;
 #[test]
 fn skill_rule_matches_the_designated_set() {
     for id in [
-        "orquestra",
-        "orquestra-modular-start",
-        "orquestra-agent-orchestrator",
-        "orquestra-smart-build-router",
+        "ownhub",
+        "ownhub-modular-start",
+        "ownhub-agent-orchestrator",
+        "ownhub-smart-build-router",
         "modular-start",
         "agent-orchestrator",
         "lean-screen",
@@ -20,7 +20,7 @@ fn skill_rule_matches_the_designated_set() {
         "github",
         "modular",
         "modular-path",
-        "orquestra-anything",
+        "ownhub-anything",
         "",
     ] {
         assert!(!is_official_skill(id), "{id} should not be official");
@@ -31,37 +31,37 @@ fn skill_rule_matches_the_designated_set() {
 fn aliases_resolve_forward_and_stamp_official() {
     assert_eq!(
         canonical_skill_id("modular-start"),
-        "orquestra-modular-start"
+        "ownhub-modular-start"
     );
     assert_eq!(
         canonical_skill_id("agent-orchestrator"),
-        "orquestra-agent-orchestrator"
+        "ownhub-agent-orchestrator"
     );
     assert_eq!(
         canonical_skill_id("autonomous-audit"),
-        "orquestra-autonomous-audit"
+        "ownhub-autonomous-audit"
     );
-    assert_eq!(canonical_skill_id("orquestra"), "orquestra");
+    assert_eq!(canonical_skill_id("ownhub"), "ownhub");
     assert_eq!(canonical_skill_id("caveman"), "caveman");
-    assert_eq!(canonical_mcp_id("idea-vault"), "orquestra-idea-vault");
-    assert_eq!(canonical_mcp_id("janitor"), "orquestra-janitor");
-    assert_eq!(canonical_mcp_id("orquestra-core"), "orquestra-core");
+    assert_eq!(canonical_mcp_id("idea-vault"), "ownhub-idea-vault");
+    assert_eq!(canonical_mcp_id("janitor"), "ownhub-janitor");
+    assert_eq!(canonical_mcp_id("ownhub-core"), "ownhub-core");
     assert_eq!(canonical_mcp_id("github"), "github");
 }
 
 #[test]
 fn mcp_rule_matches_the_designated_set() {
     for id in [
-        "orquestra-idea-vault",
-        "orquestra-session-relay",
-        "orquestra-janitor",
-        "orquestra-core",
-        "orquestra-cloudflare",
+        "ownhub-idea-vault",
+        "ownhub-session-relay",
+        "ownhub-janitor",
+        "ownhub-core",
+        "ownhub-cloudflare",
         "idea-vault",
         "session-relay",
         "janitor",
         "cloudflare",
-        "my-orquestra-bridge",
+        "my-ownhub-bridge",
     ] {
         assert!(is_official_mcp(id), "{id} should be official");
     }
@@ -180,27 +180,27 @@ fn official_skills_have_expected_scripts_and_legacy_ids() {
     let store = official_store();
     for skill in store.skills.iter().filter(|s| s.official) {
         match skill.id.as_str() {
-            "orquestra" => {
+            "ownhub" => {
                 assert!(skill.has_scripts);
                 assert_eq!(skill.legacy_id, None);
                 assert_eq!(skill.fallback_repo_url, None);
             }
-            "orquestra-modular-start" => {
+            "ownhub-modular-start" => {
                 assert!(skill.has_scripts);
                 assert_eq!(skill.legacy_id.as_deref(), Some("modular-start"));
                 assert_eq!(skill.fallback_repo_url, None);
             }
-            "orquestra-agent-orchestrator" => {
+            "ownhub-agent-orchestrator" => {
                 assert!(skill.has_scripts);
                 assert_eq!(skill.legacy_id.as_deref(), Some("agent-orchestrator"));
                 assert_eq!(skill.fallback_repo_url, None);
             }
-            "orquestra-smart-build-router" => {
+            "ownhub-smart-build-router" => {
                 assert!(!skill.has_scripts);
                 assert_eq!(skill.legacy_id.as_deref(), Some("smart-build-router"));
                 assert_eq!(skill.fallback_repo_url, None);
             }
-            "orquestra-autonomous-audit" => {
+            "ownhub-autonomous-audit" => {
                 assert!(!skill.has_scripts);
                 assert_eq!(skill.legacy_id.as_deref(), Some("autonomous-audit"));
                 assert_eq!(skill.fallback_repo_url, None);

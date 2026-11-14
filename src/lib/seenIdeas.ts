@@ -9,7 +9,7 @@ import type { IdeaItem } from "./ideas.ts";
  * of returning on the next poll.
  */
 
-export const SEEN_IDEAS_KEY = "orquestra:seen-ideas";
+export const SEEN_IDEAS_KEY = "ownhub:seen-ideas";
 
 /** How long an untouched idea keeps its [NEW] chip. */
 export const NEW_IDEA_WINDOW_MS = 10 * 60 * 1000;

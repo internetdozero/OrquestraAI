@@ -1,12 +1,12 @@
 //! Integration coverage for the headless terminal flags (`--bridge-status`,
 //! `--mcp-status`, `--mcp-deploy`, `--mcp-set`, `--preset`): the same
 //! functions `main.rs` invokes, against a scratch `HOME` so the real
-//! `~/.orquestra` is never touched.
+//! `~/.ownhub` is never touched.
 
 mod common;
 
-use orquestra_ai_lib::{apply_preset_json, bridge_status_json, deploy_mcp_json, mcp_status_json};
-use orquestra_ai_lib::{deploy_bridge_json, set_mcp_state_cli};
+use ownhub_lib::{apply_preset_json, bridge_status_json, deploy_mcp_json, mcp_status_json};
+use ownhub_lib::{deploy_bridge_json, set_mcp_state_cli};
 
 fn parse(json: &str) -> serde_json::Value {
     serde_json::from_str(json).expect("command output must be JSON")
@@ -22,7 +22,7 @@ fn bridge_status_reports_json_on_empty_home() {
 
 /// Windows has no `HOME`: the app must resolve the operator's directory from
 /// `USERPROFILE` instead. Before that fallback existed, this exact call failed
-/// with "HOME is not set", which is why nothing under `~/.orquestra` worked on
+/// with "HOME is not set", which is why nothing under `~/.ownhub` worked on
 /// a Windows launch.
 #[test]
 fn bridge_status_falls_back_to_userprofile_without_home() {
@@ -70,7 +70,7 @@ fn mcp_lifecycle_round_trips_through_the_cli_layer() {
         // Unknown ids fail closed instead of creating phantom servers.
         assert!(set_mcp_state_cli("no-such-server", "global", true).is_err());
 
-        orquestra_ai_lib::mcp::save_mcp(orquestra_ai_lib::mcp::McpServer {
+        ownhub_lib::mcp::save_mcp(ownhub_lib::mcp::McpServer {
             id: "it-server".to_string(),
             name: "Integration Test Server".to_string(),
             description: String::new(),

@@ -2,7 +2,7 @@
 //!
 //! Each target is read fresh, re-rendered in its own dialect, and only then
 //! replaced — atomically, never loosening a file's mode, and with the
-//! previous bytes kept in `~/.orquestra/backups/pre-mcp-*`.
+//! previous bytes kept in `~/.ownhub/backups/pre-mcp-*`.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -14,11 +14,11 @@ use super::secrets::parse_dotenv;
 use super::{McpServer, McpTargetStatus};
 use crate::bridge;
 use crate::harness::{self, HarnessServer};
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 const BACKUP_PREFIX: &str = "pre-mcp";
 
-/// Harness configs OrquestraAI can compile MCP servers into.
+/// Harness configs OwnHub can compile MCP servers into.
 pub fn list_targets() -> Result<Vec<McpTargetStatus>, String> {
     let home = bridge::home_dir()?;
     harness::mcp_targets()
@@ -49,13 +49,13 @@ pub fn deploy_mcps() -> Result<(), String> {
 /// Same deploy, but reports which config files changed and which had to be
 /// tightened to `0600` because they now carry env values.
 pub fn deploy_mcps_reporting() -> Result<Vec<String>, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     paths.ensure_layout()?;
     let home = bridge::home_dir()?;
     deploy_at(&home, &paths, &seed_catalog_path(&paths.root))
 }
 
-pub(super) fn deploy_current(paths: &OrquestraPaths) -> Result<(), String> {
+pub(super) fn deploy_current(paths: &OwnHubPaths) -> Result<(), String> {
     let home = bridge::home_dir()?;
     let seed = seed_catalog_path(&paths.root);
     deploy_at(&home, paths, &seed).map(|_| ())
@@ -67,7 +67,7 @@ pub(super) fn deploy_current(paths: &OrquestraPaths) -> Result<(), String> {
 
 pub(super) fn deploy_at(
     home: &Path,
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
     seed: &Path,
 ) -> Result<Vec<String>, String> {
     let mut catalog = load_catalog(paths, seed)?;
@@ -192,7 +192,7 @@ pub(super) fn deploy_at(
         }
     }
 
-    // Remember what OrquestraAI owns so a later run can remove it again. Only
+    // Remember what OwnHub owns so a later run can remove it again. Only
     // shrink the set when every target agreed; otherwise keep the union so the
     // removals are retried once the failure is fixed.
     let wanted: BTreeSet<String> = catalog
@@ -217,7 +217,7 @@ pub(super) fn deploy_at(
 
 /// Backup folder for one deploy run. Timestamps only have second resolution, so
 /// two runs in the same second must not share (and overwrite) a folder.
-fn backup_run_dir(paths: &OrquestraPaths) -> Result<PathBuf, String> {
+fn backup_run_dir(paths: &OwnHubPaths) -> Result<PathBuf, String> {
     let stamp = bridge::timestamp_label();
     let backups = paths.root.join("backups");
 

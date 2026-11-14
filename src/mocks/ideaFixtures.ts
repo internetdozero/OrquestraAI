@@ -12,7 +12,7 @@ import type { BlackboardNote, IdeaItem } from "../lib/ideas";
 export const FIXTURE_IDEAS: IdeaItem[] = [
   {
     id: 1,
-    project: "orquestra",
+    project: "ownhub",
     title: "Hover-reveal actions without layout shift",
     description:
       "Replace width-animated hover buttons with opacity-only reveals or absolute overlays so fast mouse sweeps never oscillate the layout.",
@@ -27,7 +27,7 @@ export const FIXTURE_IDEAS: IdeaItem[] = [
   },
   {
     id: 2,
-    project: "orquestra",
+    project: "ownhub",
     title: "Browser mock fixtures for visual verification",
     description:
       "Serve in-memory ideas and MCP catalog in Vite dev so agents can validate layouts without the Rust binary.",
@@ -42,7 +42,7 @@ export const FIXTURE_IDEAS: IdeaItem[] = [
   },
   {
     id: 3,
-    project: "orquestra",
+    project: "ownhub",
     title: "Collapse Completed column by default",
     description: "Keep finished work one click away without stealing kanban width on load.",
     category: "ux",
@@ -113,7 +113,7 @@ export const FIXTURE_IDEAS: IdeaItem[] = [
   },
   {
     id: 8,
-    project: "orquestra",
+    project: "ownhub",
     title: "Archived column modal",
     description: "Move archived ideas out of the kanban into a dedicated modal.",
     category: "feature",
@@ -127,7 +127,7 @@ export const FIXTURE_IDEAS: IdeaItem[] = [
   },
   {
     id: 9,
-    project: "orquestra",
+    project: "ownhub",
     title: "O(n) token estimator for huge vaults",
     description: null,
     category: "idea",
@@ -169,7 +169,7 @@ export const FIXTURE_IDEAS: IdeaItem[] = [
   },
   {
     id: 12,
-    project: "orquestra",
+    project: "ownhub",
     title: "Fix orphan process sweeper on Darwin",
     description: "pgrep flags differ on macOS; gate the sweep behind a platform check.",
     category: "bug",
@@ -187,7 +187,7 @@ export const FIXTURE_IDEAS: IdeaItem[] = [
 export const FIXTURE_NOTES: BlackboardNote[] = [
   {
     id: 1,
-    project: "orquestra",
+    project: "ownhub",
     topic: "hover-fix",
     sender: "codex-agent",
     target: "all",
@@ -207,7 +207,7 @@ export const FIXTURE_NOTES: BlackboardNote[] = [
   },
   {
     id: 3,
-    project: "orquestra",
+    project: "ownhub",
     topic: "release",
     sender: "release-bot",
     target: "all",

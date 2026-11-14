@@ -9,7 +9,7 @@ use crate::ideas::{
 };
 use std::fs;
 
-pub const LIST_USAGE: &str = "usage: orquestra idea list [--project <p>] [--status <status>] [--category <c>] [--priority <p>] [--limit <n>] [--offset <n>] [--json]\n  status: default is 'open'; use '--status all' to include completed and archived ideas";
+pub const LIST_USAGE: &str = "usage: ownhub idea list [--project <p>] [--status <status>] [--category <c>] [--priority <p>] [--limit <n>] [--offset <n>] [--json]\n  status: default is 'open'; use '--status all' to include completed and archived ideas";
 
 pub(super) fn list(args: &[String]) -> Result<String, CliError> {
     if args
@@ -56,7 +56,7 @@ pub(super) fn get(args: &[String]) -> Result<String, CliError> {
     let id_str = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra idea get <id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub idea get <id> [--json]".to_string()))?;
 
     let id = id_str
         .parse::<i64>()
@@ -112,7 +112,7 @@ pub(super) fn update(args: &[String]) -> Result<String, CliError> {
     let id_str = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra idea update <id> [options] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub idea update <id> [options] [--json]".to_string()))?;
 
     let id = id_str
         .parse::<i64>()
@@ -159,7 +159,7 @@ pub(super) fn status(args: &[String]) -> Result<String, CliError> {
         [id, status, flag] if flag == "--json" => (id.as_str(), status.as_str()),
         _ => {
             return Err(usage(
-                "usage: orquestra idea status <id> <status> [--json]".to_string(),
+                "usage: ownhub idea status <id> <status> [--json]".to_string(),
             ))
         }
     };
@@ -178,7 +178,7 @@ pub(super) fn delete(args: &[String]) -> Result<String, CliError> {
     let id_str = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra idea delete <id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub idea delete <id> [--json]".to_string()))?;
 
     let id = id_str
         .parse::<i64>()
@@ -198,7 +198,7 @@ pub(super) fn search(args: &[String]) -> Result<String, CliError> {
         .filter(|arg| !arg.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra idea search <query> [--project <p>] [--limit <n>] [--json]"
+                "usage: ownhub idea search <query> [--project <p>] [--limit <n>] [--json]"
                     .to_string(),
             )
         })?;

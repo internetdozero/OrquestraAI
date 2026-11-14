@@ -51,7 +51,7 @@ pub fn install() -> Result<String, String> {
     let client = reqwest::blocking::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(5))
         .timeout(std::time::Duration::from_secs(180))
-        .user_agent("OrquestraAI")
+        .user_agent("OwnHub")
         .build()
         .map_err(|e| format!("Não foi possível iniciar o download do RTK: {e}"))?;
     let release: serde_json::Value = client
@@ -165,7 +165,7 @@ pub fn install() -> Result<String, String> {
 /// `%LOCALAPPDATA%` instead of littering the profile root.
 fn install_dir(home: &std::path::Path) -> std::path::PathBuf {
     if cfg!(windows) {
-        home.join("AppData/Local/OrquestraAI/bin")
+        home.join("AppData/Local/OwnHub/bin")
     } else {
         home.join(".local/bin")
     }
@@ -227,7 +227,7 @@ mod tests {
     fn the_install_directory_follows_the_platform_convention() {
         let dir = install_dir(std::path::Path::new("/home/dev"));
         if cfg!(windows) {
-            assert!(dir.ends_with("OrquestraAI/bin"), "{}", dir.display());
+            assert!(dir.ends_with("OwnHub/bin"), "{}", dir.display());
         } else {
             assert_eq!(dir, std::path::PathBuf::from("/home/dev/.local/bin"));
         }

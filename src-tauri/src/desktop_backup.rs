@@ -1,5 +1,5 @@
-//! Snapshot `~/.orquestra` (configs, presets, vault, projections) into a
-//! `tar.gz` under `~/.orquestra/backups/`, excluding previous backups.
+//! Snapshot `~/.ownhub` (configs, presets, vault, projections) into a
+//! `tar.gz` under `~/.ownhub/backups/`, excluding previous backups.
 //!
 //! The archive embeds `vault.json` with cleartext keys, so the file is created
 //! `0600` **before** a single byte is written — an inherited umask of `022`
@@ -24,7 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Name of the backup directory inside `root`, excluded from its own archive.
 const BACKUPS_DIR: &str = "backups";
 
-/// Build `orquestra_backup_<stamp>.tar.gz` inside `root/backups/` and lock
+/// Build `ownhub_backup_<stamp>.tar.gz` inside `root/backups/` and lock
 /// its permissions. Returns the archive path. `root` must already exist.
 pub fn create_backup_at(root: &Path) -> Result<PathBuf, String> {
     let backups = root.join(BACKUPS_DIR);
@@ -32,7 +32,7 @@ pub fn create_backup_at(root: &Path) -> Result<PathBuf, String> {
         .map_err(|error| format!("failed to create {}: {error}", backups.display()))?;
     lock_dir(&backups)?;
 
-    let archive = backups.join(format!("orquestra_backup_{stamp}.tar.gz", stamp = stamp()));
+    let archive = backups.join(format!("ownhub_backup_{stamp}.tar.gz", stamp = stamp()));
     write_archive(root, &archive)?;
     lock_file(&archive)?;
 
@@ -220,7 +220,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         let root = std::env::temp_dir().join(format!(
-            "orquestra-backup-{name}-{}-{unique}",
+            "ownhub-backup-{name}-{}-{unique}",
             std::process::id()
         ));
         std::fs::create_dir_all(&root).unwrap();
@@ -267,7 +267,7 @@ mod tests {
         std::fs::write(root.join("vault.json"), "{\"k\":\"v\"}").unwrap();
         std::fs::create_dir_all(root.join("active/global")).unwrap();
         std::fs::create_dir_all(root.join("backups")).unwrap();
-        std::fs::write(root.join("backups/orquestra_backup_1.tar.gz"), "old").unwrap();
+        std::fs::write(root.join("backups/ownhub_backup_1.tar.gz"), "old").unwrap();
 
         let archive = create_backup_at(&root).expect("backup succeeds");
         let names = entry_names(&archive);

@@ -1,12 +1,12 @@
-//! Harness registry, re-exported from `orquestra-core`.
+//! Harness registry, re-exported from `ownhub-core`.
 //!
-//! The table and its lookups moved to `crates/orquestra-core/src/harness`
+//! The table and its lookups moved to `crates/ownhub-core/src/harness`
 //! (task #326). The glob re-export keeps every `crate::harness::…` import and
 //! the crate's public `harness` API unchanged.
 
-pub use orquestra_core::harness::*;
+pub use ownhub_core::harness::*;
 
 // The config adapter layer (one MCP dialect per harness) lives in
-// `orquestra-harness` (task #327); it is re-exported here so callers keep
+// `ownhub-harness` (task #327); it is re-exported here so callers keep
 // using `crate::harness::…` and stay independent of the crate layout.
-pub use orquestra_harness::{render_mcp_config, HarnessServer};
+pub use ownhub_harness::{render_mcp_config, HarnessServer};

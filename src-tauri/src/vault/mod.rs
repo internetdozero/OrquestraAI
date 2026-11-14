@@ -1,7 +1,7 @@
 //! Blind Credential Vault & MCP blind proxy — the IPC layer.
 //!
 //! The store, the blind HTTP/exec proxies and the at-rest encryption live in
-//! `orquestra-vault` (task #328). What stays here are the `#[tauri::command]`
+//! `ownhub-vault` (task #328). What stays here are the `#[tauri::command]`
 //! wrappers and the re-exports that keep `crate::vault::…` unchanged for the
 //! rest of the shell.
 //!
@@ -12,18 +12,18 @@
 
 use std::collections::HashMap;
 
-use orquestra_vault::vault::{presets, proxy, service};
+use ownhub_vault::vault::{presets, proxy, service};
 
-pub use orquestra_vault::vault::exec::{child_env, scrub_output};
-pub use orquestra_vault::vault::http::{
+pub use ownhub_vault::vault::exec::{child_env, scrub_output};
+pub use ownhub_vault::vault::http::{
     effective_headers, scrub_body, scrub_text, strip_response_headers,
 };
-pub use orquestra_vault::vault::presets::PresetSpec;
-pub use orquestra_vault::vault::proxy::{VaultHttpResult, VaultTestResult};
-pub use orquestra_vault::vault::service::{SaveServiceInput, VaultExecResult};
-pub use orquestra_vault::vault::{mask_key, KeyHealth, VaultServicePublic};
+pub use ownhub_vault::vault::presets::PresetSpec;
+pub use ownhub_vault::vault::proxy::{VaultHttpResult, VaultTestResult};
+pub use ownhub_vault::vault::service::{SaveServiceInput, VaultExecResult};
+pub use ownhub_vault::vault::{mask_key, KeyHealth, VaultServicePublic};
 
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 /// Preset catalog for the UI drawer.
 #[tauri::command]
@@ -34,7 +34,7 @@ pub fn list_vault_presets() -> Vec<PresetSpec> {
 /// Masked services: names, active index, counts, health. No secrets.
 #[tauri::command]
 pub fn vault_list_services() -> Result<Vec<VaultServicePublic>, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::list_services(&paths)
 }
 
@@ -42,14 +42,14 @@ pub fn vault_list_services() -> Result<Vec<VaultServicePublic>, String> {
 /// this installation's at-rest key. The source is never changed.
 #[tauri::command]
 pub fn vault_import_services(content: String) -> Result<Vec<VaultServicePublic>, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::import_services(&paths, &content)
 }
 
 /// Return one raw credential only for explicit copying by the operator.
 #[tauri::command]
 pub fn vault_reveal_key(id: String, index: usize) -> Result<String, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::reveal_key(&paths, &id, index)
 }
 
@@ -68,7 +68,7 @@ pub fn vault_save_service(
     meta: Option<HashMap<String, String>>,
     key_tags: Option<Vec<Option<String>>>,
 ) -> Result<VaultServicePublic, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::save_service(
         &paths,
         SaveServiceInput {
@@ -90,21 +90,21 @@ pub fn vault_save_service(
 /// but the blind proxy and exec refuse them.
 #[tauri::command]
 pub fn vault_set_service_enabled(id: String, enabled: bool) -> Result<VaultServicePublic, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::set_service_enabled(&paths, &id, enabled)
 }
 
 /// Remove one service from the vault.
 #[tauri::command]
 pub fn vault_delete_service(id: String) -> Result<(), String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::delete_service(&paths, &id)
 }
 
 /// Designate the primary key index for a service.
 #[tauri::command]
 pub fn vault_set_primary(id: String, index: usize) -> Result<VaultServicePublic, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::set_primary(&paths, &id, index)
 }
 
@@ -139,8 +139,8 @@ pub async fn vault_test_connection(
 /// shell strings, pipes and redirections are rejected instead of executed.
 #[tauri::command]
 pub fn vault_exec(service: String, command: serde_json::Value) -> Result<VaultExecResult, String> {
-    let paths = OrquestraPaths::resolve()?;
-    orquestra_vault::vault::service::execute(&paths, &service, &command)
+    let paths = OwnHubPaths::resolve()?;
+    ownhub_vault::vault::service::execute(&paths, &service, &command)
 }
 
 /// Which backend protects the at-rest key, for the operator-facing badge.
@@ -160,8 +160,8 @@ pub struct VaultKeyStatus {
 /// on a missing keyring: a degraded backend is the answer, not an error.
 #[tauri::command]
 pub fn vault_key_status() -> Result<VaultKeyStatus, String> {
-    let paths = OrquestraPaths::resolve()?;
-    let status = orquestra_vault::at_rest::key_status(&paths);
+    let paths = OwnHubPaths::resolve()?;
+    let status = ownhub_vault::at_rest::key_status(&paths);
     Ok(VaultKeyStatus {
         backend: status.backend.as_str().to_string(),
         degraded: status.is_degraded(),
@@ -186,7 +186,7 @@ pub struct PurgeBackupsReport {
 /// write would strand a user whose new key cannot open the sealed files.
 #[tauri::command]
 pub fn vault_purge_migration_backups() -> Result<PurgeBackupsReport, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::ensure_readable(&paths)?;
     crate::mcp::list_mcps()?;
     let vault_purged = service::purge_migration_backup(&paths)?;
@@ -200,6 +200,6 @@ pub fn vault_purge_migration_backups() -> Result<PurgeBackupsReport, String> {
 /// Remove one key from a pool (re-indexes, keeps a valid primary).
 #[tauri::command]
 pub fn vault_remove_key(id: String, index: usize) -> Result<VaultServicePublic, String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     service::remove_key(&paths, &id, index)
 }

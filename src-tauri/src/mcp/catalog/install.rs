@@ -1,8 +1,8 @@
-//! Install curated MCP packages into Orquestra's private data root.
+//! Install curated MCP packages into OwnHub's private data root.
 
 use super::super::McpServer;
 use crate::official::official_store;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(super) fn ensure_official_server(
     server: &mut McpServer,
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
 ) -> Result<(), String> {
     if !crate::official::is_official_mcp(&server.id) {
         return Ok(());
@@ -121,7 +121,7 @@ fn install_repository(
     Ok(executable)
 }
 
-fn create_private_dir(paths: &OrquestraPaths, path: &Path) -> Result<(), String> {
+fn create_private_dir(paths: &OwnHubPaths, path: &Path) -> Result<(), String> {
     let relative = path
         .strip_prefix(&paths.root)
         .map_err(|_| format!("refusing MCP install outside {}", paths.root.display()))?;
@@ -264,6 +264,6 @@ mod tests {
     fn resolves_installed_commands_to_executable_paths() {
         #[cfg(unix)]
         assert!(find_command("/bin/echo").is_some());
-        assert!(find_command("orquestra-test-command-that-does-not-exist").is_none());
+        assert!(find_command("ownhub-test-command-that-does-not-exist").is_none());
     }
 }

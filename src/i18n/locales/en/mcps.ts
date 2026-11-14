@@ -5,7 +5,7 @@ export const mcps: TranslationSchema["mcps"] = {
   registryTitle: "MCP Registry",
   headerChip: "MCP Registry",
   subtitle:
-    "One catalog in ~/.orquestra/mcps.json compiled into each harness's own dialect. Global is the baseline; a harness can opt in on top of it.",
+    "One catalog in ~/.ownhub/mcps.json compiled into each harness's own dialect. Global is the baseline; a harness can opt in on top of it.",
   active: "Active",
   scopeTokens: "Scope tokens",
   sortMcps: "Sort servers",
@@ -30,7 +30,7 @@ export const mcps: TranslationSchema["mcps"] = {
   reading: "Reading the catalog…",
   emptyTitle: "No MCP servers yet",
   emptyBody:
-    "Add the first server and OrquestraAI will compile it into every installed harness that has an adapter.",
+    "Add the first server and OwnHub will compile it into every installed harness that has an adapter.",
   exploreStoreAction: "Explore the official store",
   addManualAction: "Add manually",
   targets: "Targets",

@@ -35,21 +35,21 @@ fn monorepo_url_fragments_extract_and_sanitize() {
     use super::subpath::{sanitize_subpath, split_git_url};
 
     let (repo, sub) = split_git_url(
-        "https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-modular-start",
+        "https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-modular-start",
     );
     assert_eq!(
         repo,
-        "https://github.com/internetdozero/orquestra-extensions.git"
+        "https://github.com/internetdozero/ownhub-extensions.git"
     );
-    assert_eq!(sub.as_deref(), Some("skills/orquestra-modular-start"));
+    assert_eq!(sub.as_deref(), Some("skills/ownhub-modular-start"));
 
     let (plain, none) = split_git_url("https://github.com/o/standalone.git");
     assert!(none.is_none());
     assert_eq!(plain, "https://github.com/o/standalone.git");
 
     assert_eq!(
-        sanitize_subpath("mcps/orquestra-janitor").as_deref(),
-        Some("mcps/orquestra-janitor")
+        sanitize_subpath("mcps/ownhub-janitor").as_deref(),
+        Some("mcps/ownhub-janitor")
     );
     for hostile in ["", "../escape", "a/../b", "a//b", ".", "a/./b"] {
         assert!(
@@ -63,8 +63,8 @@ fn monorepo_url_fragments_extract_and_sanitize() {
 fn monorepo_skill_discovery_finds_nested_layouts() {
     use super::subpath::locate_skill_dir;
 
-    let root = orquestra_core::test_support::root()
-        .join(format!("orquestra-tests-mono-{}", std::process::id()));
+    let root = ownhub_core::test_support::root()
+        .join(format!("ownhub-tests-mono-{}", std::process::id()));
     if root.exists() {
         fs::remove_dir_all(&root).unwrap();
     }
@@ -85,10 +85,10 @@ fn unified_naming_stamps_legacy_and_canonical_ids() {
     use crate::official::{canonical_skill_id, is_official_skill};
 
     for id in [
-        "orquestra",
-        "orquestra-modular-start",
-        "orquestra-agent-orchestrator",
-        "orquestra-smart-build-router",
+        "ownhub",
+        "ownhub-modular-start",
+        "ownhub-agent-orchestrator",
+        "ownhub-smart-build-router",
         "modular-start",
         "agent-orchestrator",
         "lean-screen",
@@ -98,9 +98,9 @@ fn unified_naming_stamps_legacy_and_canonical_ids() {
     }
     assert_eq!(
         canonical_skill_id("modular-start"),
-        "orquestra-modular-start"
+        "ownhub-modular-start"
     );
-    assert_eq!(canonical_skill_id("orquestra"), "orquestra");
+    assert_eq!(canonical_skill_id("ownhub"), "ownhub");
     assert!(!is_official_skill("docker-helper"));
 }
 
@@ -173,11 +173,11 @@ fn a_symlinked_skill_file_is_not_listed_or_read() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = orquestra_core::test_support::root().join(format!(
-        "orquestra-skill-link-{}-{unique}",
+    let root = ownhub_core::test_support::root().join(format!(
+        "ownhub-skill-link-{}-{unique}",
         std::process::id()
     ));
-    let paths = crate::paths::OrquestraPaths {
+    let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),
         root: root.clone(),
@@ -235,12 +235,12 @@ fn read_agents_does_not_follow_a_symlink() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = orquestra_core::test_support::root().join(format!(
-        "orquestra-agents-link-{}-{unique}",
+    let root = ownhub_core::test_support::root().join(format!(
+        "ownhub-agents-link-{}-{unique}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&root);
-    let paths = crate::paths::OrquestraPaths {
+    let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),
         root: root.clone(),
@@ -274,12 +274,12 @@ fn projection_symlink_is_not_a_directory_to_delete() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let root = orquestra_core::test_support::root().join(format!(
-        "orquestra-projection-link-{}-{unique}",
+    let root = ownhub_core::test_support::root().join(format!(
+        "ownhub-projection-link-{}-{unique}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&root);
-    let paths = crate::paths::OrquestraPaths {
+    let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),
         root: root.clone(),

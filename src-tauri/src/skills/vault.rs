@@ -13,12 +13,12 @@ use super::projection::projected_ids;
 use super::security::scan_skill_security;
 use super::vault_cache::{cached_content, prune_content_cache};
 use super::{SkillItem, GLOBAL_SCOPE};
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 /// Folder name expected at the root of every skill in the vault.
-pub(crate) use orquestra_core::skills::SKILL_FILE;
+pub(crate) use ownhub_core::skills::SKILL_FILE;
 
-pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<SkillItem>, String> {
+pub(super) fn list_from(paths: &OwnHubPaths, scope: &str) -> Result<Vec<SkillItem>, String> {
     let global_dir = paths.global_dir();
     let scope_dir = paths.projection_dir(scope);
     let is_global = scope == GLOBAL_SCOPE;
@@ -79,7 +79,7 @@ pub(super) fn list_from(paths: &OrquestraPaths, scope: &str) -> Result<Vec<Skill
 }
 
 /// Read the raw `SKILL.md` of one vault skill, for the in-app editor.
-pub(super) fn read_skill_content(paths: &OrquestraPaths, id: &str) -> Result<String, String> {
+pub(super) fn read_skill_content(paths: &OwnHubPaths, id: &str) -> Result<String, String> {
     let directory = skill_directory(paths, id)?;
     let file = directory.join(SKILL_FILE);
     let metadata = fs::symlink_metadata(&file)
@@ -97,7 +97,7 @@ pub(super) fn read_skill_content(paths: &OrquestraPaths, id: &str) -> Result<Str
 /// filesystem). Blank content is refused: an empty definition would silently
 /// unlist the skill on the next scan.
 pub(super) fn save_skill_content(
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
     id: &str,
     content: &str,
 ) -> Result<(), String> {
@@ -125,7 +125,7 @@ pub(super) fn save_skill_content(
 /// Remove a skill from the vault: unlink every projection, then delete the
 /// folder. A vault entry that is not a real directory (symlink, file) is
 /// refused so a malicious or broken entry can never escape the vault.
-pub(super) fn delete_skill(paths: &OrquestraPaths, id: &str) -> Result<(), String> {
+pub(super) fn delete_skill(paths: &OwnHubPaths, id: &str) -> Result<(), String> {
     let directory = skill_directory(paths, id)?;
     let kind = fs::symlink_metadata(&directory)
         .map_err(|error| format!("failed to inspect {}: {error}", directory.display()))?;
@@ -141,7 +141,7 @@ pub(super) fn delete_skill(paths: &OrquestraPaths, id: &str) -> Result<(), Strin
         .map_err(|error| format!("failed to remove {}: {error}", directory.display()))
 }
 
-pub(super) fn skill_directory(paths: &OrquestraPaths, id: &str) -> Result<PathBuf, String> {
+pub(super) fn skill_directory(paths: &OwnHubPaths, id: &str) -> Result<PathBuf, String> {
     validate_id(id)?;
     let directory = paths.vault.join(id);
     let metadata = fs::symlink_metadata(&directory).map_err(|_| format!("unknown skill: {id}"))?;

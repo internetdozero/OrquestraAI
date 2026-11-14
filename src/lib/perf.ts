@@ -11,10 +11,10 @@
  * `performance` entries and globals:
  *
  * - dev builds: on by default;
- * - release builds: `__orquestraPerf.enable()` in the webview console, or
- *   `localStorage.setItem("orquestra:perf", "1")` before launching;
- * - read the numbers with `__orquestraPerf.report()` (copy as JSON) and clear
- *   with `__orquestraPerf.clear()`.
+ * - release builds: `__ownhubPerf.enable()` in the webview console, or
+ *   `localStorage.setItem("ownhub:perf", "1")` before launching;
+ * - read the numbers with `__ownhubPerf.report()` (copy as JSON) and clear
+ *   with `__ownhubPerf.clear()`.
  */
 
 export type PerfSource = "cache" | "load";
@@ -30,7 +30,7 @@ export interface PerfEntry {
   at: string;
 }
 
-const STORAGE_KEY = "orquestra:perf";
+const STORAGE_KEY = "ownhub:perf";
 const MAX_ENTRIES = 500;
 
 /** Bundle evaluation is the earliest instant this app can observe. */
@@ -101,7 +101,7 @@ export function perfBoot(phase: string): void {
   try {
     // Anchored at the time origin, so DevTools shows it on the same axis as the
     // navigation and the first paint.
-    performance.measure(`orquestra:boot:${phase}`, { start: 0, duration: now() - bootAt });
+    performance.measure(`ownhub:boot:${phase}`, { start: 0, duration: now() - bootAt });
   } catch {
     /* A missing Performance API must never break the shell. */
   }
@@ -114,7 +114,7 @@ export function perfViewSwitch(view: string): void {
   if (!perfEnabled()) return;
   pendingSwitch = { view, start: now(), reported: false };
   try {
-    performance.mark(`orquestra:view:${view}:start`);
+    performance.mark(`ownhub:view:${view}:start`);
   } catch {
     /* Optional: the recorded entry does not depend on it. */
   }
@@ -134,11 +134,11 @@ export function perfViewPainted(view: string, source: PerfSource): void {
   const ms = now() - pendingSwitch.start;
   record(`view:${view}`, ms, source);
   try {
-    performance.measure(`orquestra:view:${view}:${source}`, {
-      start: `orquestra:view:${view}:start`,
+    performance.measure(`ownhub:view:${view}:${source}`, {
+      start: `ownhub:view:${view}:start`,
       duration: ms,
     });
-    performance.clearMarks(`orquestra:view:${view}:start`);
+    performance.clearMarks(`ownhub:view:${view}:start`);
   } catch {
     /* DevTools spans are a bonus, the entry above is the record. */
   }
@@ -159,7 +159,7 @@ export function perfClear(): void {
 export function installPerfConsole(): void {
   if (typeof window === "undefined") return;
 
-  (window as Window & { __orquestraPerf?: unknown }).__orquestraPerf = {
+  (window as Window & { __ownhubPerf?: unknown }).__ownhubPerf = {
     enabled: perfEnabled,
     enable: () => setPerfEnabled(true),
     disable: () => setPerfEnabled(false),

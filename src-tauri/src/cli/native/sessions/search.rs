@@ -17,7 +17,7 @@ pub(super) fn search(args: &[String]) -> Result<String, CliError> {
     let query_str = options
         .one("--query")?
         .or(positional_q)
-        .ok_or_else(|| usage("usage: orquestra sessions search <query> [--harness <id>] [--content] [--limit <n>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub sessions search <query> [--harness <id>] [--content] [--limit <n>] [--json]".to_string()))?;
 
     let harness = options.one("--harness")?;
     let search_content = options.has("--content");

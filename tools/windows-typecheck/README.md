@@ -5,7 +5,7 @@ a Linux or macOS host.
 
 ## Why this exists
 
-`cargo check --target x86_64-pc-windows-msvc -p orquestra-ai` fails before it
+`cargo check --target x86_64-pc-windows-msvc -p ownhub` fails before it
 reaches any of this repository's code: `ring`'s build script and `rusqlite`'s
 bundled SQLite need a Windows compiler (`lib.exe`). The shell is the only crate
 with Windows-only modules, so on a Linux runner those modules — the health

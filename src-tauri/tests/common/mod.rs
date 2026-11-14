@@ -18,7 +18,7 @@ static HOME_LOCK: Mutex<()> = Mutex::new(());
 /// Hermetic keyring isolation: scratch suites must never read (or create) the
 /// operator's real OS keyring entry, which is global per service/account and
 /// shared with the host install.
-const KEYRING_FLAG: &str = "ORQUESTRA_KEYRING_DISABLE";
+const KEYRING_FLAG: &str = "OWNHUB_KEYRING_DISABLE";
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -29,14 +29,14 @@ fn unique_dir(label: &str) -> PathBuf {
         .unwrap_or(0);
     let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
     std::env::temp_dir().join(format!(
-        "orquestra-it-{label}-{}-{nanos}-{seq}",
+        "ownhub-it-{label}-{}-{nanos}-{seq}",
         std::process::id()
     ))
 }
 
 /// Run `body` with `HOME` pointed at a fresh scratch tree. The previous
 /// value is restored afterwards and the tree removed, so the real
-/// `~/.orquestra` is never touched and parallel test binaries cannot share
+/// `~/.ownhub` is never touched and parallel test binaries cannot share
 /// state through colliding paths.
 pub fn with_temp_home<T>(label: &str, body: impl FnOnce(&Path) -> T) -> T {
     with_scratch_home(label, false, body)
@@ -46,7 +46,7 @@ pub fn with_temp_home<T>(label: &str, body: impl FnOnce(&Path) -> T) -> T {
 /// removed, `USERPROFILE` pointing at the fresh scratch tree.
 ///
 /// This is the shape the app has to survive off Unix, so it is the only place
-/// the fallback in `orquestra_core::paths::home_dir` is exercised end to end.
+/// the fallback in `ownhub_core::paths::home_dir` is exercised end to end.
 pub fn with_userprofile_only<T>(label: &str, body: impl FnOnce(&Path) -> T) -> T {
     with_scratch_home(label, true, body)
 }
@@ -72,7 +72,7 @@ fn with_scratch_home<T>(label: &str, windows_style: bool, body: impl FnOnce(&Pat
     // that exports any of them would send paths back to the operator's real
     // tree even though `HOME` was swapped. `DirEnv` pins all four here and
     // restores them on drop.
-    let dirs = orquestra_core::test_support::DirEnv::isolate(&home);
+    let dirs = ownhub_core::test_support::DirEnv::isolate(&home);
 
     unsafe {
         if windows_style {

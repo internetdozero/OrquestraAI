@@ -2,7 +2,7 @@
 //!
 //! A preset is a named snapshot of which skills and MCP servers should be
 //! live. [`builtins`] holds the profiles shipped with the app, [`store`] owns
-//! `~/.orquestra/presets.json` for the operator's own profiles, and [`apply`]
+//! `~/.ownhub/presets.json` for the operator's own profiles, and [`apply`]
 //! reconciles the skill projections and the MCP catalog in one pass.
 //!
 //! This file keeps the API the Tauri layer and the terminal call, plus the

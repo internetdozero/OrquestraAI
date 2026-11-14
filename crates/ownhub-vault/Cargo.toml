@@ -1,0 +1,33 @@
+[package]
+name = "ownhub-vault"
+version = "0.1.0"
+description = "OwnHub credential vault: AES-256-GCM at-rest sealing, blind HTTP and exec proxies"
+authors = ["Operator"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[dependencies]
+# Storage layout (`~/.ownhub`) and atomic temp-file naming.
+ownhub-core = { path = "../ownhub-core" }
+aes-gcm.workspace = true
+base64.workspace = true
+# Blocking stream consumption and response streaming in the blind proxy.
+futures-util.workspace = true
+# One persistent backend per OS for the at-rest file key.
+keyring.workspace = true
+rand.workspace = true
+# Blind vault HTTP proxy: in-memory key injection via `vault_http_request`.
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+# Test fixtures share one scratch root (`ownhub_core::test_support`).
+ownhub-core = { path = "../ownhub-core", features = ["test-support"] }
+# The production calls run on the shell's runtime; only the proxy tests need
+# a reactor of their own, and it is the same one reqwest already builds on.
+tokio = { version = "1", features = ["rt", "net", "time"] }

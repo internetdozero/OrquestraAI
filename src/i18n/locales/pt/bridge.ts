@@ -29,7 +29,7 @@ export const bridge = {
   warnSecondary:
     "Locais secundários de descoberta — checkouts de fornecedor, marketplaces de plugins e repositórios de skills empacotados — são arquivados no cofre e depois esvaziados ou trocados pelo link da projeção, para nenhuma skill carregar por trás.",
   linkPlan: "Plano de vínculo",
-  masterLabel: "AGENTS.md mestre · ~/.orquestra/AGENTS.md",
+  masterLabel: "AGENTS.md mestre · ~/.ownhub/AGENTS.md",
   reversible: "Reversível pela pasta de backup",
   backupConnect: "Fazer backup e conectar",
   linkingHarnesses: "Vinculando harnesses…",

@@ -8,7 +8,7 @@
  * through a dynamic `import()` from the dev branches only.
  */
 
-const STORAGE_KEY = "orquestra.fixtureMode";
+const STORAGE_KEY = "ownhub.fixtureMode";
 
 /**
  * Developer fixture mode: makes the Sessions view and the transcript drawer

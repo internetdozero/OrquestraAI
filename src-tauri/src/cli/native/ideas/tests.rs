@@ -214,7 +214,7 @@ fn ideas_cli_usage_matches_dispatch() {
     for err in [empty_err, help_err] {
         match err {
             CliError::Usage(msg) => {
-                assert!(msg.starts_with("usage: orquestra idea"));
+                assert!(msg.starts_with("usage: ownhub idea"));
                 for sub in [
                     "list",
                     "get",

@@ -32,7 +32,7 @@ export const credentials: TranslationSchema["credentials"] = {
   loadingBody: "Reading masked pools from the vault.",
   needDesktopTitle: "Credentials need the desktop app",
   needDesktopBody:
-    "The blind vault lives in the Tauri core; open OrquestraAI desktop to manage it.",
+    "The blind vault lives in the Tauri core; open OwnHub desktop to manage it.",
   emptyTitle: "No credential services yet",
   emptyBody:
     "Register a key pool and agents can call its API without ever seeing the raw secret — the vault injects it blind and scrubs every response.",

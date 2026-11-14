@@ -12,29 +12,29 @@ use super::vault::{delete_skill, read_skill_content, save_skill_content};
 use super::*;
 use std::fs;
 
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    fn temp_paths(label: &str) -> OrquestraPaths {
+    fn temp_paths(label: &str) -> OwnHubPaths {
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
         let root =
-            std::env::temp_dir().join(format!("orquestra-{label}-{}-{unique}", std::process::id()));
+            std::env::temp_dir().join(format!("ownhub-{label}-{}-{unique}", std::process::id()));
 
-        OrquestraPaths {
+        OwnHubPaths {
             vault: root.join("skills-library"),
             active: root.join("active"),
             root,
         }
     }
 
-    fn setup_two_skills() -> OrquestraPaths {
+    fn setup_two_skills() -> OwnHubPaths {
         let paths = temp_paths("scopes");
         paths.ensure_layout().unwrap();
 
@@ -374,7 +374,7 @@ mod tests {
         assert!(projected_ids(&scope, &dangling.vault).contains("real"));
 
         // Legacy aliases resolve to their canonical id in both.
-        let canon = "orquestra-modular-start";
+        let canon = "ownhub-modular-start";
         let canon_dir = paths.vault.join(canon);
         fs::create_dir_all(&canon_dir).unwrap();
         fs::write(

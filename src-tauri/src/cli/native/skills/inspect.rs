@@ -2,7 +2,7 @@
 
 use super::super::{parse_options, rendered, usage, CliError};
 use crate::harness::harness_ids;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 use crate::skills::list_skills;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,7 +11,7 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills info <id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub skills info <id> [--json]".to_string()))?;
 
     let options = parse_options(&args[1..], &[], &["--json"])?;
 
@@ -90,11 +90,11 @@ pub(super) fn validate(args: &[String]) -> Result<String, CliError> {
     let target = args
         .first()
         .filter(|a| !a.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra skills validate <path|id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub skills validate <path|id> [--json]".to_string()))?;
 
     let options = parse_options(&args[1..], &[], &["--json"])?;
 
-    let paths = OrquestraPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
+    let paths = OwnHubPaths::resolve().map_err(|e| CliError::Operation(e.to_string()))?;
     let path = if Path::new(target).exists() {
         PathBuf::from(target)
     } else {

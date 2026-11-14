@@ -75,7 +75,7 @@ def main() -> int:
     )
     global_sig = bytes(signing.sign(sig + trusted_content.encode()).signature)
     minisig = (
-        "untrusted comment: signature from orquestra release key\n"
+        "untrusted comment: signature from ownhub release key\n"
         f"{b64(b'ED' + keynum + sig)}\n"
         f"trusted comment: {trusted_content}\n"
         f"{b64(global_sig)}"

@@ -15,9 +15,9 @@
 #                  ships 1.4 instead of Ubuntu 22.04's 1.2 (the old builder
 #                  calls the `appstream-compose` binary that GNOME SDK 47
 #                  no longer contains).
-#   <binary>       the artifact to wrap (`orquestra-linux-x86_64` from the
-#                  release, or target/release/orquestra-ai)
-#   [output-file]  defaults to ./OrquestraAI-x86_64.flatpak
+#   <binary>       the artifact to wrap (`ownhub-linux-x86_64` from the
+#                  release, or target/release/ownhub)
+#   [output-file]  defaults to ./OwnHub-x86_64.flatpak
 #
 # Requires flatpak + flatpak-builder and the GNOME runtime/SDK the manifest
 # names. CI installs them; locally:
@@ -35,11 +35,11 @@ if [ "${1:-}" = "--stage-only" ]; then
 fi
 
 binary=${1:?usage: scripts/build-flatpak.sh [--stage-only] <binary> [output-file]}
-output=${2:-OrquestraAI-x86_64.flatpak}
+output=${2:-OwnHub-x86_64.flatpak}
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 manifest_dir="$root/packaging/flatpak"
-manifest="$manifest_dir/ai.orquestra.desktop.yml"
-app_id=ai.orquestra.desktop
+manifest="$manifest_dir/dev.ownanai.hub.yml"
+app_id=dev.ownanai.hub
 version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$root/src-tauri/Cargo.toml" | head -1)
 
 [ -f "$binary" ] || {
@@ -76,7 +76,7 @@ files="$manifest_dir/files"
 rm -rf "$files"
 mkdir -p "$files"
 
-install -m 755 "$binary" "$files/orquestra"
+install -m 755 "$binary" "$files/ownhub"
 install -m 644 "$manifest_dir/$app_id.desktop" "$files/$app_id.desktop"
 install -m 644 "$manifest_dir/$app_id.metainfo.xml" "$files/$app_id.metainfo.xml"
 # Icon sizes the launcher and the AppStream entry reference. 256 and 512 use
@@ -93,7 +93,7 @@ if [ "$stage_only" = 1 ]; then
 fi
 
 # Staging goes to the project's scratch root, never /tmp.
-work=$(mktemp -d "${TMPDIR:-/var/tmp}/orquestra-flatpak.XXXXXXXXXX")
+work=$(mktemp -d "${TMPDIR:-/var/tmp}/ownhub-flatpak.XXXXXXXXXX")
 cleanup() {
     status=$?
     rm -rf "$work" 2>/dev/null || true

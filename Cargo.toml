@@ -2,11 +2,11 @@
 resolver = "2"
 members = [
     "src-tauri",
-    "crates/orquestra-core",
-    "crates/orquestra-harness",
-    "crates/orquestra-vault",
-    "crates/orquestra-bridge",
-    "crates/orquestra-sessions",
+    "crates/ownhub-core",
+    "crates/ownhub-harness",
+    "crates/ownhub-vault",
+    "crates/ownhub-bridge",
+    "crates/ownhub-sessions",
 ]
 
 # Shared dependency versions. Every member opts in with `dep.workspace = true`,

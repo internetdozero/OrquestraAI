@@ -20,13 +20,13 @@ import {
 } from "./bump-version.mjs";
 
 const PACKAGE = `{
-  "name": "orquestra-ai",
+  "name": "ownhub",
   "version": "0.1.0-alpha.3"
 }
 `;
 
 const CARGO = `[package]
-name = "orquestra-ai"
+name = "ownhub"
 version = "0.1.0-alpha.3"
 
 [dependencies]
@@ -47,7 +47,7 @@ test("json round-trip keeps the payload, swaps only the version", () => {
   assert.equal(getJsonVersion(PACKAGE, "package.json"), "0.1.0-alpha.3");
   const next = setJsonVersion(PACKAGE, "0.2.0");
   assert.equal(getJsonVersion(next, "package.json"), "0.2.0");
-  assert.match(next, /"name": "orquestra-ai"/);
+  assert.match(next, /"name": "ownhub"/);
   assert.throws(() => getJsonVersion("{}", "package.json"), /no string "version"/);
   assert.throws(() => getJsonVersion("{oops", "package.json"), /not valid JSON/);
 });

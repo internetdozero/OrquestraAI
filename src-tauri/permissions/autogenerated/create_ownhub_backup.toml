@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-create-ownhub-backup"
+description = "Enables the create_ownhub_backup command without any pre-configured scope."
+commands.allow = ["create_ownhub_backup"]
+
+[[permission]]
+identifier = "deny-create-ownhub-backup"
+description = "Denies the create_ownhub_backup command without any pre-configured scope."
+commands.deny = ["create_ownhub_backup"]

@@ -27,7 +27,7 @@ function source(lines) {
 
 /** Build a throwaway tree from `{ path: lineCount }`. */
 function tree(files) {
-  const root = mkdtempSync(join(tmpdir(), "orquestra-line-cap-"));
+  const root = mkdtempSync(join(tmpdir(), "ownhub-line-cap-"));
   for (const [path, lines] of Object.entries(files)) {
     const full = join(root, path);
     mkdirSync(dirname(full), { recursive: true });

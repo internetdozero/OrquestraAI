@@ -201,7 +201,7 @@ fn completed_at_stamps_completions_and_clears_on_reopen() {
 
 #[test]
 fn legacy_vaults_gain_completed_at_without_losing_rows() {
-    let path = std::env::temp_dir().join(format!("orquestra-legacy-{}", std::process::id()));
+    let path = std::env::temp_dir().join(format!("ownhub-legacy-{}", std::process::id()));
     let _ = std::fs::remove_file(&path);
     // A pre-migration table: no completed_at column at all.
     {
@@ -321,7 +321,7 @@ fn database_paths_honor_env_and_xdg() {
     // repoints the variable.
     let _home = crate::test_env::isolated_home();
     // Env override wins verbatim, without touching the filesystem.
-    let scratch = orquestra_core::test_support::root();
+    let scratch = ownhub_core::test_support::root();
     std::env::set_var("IDEA_VAULT_DB_PATH", scratch.join("vault.sqlite3"));
     assert_eq!(
         store::resolve_db_path().expect("override"),

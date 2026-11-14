@@ -1,6 +1,6 @@
-# Orquestra CLI — Blind Credential Vault (`vault`)
+# OwnHub CLI — Blind Credential Vault (`vault`)
 
-The `orquestra vault` subcommand family provides granular command-line management, zero-leak credential pooling, health monitoring, security audits, and blind proxy execution (HTTP and child processes) for the OrquestraAI Blind Vault subsystem.
+The `ownhub vault` subcommand family provides granular command-line management, zero-leak credential pooling, health monitoring, security audits, and blind proxy execution (HTTP and child processes) for the OwnHub Blind Vault subsystem.
 
 ---
 
@@ -8,21 +8,21 @@ The `orquestra vault` subcommand family provides granular command-line managemen
 
 Modern AI agentic workflows require access to cloud providers, third-party APIs, and deployment infrastructure (e.g., Cloudflare, OpenAI, Anthropic, GitHub, AWS, Stripe). However, passing plaintext API keys directly into an AI agent's prompt or context window poses severe credential leakage risks (accidental transcript persistence, unauthorized exfiltration, prompt injection).
 
-OrquestraAI resolves this with the **Blind Vault** pattern:
+OwnHub resolves this with the **Blind Vault** pattern:
 
 - **Zero-Context Secrets:** Secrets are sealed at rest and injected into outgoing HTTP calls or subprocess environments entirely within the native Rust backend. The agent interacts with credentials purely through abstract service IDs and blind proxy endpoints.
 - **Scrubbed Output:** All response bodies, error messages, `stdout`, and `stderr` streams are scrubbed against all registered keys before returning to the caller.
 - **Failover Pools & Cooldowns:** Services support pools of multiple API keys with automatic failover on 401/402/403/429 errors, tagging (`workers`, `d1`, etc.), and health tracking (`healthy`, `degraded`, `cooldown`).
-- **At-Rest AES-256-GCM Encryption:** Credentials in `~/.orquestra/vault.json` are sealed under a per-installation key held in the OS keyring (Secret Service, macOS Keychain, Windows Credential Manager) or a `0600` headless fallback file.
+- **At-Rest AES-256-GCM Encryption:** Credentials in `~/.ownhub/vault.json` are sealed under a per-installation key held in the OS keyring (Secret Service, macOS Keychain, Windows Credential Manager) or a `0600` headless fallback file.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        AI Agent / CLI Operator                         │
 └──────────────────────────────────┬─────────────────────────────────────┘
-                                   │ orquestra vault <cmd>
+                                   │ ownhub vault <cmd>
                                    ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│                Orquestra Blind Vault (Native Rust Core)                │
+│                OwnHub Blind Vault (Native Rust Core)                │
 │                                                                        │
 │  ┌──────────────────────┐  ┌───────────────────┐  ┌─────────────────┐  │
 │  │ AES-256-GCM Envelope │  │ SSRF / URL Gate   │  │ Exec Allowlist  │  │
@@ -48,33 +48,33 @@ OrquestraAI resolves this with the **Blind Vault** pattern:
 
 ## 2. Current State vs. Granular CLI Design
 
-| Capability               | Current State (`src-tauri/src/cli/native/vault.rs`) | New Granular Design (`orquestra vault <cmd>`)                                                   |
+| Capability               | Current State (`src-tauri/src/cli/native/vault.rs`) | New Granular Design (`ownhub vault <cmd>`)                                                   |
 | :----------------------- | :-------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
-| **List Services**        | Basic `vault list [--json]`                         | `orquestra vault list [--preset <P>] [--enabled-only] [--failing-only] [--search <S>] [--json]` |
-| **Inspect Service**      | _None_ (requires reading sealed file)               | `orquestra vault inspect <id> [--reveal] [--json]`                                              |
-| **Add / Update Service** | _None_ (UI modal only)                              | `orquestra vault set <id> --key <K> [--preset <P>] [--meta <K=V>] [--tag <T>] [--json]`         |
-| **Add Key to Pool**      | _None_ (UI modal only)                              | `orquestra vault add-key <id> --key <K> [--tag <T>] [--json]`                                   |
-| **Remove Key from Pool** | _None_ (UI only)                                    | `orquestra vault remove-key <id> --key-number <N> [--json]`                                     |
-| **Delete Service**       | _None_ (UI only)                                    | `orquestra vault remove <id> [--yes] [--json]`                                                  |
-| **Kill-Switch Toggle**   | `vault set-enabled <id> <on\|off> [--json]`         | `orquestra vault enable <id>`, `disable <id>`, `toggle <id>`, and `set-enabled`                 |
-| **Set Primary Key**      | _None_ (UI only)                                    | `orquestra vault set-primary <id> --key-number <N> [--json]`                                    |
-| **Rotate Key**           | _None_                                              | `orquestra vault rotate <id> [--next] [--key-number <N>] [--new-key <K>] [--json]`              |
-| **Test Connectivity**    | _None_ (UI only)                                    | `orquestra vault test <id> [--key-number <N>] [--json]`                                         |
-| **Blind HTTP Proxy**     | `vault http --service <S> --endpoint <E> ...`       | `orquestra vault proxy-http` (with `http` alias)                                                |
-| **Blind Exec Proxy**     | `vault exec <S> [--] <argv...>`                     | `orquestra vault proxy-exec` (with `exec` alias)                                                |
-| **Preset Catalog**       | _None_ (UI only)                                    | `orquestra vault presets [--json]`                                                              |
-| **Security Audit**       | _None_                                              | `orquestra vault audit [--json]` & `audit purge-backups [--confirm]`                            |
+| **List Services**        | Basic `vault list [--json]`                         | `ownhub vault list [--preset <P>] [--enabled-only] [--failing-only] [--search <S>] [--json]` |
+| **Inspect Service**      | _None_ (requires reading sealed file)               | `ownhub vault inspect <id> [--reveal] [--json]`                                              |
+| **Add / Update Service** | _None_ (UI modal only)                              | `ownhub vault set <id> --key <K> [--preset <P>] [--meta <K=V>] [--tag <T>] [--json]`         |
+| **Add Key to Pool**      | _None_ (UI modal only)                              | `ownhub vault add-key <id> --key <K> [--tag <T>] [--json]`                                   |
+| **Remove Key from Pool** | _None_ (UI only)                                    | `ownhub vault remove-key <id> --key-number <N> [--json]`                                     |
+| **Delete Service**       | _None_ (UI only)                                    | `ownhub vault remove <id> [--yes] [--json]`                                                  |
+| **Kill-Switch Toggle**   | `vault set-enabled <id> <on\|off> [--json]`         | `ownhub vault enable <id>`, `disable <id>`, `toggle <id>`, and `set-enabled`                 |
+| **Set Primary Key**      | _None_ (UI only)                                    | `ownhub vault set-primary <id> --key-number <N> [--json]`                                    |
+| **Rotate Key**           | _None_                                              | `ownhub vault rotate <id> [--next] [--key-number <N>] [--new-key <K>] [--json]`              |
+| **Test Connectivity**    | _None_ (UI only)                                    | `ownhub vault test <id> [--key-number <N>] [--json]`                                         |
+| **Blind HTTP Proxy**     | `vault http --service <S> --endpoint <E> ...`       | `ownhub vault proxy-http` (with `http` alias)                                                |
+| **Blind Exec Proxy**     | `vault exec <S> [--] <argv...>`                     | `ownhub vault proxy-exec` (with `exec` alias)                                                |
+| **Preset Catalog**       | _None_ (UI only)                                    | `ownhub vault presets [--json]`                                                              |
+| **Security Audit**       | _None_                                              | `ownhub vault audit [--json]` & `audit purge-backups [--confirm]`                            |
 
 ---
 
 ## 3. Subcommand Reference
 
-### 3.1 `orquestra vault list`
+### 3.1 `ownhub vault list`
 
 Lists all credential services registered in the vault, displaying their active health, key counts, enabled state, and masked keys.
 
 ```bash
-orquestra vault list [OPTIONS]
+ownhub vault list [OPTIONS]
 ```
 
 **Options:**
@@ -97,12 +97,12 @@ github        GitHub Automation  github      disabled  Healthy   1     #1
 
 ---
 
-### 3.2 `orquestra vault inspect <id>`
+### 3.2 `ownhub vault inspect <id>`
 
 Inspects detailed metadata and key status for a single vault service. Alias: `show`, `info`.
 
 ```bash
-orquestra vault inspect <id> [OPTIONS]
+ownhub vault inspect <id> [OPTIONS]
 ```
 
 **Options:**
@@ -132,12 +132,12 @@ Key Pool (4 keys):
 
 ---
 
-### 3.3 `orquestra vault set <id>`
+### 3.3 `ownhub vault set <id>`
 
 Creates a new credential service or updates an existing one. Alias: `add`, `save`.
 
 ```bash
-orquestra vault set <id> [OPTIONS]
+ownhub vault set <id> [OPTIONS]
 ```
 
 **Options:**
@@ -159,7 +159,7 @@ orquestra vault set <id> [OPTIONS]
 
 ```bash
 # Registering a Cloudflare credential with metadata:
-orquestra vault set cloudflare \
+ownhub vault set cloudflare \
   --label "Cloudflare Production" \
   --preset cloudflare \
   --key "clfp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
@@ -167,17 +167,17 @@ orquestra vault set cloudflare \
   --tag "workers"
 
 # Securely passing key from pipe without shell history contamination:
-echo -n "sk-ant-api03-xxxx..." | orquestra vault set anthropic --preset anthropic --key -
+echo -n "sk-ant-api03-xxxx..." | ownhub vault set anthropic --preset anthropic --key -
 ```
 
 ---
 
-### 3.4 `orquestra vault add-key <id>`
+### 3.4 `ownhub vault add-key <id>`
 
 Appends a new credential key into an existing service's pool.
 
 ```bash
-orquestra vault add-key <id> --key <secret> [OPTIONS]
+ownhub vault add-key <id> --key <secret> [OPTIONS]
 ```
 
 **Options:**
@@ -189,17 +189,17 @@ orquestra vault add-key <id> --key <secret> [OPTIONS]
 **Example:**
 
 ```bash
-orquestra vault add-key openai --key "sk-proj-backupkey..." --tag "fallback"
+ownhub vault add-key openai --key "sk-proj-backupkey..." --tag "fallback"
 ```
 
 ---
 
-### 3.5 `orquestra vault remove-key <id>`
+### 3.5 `ownhub vault remove-key <id>`
 
 Removes a specific credential from a service pool by its 1-based key number.
 
 ```bash
-orquestra vault remove-key <id> --key-number <N> [OPTIONS]
+ownhub vault remove-key <id> --key-number <N> [OPTIONS]
 ```
 
 **Options:**
@@ -209,16 +209,16 @@ orquestra vault remove-key <id> --key-number <N> [OPTIONS]
 - `--json`: Output updated service in JSON.
 
 > [!NOTE]
-> The vault refuses to delete the last remaining key of a service. To remove the entire service, use `orquestra vault remove <id>`.
+> The vault refuses to delete the last remaining key of a service. To remove the entire service, use `ownhub vault remove <id>`.
 
 ---
 
-### 3.6 `orquestra vault remove <id>`
+### 3.6 `ownhub vault remove <id>`
 
 Removes an entire credential service from the vault. Alias: `delete`.
 
 ```bash
-orquestra vault remove <id> [OPTIONS]
+ownhub vault remove <id> [OPTIONS]
 ```
 
 **Options:**
@@ -234,32 +234,32 @@ Service 'cloudflare' successfully removed from the vault.
 
 ---
 
-### 3.7 `orquestra vault enable` / `disable` / `toggle` / `set-enabled`
+### 3.7 `ownhub vault enable` / `disable` / `toggle` / `set-enabled`
 
 Controls the operator kill-switch for a service. When disabled, the blind proxy immediately refuses any HTTP or exec request directed to that service, failing closed before secrets touch memory or the network.
 
 ```bash
-orquestra vault enable <id> [--json]
-orquestra vault disable <id> [--json]
-orquestra vault toggle <id> [--json]
-orquestra vault set-enabled <id> <on|off> [--json]
+ownhub vault enable <id> [--json]
+ownhub vault disable <id> [--json]
+ownhub vault toggle <id> [--json]
+ownhub vault set-enabled <id> <on|off> [--json]
 ```
 
 **Example:**
 
 ```bash
-orquestra vault disable openai
+ownhub vault disable openai
 # Output: Service 'OpenAI Production' disabled. Blind proxy calls will fail closed.
 ```
 
 ---
 
-### 3.8 `orquestra vault set-primary <id>`
+### 3.8 `ownhub vault set-primary <id>`
 
 Designates which key in the pool is the active default (`#1` based index).
 
 ```bash
-orquestra vault set-primary <id> --key-number <N> [OPTIONS]
+ownhub vault set-primary <id> --key-number <N> [OPTIONS]
 ```
 
 **Options:**
@@ -270,18 +270,18 @@ orquestra vault set-primary <id> --key-number <N> [OPTIONS]
 **Example:**
 
 ```bash
-orquestra vault set-primary openai --key-number 2
+ownhub vault set-primary openai --key-number 2
 # Output: Key #2 is now the primary active key for service 'openai'.
 ```
 
 ---
 
-### 3.9 `orquestra vault rotate <id>`
+### 3.9 `ownhub vault rotate <id>`
 
 Advances or replaces credentials within a pool.
 
 ```bash
-orquestra vault rotate <id> [OPTIONS]
+ownhub vault rotate <id> [OPTIONS]
 ```
 
 **Options:**
@@ -295,20 +295,20 @@ orquestra vault rotate <id> [OPTIONS]
 
 ```bash
 # Advance to the next healthy key in the pool:
-orquestra vault rotate openai --next
+ownhub vault rotate openai --next
 
 # In-place key replacement:
-orquestra vault rotate github --key-number 1 --new-key "ghp_freshnewtoken..."
+ownhub vault rotate github --key-number 1 --new-key "ghp_freshnewtoken..."
 ```
 
 ---
 
-### 3.10 `orquestra vault test <id>`
+### 3.10 `ownhub vault test <id>`
 
 Tests connectivity and credential validity against the provider's canonical health endpoint without exposing secrets. Persists the observed health state (`Healthy` or `Degraded`) into the vault. Alias: `check`, `ping`.
 
 ```bash
-orquestra vault test <id> [OPTIONS]
+ownhub vault test <id> [OPTIONS]
 ```
 
 **Options:**
@@ -328,12 +328,12 @@ Message:   Connection verified successfully.
 
 ---
 
-### 3.11 `orquestra vault proxy-http` (Alias: `http`)
+### 3.11 `ownhub vault proxy-http` (Alias: `http`)
 
 Executes a credentialed blind HTTP request. The backend injects authentication headers in memory, protects against SSRF via preset host allowlists, executes failover across keys on rate limits or auth errors, and scrubs all secrets from the response payload.
 
 ```bash
-orquestra vault proxy-http [OPTIONS]
+ownhub vault proxy-http [OPTIONS]
 ```
 
 **Options:**
@@ -350,7 +350,7 @@ orquestra vault proxy-http [OPTIONS]
 **Example:**
 
 ```bash
-orquestra vault proxy-http \
+ownhub vault proxy-http \
   --service github \
   --endpoint "https://api.github.com/user" \
   --headers '{"Accept":"application/vnd.github.v3+json"}'
@@ -358,14 +358,14 @@ orquestra vault proxy-http \
 
 ---
 
-### 3.12 `orquestra vault proxy-exec` (Alias: `exec`)
+### 3.12 `ownhub vault proxy-exec` (Alias: `exec`)
 
 Executes a bare allowlisted binary in a subprocess with secrets injected strictly into environment variables. Shell strings, pipes, redirections, and non-allowlisted binaries are rejected before invocation. Output streams are scrubbed.
 
 The binary is resolved through the process `PATH` and then the login shell's `PATH` (plus `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew), so CLIs installed by a version manager work when the app was opened from the menu. The allowlist and the per-binary subcommand policy are checked against the bare name **before** resolution; a path supplied through IPC is still refused.
 
 ```bash
-orquestra vault proxy-exec <service> [--key-number N] [--] <argv...>
+ownhub vault proxy-exec <service> [--key-number N] [--] <argv...>
 ```
 
 **Allowlisted Binaries:**
@@ -375,20 +375,20 @@ orquestra vault proxy-exec <service> [--key-number N] [--] <argv...>
 
 ```bash
 # Execute gh CLI with vault-injected GITHUB_TOKEN:
-orquestra vault proxy-exec github -- gh issue list --repo myorg/myrepo
+ownhub vault proxy-exec github -- gh issue list --repo myorg/myrepo
 
 # Execute aws CLI with vault-injected AWS credentials & meta region:
-orquestra vault proxy-exec aws -- aws s3 ls
+ownhub vault proxy-exec aws -- aws s3 ls
 ```
 
 ---
 
-### 3.13 `orquestra vault presets`
+### 3.13 `ownhub vault presets`
 
-Lists all built-in provider presets supported by OrquestraAI, including auth header strategies, environment variable mappings, and required metadata fields.
+Lists all built-in provider presets supported by OwnHub, including auth header strategies, environment variable mappings, and required metadata fields.
 
 ```bash
-orquestra vault presets [OPTIONS]
+ownhub vault presets [OPTIONS]
 ```
 
 **Options:**
@@ -411,12 +411,12 @@ custom        Custom Service   (user-defined)   (user-defined)        -
 
 ---
 
-### 3.14 `orquestra vault audit`
+### 3.14 `ownhub vault audit`
 
 Performs a comprehensive security assessment of the local Vault subsystem.
 
 ```bash
-orquestra vault audit [OPTIONS]
+ownhub vault audit [OPTIONS]
 ```
 
 **Diagnostics Executed:**
@@ -431,10 +431,10 @@ orquestra vault audit [OPTIONS]
 ```text
 Vault Security Audit:
   Storage Encryption:  AES-256-GCM (Linux Secret Service Keyring) [PASS]
-  File Permissions:    ~/.orquestra/vault.json (0600) [PASS]
+  File Permissions:    ~/.ownhub/vault.json (0600) [PASS]
   Migration Backups:   1 lingering plaintext backup detected! [WARN]
-                       File: ~/.orquestra/vault.json.migrate-bak
-                       Run 'orquestra vault audit purge-backups' to zeroize.
+                       File: ~/.ownhub/vault.json.migrate-bak
+                       Run 'ownhub vault audit purge-backups' to zeroize.
   Pool Integrity:      4 services, 10 keys (9 Healthy, 1 Cooldown)
   Exec Policy:         Allowlist active (10 binaries), No shell escapes
 ```
@@ -442,7 +442,7 @@ Vault Security Audit:
 #### Purging Migration Backups:
 
 ```bash
-orquestra vault audit purge-backups --confirm [--json]
+ownhub vault audit purge-backups --confirm [--json]
 ```
 
 Overwrites with zeroes, flushes to disk (`sync`), and unlinks the `.migrate-bak` files after verifying that the active sealed vault opens successfully.
@@ -459,11 +459,11 @@ Overwrites with zeroes, flushes to disk (`sync`), and unlinks the `.migrate-bak`
 
 ```bash
 # Query health of all enabled services:
-orquestra vault list --enabled-only --json | jq '.[] | {id: .id, health: .health, keys: .totalKeys}'
+ownhub vault list --enabled-only --json | jq '.[] | {id: .id, health: .health, keys: .totalKeys}'
 
 # Test all services and alert on non-healthy endpoints:
-for svc in $(orquestra vault list --enabled-only --json | jq -r '.[].id'); do
-  status=$(orquestra vault test "$svc" --json | jq -r '.health')
+for svc in $(ownhub vault list --enabled-only --json | jq -r '.[].id'); do
+  status=$(ownhub vault test "$svc" --json | jq -r '.health')
   echo "Service $svc health: $status"
 done
 ```

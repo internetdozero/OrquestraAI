@@ -45,7 +45,7 @@ pub(super) fn retired_binary_path(target: &Path) -> PathBuf {
         target
             .file_name()
             .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "orquestra".to_string()),
+            .unwrap_or_else(|| "ownhub".to_string()),
         crate::paths::unique_tmp_suffix()
     ))
 }
@@ -74,7 +74,7 @@ fn purge_retired_binaries_in(directory: &Path) {
     }
 }
 
-/// Running executable first, `~/.local/bin/orquestra` as fallback.
+/// Running executable first, `~/.local/bin/ownhub` as fallback.
 pub(super) fn active_binary() -> Result<PathBuf, String> {
     if let Ok(exe) = std::env::current_exe() {
         if exe.is_file() {
@@ -82,12 +82,12 @@ pub(super) fn active_binary() -> Result<PathBuf, String> {
         }
     }
     let home = crate::paths::require_home("locate the active binary")?;
-    let fallback = home.join(".local/bin/orquestra");
+    let fallback = home.join(".local/bin/ownhub");
     if fallback.is_file() {
         return Ok(fallback);
     }
     Err(
-        "cannot locate the running binary (current_exe and ~/.local/bin/orquestra both missing)"
+        "cannot locate the running binary (current_exe and ~/.local/bin/ownhub both missing)"
             .to_string(),
     )
 }
@@ -103,18 +103,18 @@ mod tests {
     #[test]
     fn retired_images_are_dotted_siblings_and_purged() {
         let dir = std::env::temp_dir().join(format!(
-            "orquestra-update-purge-{}-{}",
+            "ownhub-update-purge-{}-{}",
             std::process::id(),
             crate::paths::unique_tmp_suffix()
         ));
         std::fs::create_dir_all(&dir).unwrap();
 
-        let target = dir.join("orquestra-ai");
+        let target = dir.join("ownhub");
         let retired = retired_binary_path(&target);
         assert_eq!(retired.parent(), Some(dir.as_path()));
         let name = retired.file_name().unwrap().to_string_lossy().into_owned();
         assert!(
-            name.starts_with(".orquestra-ai.old-"),
+            name.starts_with(".ownhub.old-"),
             "unexpected name {name}"
         );
 

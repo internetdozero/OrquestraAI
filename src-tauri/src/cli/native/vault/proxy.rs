@@ -36,7 +36,7 @@ pub(super) fn http(args: &[String]) -> Result<String, CliError> {
         .transpose()?;
 
     let result =
-        tauri::async_runtime::block_on(orquestra_vault::vault::proxy::request_with_key_number(
+        tauri::async_runtime::block_on(ownhub_vault::vault::proxy::request_with_key_number(
             service, endpoint, method, headers, body, key_tag, key_number,
         ))
         .map_err(CliError::Operation)?;
@@ -50,7 +50,7 @@ pub(super) fn exec(args: &[String]) -> Result<String, CliError> {
     let mut parts: Vec<&str> = args.iter().map(String::as_str).collect();
     let Some(service) = parts.first().copied() else {
         return Err(usage(
-            "usage: orquestra vault proxy-exec <service> [--key-number N] [--] <argv…>".to_string(),
+            "usage: ownhub vault proxy-exec <service> [--key-number N] [--] <argv…>".to_string(),
         ));
     };
     parts.remove(0);
@@ -71,13 +71,13 @@ pub(super) fn exec(args: &[String]) -> Result<String, CliError> {
     }
     if service.starts_with('-') || parts.is_empty() {
         return Err(usage(
-            "usage: orquestra vault proxy-exec <service> [--key-number N] [--] <argv…>".to_string(),
+            "usage: ownhub vault proxy-exec <service> [--key-number N] [--] <argv…>".to_string(),
         ));
     }
 
     let command =
         serde_json::to_value(&parts).map_err(|error| CliError::Operation(error.to_string()))?;
-    let result = orquestra_vault::vault::service::execute_with_key_number(
+    let result = ownhub_vault::vault::service::execute_with_key_number(
         &paths()?,
         service,
         &command,
@@ -95,7 +95,7 @@ pub(super) fn test_conn(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra vault test <id> [--key-number <N>] [--json]".to_string())
+            usage("usage: ownhub vault test <id> [--key-number <N>] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &["--key-number"], &["--json"])?;
@@ -105,7 +105,7 @@ pub(super) fn test_conn(args: &[String]) -> Result<String, CliError> {
         .transpose()?
         .map(|n| n - 1);
 
-    let result = tauri::async_runtime::block_on(orquestra_vault::vault::proxy::test_connection(
+    let result = tauri::async_runtime::block_on(ownhub_vault::vault::proxy::test_connection(
         id.to_string(),
         key_index,
     ))

@@ -1,11 +1,11 @@
 //! Global and per-harness MCP server management.
 //!
-//! One master catalog lives in `~/.orquestra/mcps.json`; every harness wants
+//! One master catalog lives in `~/.ownhub/mcps.json`; every harness wants
 //! a different envelope around the same server definition, so the adapter
-//! layer lives in `orquestra_harness` (see `McpServer::to_harness_server`),
+//! layer lives in `ownhub_harness` (see `McpServer::to_harness_server`),
 //! [`deploy`] owns the atomic writes and backups, and [`catalog`] owns the
 //! storage behind both. Every write
-//! starts from the file already on disk, so keys OrquestraAI does not own
+//! starts from the file already on disk, so keys OwnHub does not own
 //! (project state, hooks, plugin tables, hand-added servers) survive
 //! untouched.
 
@@ -27,7 +27,7 @@ pub use catalog::{
 /// sealed catalog must still open under the current key, so this never
 /// destroys the only readable copy; see `crate::at_rest`.
 pub fn purge_catalog_migration_backup() -> Result<bool, String> {
-    let paths = crate::paths::OrquestraPaths::resolve()?;
+    let paths = crate::paths::OwnHubPaths::resolve()?;
     let path = catalog::catalog_path(&paths);
     crate::at_rest::purge_migration_backup(&paths, &path, crate::at_rest::AAD_MCPS)
 }
@@ -92,8 +92,8 @@ impl McpServer {
 impl McpServer {
     /// Project the catalog entry into the dialect-neutral shape the harness
     /// serializers consume, dropping state that only the app cares about.
-    pub(super) fn to_harness_server(&self) -> orquestra_harness::HarnessServer {
-        orquestra_harness::HarnessServer {
+    pub(super) fn to_harness_server(&self) -> ownhub_harness::HarnessServer {
+        ownhub_harness::HarnessServer {
             id: self.id.clone(),
             command: self.command.clone(),
             args: self.args.clone(),
@@ -113,7 +113,7 @@ impl McpServer {
     }
 }
 
-/// Live state of one harness config OrquestraAI can write.
+/// Live state of one harness config OwnHub can write.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpTargetStatus {

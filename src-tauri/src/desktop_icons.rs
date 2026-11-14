@@ -17,23 +17,23 @@ const ICON_32: &[u8] = include_bytes!("../icons/32x32.png");
 
 /// Launcher text with an explicit `Exec=`.
 ///
-/// A bare `orquestra` only works when that name is on the menu session's
+/// A bare `ownhub` only works when that name is on the menu session's
 /// `PATH`. Running the AppImage from `~/Downloads`, or the binary from any
 /// folder, wrote a launcher that did nothing when clicked.
 pub(crate) fn desktop_entry(exec: &str) -> String {
     format!(
         "[Desktop Entry]\n\
-         Name=OrquestraAI\n\
+         Name=OwnHub\n\
          GenericName=AI Harness Control Plane\n\
          Comment=Universal AI Harness Administration Platform\n\
          Exec={exec} %U\n\
-         Icon=orquestra-ai\n\
+         Icon=ownhub\n\
          Terminal=false\n\
          Type=Application\n\
          Categories=Development;Utility;System;\n\
          StartupNotify=true\n\
-         StartupWMClass=orquestra\n\
-         Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;orquestra;\n"
+         StartupWMClass=ownhub\n\
+         Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;ownhub;\n"
     )
 }
 
@@ -54,7 +54,7 @@ pub(crate) fn launch_exec() -> String {
     executable
         .and_then(|path| path.into_string().ok())
         .map(|path| quote_exec(&path))
-        .unwrap_or_else(|| "orquestra".to_string())
+        .unwrap_or_else(|| "ownhub".to_string())
 }
 
 /// Quote an `Exec` value the way the Desktop Entry spec requires: only when
@@ -78,17 +78,20 @@ fn quote_exec(path: &str) -> String {
 
 /// Launcher text for an alias entry: identical to the canonical entry but
 /// hidden from menus. Without this, GNOME/KDE/XFCE list two or three
-/// duplicate OrquestraAI icons (one per alias filename).
+/// duplicate OwnHub icons (one per alias filename).
 fn alias_entry(exec: &str) -> String {
     format!("{}NoDisplay=true\n", desktop_entry(exec))
 }
 
-/// Expected launcher bytes per filename: only `orquestra.desktop` is the
-/// visible canonical entry; the technical aliases stay hidden.
+/// Expected launcher bytes per filename: only `ownhub.desktop` is the
+/// visible canonical entry; the technical aliases stay hidden. The
+/// pre-OwnHub filenames are kept as hidden aliases so an existing install
+/// converges them instead of leaving duplicate visible launchers.
 fn entry_for(name: &str, exec: &str) -> Option<String> {
     match name {
-        "orquestra.desktop" => Some(desktop_entry(exec)),
-        "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop" => Some(alias_entry(exec)),
+        "ownhub.desktop" => Some(desktop_entry(exec)),
+        "orquestra.desktop" | "orquestra-ai.desktop" | "ai.orquestra.desktop.desktop"
+        | "dev.ownanai.hub.desktop" => Some(alias_entry(exec)),
         _ => None,
     }
 }
@@ -122,7 +125,7 @@ pub(crate) fn data_home_with(
 /// Reports whether any bytes changed so the caller can skip the desktop
 /// refresh subprocesses when a launch changed nothing.
 pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
-    // Flatpak exports its own launcher pointing at `/app/bin/orquestra`,
+    // Flatpak exports its own launcher pointing at `/app/bin/ownhub`,
     // which is meaningless outside the sandbox. Do not shadow it with a
     // host-visible entry that cannot launch.
     if crate::exec_env::in_flatpak() {
@@ -137,9 +140,11 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
         let _ = std::fs::create_dir_all(&apps_dir);
     }
     for name in [
+        "ownhub.desktop",
         "orquestra.desktop",
         "orquestra-ai.desktop",
         "ai.orquestra.desktop.desktop",
+        "dev.ownanai.hub.desktop",
     ] {
         let dest = apps_dir.join(name);
         if is_symlink(&apps_dir) || is_symlink(&dest) {
@@ -172,7 +177,7 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
             continue;
         }
         let _ = std::fs::create_dir_all(&target_dir);
-        for icon_name in ["orquestra.png", "orquestra-ai.png"] {
+        for icon_name in ["ownhub.png"] {
             let icon_file = target_dir.join(icon_name);
             if is_symlink(&icon_file) {
                 continue;
@@ -189,7 +194,7 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
 
     // Clean up legacy 1024x1024 icons from early alpha builds that override theme colors
     let legacy_1024 = icons_base.join("1024x1024/apps");
-    for legacy_name in ["orquestra.png", "orquestra-ai.png"] {
+    for legacy_name in ["ownhub.png"] {
         let legacy = legacy_1024.join(legacy_name);
         if ancestor_is_symlink(data_dir, &legacy) || is_symlink(&legacy) {
             continue;
@@ -199,7 +204,7 @@ pub(crate) fn install_linux_assets(data_dir: &std::path::Path) -> bool {
         }
     }
 
-    for root_name in ["icons/orquestra.png", "icons/orquestra-ai.png"] {
+    for root_name in ["icons/ownhub.png"] {
         let root_icon = data_dir.join(root_name);
         if ancestor_is_symlink(data_dir, &root_icon) || is_symlink(&root_icon) {
             continue;

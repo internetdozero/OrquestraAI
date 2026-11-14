@@ -2715,18 +2715,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "orquestra-ai"
+name = "ownhub"
 version = "0.1.0-alpha.9"
 dependencies = [
  "flate2",
  "json5",
  "libc",
  "minisign-verify",
- "orquestra-bridge",
- "orquestra-core",
- "orquestra-harness",
- "orquestra-sessions",
- "orquestra-vault",
+ "ownhub-bridge",
+ "ownhub-core",
+ "ownhub-harness",
+ "ownhub-sessions",
+ "ownhub-vault",
  "reqwest 0.12.28",
  "rusqlite",
  "semver",
@@ -2743,17 +2743,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "orquestra-bridge"
+name = "ownhub-bridge"
 version = "0.1.0"
 dependencies = [
  "json5",
- "orquestra-core",
+ "ownhub-core",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "orquestra-core"
+name = "ownhub-core"
 version = "0.1.0"
 dependencies = [
  "junction",
@@ -2762,27 +2762,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "orquestra-harness"
+name = "ownhub-harness"
 version = "0.1.0"
 dependencies = [
  "json5",
- "orquestra-core",
+ "ownhub-core",
  "serde_json",
  "toml_edit 0.22.27",
 ]
 
 [[package]]
-name = "orquestra-sessions"
+name = "ownhub-sessions"
 version = "0.1.0"
 dependencies = [
- "orquestra-core",
+ "ownhub-core",
  "rusqlite",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "orquestra-vault"
+name = "ownhub-vault"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -2790,7 +2790,7 @@ dependencies = [
  "futures-util",
  "keyring",
  "libc",
- "orquestra-core",
+ "ownhub-core",
  "rand 0.9.5",
  "reqwest 0.12.28",
  "serde",

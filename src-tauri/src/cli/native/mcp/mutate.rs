@@ -85,7 +85,7 @@ pub(super) fn remove(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra mcp remove <id> [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub mcp remove <id> [--json]".to_string()))?;
 
     let options = parse_options(&args[1..], &[], &["--json"])?;
 
@@ -112,12 +112,12 @@ pub(super) fn set_state(args: &[String]) -> Result<String, CliError> {
     let id = args
         .first()
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]".to_string()))?;
 
     let state_arg = args
         .get(1)
         .filter(|arg| !arg.starts_with('-'))
-        .ok_or_else(|| usage("usage: orquestra mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]".to_string()))?;
+        .ok_or_else(|| usage("usage: ownhub mcp set-state <id> <on|off> [--global] [--harness <name>] [--json]".to_string()))?;
 
     let enabled = match state_arg.as_str() {
         "on" | "true" | "enable" => true,
@@ -134,7 +134,7 @@ fn toggle(args: &[String], enabled: bool, verb: &str) -> Result<String, CliError
         .filter(|arg| !arg.starts_with('-'))
         .ok_or_else(|| {
             usage(format!(
-                "usage: orquestra mcp {verb} <id> [--global] [--harness <name>] [--json]"
+                "usage: ownhub mcp {verb} <id> [--global] [--harness <name>] [--json]"
             ))
         })?;
 

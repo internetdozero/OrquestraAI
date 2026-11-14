@@ -199,17 +199,17 @@ export function setMinimizeToTray(enabled: boolean): Promise<void> {
   return invoke<void>("set_minimize_to_tray", { enabled });
 }
 
-/** Reveal a `~/.orquestra` location in the native file manager. */
+/** Reveal a `~/.ownhub` location in the native file manager. */
 export function openInFileManager(path: string): Promise<void> {
   return invoke<void>("open_in_file_manager", { path });
 }
 
 /**
- * Snapshot `~/.orquestra` into `backups/orquestra_backup_<stamp>.tar.gz`.
+ * Snapshot `~/.ownhub` into `backups/ownhub_backup_<stamp>.tar.gz`.
  * Resolves to the archive path so the UI can toast the real destination.
  */
-export function createOrquestraBackup(): Promise<string> {
-  return invoke<string>("create_orquestra_backup");
+export function createOwnHubBackup(): Promise<string> {
+  return invoke<string>("create_ownhub_backup");
 }
 
 /** True inside the Tauri webview; false in a plain browser preview. */

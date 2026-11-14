@@ -1,6 +1,6 @@
 //! The wire contract between the session commands and the React view.
 //!
-//! The payload types live in `orquestra-sessions`, but the frozen shape
+//! The payload types live in `ownhub-sessions`, but the frozen shape
 //! fixture belongs to the app's IPC contract (`tests/fixtures/`), so the
 //! guard stays here: a field added, renamed or dropped from a session payload
 //! breaks this test before it reaches the UI.

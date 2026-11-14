@@ -2,7 +2,7 @@
 //!
 //! One persistent icon with a context menu:
 //!
-//! * **Show / Hide OrquestraAI** — toggles the main window and focuses it.
+//! * **Show / Hide OwnHub** — toggles the main window and focuses it.
 //! * **Bridge Status** — read-only submenu listing every harness and whether
 //!   the bridge reaches it, sampled from the same code the footer uses.
 //! * **Quit** — graceful exit, the only way to leave the process running after
@@ -24,7 +24,7 @@ use crate::bridge;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Tray id, so the icon can be addressed without keeping a handle around.
-pub const TRAY_ID: &str = "orquestra-tray";
+pub const TRAY_ID: &str = "ownhub-tray";
 
 /// Window-close behavior synced from the frontend's `minimizeToTray` setting.
 /// Defaults to hidden-to-tray so the retention daemon survives a close;
@@ -103,7 +103,7 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     }
 
     builder
-        .tooltip("OrquestraAI — universal AI harness control plane")
+        .tooltip("OwnHub — universal AI harness control plane")
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "toggle" => toggle_main_window(app),
@@ -131,12 +131,12 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
 /// The tray menu, rebuilt from the harness links every time it is created.
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
-    let toggle = MenuItem::with_id(app, "toggle", "Show / Hide OrquestraAI", true, None::<&str>)?;
+    let toggle = MenuItem::with_id(app, "toggle", "Show / Hide OwnHub", true, None::<&str>)?;
     let bridge = bridge_menu(app)?;
     let about = MenuItem::with_id(
         app,
         "about",
-        format!("OrquestraAI v{}", env!("CARGO_PKG_VERSION")),
+        format!("OwnHub v{}", env!("CARGO_PKG_VERSION")),
         false,
         None::<&str>,
     )?;

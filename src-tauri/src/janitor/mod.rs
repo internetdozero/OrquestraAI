@@ -22,10 +22,10 @@ pub fn get_system_health() -> Result<SystemHealth, String> {
     health::snapshot()
 }
 
-/// Remove only dead Orquestra socket files and aged direct-child scratch files.
+/// Remove only dead OwnHub socket files and aged direct-child scratch files.
 #[tauri::command]
 pub fn sweep_system_caches() -> Result<SweepReport, String> {
-    let home = crate::paths::require_home("locate ~/.orquestra")?;
+    let home = crate::paths::storage_root(&crate::paths::require_home("locate ~/.ownhub")?);
     // `/proc/net/unix` is Linux-only. Elsewhere liveness is reported as
     // `None`, which `sweep::clean_sockets` reads as "unknown, delete
     // nothing" — an empty table would instead mean "no socket is live" and
@@ -39,7 +39,7 @@ pub fn sweep_system_caches() -> Result<SweepReport, String> {
     let active_sockets: Option<String> = None;
 
     sweep::sweep_at(
-        &home.join(".orquestra"),
+        &home,
         &crate::paths::scratch_root(),
         active_sockets.as_deref(),
         std::time::SystemTime::now(),

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-# OrquestraAI Official Secure Installer
-# https://github.com/internetdozero/OrquestraAI
+# OwnHub Official Secure Installer
+# https://github.com/internetdozero/OwnHub
 #
 # Trust model: the release's SHA256SUMS.txt carries a detached Minisign /
 # Ed25519 signature (SHA256SUMS.txt.minisig) from the offline release key.
@@ -11,14 +11,14 @@ set -e
 # checksums still fails closed. Same model as the in-app updater
 # (src-tauri/src/update_sig.rs); see docs/security.md for the key and
 # manual verification commands.
-REPO="internetdozero/OrquestraAI"
+REPO="internetdozero/OwnHub"
 # Embedded release public key (minisign .pub key-id + base64 body). The
 # matching secret lives only in the maintainer's offline copy and the
 # UPDATE_SIGNING_SEED CI secret. Must equal
 # src-tauri/src/update_sig.rs::RELEASE_PUBLIC_KEY.
 RELEASE_PUBKEY="RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1"
 BIN_DIR="${HOME}/.local/bin"
-TARGET_BIN="${BIN_DIR}/orquestra"
+TARGET_BIN="${BIN_DIR}/ownhub"
 
 # 0. CLI Flags
 ALLOW_UNSIGNED_LEGACY=0
@@ -131,8 +131,8 @@ check_linux_glibc() {
         echo "   The loader would fail with 'GLIBC_${required} not found'." >&2
         echo "   Install the Flatpak bundle instead: it carries its own runtime, so the" >&2
         echo "   host glibc does not matter (docs/install.md explains the tradeoffs):" >&2
-        echo "     curl -fLO https://github.com/${REPO}/releases/latest/download/OrquestraAI-x86_64.flatpak" >&2
-        echo "     flatpak install --user ./OrquestraAI-x86_64.flatpak" >&2
+        echo "     curl -fLO https://github.com/${REPO}/releases/latest/download/OwnHub-x86_64.flatpak" >&2
+        echo "     flatpak install --user ./OwnHub-x86_64.flatpak" >&2
         echo "   Building from source on this distribution also works." >&2
         return 1
     fi
@@ -239,7 +239,7 @@ check_linux_runtime_deps() {
 
 if [ "$CHECK_DEPS_ONLY" = "1" ]; then
     [ "$(uname -s)" = "Linux" ] || { echo "❌ Runtime dependency diagnostics currently support Linux only." >&2; exit 2; }
-    [ -x "$TARGET_BIN" ] || { echo "❌ Installed OrquestraAI binary not found at ${TARGET_BIN}." >&2; exit 1; }
+    [ -x "$TARGET_BIN" ] || { echo "❌ Installed OwnHub binary not found at ${TARGET_BIN}." >&2; exit 1; }
     check_linux_runtime_deps "$TARGET_BIN" || exit "$?"
     ensure_linux_tools check || true
     exit 0
@@ -286,7 +286,7 @@ fi
 mkdir -p "$BIN_DIR"
 BASE_TMP="${TMPDIR:-/tmp}"
 [ -d "$BASE_TMP" ] && [ -w "$BASE_TMP" ] || BASE_TMP="/var/tmp"
-TMP_DIR=$(mktemp -d "${BASE_TMP}/orquestra-install.XXXXXXXXXX")
+TMP_DIR=$(mktemp -d "${BASE_TMP}/ownhub-install.XXXXXXXXXX")
 chmod 700 "$TMP_DIR"
 
 STAGING_BIN=""
@@ -304,23 +304,23 @@ trap 'exit 143' TERM
 
 # 2b. Platform Detection (OS + architecture -> release asset)
 # Mirrors the in-app updater mapping in src-tauri/src/updater.rs:
-# Linux ships `orquestra-linux-x86_64` (plus the legacy `orquestra-ai`
-# alias); macOS ships `orquestra-macos-arm64` and `orquestra-macos-x86_64`.
+# Linux ships `ownhub-linux-x86_64` (plus the legacy `ownhub`
+# alias); macOS ships `ownhub-macos-arm64` and `ownhub-macos-x86_64`.
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 ASSET_CANDIDATES=""
 case "${OS}-${ARCH}" in
-    Linux-x86_64) ASSET_CANDIDATES="orquestra-linux-x86_64 orquestra-ai" ;;
+    Linux-x86_64) ASSET_CANDIDATES="ownhub-linux-x86_64 ownhub" ;;
     # The signed bundle is preferred: it is the artifact the release signs and
     # notarizes, and macOS treats a bare Mach-O from the internet as an
     # unidentified developer. The bare binary stays as the fallback for
     # releases built without the bundle step.
-    Darwin-arm64|Darwin-aarch64) ASSET_CANDIDATES="OrquestraAI-macos-arm64.app.zip orquestra-macos-arm64" ;;
-    Darwin-x86_64) ASSET_CANDIDATES="OrquestraAI-macos-x86_64.app.zip orquestra-macos-x86_64" ;;
+    Darwin-arm64|Darwin-aarch64) ASSET_CANDIDATES="OwnHub-macos-arm64.app.zip ownhub-macos-arm64" ;;
+    Darwin-x86_64) ASSET_CANDIDATES="OwnHub-macos-x86_64.app.zip ownhub-macos-x86_64" ;;
     *) echo "❌ Error: unsupported platform ${OS}/${ARCH}." >&2; exit 1 ;;
 esac
 
-echo "🔒 Downloading OrquestraAI release & SHA-256 checksum..."
+echo "🔒 Downloading OwnHub release & SHA-256 checksum..."
 echo "ℹ️  Platform: ${OS}/${ARCH}"
 
 # 3. Fetch Release Binary and Checksums
@@ -487,12 +487,12 @@ fi
 #
 # Two shapes reach this point: the bare executable every platform publishes
 # (which the in-app updater replaces in place) and, on macOS, the signed
-# `OrquestraAI.app` bundle. Both are installed from the staging copy whose
+# `OwnHub.app` bundle. Both are installed from the staging copy whose
 # SHA-256 was just verified.
 install_binary() {
     source_bin=$1
     chmod 755 "$source_bin"
-    STAGING_BIN=$(mktemp "${BIN_DIR}/.orquestra.tmp.XXXXXXXXXX")
+    STAGING_BIN=$(mktemp "${BIN_DIR}/.ownhub.tmp.XXXXXXXXXX")
     cp -p "$source_bin" "$STAGING_BIN"
     chmod 755 "$STAGING_BIN"
 
@@ -501,7 +501,7 @@ install_binary() {
     STAGING_BIN=""
 }
 
-# Install a notarized bundle into ~/Applications and point the `orquestra`
+# Install a notarized bundle into ~/Applications and point the `ownhub`
 # command at the executable inside it.
 #
 # The bundle is copied into a sibling staging directory and swapped in, so an
@@ -511,7 +511,7 @@ install_binary() {
 install_macos_bundle() {
     archive=$1
     apps_dir="${HOME}/Applications"
-    bundle="${apps_dir}/OrquestraAI.app"
+    bundle="${apps_dir}/OwnHub.app"
     unpack="${TMP_DIR}/unpacked"
 
     command -v unzip >/dev/null 2>&1 || {
@@ -532,7 +532,7 @@ install_macos_bundle() {
     fi
 
     mkdir -p "$apps_dir"
-    staged="${apps_dir}/.OrquestraAI.app.new.$$"
+    staged="${apps_dir}/.OwnHub.app.new.$$"
     rm -rf "$staged"
     cp -R "$app" "$staged" || {
         echo "❌ Error: could not stage the app bundle in ${apps_dir}." >&2
@@ -544,7 +544,7 @@ install_macos_bundle() {
     rm -rf "$bundle"
     mv "$staged" "$bundle"
 
-    # The CLI keeps its documented name. The link is what `orquestra` resolves
+    # The CLI keeps its documented name. The link is what `ownhub` resolves
     # through, and the updater replaces the real Mach-O behind it.
     executable=$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)
     if [ -z "$executable" ]; then
@@ -569,12 +569,12 @@ esac
 # from two sources that drift apart, so this script no longer touches them.
 
 echo "========================================================"
-echo "🎉 OrquestraAI installed successfully to ${TARGET_BIN}"
-echo "Run 'orquestra' in your terminal to launch the control plane."
+echo "🎉 OwnHub installed successfully to ${TARGET_BIN}"
+echo "Run 'ownhub' in your terminal to launch the control plane."
 if [ "$OS" = "Darwin" ]; then
     case "$ASSET" in
         *.app.zip)
-            echo "Open it from Launchpad, Spotlight, or with 'open -a OrquestraAI'."
+            echo "Open it from Launchpad, Spotlight, or with 'open -a OwnHub'."
             ;;
         *)
             # A bare Mach-O downloaded over the network is quarantined; the
@@ -587,6 +587,6 @@ if [ "$OS" = "Darwin" ]; then
 fi
 if [ "$OS" = "Linux" ]; then
     echo "If it later fails to launch, diagnose missing libraries without reinstalling:"
-    echo "  curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh -s -- --check-deps"
+    echo "  curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh -s -- --check-deps"
 fi
 echo "========================================================"

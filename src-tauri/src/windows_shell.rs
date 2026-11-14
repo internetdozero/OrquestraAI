@@ -8,12 +8,12 @@
 //! error code, and it needs no console window.
 //!
 //! The AppUserModelID is what lets the Start Menu shortcut, the taskbar button
-//! and the tray icon group as OrquestraAI instead of as a generic console app.
+//! and the tray icon group as OwnHub instead of as a generic console app.
 //! A packaged (MSIX) build gets one from its manifest; an unpacked build has to
 //! declare it, which is what [`declare_app_identity`] does at startup.
 
 /// Matches the macOS bundle identifier, so both platforms report the same app.
-pub(crate) const APP_USER_MODEL_ID: &str = "ai.orquestra.desktop";
+pub(crate) const APP_USER_MODEL_ID: &str = "dev.ownanai.hub";
 
 /// Wide, NUL-terminated copy of `value`, the shape every Win32 `W`-suffixed
 /// call expects.
@@ -80,9 +80,9 @@ mod tests {
 
     #[test]
     fn wide_strings_are_nul_terminated_utf16() {
-        let encoded = wide("ai.orquestra.desktop");
+        let encoded = wide("dev.ownanai.hub");
         assert_eq!(encoded.last(), Some(&0));
-        assert_eq!(encoded.len(), "ai.orquestra.desktop".len() + 1);
+        assert_eq!(encoded.len(), "dev.ownanai.hub".len() + 1);
         // An emoji is a surrogate pair: counting chars would truncate it.
         let accented = wide("ação");
         assert_eq!(accented.last(), Some(&0));
@@ -91,6 +91,6 @@ mod tests {
 
     #[test]
     fn the_identity_matches_the_bundle_identifier() {
-        assert_eq!(APP_USER_MODEL_ID, "ai.orquestra.desktop");
+        assert_eq!(APP_USER_MODEL_ID, "dev.ownanai.hub");
     }
 }

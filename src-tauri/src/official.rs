@@ -1,4 +1,4 @@
-//! Official tier: curated OrquestraAI skills and MCP servers.
+//! Official tier: curated OwnHub skills and MCP servers.
 //!
 //! The `official` flag on `SkillItem` and `McpServer` is **computed** from
 //! the id rules below, never stored: older catalogs without the key load
@@ -12,27 +12,27 @@
 use serde::Serialize;
 
 /// Monorepo consolidating the official suite.
-pub(crate) const MONOREPO: &str = "https://github.com/internetdozero/orquestra-extensions.git";
+pub(crate) const MONOREPO: &str = "https://github.com/internetdozero/ownhub-extensions.git";
 
-/// Official skills (unified `orquestra-*` naming, served from the monorepo).
+/// Official skills (unified `ownhub-*` naming, served from the monorepo).
 const OFFICIAL_SKILL_IDS: &[&str] = &[
-    "orquestra",
-    "orquestra-modular-start",
-    "orquestra-agent-orchestrator",
-    "orquestra-smart-build-router",
-    "orquestra-autonomous-audit",
+    "ownhub",
+    "ownhub-modular-start",
+    "ownhub-agent-orchestrator",
+    "ownhub-smart-build-router",
+    "ownhub-autonomous-audit",
     "lean-screen",
     "ux-best-practices",
 ];
 
 /// Official MCP servers (unified naming).
 const OFFICIAL_MCP_IDS: &[&str] = &[
-    "orquestra-idea-vault",
-    "orquestra-session-relay",
-    "orquestra-janitor",
-    "orquestra-core",
-    "orquestra-cloudflare",
-    "orquestra-web-search",
+    "ownhub-idea-vault",
+    "ownhub-session-relay",
+    "ownhub-janitor",
+    "ownhub-core",
+    "ownhub-cloudflare",
+    "ownhub-web-search",
 ];
 
 /// True when a vault skill id belongs to the official tier. Legacy
@@ -45,29 +45,29 @@ pub(crate) fn is_official_skill(id: &str) -> bool {
 /// Legacy vault id → canonical unified id; anything else passes through.
 pub(crate) fn canonical_skill_id(id: &str) -> &str {
     match id {
-        "modular-start" => "orquestra-modular-start",
-        "agent-orchestrator" => "orquestra-agent-orchestrator",
-        "autonomous-audit" => "orquestra-autonomous-audit",
-        "smart-build-router" => "orquestra-smart-build-router",
+        "modular-start" => "ownhub-modular-start",
+        "agent-orchestrator" => "ownhub-agent-orchestrator",
+        "autonomous-audit" => "ownhub-autonomous-audit",
+        "smart-build-router" => "ownhub-smart-build-router",
         _ => id,
     }
 }
 
 /// True when a catalog MCP id belongs to the official tier. Legacy
 /// pre-monorepo ids resolve through [`canonical_mcp_id`] first; the
-/// `orquestra` substring keeps third-party bridges stamped.
+/// `ownhub` substring keeps third-party bridges stamped.
 pub(crate) fn is_official_mcp(id: &str) -> bool {
-    OFFICIAL_MCP_IDS.contains(&canonical_mcp_id(id)) || id.contains("orquestra")
+    OFFICIAL_MCP_IDS.contains(&canonical_mcp_id(id)) || id.contains("ownhub")
 }
 
 /// Legacy catalog id → canonical unified id; anything else passes through.
 pub(crate) fn canonical_mcp_id(id: &str) -> &str {
     match id {
-        "idea-vault" => "orquestra-idea-vault",
-        "session-relay" => "orquestra-session-relay",
-        "janitor" => "orquestra-janitor",
-        "cloudflare" => "orquestra-cloudflare",
-        "web-search" => "orquestra-web-search",
+        "idea-vault" => "ownhub-idea-vault",
+        "session-relay" => "ownhub-session-relay",
+        "janitor" => "ownhub-janitor",
+        "cloudflare" => "ownhub-cloudflare",
+        "web-search" => "ownhub-web-search",
         _ => id,
     }
 }
@@ -83,7 +83,7 @@ pub struct OfficialSkillEntry {
     /// Verified GitHub URL, or `None` for a reserved slot with no repo yet.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo_url: Option<String>,
-    /// Badge tier: `true` for OrquestraAI-maintained entries.
+    /// Badge tier: `true` for OwnHub-maintained entries.
     #[serde(default)]
     pub official: bool,
     /// `"official"` or `"community"`.
@@ -167,50 +167,50 @@ pub struct OfficialStore {
 pub fn official_store() -> OfficialStore {
     let mut skills = vec![
         official_skill(
-            "orquestra",
-            "Operational guide for autonomous AI agents inside the OrquestraAI ecosystem: fleet topology, single-source-of-truth rules and safe control-plane interaction.",
+            "ownhub",
+            "Operational guide for autonomous AI agents inside the OwnHub ecosystem: fleet topology, single-source-of-truth rules and safe control-plane interaction.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub"),
             &["agents", "orchestration"],
             true,
             None,
             None,
         ),
         official_skill(
-            "orquestra-modular-start",
+            "ownhub-modular-start",
             "Start a new project, empty repository or scaffold in any language: initialize git, set up a concise root AGENTS.md with file-size caps and a module map, and commit each coherent slice locally.",
             "Infra",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-modular-start"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-modular-start"),
             &["scaffold", "infra"],
             true,
             Some("modular-start"),
             None,
         ),
         official_skill(
-            "orquestra-agent-orchestrator",
-            "Fleet orchestration for OrquestraAI agents: dispatch, supervise and coordinate multi-agent work.",
+            "ownhub-agent-orchestrator",
+            "Fleet orchestration for OwnHub agents: dispatch, supervise and coordinate multi-agent work.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-agent-orchestrator"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-agent-orchestrator"),
             &["agents", "fleet"],
             true,
             Some("agent-orchestrator"),
             None,
         ),
         official_skill(
-            "orquestra-smart-build-router",
+            "ownhub-smart-build-router",
             "Route build and task dispatches to the cheapest capable lane: sketches, plans and execution with budget guards.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-smart-build-router"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-smart-build-router"),
             &["agents", "routing"],
             false,
             Some("smart-build-router"),
             None,
         ),
         official_skill(
-            "orquestra-autonomous-audit",
+            "ownhub-autonomous-audit",
             "Time-boxed autonomous code audit shift: continuous multi-scope sweeps, atomic 1-issue commits with reproduction tests, formal negative passes, and structured ledger persistence.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/orquestra-autonomous-audit"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-autonomous-audit"),
             &["audit", "security", "testing", "autonomous"],
             false,
             Some("autonomous-audit"),
@@ -220,7 +220,7 @@ pub fn official_store() -> OfficialStore {
             "lean-screen",
             "Stop the generic admin-dashboard screen on any product: bans obvious subtitles, decorative metric heroes, equal KPI cards, card-in-card, and squeezed center columns.",
             "Frontend",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/lean-screen"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/lean-screen"),
             &["frontend", "ui", "layout"],
             false,
             None,
@@ -230,7 +230,7 @@ pub fn official_store() -> OfficialStore {
             "ux-best-practices",
             "UX guidelines and design heuristics for autonomous coding agents: audit checklists, flows, states, and anti-patterns.",
             "Frontend",
-            Some("https://github.com/internetdozero/orquestra-extensions.git#skills/ux-best-practices"),
+            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ux-best-practices"),
             &["frontend", "ux", "accessibility"],
             false,
             None,

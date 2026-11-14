@@ -1,4 +1,4 @@
-// ESLint flat config for the OrquestraAI React frontend.
+// ESLint flat config for the OwnHub React frontend.
 //
 // Layers: @eslint/js recommended + typescript-eslint recommended (not
 // type-aware, so lint stays fast; tsc --noEmit remains the type gate) +

@@ -4,7 +4,7 @@ dist-ssr/
 target/
 node_modules/
 .freebuff/
-.orquestra/audits/
+.ownhub/audits/
 *.sqlite
 *.sqlite3
 *.db

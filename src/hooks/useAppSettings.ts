@@ -14,7 +14,7 @@ export interface AppSettings {
   autoCheckExtensionUpdates: boolean;
 }
 
-const STORAGE_KEY = "orquestra_settings";
+const STORAGE_KEY = "ownhub_settings";
 
 export const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: true,

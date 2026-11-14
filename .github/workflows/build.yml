@@ -33,27 +33,27 @@ jobs:
         platform:
           - name: Linux x86_64
             os: ubuntu-22.04
-            artifact: orquestra-linux-x86_64
-            bin_name: orquestra-linux-x86_64
+            artifact: ownhub-linux-x86_64
+            bin_name: ownhub-linux-x86_64
             is_linux: true
             is_macos: false
-            # The legacy `orquestra-ai` alias is publishable once; only the
+            # The legacy `ownhub` alias is publishable once; only the
             # x86_64 row claims it so the arm64 row cannot collide.
             legacy_alias: true
           # Native arm64 runner: no cross-compilation, so WebKitGTK and
           # rusqlite's bundled SQLite build for the target architecture.
           - name: Linux aarch64
             os: ubuntu-24.04-arm
-            artifact: orquestra-linux-aarch64
-            bin_name: orquestra-linux-aarch64
+            artifact: ownhub-linux-aarch64
+            bin_name: ownhub-linux-aarch64
             is_linux: true
             is_macos: false
             legacy_alias: false
           - name: macOS Apple Silicon (arm64)
             # macos-14 retired 2026-11-02; arm64 builds stay on macos-15.
             os: macos-15
-            artifact: orquestra-macos-arm64
-            bin_name: orquestra-macos-arm64
+            artifact: ownhub-macos-arm64
+            bin_name: ownhub-macos-arm64
             is_linux: false
             is_macos: true
             # Name the bundle zip the installer looks for.
@@ -64,18 +64,18 @@ jobs:
           # until Aug 2027). Asset naming mirrors the arm64 row.
           - name: macOS Intel (x86_64)
             os: macos-15-intel
-            artifact: orquestra-macos-x86_64
-            bin_name: orquestra-macos-x86_64
+            artifact: ownhub-macos-x86_64
+            bin_name: ownhub-macos-x86_64
             is_linux: false
             is_macos: true
             bundle_arch: x86_64
             legacy_alias: false
           - name: Windows x86_64
             os: windows-latest
-            artifact: orquestra-windows-x86_64
+            artifact: ownhub-windows-x86_64
             # The bare `.exe` is what the updater replaces in place; the NSIS
             # setup is the first-install channel.
-            bin_name: orquestra-windows-x86_64.exe
+            bin_name: ownhub-windows-x86_64.exe
             is_linux: false
             is_macos: false
             is_windows: true
@@ -120,7 +120,7 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Build OrquestraAI Release Binary & SHA-256 Checksum
+      - name: Build OwnHub Release Binary & SHA-256 Checksum
         env:
           # Signing is opt-in: `tauri build` signs the bundle and the dmg only
           # when these are present, and notarization follows from APPLE_ID,
@@ -152,9 +152,9 @@ jobs:
           mkdir -p bin-out
           # `exe_suffix` is only set on the Windows row; an absent matrix key
           # expands to the empty string everywhere else.
-          cp "target/release/orquestra-ai${{ matrix.platform.exe_suffix }}" "bin-out/${{ matrix.platform.bin_name }}"
+          cp "target/release/ownhub${{ matrix.platform.exe_suffix }}" "bin-out/${{ matrix.platform.bin_name }}"
           if [ "${{ matrix.platform.legacy_alias }}" = "true" ]; then
-            cp target/release/orquestra-ai bin-out/orquestra-ai
+            cp target/release/ownhub bin-out/ownhub
           fi
           if [ "${{ matrix.platform.is_linux }}" = "true" ]; then
             # `--bundles deb` writes the package, not the binary: publish both.
@@ -166,7 +166,7 @@ jobs:
             find target/release/bundle/nsis -name '*-setup.exe' -exec cp {} bin-out/ ';' 2>/dev/null || true
           fi
           if [ "${{ matrix.platform.is_macos }}" = "true" ]; then
-            APP="target/release/bundle/macos/OrquestraAI.app"
+            APP="target/release/bundle/macos/OwnHub.app"
             if [ -d "$APP" ]; then
               # Notarization is asynchronous proof: staple the ticket to the
               # bundle so it validates offline, then ship it as a zip (dmg is
@@ -174,7 +174,7 @@ jobs:
               if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
                 xcrun stapler staple "$APP" || echo "::warning::stapler found no ticket; the bundle is unsigned or notarization was skipped"
               fi
-              ditto -c -k --keepParent "$APP" "bin-out/OrquestraAI-${{ matrix.platform.bundle_arch }}.app.zip"
+              ditto -c -k --keepParent "$APP" "bin-out/OwnHub-${{ matrix.platform.bundle_arch }}.app.zip"
               cp target/release/bundle/dmg/*.dmg bin-out/ 2>/dev/null || true
             else
               echo "::warning::no app bundle was produced; only the bare binary is published"
@@ -234,7 +234,7 @@ jobs:
       - name: Download the Linux x86_64 artifact
         uses: actions/download-artifact@v8
         with:
-          name: orquestra-linux-x86_64
+          name: ownhub-linux-x86_64
           path: artifact
 
       # Both outcomes are correct, one is not: exit 0 means this distribution
@@ -245,9 +245,9 @@ jobs:
       - name: Measure the binary against this distribution's glibc
         shell: bash
         run: |
-          chmod +x artifact/orquestra-linux-x86_64
+          chmod +x artifact/ownhub-linux-x86_64
           status=0
-          report=$(./scripts/check-glibc.sh artifact/orquestra-linux-x86_64 2>&1) || status=$?
+          report=$(./scripts/check-glibc.sh artifact/ownhub-linux-x86_64 2>&1) || status=$?
           printf '%s\n' "$report"
           case "$status" in
             0) echo "::notice::this distribution meets the release glibc baseline" ;;
@@ -308,7 +308,7 @@ jobs:
         if: inputs.build_flatpak != true
         uses: actions/download-artifact@v8
         with:
-          name: orquestra-linux-x86_64
+          name: ownhub-linux-x86_64
           path: artifact
 
       # Manual runs wrap the published binary instead of rebuilding it, so the
@@ -322,28 +322,28 @@ jobs:
           curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" \
             -o /tmp/release.json
-          asset_id=$(python3 -c 'import json; a=json.load(open("/tmp/release.json"))["assets"]; print(next(x["id"] for x in a if x["name"] == "orquestra-linux-x86_64"))')
+          asset_id=$(python3 -c 'import json; a=json.load(open("/tmp/release.json"))["assets"]; print(next(x["id"] for x in a if x["name"] == "ownhub-linux-x86_64"))')
           curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/octet-stream" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" \
-            -o artifact/orquestra-linux-x86_64
-          chmod +x artifact/orquestra-linux-x86_64
+            -o artifact/ownhub-linux-x86_64
+          chmod +x artifact/ownhub-linux-x86_64
 
       # The manifest resolves `path: files/...` beside itself, so the staging
       # tree is produced first and the action builds from the manifest.
       - name: Stage the bundle contents
         run: |
-          chmod +x artifact/orquestra-linux-x86_64
-          ./scripts/build-flatpak.sh --stage-only artifact/orquestra-linux-x86_64
+          chmod +x artifact/ownhub-linux-x86_64
+          ./scripts/build-flatpak.sh --stage-only artifact/ownhub-linux-x86_64
 
       - name: Build the self-contained bundle
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           # The action writes exactly this name, which is the one the docs and
           # the installer look for. Its own artifact upload is off: the named
-          # `orquestra-linux-flatpak` upload below is what the release reads.
-          bundle: OrquestraAI-x86_64.flatpak
-          manifest-path: packaging/flatpak/ai.orquestra.desktop.yml
+          # `ownhub-linux-flatpak` upload below is what the release reads.
+          bundle: OwnHub-x86_64.flatpak
+          manifest-path: packaging/flatpak/dev.ownanai.hub.yml
           arch: x86_64
           upload-artifact: false
           cache-key: flatpak-builder-${{ hashFiles('packaging/flatpak/**', 'scripts/build-flatpak.sh') }}
@@ -354,14 +354,14 @@ jobs:
         run: |
           # System install: the action's dependencies went to the root user's
           # system installation, so the runtime is already there.
-          flatpak install --system -y --noninteractive --bundle OrquestraAI-x86_64.flatpak
-          flatpak run --command=orquestra ai.orquestra.desktop --help
+          flatpak install --system -y --noninteractive --bundle OwnHub-x86_64.flatpak
+          flatpak run --command=ownhub dev.ownanai.hub --help
 
       - name: Upload the Flatpak bundle
         uses: actions/upload-artifact@v7
         with:
-          name: orquestra-linux-flatpak
-          path: OrquestraAI-*.flatpak
+          name: ownhub-linux-flatpak
+          path: OwnHub-*.flatpak
           retention-days: 14
 
   release:
@@ -386,7 +386,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          name: orquestra-linux-flatpak
+          name: ownhub-linux-flatpak
           path: artifacts
 
       - name: Prepare Unified Release Directory & Checksums

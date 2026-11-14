@@ -1,6 +1,6 @@
 //! Shell-side view of external-program lookup.
 //!
-//! Resolution itself lives in [`orquestra_core::exec`] so the vault's blind
+//! Resolution itself lives in [`ownhub_core::exec`] so the vault's blind
 //! `exec` proxy finds the same binaries as the desktop app: the process
 //! `PATH` first, then the login shell's `PATH` plus per-user install
 //! directories. A GUI launch does not inherit `nvm`, `mise`, `~/.cargo/bin`
@@ -9,7 +9,7 @@
 //! This module adds what is specific to the desktop shell: spawning without a
 //! console window, the Flatpak sandbox check, and the per-OS install hint.
 
-pub use orquestra_core::exec::{extra_dirs, resolve, resolve_in};
+pub use ownhub_core::exec::{extra_dirs, resolve, resolve_in};
 
 use std::path::Path;
 use std::process::Command;

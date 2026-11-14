@@ -1,12 +1,12 @@
-# Installing OrquestraAI
+# Installing OwnHub
 
 The supported channel today is the installer served at
-`https://orquestra.internetdozero.com.br/install.sh`, which verifies a detached
+`https://ownhub.internetdozero.com.br/install.sh`, which verifies a detached
 signature over the release checksums before it trusts anything (see
-[security.md](security.md)) and installs the binary to `~/.local/bin/orquestra`.
+[security.md](security.md)) and installs the binary to `~/.local/bin/ownhub`.
 
 ```sh
-curl -fsSL https://orquestra.internetdozero.com.br/install.sh | sh
+curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh
 ```
 
 ## Native package (Debian/Ubuntu)
@@ -20,12 +20,12 @@ GTK 3, libsoup 3, libayatana-appindicator, librsvg and `xdg-utils` — so
 glibc requirement still comes from the binary itself, not from a package.
 
 ```sh
-curl -fLO https://github.com/internetdozero/OrquestraAI/releases/latest/download/<name>.deb
+curl -fLO https://github.com/internetdozero/OwnHub/releases/latest/download/<name>.deb
 sudo dpkg -i <name>.deb
 ```
 
 In-app updates replace the executable the app is running from. For a
-package-managed install that is `/usr/bin/orquestra`, which needs write access;
+package-managed install that is `/usr/bin/ownhub`, which needs write access;
 the updater reports the permission error instead of failing silently, and
 reinstalling the newer `.deb` is the intended path there.
 
@@ -36,7 +36,7 @@ glibc 2.35 and WebKitGTK 4.1. The loader is the hard limit: a distribution with
 an older glibc stops before `main` with
 
 ```
-/app/orquestra: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found
+/app/ownhub: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found
 ```
 
 and no package install fixes that.
@@ -60,16 +60,16 @@ recorded, expected outcome there, not a regression.
 ### Running on an older distribution
 
 - **Flatpak** is the supported channel there. The release publishes
-  `OrquestraAI-x86_64.flatpak`, built from the same binary as every other
+  `OwnHub-x86_64.flatpak`, built from the same binary as every other
   channel (`.github/workflows/build.yml`, job `flatpak`) and wrapped by
-  `packaging/flatpak/ai.orquestra.desktop.yml`. It runs inside the GNOME 47
+  `packaging/flatpak/dev.ownanai.hub.yml`. It runs inside the GNOME 47
   runtime, which supplies glibc, GTK 3 and WebKitGTK 4.1 itself, so the host
   only needs a working `flatpak`:
 
   ```sh
-  curl -fLO https://github.com/internetdozero/OrquestraAI/releases/latest/download/OrquestraAI-x86_64.flatpak
-  flatpak install --user ./OrquestraAI-x86_64.flatpak
-  flatpak run ai.orquestra.desktop
+  curl -fLO https://github.com/internetdozero/OwnHub/releases/latest/download/OwnHub-x86_64.flatpak
+  flatpak install --user ./OwnHub-x86_64.flatpak
+  flatpak run dev.ownanai.hub
   ```
 
   If the asset is missing from the latest release page, the packaging job
@@ -78,7 +78,7 @@ recorded, expected outcome there, not a regression.
 
   Two consequences of the sandbox are worth knowing before installing. The
   app manages user-level harness files (`~/.claude`, `~/.codex`, `~/.agents`,
-  `~/.orquestra`), so the manifest declares `--filesystem=home`: a narrower
+  `~/.ownhub`), so the manifest declares `--filesystem=home`: a narrower
   share would leave every harness read-only. And in-app updates cannot replace
   a binary inside `/app`, so the updater reports a permission error and the
   Flatpak is updated by installing the newer bundle.
@@ -132,9 +132,9 @@ WebKitGTK 2.42+ renders through DMA-BUF, which produces a blank window or a
 crash with the proprietary NVIDIA driver on Wayland. Launch with
 
 ```sh
-WEBKIT_DISABLE_DMABUF_RENDERER=1 orquestra
+WEBKIT_DISABLE_DMABUF_RENDERER=1 ownhub
 # or, equivalently:
-ORQUESTRA_WEBKIT_SOFTWARE=1 orquestra
+OWNHUB_WEBKIT_SOFTWARE=1 ownhub
 ```
 
 To test the X11 path instead, set `GDK_BACKEND=x11`; the app never overrides an
@@ -145,22 +145,22 @@ explicit `GDK_BACKEND`.
 Two assets are published per architecture, and the installer takes the first
 one that exists:
 
-- `OrquestraAI-macos-<arch>.app.zip`: the app bundle. When the release was
+- `OwnHub-macos-<arch>.app.zip`: the app bundle. When the release was
   signed and notarized (the `APPLE_*` secrets were set for that tag), it opens
   from Finder without the "unidentified developer" dialog. The installer
-  unpacks it into `~/Applications` and links `~/.local/bin/orquestra` at the
+  unpacks it into `~/Applications` and links `~/.local/bin/ownhub` at the
   executable inside the bundle, so the CLI and the updater keep working against
   the same Mach-O.
-- `orquestra-macos-<arch>`: the bare binary. This is the shape older releases
+- `ownhub-macos-<arch>`: the bare binary. This is the shape older releases
   published, and it is still the updater's asset; without a bundle the app
-  wraps itself in `~/Applications/OrquestraAI.app` on first launch (see
+  wraps itself in `~/Applications/OwnHub.app` on first launch (see
   [ARCHITECTURE.md](ARCHITECTURE.md)).
 
 A build without the signing secrets is quarantined by macOS. Allow it once in
 System Settings → Privacy & Security, right-click → Open, or clear the flag:
 
 ```sh
-xattr -dr com.apple.quarantine ~/Applications/OrquestraAI.app
+xattr -dr com.apple.quarantine ~/Applications/OwnHub.app
 ```
 
 The bundle is built with the hardened runtime plus the JIT entitlement the
@@ -178,20 +178,20 @@ to add when the directory is missing from `PATH`:
 export PATH="$HOME/.local/bin:$PATH"  # add to ~/.zshrc or ~/.profile
 ```
 
-On Windows the tool goes to `%LOCALAPPDATA%\OrquestraAI\bin`, and the message
+On Windows the tool goes to `%LOCALAPPDATA%\OwnHub\bin`, and the message
 prints the `setx PATH` command that adds it permanently.
 
 ## Windows
 
-The Windows build is published as an NSIS setup (`OrquestraAI_<version>_x64-setup.exe`)
-and, next to it, the bare `orquestra-windows-x86_64.exe` that in-app updates
+The Windows build is published as an NSIS setup (`OwnHub_<version>_x64-setup.exe`)
+and, next to it, the bare `ownhub-windows-x86_64.exe` that in-app updates
 replace in place. The setup installs for the current user only, into
-`%LOCALAPPDATA%\OrquestraAI`, so it needs no administrator rights and the
+`%LOCALAPPDATA%\OwnHub`, so it needs no administrator rights and the
 updater can overwrite the executable it is running from.
 
 ```powershell
-$release = 'https://github.com/internetdozero/OrquestraAI/releases/latest/download'
-Start-Process "$release/OrquestraAI_<version>_x64-setup.exe"
+$release = 'https://github.com/internetdozero/OwnHub/releases/latest/download'
+Start-Process "$release/OwnHub_<version>_x64-setup.exe"
 ```
 
 The script channel is `install.ps1`, the counterpart of `install.sh`, with the
@@ -200,11 +200,11 @@ before any checksum is trusted, and the downloaded executable must match its
 signed SHA-256 entry.
 
 ```powershell
-irm https://orquestra.internetdozero.com.br/install.ps1 | iex
+irm https://ownhub.internetdozero.com.br/install.ps1 | iex
 ```
 
-It installs `orquestra.exe` (the same command name the Unix installer uses)
-into `%LOCALAPPDATA%\Programs\OrquestraAI` and adds that directory to the user
+It installs `ownhub.exe` (the same command name the Unix installer uses)
+into `%LOCALAPPDATA%\Programs\OwnHub` and adds that directory to the user
 `PATH`; `-InstallDir` changes the destination and `-NoPathUpdate` skips the
 `PATH` edit. Unlike the setup, the script keeps its own directory, so the two
 channels never share files.

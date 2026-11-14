@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within OrquestraAI, please report it privately through GitHub's [Private Vulnerability Reporting](https://github.com/internetdozero/OrquestraAI/security/advisories/new) or contact the maintainers directly at:
+If you discover a security vulnerability within OwnHub, please report it privately through GitHub's [Private Vulnerability Reporting](https://github.com/internetdozero/OwnHub/security/advisories/new) or contact the maintainers directly at:
 
 - Email: `contato@internetdozero.com.br`
 

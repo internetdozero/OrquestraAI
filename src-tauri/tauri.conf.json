@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OrquestraAI",
+  "productName": "OwnHub",
   "version": "0.1.0-alpha.9",
-  "identifier": "ai.orquestra.desktop",
+  "identifier": "dev.ownanai.hub",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "OrquestraAI",
+        "title": "OwnHub",
         "width": 1080,
         "height": 720,
         "minWidth": 900,

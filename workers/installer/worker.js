@@ -1,5 +1,5 @@
 /**
- * orquestra installer edge worker.
+ * ownhub installer edge worker.
  *
  * Serves `/install.sh` and `/install.ps1` byte-identical to the canonical
  * release tag instead of a stale hardcoded copy: every request resolves the
@@ -13,10 +13,10 @@
  * (repo redirect) and `/healthz`.
  */
 
-const REPO = "internetdozero/OrquestraAI";
+const REPO = "internetdozero/OwnHub";
 const LATEST_RELEASE = `https://github.com/${REPO}/releases/latest`;
 const RAW_AT = (tag, asset) => `https://raw.githubusercontent.com/${REPO}/${tag}/${asset}`;
-const UA = "orquestra-installer-worker";
+const UA = "ownhub-installer-worker";
 
 /** The installers this worker mirrors, keyed by request path. */
 const INSTALLERS = new Map([
@@ -38,7 +38,7 @@ const RETRY_DELAY_MS = 150;
 
 // Synthetic Cache API keys (never fetched): shared by every isolate in a
 // colo, so a cold isolate does not have to reach GitHub on its first request.
-const INTERNAL = "https://orquestra-installer.internal";
+const INTERNAL = "https://ownhub-installer.internal";
 const TAG_KEY = `${INTERNAL}/latest-tag`;
 const LAST_GOOD_KEY = (asset) => `${INTERNAL}/last-good/${asset}`;
 
@@ -72,8 +72,8 @@ async function fetchWithRetry(url, init) {
 async function cachedTag(cache) {
   const hit = await cache.match(TAG_KEY);
   if (!hit) return null;
-  const at = Number(hit.headers.get("x-orquestra-at"));
-  const tag = hit.headers.get("x-orquestra-tag");
+  const at = Number(hit.headers.get("x-ownhub-at"));
+  const tag = hit.headers.get("x-ownhub-tag");
   if (!tag || !Number.isFinite(at) || Date.now() - at >= TAG_TTL_MS) return null;
   return { tag, at };
 }
@@ -111,8 +111,8 @@ async function latestTag(cache, ctx) {
       new Response(null, {
         headers: {
           "cache-control": `public, max-age=${TAG_TTL_MS / 1000}`,
-          "x-orquestra-tag": tag,
-          "x-orquestra-at": String(now),
+          "x-ownhub-tag": tag,
+          "x-ownhub-at": String(now),
         },
       }),
     ),
@@ -138,7 +138,7 @@ function respondWith(request, body, headers) {
   if (etagMatches(request, etag)) {
     return new Response(null, {
       status: 304,
-      headers: { etag, "x-orquestra-tag": headers.get("x-orquestra-tag") ?? "" },
+      headers: { etag, "x-ownhub-tag": headers.get("x-ownhub-tag") ?? "" },
     });
   }
   return new Response(request.method === "HEAD" ? null : body, { status: 200, headers });
@@ -154,7 +154,7 @@ async function serveLastGood(request, cache, installer) {
   if (!stored) return null;
   const headers = new Headers(stored.headers);
   headers.set("cache-control", "public, max-age=60");
-  headers.set("x-orquestra-fallback", "last-good");
+  headers.set("x-ownhub-fallback", "last-good");
   return respondWith(request, await stored.arrayBuffer(), headers);
 }
 
@@ -163,7 +163,7 @@ async function serveFresh(request, ctx, installer, cache) {
   const cacheKey = new Request(request.url, { method: "GET" });
   const cached = await cache.match(cacheKey);
 
-  if (cached && cached.headers.get("x-orquestra-tag") === tag) {
+  if (cached && cached.headers.get("x-ownhub-tag") === tag) {
     return respondWith(request, await cached.arrayBuffer(), new Headers(cached.headers));
   }
 
@@ -179,7 +179,7 @@ async function serveFresh(request, ctx, installer, cache) {
     "content-type": installer.contentType,
     etag,
     "cache-control": "public, max-age=300",
-    "x-orquestra-tag": tag,
+    "x-ownhub-tag": tag,
   });
   const lastGoodHeaders = new Headers(headers);
   lastGoodHeaders.set("cache-control", `public, max-age=${LAST_GOOD_TTL_S}`);

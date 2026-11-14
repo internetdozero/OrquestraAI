@@ -1,8 +1,8 @@
 #!/bin/sh
-# Deploy the orquestra installer edge worker and verify 1:1 byte parity.
+# Deploy the ownhub installer edge worker and verify 1:1 byte parity.
 #
 # Usage: sh scripts/deploy-installer-worker.sh [worker-url]
-#   worker-url defaults to https://orquestra.internetdozero.com.br; a URL
+#   worker-url defaults to https://ownhub.internetdozero.com.br; a URL
 #   ending in /install.sh or /install.ps1 is accepted and trimmed.
 #
 # Requires: wrangler authenticated (`wrangler login` or CLOUDFLARE_API_TOKEN),
@@ -11,9 +11,9 @@
 set -e
 
 REPO_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-WORKER_BASE="${1:-https://orquestra.internetdozero.com.br}"
+WORKER_BASE="${1:-https://ownhub.internetdozero.com.br}"
 WORKER_BASE=$(printf '%s' "$WORKER_BASE" | sed -e 's#/install\.sh$##' -e 's#/install\.ps1$##' -e 's#/$##')
-REPO="internetdozero/OrquestraAI"
+REPO="internetdozero/OwnHub"
 INSTALLERS="install.sh install.ps1"
 
 if command -v wrangler >/dev/null 2>&1; then
@@ -36,7 +36,7 @@ if [ -z "$TAG" ]; then
 fi
 echo "ℹ️  Canonical tag: $TAG"
 
-TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/orquestra-worker-verify.XXXXXXXXXX")
+TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ownhub-worker-verify.XXXXXXXXXX")
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
 if command -v sha256sum >/dev/null 2>&1; then

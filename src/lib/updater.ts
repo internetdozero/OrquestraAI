@@ -8,7 +8,7 @@ export interface ReleaseCheckResult {
   publishedAt?: string;
 }
 
-const LATEST_URL = "https://api.github.com/repos/internetdozero/OrquestraAI/releases/latest";
+const LATEST_URL = "https://api.github.com/repos/internetdozero/OwnHub/releases/latest";
 
 /** `v0.1.0` → `0.1.0` so tags compare against the bare app version. */
 function cleanTag(tag: string): string {
@@ -85,7 +85,7 @@ export async function checkLatestRelease(currentVersion: string): Promise<Releas
     const response = await fetch(LATEST_URL, {
       headers: {
         Accept: "application/vnd.github.v3+json",
-        "User-Agent": "OrquestraAI-App",
+        "User-Agent": "OwnHub-App",
       },
     });
     if (!response.ok) return { isLatest: true, latestVersion: currentVersion };

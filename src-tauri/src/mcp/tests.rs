@@ -3,7 +3,7 @@
 
 //! Unit tests for seeding, catalog storage, and the deploy's non-destructive
 //! guarantees. The dialect tests live with the serializers in
-//! `orquestra-harness`.
+//! `ownhub-harness`.
 
 use super::catalog::*;
 use super::*;
@@ -13,7 +13,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use crate::harness::is_mcp_target as is_target;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 #[cfg(test)]
 mod tests {
@@ -22,7 +22,7 @@ mod tests {
 
     struct TestHome {
         home: PathBuf,
-        paths: OrquestraPaths,
+        paths: OwnHubPaths,
     }
 
     impl TestHome {
@@ -32,17 +32,17 @@ mod tests {
                 .unwrap()
                 .as_nanos();
             let base = std::env::temp_dir().join(format!(
-                "orquestra-mcp-{label}-{}-{unique}",
+                "ownhub-mcp-{label}-{}-{unique}",
                 std::process::id()
             ));
             let home = base.join("home");
-            let root = base.join("orquestra");
+            let root = base.join("ownhub");
 
             fs::create_dir_all(&home).unwrap();
 
             TestHome {
                 home,
-                paths: OrquestraPaths {
+                paths: OwnHubPaths {
                     vault: root.join("skills-library"),
                     active: root.join("active"),
                     root,
@@ -157,8 +157,8 @@ mod tests {
     fn seed_defaults_to_a_file_inside_the_storage_root() {
         // The operator override is process-global; only assert the default
         // when the test runner did not set it.
-        if std::env::var_os("ORQUESTRA_SEED_MCP_CATALOG").is_none() {
-            let root = PathBuf::from("/tmp/orquestra-test-root");
+        if std::env::var_os("OWNHUB_SEED_MCP_CATALOG").is_none() {
+            let root = PathBuf::from("/tmp/ownhub-test-root");
             assert_eq!(seed_catalog_path(&root), root.join("seed-mcps.json"));
         }
     }

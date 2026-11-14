@@ -2,14 +2,14 @@
 //! the master `AGENTS.md`.
 //!
 //! Split by responsibility — [`vault`] indexes `SKILL.md` files, [`projection`]
-//! owns the symlinks under `~/.orquestra/active`, and [`agents`] owns the
+//! owns the symlinks under `~/.ownhub/active`, and [`agents`] owns the
 //! instruction file. This file keeps the API the Tauri layer calls and the
 //! shapes it serializes.
 
 use serde::{Deserialize, Serialize};
 
 use crate::harness::{self, harness_ids, GLOBAL_SCOPE};
-use crate::paths::{open_paths, OrquestraPaths};
+use crate::paths::{open_paths, OwnHubPaths};
 
 mod agents;
 mod import;
@@ -78,7 +78,7 @@ pub fn list_skills(harness_id: Option<String>) -> Result<Vec<SkillItem>, String>
     list_from(&paths, &scope)
 }
 
-fn summary_from(paths: &OrquestraPaths) -> Result<Vec<HarnessSummary>, String> {
+fn summary_from(paths: &OwnHubPaths) -> Result<Vec<HarnessSummary>, String> {
     let directories = skill_directories(&paths.vault)?;
     let total = directories.len();
     // One `read_dir` per scope: the old loop paid two `canonicalize`

@@ -9,13 +9,13 @@ use super::{
 };
 use crate::harness;
 use crate::official::is_official_mcp;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 /// Insert or replace one server, then re-compile the harness configs.
 pub fn save_mcp(server: McpServer) -> Result<(), String> {
     validate_server(&server)?;
 
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
 
     let mut server = server;
@@ -64,7 +64,7 @@ fn restore_masked_values(
 /// Drop a server from the catalog. It stays in `managedIds` long enough for the
 /// deploy to strip it out of every harness config it was written into.
 pub fn delete_mcp(id: &str) -> Result<(), String> {
-    let paths = OrquestraPaths::resolve()?;
+    let paths = OwnHubPaths::resolve()?;
     let mut catalog = load_catalog(&paths, &seed_catalog_path(&paths.root))?;
 
     if catalog.mcps.remove(id).is_none() {

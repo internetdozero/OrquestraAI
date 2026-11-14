@@ -16,7 +16,7 @@ mod desktop_icons;
 #[cfg(any(windows, test))]
 mod desktop_shortcut;
 mod exec_env;
-// `paths`/`harness` re-export `orquestra-core` (task #326): items moved, paths did not.
+// `paths`/`harness` re-export `ownhub-core` (task #326): items moved, paths did not.
 pub mod harness;
 pub mod ideas;
 #[cfg(test)]
@@ -43,17 +43,17 @@ pub mod vault;
 #[cfg(any(windows, test))]
 mod windows_shell;
 
-pub use orquestra_core::{log_error, log_info, log_warn};
+pub use ownhub_core::{log_error, log_info, log_warn};
 
 // Registered as a bare identifier: the IPC contract test reads the handler list
 // and treats a `module::name` entry as two separate command names.
 use tooling::probe_external_tools;
 
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 use bridge::{BridgeReport, HarnessStatus};
 pub use commands::CoreStatus;
 use commands::{core_status, import_skill_from_git, log_ui_error};
-use desktop::{create_orquestra_backup, open_in_file_manager, open_url};
+use desktop::{create_ownhub_backup, open_in_file_manager, open_url};
 use ideas::{
     create_idea, delete_idea, get_productivity_metrics, list_blackboard_notes, list_idea_projects,
     list_ideas, mark_note_read, post_blackboard_note, update_idea, update_idea_status,
@@ -128,13 +128,13 @@ fn harness_summary() -> Result<Vec<HarnessSummary>, String> {
     skills::harness_summary()
 }
 
-/// Read the master `~/.orquestra/AGENTS.md`, creating a template on first use.
+/// Read the master `~/.ownhub/AGENTS.md`, creating a template on first use.
 #[tauri::command]
 fn read_master_agents_md() -> Result<String, String> {
     skills::read_master_agents_md()
 }
 
-/// Atomically replace the master `~/.orquestra/AGENTS.md`.
+/// Atomically replace the master `~/.ownhub/AGENTS.md`.
 #[tauri::command]
 fn write_master_agents_md(content: String) -> Result<(), String> {
     skills::write_master_agents_md(&content)
@@ -252,7 +252,7 @@ fn get_bridge_status() -> Result<Vec<HarnessStatus>, String> {
     bridge::get_bridge_status()
 }
 
-/// Back up each harness, then symlink it into its OrquestraAI projection.
+/// Back up each harness, then symlink it into its OwnHub projection.
 #[tauri::command]
 fn deploy_harness_bridge() -> Result<BridgeReport, String> {
     bridge::deploy_harness_bridge()
@@ -278,7 +278,7 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 window.set_background_color(Some(tauri::window::Color(9, 9, 11, 255)))?;
             }
-            match OrquestraPaths::resolve().and_then(|paths| paths.bootstrap()) {
+            match OwnHubPaths::resolve().and_then(|paths| paths.bootstrap()) {
                 Ok(()) => {}
                 Err(error) => crate::log_error!("storage bootstrap failed: {error}"),
             }
@@ -334,7 +334,7 @@ pub fn run() {
             pick_folder,
             open_url,
             open_in_file_manager,
-            create_orquestra_backup,
+            create_ownhub_backup,
             set_minimize_to_tray,
             harness_summary,
             read_master_agents_md,
@@ -395,6 +395,6 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
     {
-        crate::log_error!("error while running OrquestraAI: {error}");
+        crate::log_error!("error while running OwnHub: {error}");
     }
 }

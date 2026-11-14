@@ -2,14 +2,14 @@
 
 use super::{load_catalog, save_catalog};
 use crate::mcp::McpServer;
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
 pub(super) fn adopt_existing(
-    paths: &OrquestraPaths,
+    paths: &OwnHubPaths,
     home: &Path,
     seed: &Path,
 ) -> Result<(), String> {
@@ -172,13 +172,13 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let base = std::env::temp_dir().join(format!("orquestra-gemini-mcp-{nonce}"));
+        let base = std::env::temp_dir().join(format!("ownhub-gemini-mcp-{nonce}"));
         let home = base.join("home");
-        let root = base.join("orquestra");
+        let root = base.join("ownhub");
         fs::create_dir_all(home.join(".gemini/config")).expect("Gemini config");
         // An unmanaged file at the old shared root: adoption must ignore it.
         fs::create_dir_all(home.join(".agents")).expect("shared root");
-        let paths = OrquestraPaths {
+        let paths = OwnHubPaths {
             vault: root.join("skills-library"),
             active: root.join("active"),
             root,
@@ -186,7 +186,7 @@ mod tests {
         paths.ensure_layout().expect("layout");
         fs::write(
             home.join(".agents/mcp.json"),
-            r#"{"mcpServers":{"exa":{"url":"https://exa.example/mcp"},"rea":{"command":"/bin/echo","args":[]},"orquestra-idea-vault":{"command":"idea-vault","args":[]}}}"#,
+            r#"{"mcpServers":{"exa":{"url":"https://exa.example/mcp"},"rea":{"command":"/bin/echo","args":[]},"ownhub-idea-vault":{"command":"idea-vault","args":[]}}}"#,
         )
         .expect("shared root config");
         fs::write(
@@ -212,7 +212,7 @@ mod tests {
         );
         assert_eq!(catalog.mcps["rea"].enabled_harnesses, ["antigravity"]);
         // `.agents/mcp.json` belongs to no managed harness any more.
-        assert!(!catalog.mcps.contains_key("orquestra-idea-vault"));
+        assert!(!catalog.mcps.contains_key("ownhub-idea-vault"));
         assert_eq!(
             catalog.managed_ids,
             ["exa", "rea"].into_iter().map(str::to_string).collect()

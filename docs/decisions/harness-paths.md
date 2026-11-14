@@ -9,7 +9,7 @@ them wherever the operator said.
 
 ## The rule
 
-`orquestra_core::paths` owns two functions and one mapping:
+`ownhub_core::paths` owns two functions and one mapping:
 
 | Logical path       | Linux (`XDG_*_HOME` when absolute) | macOS                               | Windows                                          |
 | ------------------ | ---------------------------------- | ----------------------------------- | ------------------------------------------------ |

@@ -1,4 +1,4 @@
-//! Granular CLI management for Skills (`orquestra skills …`).
+//! Granular CLI management for Skills (`ownhub skills …`).
 
 use super::{usage, CliError};
 
@@ -9,7 +9,7 @@ mod mutate;
 #[cfg(test)]
 mod tests;
 
-const USAGE: &str = "usage: orquestra skills <list|info|inspect|enable|disable|batch|summary|validate|create|scaffold|import|export|content|delete> [options]";
+const USAGE: &str = "usage: ownhub skills <list|info|inspect|enable|disable|batch|summary|validate|create|scaffold|import|export|content|delete> [options]";
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     match args.first().map(String::as_str) {

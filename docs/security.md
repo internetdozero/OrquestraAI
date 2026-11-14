@@ -1,6 +1,6 @@
 # Release Supply-Chain Security
 
-Every OrquestraAI release signs its published `SHA256SUMS.txt` with an
+Every OwnHub release signs its published `SHA256SUMS.txt` with an
 offline Ed25519 release key and uploads the detached Minisign signature as
 `SHA256SUMS.txt.minisig` next to it (see `scripts/sign-release.py` and the
 `Sign SHA256SUMS.txt` step in `.github/workflows/build.yml`). Verifying
@@ -16,7 +16,7 @@ Public half, minisign `.pub` format (embedded in both `install.sh` as
 `RELEASE_PUBLIC_KEY` — the two must always match):
 
 ```text
-untrusted comment: orquestra release signing key
+untrusted comment: ownhub release signing key
 RWRXcQWxu51A3hiNwiOi7zV6Dm+uUXR4zZrg1IbsZqD8RAqHZwgKbeU1
 ```
 
@@ -39,7 +39,7 @@ from before signing can still be installed with an explicit opt-in to
 checksum-only verification:
 
 ```sh
-curl -fsSL https://orquestra.internetdozero.com.br/install.sh | bash -s -- --allow-unsigned-legacy
+curl -fsSL https://ownhub.internetdozero.com.br/install.sh | bash -s -- --allow-unsigned-legacy
 ```
 
 ## Manual verification
@@ -83,14 +83,14 @@ any downloaded checksum.
 
 ## Backup archive privacy
 
-`~/.orquestra/backups/*.tar.gz` embeds `vault.json` with cleartext service
+`~/.ownhub/backups/*.tar.gz` embeds `vault.json` with cleartext service
 keys, so the archive is treated as a secret at rest:
 
 - The file is created with mode `0600` **before** the first byte is written,
   and the mode is re-applied after closing. Without that, the inherited umask
   (`0644` on most systems) leaves the archive readable by every local user for
   as long as it takes to fill it.
-- `~/.orquestra/backups/` is tightened to `0700`, so the names inside are not
+- `~/.ownhub/backups/` is tightened to `0700`, so the names inside are not
   listable either.
 - Archiving happens in-process (`tar` + `flate2`), never through an external
   `tar` binary, so no child process can be selected from `PATH` and no
@@ -99,7 +99,7 @@ keys, so the archive is treated as a secret at rest:
   projections do not duplicate the vault into the archive.
 
 On Windows there are no POSIX mode bits. The archive is created inside the
-operator's profile (`%USERPROFILE%\.orquestra\backups`), which inherits the
+operator's profile (`%USERPROFILE%\.ownhub\backups`), which inherits the
 profile ACL: the owning account, `SYSTEM` and the local `Administrators` group
 — no ordinary local user. That is the guarantee the code relies on; it is not
 a per-file DACL, so a profile directory whose ACL was widened by hand widens
@@ -111,7 +111,7 @@ the backups with it. Deployments that need a stronger guarantee should point
 The app shells out to a small, fixed set of programs (`git`, `python3`,
 `node`, a desktop opener) and the vault's blind `vault exec` proxy shells out
 to its own allowlist. Both use the same resolver
-(`orquestra_core::exec`): the process `PATH` first, then the login shell's
+(`ownhub_core::exec`): the process `PATH` first, then the login shell's
 `PATH`, `~/.local/bin`, `~/.cargo/bin`, mise/asdf shims and Homebrew; on
 Windows the user `PATH` comes from `HKCU\Environment`.
 

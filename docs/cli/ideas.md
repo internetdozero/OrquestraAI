@@ -1,6 +1,6 @@
 # CLI: Granular Control for Idea Vault & Blackboard Notes
 
-The `orquestra idea` (and alias `orquestra ideas`) CLI provides command-line control over OrquestraAI's **Idea Vault** and **Inter-Agent Blackboard Notes**.
+The `ownhub idea` (and alias `ownhub ideas`) CLI provides command-line control over OwnHub's **Idea Vault** and **Inter-Agent Blackboard Notes**.
 
 It enables headless terminal environments, autonomous agents, and CI/CD pipelines to create, query, inspect, transition, and export tasks, ideas, and asynchronous collaboration notes without launching the desktop GUI.
 
@@ -8,7 +8,7 @@ It enables headless terminal environments, autonomous agents, and CI/CD pipeline
 
 ## Architecture & Storage Model
 
-Both the desktop application, the `orquestra-idea-vault` MCP server, and the CLI share the same SQLite database:
+Both the desktop application, the `ownhub-idea-vault` MCP server, and the CLI share the same SQLite database:
 
 - **Default Database Location:** `~/.local/share/idea-vault/ideas.sqlite3`
 - **Overrides:** Honors `IDEA_VAULT_DB_PATH` and `XDG_DATA_HOME` environment variables.
@@ -37,15 +37,15 @@ Both the desktop application, the `orquestra-idea-vault` MCP server, and the CLI
 
 ### What Exists Today
 
-The existing implementation in `src-tauri/src/cli/native/ideas.rs` only supports 3 basic commands under the `orquestra ideas` root:
+The existing implementation in `src-tauri/src/cli/native/ideas.rs` only supports 3 basic commands under the `ownhub ideas` root:
 
-- `orquestra ideas add --project <p> --title <t> [...]`
-- `orquestra ideas list [--project <p>] [--status <s>] [--limit <l>] [--offset <o>] [--json]`
-- `orquestra ideas status <id> <status> [--json]`
+- `ownhub ideas add --project <p> --title <t> [...]`
+- `ownhub ideas list [--project <p>] [--status <s>] [--limit <l>] [--offset <o>] [--json]`
+- `ownhub ideas status <id> <status> [--json]`
 
 **Limitations:**
 
-- Does not recognize the canonical singular command `orquestra idea` (only plural `ideas`).
+- Does not recognize the canonical singular command `ownhub idea` (only plural `ideas`).
 - Cannot inspect or get a single idea (`get`/`inspect`).
 - Cannot update fields of an existing idea without resetting status or recreating (`update`).
 - Cannot delete ideas (`delete`).
@@ -57,10 +57,10 @@ The existing implementation in `src-tauri/src/cli/native/ideas.rs` only supports
 
 ### The Granular Redesign
 
-The redesigned CLI introduces comprehensive subcommands grouped under `orquestra idea` (with `orquestra ideas` alias retained for backward compatibility), providing full parity with the `orquestra-idea-vault` MCP and Rust backend capabilities.
+The redesigned CLI introduces comprehensive subcommands grouped under `ownhub idea` (with `ownhub ideas` alias retained for backward compatibility), providing full parity with the `ownhub-idea-vault` MCP and Rust backend capabilities.
 
 ```
-orquestra idea
+ownhub idea
 ├── list              List ideas with multi-criteria filtering
 ├── get               Inspect full details and prompt of an idea
 ├── add               Record a new idea or task
@@ -89,11 +89,11 @@ All commands support human-readable standard output by default, and structured J
 List ideas matching specified filters, sorted by priority and recency.
 
 ```bash
-orquestra idea list [options]
+ownhub idea list [options]
 ```
 
 - **Options:**
-  - `--project <name>`: Filter by project name (e.g., `OrquestraAI`).
+  - `--project <name>`: Filter by project name (e.g., `OwnHub`).
   - `--status <status>`: Filter by status: `open` (default if omitted), `in_progress`, `completed`, `archived`, or `all` (disables status filter).
   - `--category <cat>`: Filter by category (`feature`, `architecture`, `bug`, `ux`, `idea`).
   - `--priority <prio>`: Filter by priority (`critical`, `high`, `medium`, `low`).
@@ -104,11 +104,11 @@ orquestra idea list [options]
 **Examples:**
 
 ```bash
-# List all open ideas for OrquestraAI
-orquestra idea list --project OrquestraAI
+# List all open ideas for OwnHub
+ownhub idea list --project OwnHub
 
 # List high and critical priority ideas across all statuses in JSON
-orquestra idea list --status all --priority high --json
+ownhub idea list --status all --priority high --json
 ```
 
 ---
@@ -118,7 +118,7 @@ orquestra idea list --status all --priority high --json
 Inspect complete details of a single idea, including description, tags, and technical Builder dispatch prompt.
 
 ```bash
-orquestra idea get <id> [--json]
+ownhub idea get <id> [--json]
 ```
 
 - **Arguments:**
@@ -129,8 +129,8 @@ orquestra idea get <id> [--json]
 **Examples:**
 
 ```bash
-orquestra idea get 42
-orquestra idea get 42 --json
+ownhub idea get 42
+ownhub idea get 42 --json
 ```
 
 ---
@@ -140,7 +140,7 @@ orquestra idea get 42 --json
 Record a new idea or task into the vault.
 
 ```bash
-orquestra idea add --project <project> --title <title> [options]
+ownhub idea add --project <project> --title <title> [options]
 ```
 
 - **Required Flags:**
@@ -158,9 +158,9 @@ orquestra idea add --project <project> --title <title> [options]
 **Example:**
 
 ```bash
-orquestra idea add \
-  --project OrquestraAI \
-  --title "CLI: orquestra idea granular control" \
+ownhub idea add \
+  --project OwnHub \
+  --title "CLI: ownhub idea granular control" \
   --category feature \
   --priority high \
   --tags "cli,ideas,idea-vault" \
@@ -174,7 +174,7 @@ orquestra idea add \
 Partially update fields of an existing idea without resetting unspecified fields.
 
 ```bash
-orquestra idea update <id> [options]
+ownhub idea update <id> [options]
 ```
 
 - **Arguments:**
@@ -193,7 +193,7 @@ orquestra idea update <id> [options]
 **Example:**
 
 ```bash
-orquestra idea update 42 --priority critical --tags "cli,release-blocker"
+ownhub idea update 42 --priority critical --tags "cli,release-blocker"
 ```
 
 ---
@@ -203,7 +203,7 @@ orquestra idea update 42 --priority critical --tags "cli,release-blocker"
 Convenient shortcut to transition an idea's lifecycle status.
 
 ```bash
-orquestra idea status <id> <status> [--json]
+ownhub idea status <id> <status> [--json]
 ```
 
 - **Arguments:**
@@ -217,8 +217,8 @@ orquestra idea status <id> <status> [--json]
 **Example:**
 
 ```bash
-orquestra idea status 42 in_progress
-orquestra idea status 42 completed
+ownhub idea status 42 in_progress
+ownhub idea status 42 completed
 ```
 
 ---
@@ -228,7 +228,7 @@ orquestra idea status 42 completed
 Permanently remove an idea from the vault.
 
 ```bash
-orquestra idea delete <id> [--json]
+ownhub idea delete <id> [--json]
 ```
 
 - **Arguments:**
@@ -239,7 +239,7 @@ orquestra idea delete <id> [--json]
 **Example:**
 
 ```bash
-orquestra idea delete 42
+ownhub idea delete 42
 ```
 
 ---
@@ -249,7 +249,7 @@ orquestra idea delete 42
 Search ideas by substring match across `title`, `description`, `tags`, and `prompt`.
 
 ```bash
-orquestra idea search <query> [options]
+ownhub idea search <query> [options]
 ```
 
 - **Arguments:**
@@ -262,7 +262,7 @@ orquestra idea search <query> [options]
 **Example:**
 
 ```bash
-orquestra idea search "granular cli" --project OrquestraAI
+ownhub idea search "granular cli" --project OwnHub
 ```
 
 ---
@@ -272,13 +272,13 @@ orquestra idea search "granular cli" --project OrquestraAI
 List all unique project identifiers currently registered in the Idea Vault.
 
 ```bash
-orquestra idea projects [--json]
+ownhub idea projects [--json]
 ```
 
 **Example:**
 
 ```bash
-orquestra idea projects
+ownhub idea projects
 ```
 
 ---
@@ -288,7 +288,7 @@ orquestra idea projects
 Export active ideas (`open` and `in_progress`) for a project formatted as GitHub-style Markdown checklist.
 
 ```bash
-orquestra idea export-md --project <project> [options]
+ownhub idea export-md --project <project> [options]
 ```
 
 - **Required Flags:**
@@ -300,7 +300,7 @@ orquestra idea export-md --project <project> [options]
 **Example:**
 
 ```bash
-orquestra idea export-md --project OrquestraAI --out /tmp/ideas-board.md
+ownhub idea export-md --project OwnHub --out /tmp/ideas-board.md
 ```
 
 ---
@@ -310,7 +310,7 @@ orquestra idea export-md --project OrquestraAI --out /tmp/ideas-board.md
 Display developer velocity metrics, task completion counts, and heatmaps.
 
 ```bash
-orquestra idea metrics [options]
+ownhub idea metrics [options]
 ```
 
 - **Options:**
@@ -321,7 +321,7 @@ orquestra idea metrics [options]
 **Example:**
 
 ```bash
-orquestra idea metrics --project OrquestraAI --weeks 4
+ownhub idea metrics --project OwnHub --weeks 4
 ```
 
 ---
@@ -335,7 +335,7 @@ Blackboard notes provide an asynchronous, multi-agent communication channel stor
 Post a collaboration note on the blackboard.
 
 ```bash
-orquestra idea note-post --project <project> --topic <topic> --note <text> [options]
+ownhub idea note-post --project <project> --topic <topic> --note <text> [options]
 ```
 
 - **Required Flags:**
@@ -350,8 +350,8 @@ orquestra idea note-post --project <project> --topic <topic> --note <text> [opti
 **Example:**
 
 ```bash
-orquestra idea note-post \
-  --project OrquestraAI \
+ownhub idea note-post \
+  --project OwnHub \
   --topic "build-status" \
   --note "Artifact release compiled cleanly, ready for smoke test" \
   --sender "builder-1" \
@@ -365,7 +365,7 @@ orquestra idea note-post \
 List blackboard notes matching topic or read status.
 
 ```bash
-orquestra idea note-list [options]
+ownhub idea note-list [options]
 ```
 
 - **Options:**
@@ -379,7 +379,7 @@ orquestra idea note-list [options]
 **Example:**
 
 ```bash
-orquestra idea note-list --project OrquestraAI --unread-only
+ownhub idea note-list --project OwnHub --unread-only
 ```
 
 ---
@@ -389,7 +389,7 @@ orquestra idea note-list --project OrquestraAI --unread-only
 Inspect an individual blackboard note by ID.
 
 ```bash
-orquestra idea note-get <id> [--json]
+ownhub idea note-get <id> [--json]
 ```
 
 ---
@@ -399,13 +399,13 @@ orquestra idea note-get <id> [--json]
 Mark a blackboard note as read.
 
 ```bash
-orquestra idea note-read <id> [--json]
+ownhub idea note-read <id> [--json]
 ```
 
 **Example:**
 
 ```bash
-orquestra idea note-read 15
+ownhub idea note-read 15
 ```
 
 ---
@@ -415,7 +415,7 @@ orquestra idea note-read 15
 Purge handled blackboard notes for a given project.
 
 ```bash
-orquestra idea note-clear --project <project> [options]
+ownhub idea note-clear --project <project> [options]
 ```
 
 - **Required Flags:**
@@ -428,8 +428,8 @@ orquestra idea note-clear --project <project> [options]
 **Example:**
 
 ```bash
-# Clear all read notes for OrquestraAI
-orquestra idea note-clear --project OrquestraAI
+# Clear all read notes for OwnHub
+ownhub idea note-clear --project OwnHub
 ```
 
 ---
@@ -446,8 +446,8 @@ With `--json`, any command output can be parsed directly with `jq` or Python:
 
 ```bash
 # Get the active Builder prompt for Idea #42 and pipe to clipboard or runner
-orquestra idea get 42 --json | jq -r '.prompt'
+ownhub idea get 42 --json | jq -r '.prompt'
 
 # List IDs of all open critical bugs
-orquestra idea list --category bug --priority critical --status open --json | jq '.[].id'
+ownhub idea list --category bug --priority critical --status open --json | jq '.[].id'
 ```

@@ -79,10 +79,10 @@ export function AboutSettingsTab({
 
   const copyDiagnostics = async () => {
     const lines = [
-      "# OrquestraAI diagnostics",
+      "# OwnHub diagnostics",
       `- version: ${status?.version ?? "0.1.0"}`,
       `- platform: ${status?.platform ?? "browser-preview"}`,
-      `- core: ${status?.name ?? "orquestra-ai"}`,
+      `- core: ${status?.name ?? "ownhub"}`,
       `- tauri: ${isTauri ? "desktop" : "browser-preview"}`,
       `- harnesses: ${HARNESSES.map((h) => h.id).join(", ")}`,
       `- bridge: ${status?.bridge ?? "unknown"}`,
@@ -112,7 +112,7 @@ export function AboutSettingsTab({
         </div>
         <div>
           <p className="text-[13px] font-semibold text-zinc-100">
-            Orquestra<span className="text-violet-400">AI</span>
+            OwnHub<span className="text-violet-400">AI</span>
           </p>
           <p className="font-mono text-[10.5px] text-zinc-500">
             {a.version} {status?.version ?? "0.1.0"} · {a.platform}{" "}
@@ -123,7 +123,7 @@ export function AboutSettingsTab({
 
       <dl className="space-y-1.5">
         {[
-          [a.core, status?.name ?? "orquestra-ai"],
+          [a.core, status?.name ?? "ownhub"],
           ["Bridge", status?.bridge ?? "—"],
           ["Harnesses", `${HARNESSES.length}`],
         ].map(([term, value]) => (

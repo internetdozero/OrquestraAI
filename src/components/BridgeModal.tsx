@@ -80,8 +80,8 @@ function Route({ from, to }: { from: string; to: string }) {
 
 function HarnessRow({ status }: { status: HarnessStatus }) {
   const { t } = useI18n();
-  const projection = `~/.orquestra/active/${status.id}`;
-  const master = "~/.orquestra/AGENTS.md";
+  const projection = `~/.ownhub/active/${status.id}`;
+  const master = "~/.ownhub/AGENTS.md";
 
   return (
     <li className="rounded-lg border border-white/[0.06] bg-white/[0.015] p-3">
@@ -202,7 +202,7 @@ export function BridgeModal({ statuses, deploying, onClose, onConfirm }: BridgeM
                 <p>
                   {t.bridge.warnLead}{" "}
                   <code className="font-mono text-amber-200">
-                    ~/.orquestra/backups/pre-fusion-&lt;timestamp&gt;/
+                    ~/.ownhub/backups/pre-fusion-&lt;timestamp&gt;/
                   </code>{" "}
                   {t.bridge.warnTail}
                 </p>

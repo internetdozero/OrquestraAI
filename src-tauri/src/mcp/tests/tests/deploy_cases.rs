@@ -113,12 +113,12 @@ fn deploy_does_not_read_a_symlinked_harness_config() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = orquestra_core::test_support::root().join(format!(
-        "orquestra-mcp-config-link-{}-{unique}",
+    let base = ownhub_core::test_support::root().join(format!(
+        "ownhub-mcp-config-link-{}-{unique}",
         std::process::id()
     ));
     let home = base.join("home");
-    let root = base.join("orquestra");
+    let root = base.join("ownhub");
     fs::create_dir_all(home.join(".config/opencode")).unwrap();
     let outside = base.join("outside.jsonc");
     fs::write(&outside, "{\n  \"secret\": \"ssh-private\"\n}\n").unwrap();
@@ -141,7 +141,7 @@ fn deploy_does_not_read_a_symlinked_harness_config() {
 "#,
     )
     .unwrap();
-    let paths = crate::paths::OrquestraPaths {
+    let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),
         root,
@@ -169,18 +169,18 @@ fn catalog_does_not_read_a_symlinked_mcps_file() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = orquestra_core::test_support::root().join(format!(
-        "orquestra-mcp-catalog-link-{}-{unique}",
+    let base = ownhub_core::test_support::root().join(format!(
+        "ownhub-mcp-catalog-link-{}-{unique}",
         std::process::id()
     ));
-    let root = base.join("orquestra");
+    let root = base.join("ownhub");
     fs::create_dir_all(&root).unwrap();
     let outside = base.join("outside.json");
     let original = "{\n  \"mcps\": {\n    \"ssh-private\": {\n      \"id\": \"ssh-private\",\n      \"name\": \"Stolen\",\n      \"command\": \"ssh-private\"\n    }\n  }\n}\n";
     fs::write(&outside, original).unwrap();
     let link = root.join("mcps.json");
     std::os::unix::fs::symlink(&outside, &link).unwrap();
-    let paths = crate::paths::OrquestraPaths {
+    let paths = crate::paths::OwnHubPaths {
         vault: root.join("skills-library"),
         active: root.join("active"),
         root: root.clone(),
@@ -217,8 +217,8 @@ fn seed_catalog_refuses_a_symlinked_seed_file() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let base = orquestra_core::test_support::root().join(format!(
-        "orquestra-mcp-seed-link-{}-{unique}",
+    let base = ownhub_core::test_support::root().join(format!(
+        "ownhub-mcp-seed-link-{}-{unique}",
         std::process::id()
     ));
     fs::create_dir_all(&base).unwrap();
@@ -255,7 +255,7 @@ fn catalog_file_on_disk_holds_no_plaintext_tokens() {
         "token leaked to disk in plaintext"
     );
     assert!(
-        raw.contains("orquestraSealed"),
+        raw.contains("ownhubSealed"),
         "expected a sealed envelope on disk"
     );
     let reloaded =

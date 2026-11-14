@@ -1,7 +1,7 @@
 # Decision: how skills project onto Windows
 
 Status: accepted (W-01, task #19)
-Scope: `src-tauri/src/skills/projection.rs`, `crates/orquestra-bridge`, `crates/orquestra-core/src/links.rs`
+Scope: `src-tauri/src/skills/projection.rs`, `crates/ownhub-bridge`, `crates/ownhub-core/src/links.rs`
 
 ## Context
 
@@ -35,7 +35,7 @@ walking a folder, so config injection cannot reach them.
 
 Use **NTFS junctions plus a managed copy fallback**, behind one module.
 
-1. `crates/orquestra-core/src/links.rs` is the only place that creates, detects,
+1. `crates/ownhub-core/src/links.rs` is the only place that creates, detects,
    removes or reads a directory link. Unix → `std::os::unix::fs::symlink`;
    Windows → the `junction` crate (v1, unpinned privilege, no elevation).
 2. Detection on Windows checks the `FILE_ATTRIBUTE_REPARSE_POINT` attribute

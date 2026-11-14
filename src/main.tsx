@@ -7,7 +7,7 @@ import { useI18n } from "./hooks/useI18n";
 import { installPerfConsole } from "./lib/perf";
 import "./index.css";
 
-// Console handle for the opt-in boot/view timings (`__orquestraPerf`).
+// Console handle for the opt-in boot/view timings (`__ownhubPerf`).
 installPerfConsole();
 
 const container = document.getElementById("root");

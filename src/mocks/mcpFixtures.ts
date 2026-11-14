@@ -46,11 +46,11 @@ export const FIXTURE_MCP_SERVERS: McpServer[] = [
     official: true,
   },
   {
-    id: "orquestra-core",
-    name: "Orquestra Core (Control Plane)",
+    id: "ownhub-core",
+    name: "OwnHub Core (Control Plane)",
     description:
       "Just-in-time skills, MCP server toggles, fleet bridge status, master rules and skill/server lifecycle management.",
-    command: "/usr/local/bin/orquestra-mcp",
+    command: "/usr/local/bin/ownhub-mcp",
     args: [],
     env: {},
     globalEnabled: true,

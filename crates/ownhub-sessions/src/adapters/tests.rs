@@ -1,0 +1,97 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
+//! Adapter discovery tests: the fixture harness and nothing else.
+//!
+//! Every fixture lives under [`ownhub_core::test_support::root`] and mimics the real store
+//! layout — including the columns the adapters actually query, so a schema
+//! drift in these files means the query drifted too. The cases themselves
+//! live in the sibling modules:
+//!
+//! * [`catalog_cases`] — listing, titles, turn counts and byte totals.
+//! * [`transcript_cases`] — the transcript readers.
+//! * [`store_guards`] — symlinks that must never be followed.
+//! * [`stores`] and [`symlink_cases`] — per-harness store layouts and links.
+
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use rusqlite::Connection;
+
+use super::{registry, SessionAdapter};
+
+mod brain_links;
+mod catalog_cases;
+mod grok_links;
+mod id_escape;
+mod store_guards;
+mod stores;
+mod symlink_cases;
+mod transcript_cases;
+
+/// Fixture path for a registry-style relative path.
+///
+/// The adapters resolve `.local/share/...` and `.config/...` per platform, so
+/// the fixtures must land where the adapter will look — otherwise the suite
+/// would pass on Linux and silently test nothing on macOS or Windows.
+fn fixture_path(home: &Path, relative: &str) -> PathBuf {
+    ownhub_core::paths::rebase(home, relative)
+}
+
+struct TestHome(
+    PathBuf,
+    // Held only for its `Drop`: it owns the directory variables while the
+    // fixture is alive.
+    #[allow(dead_code)] ownhub_core::test_support::DirEnv,
+);
+
+impl TestHome {
+    fn new() -> Self {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = ownhub_core::test_support::root().join(format!(
+            "ownhub-sessions-adapters-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root)
+            .expect("create the adapter test home under the test scratch root");
+        // [`fixture_path`] resolves through `rebase`, so the fixture owns the
+        // directory variables while it is alive.
+        let env = ownhub_core::test_support::DirEnv::isolate(&root);
+
+        Self(root, env)
+    }
+
+    fn write(&self, relative: &str, content: &str) -> u64 {
+        let path = fixture_path(&self.0, relative);
+        fs::create_dir_all(path.parent().unwrap()).expect("create the fixture parent");
+        fs::write(&path, content).expect("write the fixture file");
+        content.len() as u64
+    }
+
+    fn database(&self, relative: &str, schema: &str) {
+        let path = fixture_path(&self.0, relative);
+        fs::create_dir_all(path.parent().unwrap()).expect("create the fixture parent");
+        Connection::open(path)
+            .expect("open the fixture database")
+            .execute_batch(schema)
+            .expect("apply the fixture schema");
+    }
+}
+
+impl Drop for TestHome {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+        // `self.1` restores the directory variables as it drops.
+    }
+}
+
+fn adapter(home: &Path, harness: &str) -> Box<dyn SessionAdapter> {
+    registry(home)
+        .into_iter()
+        .find(|adapter| adapter.harness_id() == harness)
+        .unwrap_or_else(|| panic!("no adapter registered for {harness}"))
+}

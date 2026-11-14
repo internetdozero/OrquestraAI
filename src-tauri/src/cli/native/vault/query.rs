@@ -2,9 +2,9 @@
 
 use super::super::{parse_options, rendered, usage, CliError};
 use super::{parse_key_number, paths};
-use orquestra_vault::vault::presets::list_presets;
-use orquestra_vault::vault::service::{list_services, reveal_key};
-use orquestra_vault::vault::VaultServicePublic;
+use ownhub_vault::vault::presets::list_presets;
+use ownhub_vault::vault::service::{list_services, reveal_key};
+use ownhub_vault::vault::VaultServicePublic;
 
 pub(super) fn list(args: &[String]) -> Result<String, CliError> {
     let options = parse_options(
@@ -43,7 +43,7 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
         .filter(|a| !a.starts_with('-'))
         .ok_or_else(|| {
             usage(
-                "usage: orquestra vault inspect <id> [--reveal] [--key-number <N>] [--json]"
+                "usage: ownhub vault inspect <id> [--reveal] [--key-number <N>] [--json]"
                     .to_string(),
             )
         })?;
@@ -191,7 +191,7 @@ fn format_inspect_human(service: &VaultServicePublic, revealed: &[Option<String>
     )
 }
 
-fn format_presets_table(presets: &[orquestra_vault::vault::presets::PresetSpec]) -> String {
+fn format_presets_table(presets: &[ownhub_vault::vault::presets::PresetSpec]) -> String {
     let mut lines = Vec::with_capacity(presets.len() + 1);
     lines.push(format!(
         "{:<14} {:<16} {:<16} {:<22} {}",

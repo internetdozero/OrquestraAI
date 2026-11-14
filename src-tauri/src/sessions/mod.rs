@@ -1,32 +1,32 @@
 //! Unified session and chat-history management.
 //!
 //! Phase 1: a read-only catalog of every conversation the eight harnesses keep
-//! on disk, plus the pin and retention sidecar in `~/.orquestra`. Listing never
+//! on disk, plus the pin and retention sidecar in `~/.ownhub`. Listing never
 //! writes to a harness store — a harness that is broken, locked or absent is
 //! reported on stderr and skipped, so one bad database cannot empty the tab.
 //!
-//! Everything but the IPC surface lives in `orquestra-sessions`: the wire
+//! Everything but the IPC surface lives in `ownhub-sessions`: the wire
 //! types and the eight harness adapters, the pin and retention sidecar
 //! (`policy`), purge execution (`purge`) and the auto-purge daemon
 //! (`scheduler`). This module keeps only the commands the React view calls.
 
 // Re-exported so every `crate::sessions::{adapters, types, purge}` path —
 // including the `dir_size` bench — reads exactly as before.
-pub use orquestra_sessions::{adapters, purge, types};
+pub use ownhub_sessions::{adapters, purge, types};
 
 use std::collections::HashMap;
 
 #[cfg(test)]
 mod contract_tests;
 
-use orquestra_sessions::policy::{self, pins};
-use orquestra_sessions::scheduler;
+use ownhub_sessions::policy::{self, pins};
+use ownhub_sessions::scheduler;
 use types::{
     PurgeEstimate, PurgeFilter, PurgeReport, RetentionPolicy, TranscriptTurn, UnifiedSession,
 };
 
 /// Every session from every installed harness, newest first, with pin state
-/// applied from `~/.orquestra/sessions_policy.json`.
+/// applied from `~/.ownhub/sessions_policy.json`.
 ///
 /// Runs on the async runtime rather than the main thread: sizing a worktree
 /// store walks `node_modules` folders and measured ~3.6 s on a real machine,

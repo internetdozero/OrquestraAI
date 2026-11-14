@@ -7,17 +7,17 @@
 // No `common` import: signature verification and version validation are
 // pure and never read `HOME`, so no isolation is needed here.
 
-use orquestra_ai_lib::update_sig::verify_release_file;
+use ownhub_lib::update_sig::verify_release_file;
 
-/// Throwaway test vectors (key seed `b"ORQUESTRA-TEST-KEY-v1-0000000000"`,
+/// Throwaway test vectors (key seed `b"OWNHUB-TEST-KEY-v1-0000000000"`,
 /// produced offline with PyNaCl): valid prehashed minisign material, but
 /// signed by a key that is NOT the embedded release key.
 const SUMS_LEGIT: &str =
-    "fd9bf630dd91899266fa7bbf05f069a832bcd52bea1841ab5770a76db076712b  orquestra-linux-x86_64\n";
-const SIG_LEGIT: &str = "untrusted comment: signature from orquestra test release key\nRUQBAgMEBQYHCOvNknYMLfOEIdhrsgmccfoicEqYitSA8dmbpl9D6+yKiWcYU8IB2tlppo29q90cpuh3IFgRtyoW7PwbJ+XSEA8=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\nbfL/M7JLtFxdnhSK5p1dy3q0D0n2EyY+YQro0Q7ux+1ZeQ7CKScCnP7iN5QHYL/Q2C/gok4fwcKh4aoK00I8BA==";
+    "fd9bf630dd91899266fa7bbf05f069a832bcd52bea1841ab5770a76db076712b  ownhub-linux-x86_64\n";
+const SIG_LEGIT: &str = "untrusted comment: signature from ownhub test release key\nRUQBAgMEBQYHCOvNknYMLfOEIdhrsgmccfoicEqYitSA8dmbpl9D6+yKiWcYU8IB2tlppo29q90cpuh3IFgRtyoW7PwbJ+XSEA8=\ntrusted comment: timestamp=1700000000\tfile=SHA256SUMS.txt\nbfL/M7JLtFxdnhSK5p1dy3q0D0n2EyY+YQro0Q7ux+1ZeQ7CKScCnP7iN5QHYL/Q2C/gok4fwcKh4aoK00I8BA==";
 /// Forged checksums matching a tampered binary: valid SHA-256 hex, no key.
 const SUMS_ATTACKER: &str =
-    "6586fbdaf0b6d56dad3e94a49c2515abc2573df65d84fea3dbc73dc226d37d1a  orquestra-linux-x86_64\n";
+    "6586fbdaf0b6d56dad3e94a49c2515abc2573df65d84fea3dbc73dc226d37d1a  ownhub-linux-x86_64\n";
 
 /// Task #325: equal and lower versions are refused before any network
 /// access — validation runs first, so no download is attempted.
@@ -31,7 +31,7 @@ fn equal_and_lower_versions_rejected_before_network() {
         "0.1.0-alpha.1".to_string(),
         "0.0.9".to_string(),
     ] {
-        let error = orquestra_ai_lib::apply_app_update(target.clone())
+        let error = ownhub_lib::apply_app_update(target.clone())
             .expect_err(&format!("{target:?} must be refused"));
         assert!(
             error.contains("not newer") || error.contains("refusing to update"),
@@ -92,7 +92,7 @@ fn hostile_versions_rejected_before_network() {
     // proves the fail-closed entry without network access.
     for hostile in ["", "../escape", "a/b", "x with space"] {
         assert!(
-            orquestra_ai_lib::apply_app_update(hostile.to_string()).is_err(),
+            ownhub_lib::apply_app_update(hostile.to_string()).is_err(),
             "{hostile:?} must be refused"
         );
     }

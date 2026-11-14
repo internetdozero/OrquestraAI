@@ -1,8 +1,8 @@
-//! Integration tests for granular MCP CLI subcommands (`orquestra mcp <cmd>`).
+//! Integration tests for granular MCP CLI subcommands (`ownhub mcp <cmd>`).
 
 mod common;
 
-use orquestra_ai_lib::{dispatch_native_cli, CliError};
+use ownhub_lib::{dispatch_native_cli, CliError};
 
 fn run_mcp(args: &[&str]) -> Result<String, CliError> {
     let full_args: Vec<String> = std::iter::once("mcp".to_string())

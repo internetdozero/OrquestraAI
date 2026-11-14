@@ -17,7 +17,7 @@ interface AgentsViewProps {
   reloadToken?: number;
 }
 
-/** Route for the master `~/.orquestra/AGENTS.md`, loaded and saved over IPC. */
+/** Route for the master `~/.ownhub/AGENTS.md`, loaded and saved over IPC. */
 export function AgentsView({
   isTauri,
   error,

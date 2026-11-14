@@ -8,7 +8,7 @@ pub(super) fn inspect(args: &[String]) -> Result<String, CliError> {
         .first()
         .filter(|arg| !arg.starts_with('-'))
         .ok_or_else(|| {
-            usage("usage: orquestra mcp inspect <id> [--reveal] [--json]".to_string())
+            usage("usage: ownhub mcp inspect <id> [--reveal] [--json]".to_string())
         })?;
 
     let options = parse_options(&args[1..], &[], &["--reveal", "--json"])?;

@@ -7,8 +7,8 @@ let isolate = 0;
 const coldWorker = async () =>
   (await import(`../workers/installer/worker.js?isolate=${(isolate += 1)}`)).default;
 
-const LATEST = "https://github.com/internetdozero/OrquestraAI/releases/latest";
-const RAW = "https://raw.githubusercontent.com/internetdozero/OrquestraAI/v1.2.3/install.sh";
+const LATEST = "https://github.com/internetdozero/OwnHub/releases/latest";
+const RAW = "https://raw.githubusercontent.com/internetdozero/OwnHub/v1.2.3/install.sh";
 const SCRIPT = "#!/bin/sh\necho ok\n";
 
 function colo() {
@@ -36,7 +36,7 @@ function github({ latest = [], raw = [] }) {
     if (next === "redirect") {
       return new Response(null, {
         status: 302,
-        headers: { location: "https://github.com/internetdozero/OrquestraAI/releases/tag/v1.2.3" },
+        headers: { location: "https://github.com/internetdozero/OwnHub/releases/tag/v1.2.3" },
       });
     }
     if (next === "script") return new Response(SCRIPT, { status: 200 });
@@ -46,7 +46,7 @@ function github({ latest = [], raw = [] }) {
   return { calls, fetch };
 }
 
-async function run(worker, { method = "GET", url = "https://orquestra.example/install.sh" } = {}) {
+async function run(worker, { method = "GET", url = "https://ownhub.example/install.sh" } = {}) {
   const pending = [];
   const res = await worker.fetch(
     new Request(url, { method }),
@@ -99,7 +99,7 @@ test("a cold isolate reuses the colo's shared tag and installer without calling 
   const res = await withEnv({ fetch: down.fetch, caches }, async () => run(await coldWorker()));
   assert.equal(res.status, 200);
   assert.equal(await res.text(), SCRIPT);
-  assert.equal(res.headers.get("x-orquestra-fallback"), null);
+  assert.equal(res.headers.get("x-ownhub-fallback"), null);
   assert.deepEqual(down.calls, []);
 });
 
@@ -119,8 +119,8 @@ test("a GitHub outage serves the last good installer byte-identical instead of 5
     );
     assert.equal(res.status, 200, method);
     assert.equal(res.headers.get("etag"), etag);
-    assert.equal(res.headers.get("x-orquestra-fallback"), "last-good");
-    assert.equal(res.headers.get("x-orquestra-tag"), "v1.2.3");
+    assert.equal(res.headers.get("x-ownhub-fallback"), "last-good");
+    assert.equal(res.headers.get("x-ownhub-tag"), "v1.2.3");
     assert.equal(res.headers.get("content-type"), "text/x-shellscript; charset=utf-8");
     assert.equal(await res.text(), method === "GET" ? SCRIPT : "");
   }

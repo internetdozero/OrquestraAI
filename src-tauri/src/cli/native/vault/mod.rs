@@ -1,7 +1,7 @@
-//! Granular CLI management for Blind Credential Vault (`orquestra vault …`).
+//! Granular CLI management for Blind Credential Vault (`ownhub vault …`).
 
 use super::{usage, CliError};
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 mod audit;
 mod mutate;
@@ -10,7 +10,7 @@ mod query;
 #[cfg(test)]
 mod tests;
 
-const USAGE: &str = "usage: orquestra vault <list|inspect|set|add-key|remove-key|remove|enable|disable|toggle|set-enabled|set-primary|rotate|test|proxy-http|proxy-exec|presets|audit> [options]";
+const USAGE: &str = "usage: ownhub vault <list|inspect|set|add-key|remove-key|remove|enable|disable|toggle|set-enabled|set-primary|rotate|test|proxy-http|proxy-exec|presets|audit> [options]";
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     match args.first().map(String::as_str) {
@@ -35,8 +35,8 @@ pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     }
 }
 
-pub(super) fn paths() -> Result<OrquestraPaths, CliError> {
-    OrquestraPaths::resolve().map_err(|error| CliError::Operation(error.to_string()))
+pub(super) fn paths() -> Result<OwnHubPaths, CliError> {
+    OwnHubPaths::resolve().map_err(|error| CliError::Operation(error.to_string()))
 }
 
 pub(super) fn parse_key_number(value: &str) -> Result<usize, CliError> {

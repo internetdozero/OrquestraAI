@@ -101,8 +101,8 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_nanos())
             .unwrap_or(0);
-        let root = orquestra_core::test_support::root().join(format!(
-            "orquestra-security-{label}-{}-{unique}",
+        let root = ownhub_core::test_support::root().join(format!(
+            "ownhub-security-{label}-{}-{unique}",
             std::process::id()
         ));
         if root.exists() {

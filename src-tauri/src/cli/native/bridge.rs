@@ -2,7 +2,7 @@ use super::{parse_options, rendered, usage, CliError};
 
 pub(super) fn run(args: &[String]) -> Result<String, CliError> {
     if args.first().map(String::as_str) != Some("status") {
-        return Err(usage("usage: orquestra bridge status [--json]".to_string()));
+        return Err(usage("usage: ownhub bridge status [--json]".to_string()));
     }
     let options = parse_options(&args[1..], &[], &["--json"])?;
     let statuses = crate::bridge::get_bridge_status().map_err(CliError::Operation)?;

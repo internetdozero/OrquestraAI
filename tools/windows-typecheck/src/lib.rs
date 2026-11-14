@@ -1,7 +1,7 @@
 //! Type-checks Windows-only modules of the desktop shell from a non-Windows
 //! host.
 //!
-//! `cargo check --target x86_64-pc-windows-msvc -p orquestra-ai` stops long
+//! `cargo check --target x86_64-pc-windows-msvc -p ownhub` stops long
 //! before this crate's own code: `ring`'s build script and `rusqlite`'s
 //! bundled SQLite need a Windows compiler, so the shell — the only crate that
 //! contains `#[cfg(windows)]` modules — never gets parsed. That left the
@@ -27,17 +27,17 @@ pub mod paths {
     use std::path::PathBuf;
 
     /// Windows scratch root. Only its capacity is read, so the temp directory
-    /// stands in for `%LOCALAPPDATA%\orquestra-ai`.
+    /// stands in for `%LOCALAPPDATA%\ownhub`.
     pub fn scratch_root() -> PathBuf {
         std::env::temp_dir()
     }
 
-    /// The slice of `OrquestraPaths` these modules touch.
-    pub struct OrquestraPaths {
+    /// The slice of `OwnHubPaths` these modules touch.
+    pub struct OwnHubPaths {
         pub root: PathBuf,
     }
 
-    impl OrquestraPaths {
+    impl OwnHubPaths {
         pub fn resolve() -> Result<Self, String> {
             Ok(Self {
                 root: std::env::temp_dir(),

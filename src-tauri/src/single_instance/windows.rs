@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, HANDLE};
 use windows_sys::Win32::System::Threading::CreateMutexW;
 
-use crate::paths::OrquestraPaths;
+use crate::paths::OwnHubPaths;
 
 /// The handle held in the `static` below.
 ///
@@ -33,9 +33,9 @@ fn owned() -> std::sync::MutexGuard<'static, Option<OwnedMutex>> {
 
 /// NUL-terminated UTF-16 name, from the store root's stable hash.
 pub(super) fn mutex_name() -> Result<Vec<u16>, String> {
-    let root = OrquestraPaths::resolve()?.root;
+    let root = OwnHubPaths::resolve()?.root;
     let key = super::short_key(root.to_string_lossy().as_ref());
-    let mut name: Vec<u16> = format!("Local\\orquestra-ai-{key}")
+    let mut name: Vec<u16> = format!("Local\\ownhub-{key}")
         .encode_utf16()
         .collect();
     name.push(0);

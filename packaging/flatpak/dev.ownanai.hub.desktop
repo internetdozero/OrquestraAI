@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=OwnHub
+GenericName=AI Harness Control Plane
+Comment=Universal AI Harness Administration Platform
+Exec=ownhub %U
+Icon=dev.ownanai.hub
+Terminal=false
+Type=Application
+Categories=Development;Utility;System;
+StartupNotify=true
+StartupWMClass=ownhub
+Keywords=ai;harness;skills;mcp;agents;codex;claude;gemini;ownhub;

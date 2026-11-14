@@ -102,18 +102,18 @@ fn inserting_a_flag_does_not_store_the_mask_as_the_secret() {
 
 #[test]
 fn deployment_projection_resolves_templates_without_mutating_the_catalog_value() {
-    let original = "${ORQUESTRA_MCP_TEST_SECRET_837491}";
+    let original = "${OWNHUB_MCP_TEST_SECRET_837491}";
     let server = super::super::McpServer {
         id: "test".to_string(),
         name: "test".to_string(),
         description: String::new(),
         command: "tool".to_string(),
-        args: vec!["--token=${ORQUESTRA_MCP_TEST_SECRET_837491}".to_string()],
+        args: vec!["--token=${OWNHUB_MCP_TEST_SECRET_837491}".to_string()],
         env: HashMap::from([("TOKEN".to_string(), original.to_string())]),
         url: Some("https://${MCP_TEST_HOST}/mcp".to_string()),
         headers: HashMap::from([(
             "Authorization".to_string(),
-            "Bearer ${ORQUESTRA_MCP_TEST_SECRET_837491}".to_string(),
+            "Bearer ${OWNHUB_MCP_TEST_SECRET_837491}".to_string(),
         )]),
         global_enabled: true,
         enabled_harnesses: Vec::new(),
@@ -121,7 +121,7 @@ fn deployment_projection_resolves_templates_without_mutating_the_catalog_value()
     };
     let dotenv = HashMap::from([
         (
-            "ORQUESTRA_MCP_TEST_SECRET_837491".to_string(),
+            "OWNHUB_MCP_TEST_SECRET_837491".to_string(),
             "resolved".to_string(),
         ),
         ("MCP_TEST_HOST".to_string(), "mcp.example.test".to_string()),
@@ -171,6 +171,6 @@ fn deployment_projection_resolves_templates_without_mutating_the_catalog_value()
     assert_eq!(serialized["url"], "https://${MCP_TEST_HOST}/mcp");
     assert_eq!(
         serialized["headers"]["Authorization"],
-        "Bearer ${ORQUESTRA_MCP_TEST_SECRET_837491}"
+        "Bearer ${OWNHUB_MCP_TEST_SECRET_837491}"
     );
 }
