@@ -184,7 +184,7 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
           <img
             src={ownhubLogo}
             alt="OwnHub"
-            className="size-6 shrink-0 rounded-md"
+            className="size-5 shrink-0 rounded"
             draggable={false}
           />
           <div className="flex min-w-0 items-center gap-1.5">
