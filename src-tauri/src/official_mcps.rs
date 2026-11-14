@@ -80,7 +80,7 @@ pub(crate) fn official_mcps() -> Vec<OfficialMcpEntry> {
             "Web Search",
             "Exa-backed web search returning cited highlights for AI agents (stdio).",
             "mcps/ownhub-web-search",
-            "https://github.com/internetdozero/ownhub-extensions.git",
+            "https://github.com/OwnAnAI/ownhub-extensions.git",
             "web-search",
             "web-search",
         ),

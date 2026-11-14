@@ -12,7 +12,7 @@
 use serde::Serialize;
 
 /// Monorepo consolidating the official suite.
-pub(crate) const MONOREPO: &str = "https://github.com/internetdozero/ownhub-extensions.git";
+pub(crate) const MONOREPO: &str = "https://github.com/OwnAnAI/ownhub-extensions.git";
 
 /// Official skills (unified `ownhub-*` naming, served from the monorepo).
 const OFFICIAL_SKILL_IDS: &[&str] = &[
@@ -170,7 +170,7 @@ pub fn official_store() -> OfficialStore {
             "ownhub",
             "Operational guide for autonomous AI agents inside the OwnHub ecosystem: fleet topology, single-source-of-truth rules and safe control-plane interaction.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub"),
             &["agents", "orchestration"],
             true,
             None,
@@ -180,7 +180,7 @@ pub fn official_store() -> OfficialStore {
             "ownhub-modular-start",
             "Start a new project, empty repository or scaffold in any language: initialize git, set up a concise root AGENTS.md with file-size caps and a module map, and commit each coherent slice locally.",
             "Infra",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-modular-start"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub-modular-start"),
             &["scaffold", "infra"],
             true,
             Some("modular-start"),
@@ -190,7 +190,7 @@ pub fn official_store() -> OfficialStore {
             "ownhub-agent-orchestrator",
             "Fleet orchestration for OwnHub agents: dispatch, supervise and coordinate multi-agent work.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-agent-orchestrator"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub-agent-orchestrator"),
             &["agents", "fleet"],
             true,
             Some("agent-orchestrator"),
@@ -200,7 +200,7 @@ pub fn official_store() -> OfficialStore {
             "ownhub-smart-build-router",
             "Route build and task dispatches to the cheapest capable lane: sketches, plans and execution with budget guards.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-smart-build-router"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub-smart-build-router"),
             &["agents", "routing"],
             false,
             Some("smart-build-router"),
@@ -210,7 +210,7 @@ pub fn official_store() -> OfficialStore {
             "ownhub-autonomous-audit",
             "Time-boxed autonomous code audit shift: continuous multi-scope sweeps, atomic 1-issue commits with reproduction tests, formal negative passes, and structured ledger persistence.",
             "AI & Agents",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-autonomous-audit"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub-autonomous-audit"),
             &["audit", "security", "testing", "autonomous"],
             false,
             Some("autonomous-audit"),
@@ -220,7 +220,7 @@ pub fn official_store() -> OfficialStore {
             "lean-screen",
             "Stop the generic admin-dashboard screen on any product: bans obvious subtitles, decorative metric heroes, equal KPI cards, card-in-card, and squeezed center columns.",
             "Frontend",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/lean-screen"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/lean-screen"),
             &["frontend", "ui", "layout"],
             false,
             None,
@@ -230,7 +230,7 @@ pub fn official_store() -> OfficialStore {
             "ux-best-practices",
             "UX guidelines and design heuristics for autonomous coding agents: audit checklists, flows, states, and anti-patterns.",
             "Frontend",
-            Some("https://github.com/internetdozero/ownhub-extensions.git#skills/ux-best-practices"),
+            Some("https://github.com/OwnAnAI/ownhub-extensions.git#skills/ux-best-practices"),
             &["frontend", "ux", "accessibility"],
             false,
             None,

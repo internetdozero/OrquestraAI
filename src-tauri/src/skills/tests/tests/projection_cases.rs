@@ -35,11 +35,11 @@ fn monorepo_url_fragments_extract_and_sanitize() {
     use super::subpath::{sanitize_subpath, split_git_url};
 
     let (repo, sub) = split_git_url(
-        "https://github.com/internetdozero/ownhub-extensions.git#skills/ownhub-modular-start",
+        "https://github.com/OwnAnAI/ownhub-extensions.git#skills/ownhub-modular-start",
     );
     assert_eq!(
         repo,
-        "https://github.com/internetdozero/ownhub-extensions.git"
+        "https://github.com/OwnAnAI/ownhub-extensions.git"
     );
     assert_eq!(sub.as_deref(), Some("skills/ownhub-modular-start"));
 

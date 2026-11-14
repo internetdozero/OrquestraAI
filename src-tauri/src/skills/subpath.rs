@@ -2,7 +2,7 @@
 //!
 //! A git URL may carry a `#subpath` fragment pointing at the skill folder
 //! inside a monorepo, e.g.
-//! `https://github.com/internetdozero/ownhub-extensions.git#skills/foo`.
+//! `https://github.com/OwnAnAI/ownhub-extensions.git#skills/foo`.
 //! The fragment is stripped before `git clone` and resolved as the primary
 //! target inside the staging tree. Without a fragment, discovery checks the
 //! repo root, one level down (standalone layout), then standard monorepo

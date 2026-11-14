@@ -202,7 +202,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Official Skills Suite Modernization & Canonical Alignment:**
-  - Modernized the 4 official core skills (`ownhub`, `ownhub-modular-start`, `ownhub-agent-orchestrator`, `ownhub-smart-build-router`) in the official monorepo `internetdozero/ownhub-extensions`.
+  - Modernized the 4 official core skills (`ownhub`, `ownhub-modular-start`, `ownhub-agent-orchestrator`, `ownhub-smart-build-router`) in the official monorepo `OwnAnAI/ownhub-extensions`.
   - Registered `@internetdozero` UI/UX skills (`lean-screen` and `ux-best-practices`) as official first-class skills in `src-tauri/src/official.rs`.
   - Integrated Idea Vault task lifecycle (#251-#256), multi-harness fleet protocols (`session-relay`, `janitor`), `rtk` command efficiency, and Zero-Heat Cloud Builds.
   - Repaired broken symlinks in local vault (`~/.ownhub/skills-library/`) and harness projections.
@@ -210,7 +210,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Community Skills & MCP Hub (#229):** In-app discovery catalog for community skills and MCP servers with category and tier filters (`all`, `official`, `community`), 1-click install, and instant projection into active harness scopes.
 - **Static Skill Security Audit:** Recursive directory inspector flagging external executable scripts (`.sh`, `.bash`, `.py`, `.js`, `scripts/`, `bin/`) and surfacing UI security badges before installation.
 - **Freebuff Desktop Deduplication Pass (#210):** Worktree resolver correlating 36-char SQLite thread UUIDs with 8-char prefix worktree directories; eliminates double-counting disk usage and reclaims dormant worktrees upon thread deletion.
-- **Official Extensions Monorepo Architecture (#212):** Core support for `internetdozero/ownhub-extensions` with subpath anchor extraction (`#skills/...`, `#mcps/...`), deep monorepo folder discovery, and fallback repository routing.
+- **Official Extensions Monorepo Architecture (#212):** Core support for `OwnAnAI/ownhub-extensions` with subpath anchor extraction (`#skills/...`, `#mcps/...`), deep monorepo folder discovery, and fallback repository routing.
 - **Ideas Backlog & Notion-Style Productivity Upgrades:**
   - One-click "Copy for AI Agent" across Kanban cards, list view rows, and detail modal formatting ideas into markdown prompts ready for agent dispatch.
   - Interactive Notion-style column sorting in list view (`title`, `priority`, `category`, `updated`).

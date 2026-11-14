@@ -282,7 +282,7 @@ Imports an external skill into the master vault.
 **Example:**
 
 ```bash
-ownhub skills import https://github.com/internetdozero/ownhub-extensions.git#skills/docker-tools --enable
+ownhub skills import https://github.com/OwnAnAI/ownhub-extensions.git#skills/docker-tools --enable
 ```
 
 ---

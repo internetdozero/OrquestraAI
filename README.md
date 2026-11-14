@@ -112,7 +112,7 @@ cargo test --workspace
 
 Stack: Tauri v2 and a Rust workspace (`crates/`: core, harness, vault, bridge, sessions) with a React 19 + TypeScript + Vite frontend styled with Tailwind CSS v4. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/IPC_API.md](docs/IPC_API.md), [docs/vault.md](docs/vault.md) and [docs/security.md](docs/security.md).
 
-Official skills and MCP servers live in [internetdozero/ownhub-extensions](https://github.com/internetdozero/ownhub-extensions).
+Official skills and MCP servers live in [OwnAnAI/ownhub-extensions](https://github.com/OwnAnAI/ownhub-extensions).
 
 ## License
 

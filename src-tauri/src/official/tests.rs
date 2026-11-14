@@ -78,7 +78,7 @@ fn monorepo_anchors_have_https_fallbacks() {
             continue;
         };
         assert!(
-            url.starts_with("https://github.com/internetdozero/"),
+            url.starts_with("https://github.com/OwnAnAI/"),
             "bad remote for {}",
             skill.id
         );
