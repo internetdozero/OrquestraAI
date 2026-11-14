@@ -107,7 +107,12 @@ export function AboutSettingsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5">
-        <img src={ownhubLogo} alt="OwnHub" className="size-10 shrink-0 rounded-xl" draggable={false} />
+        <img
+          src={ownhubLogo}
+          alt="OwnHub"
+          className="size-10 shrink-0 rounded-xl"
+          draggable={false}
+        />
         <div>
           <p className="text-[13px] font-semibold text-zinc-100">OwnHub</p>
           <p className="font-mono text-[10.5px] text-zinc-500">
