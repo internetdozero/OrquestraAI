@@ -15,13 +15,16 @@ export interface AppSettings {
 }
 
 const STORAGE_KEY = "ownhub_settings";
+/** Stamped after the first read so the one-time accent upgrade runs once. */
+const SCHEMA_KEY = "ownhub_settings_schema";
+const SCHEMA_VERSION = "2";
 
 export const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: true,
   notifyOnPurge: true,
   ramAlertThreshold: 85,
   tmpWatchEnabled: true,
-  accentColor: "violet",
+  accentColor: "silver",
   autoCheckAppUpdates: true,
   autoCheckExtensionUpdates: true,
 };
@@ -36,10 +39,33 @@ function readStored(): Partial<AppSettings> {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return typeof parsed === "object" && parsed !== null ? parsed : {};
+    if (typeof parsed !== "object" || parsed === null) return {};
+    return upgraded(parsed);
   } catch {
     return {};
   }
+}
+
+/**
+ * One-time schema upgrade. Every install persists the whole settings object on
+ * first mount, so a stored `violet` is indistinguishable from the old default
+ * — schema 1 wrote it for everyone. Dropping it lets the new default (silver)
+ * apply; the schema marker keeps a later, deliberate violet choice intact.
+ */
+function upgraded(stored: Partial<AppSettings>): Partial<AppSettings> {
+  try {
+    if (window.localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return stored;
+    window.localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+  } catch {
+    // Storage refused the marker: keep the stored choice rather than fight it.
+    return stored;
+  }
+  if (stored.accentColor !== "violet") return stored;
+  // Omit the key entirely: an explicit `undefined` would win over the default
+  // in the spread below and leave `data-accent` unset.
+  const rest: Partial<AppSettings> = { ...stored };
+  delete rest.accentColor;
+  return rest;
 }
 
 /**
