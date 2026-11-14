@@ -2,7 +2,7 @@
 set -e
 
 # OwnHub Official Secure Installer
-# https://github.com/internetdozero/ownhub
+# https://github.com/OwnAnAI/ownhub
 #
 # Trust model: the release's SHA256SUMS.txt carries a detached Minisign /
 # Ed25519 signature (SHA256SUMS.txt.minisig) from the offline release key.
@@ -11,7 +11,7 @@ set -e
 # checksums still fails closed. Same model as the in-app updater
 # (src-tauri/src/update_sig.rs); see docs/security.md for the key and
 # manual verification commands.
-REPO="internetdozero/ownhub"
+REPO="OwnAnAI/ownhub"
 # Embedded release public key (minisign .pub key-id + base64 body). The
 # matching secret lives only in the maintainer's offline copy and the
 # UPDATE_SIGNING_SEED CI secret. Must equal

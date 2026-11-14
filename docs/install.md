@@ -20,7 +20,7 @@ GTK 3, libsoup 3, libayatana-appindicator, librsvg and `xdg-utils` — so
 glibc requirement still comes from the binary itself, not from a package.
 
 ```sh
-curl -fLO https://github.com/internetdozero/ownhub/releases/latest/download/<name>.deb
+curl -fLO https://github.com/OwnAnAI/ownhub/releases/latest/download/<name>.deb
 sudo dpkg -i <name>.deb
 ```
 
@@ -67,7 +67,7 @@ recorded, expected outcome there, not a regression.
   only needs a working `flatpak`:
 
   ```sh
-  curl -fLO https://github.com/internetdozero/ownhub/releases/latest/download/OwnHub-x86_64.flatpak
+  curl -fLO https://github.com/OwnAnAI/ownhub/releases/latest/download/OwnHub-x86_64.flatpak
   flatpak install --user ./OwnHub-x86_64.flatpak
   flatpak run dev.ownanai.hub
   ```
@@ -190,7 +190,7 @@ replace in place. The setup installs for the current user only, into
 updater can overwrite the executable it is running from.
 
 ```powershell
-$release = 'https://github.com/internetdozero/ownhub/releases/latest/download'
+$release = 'https://github.com/OwnAnAI/ownhub/releases/latest/download'
 Start-Process "$release/OwnHub_<version>_x64-setup.exe"
 ```
 

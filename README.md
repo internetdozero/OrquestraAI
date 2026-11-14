@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)](CHANGELOG.md)
-[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-emerald.svg)](https://github.com/internetdozero/ownhub/releases/latest)
+[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-emerald.svg)](https://github.com/OwnAnAI/ownhub/releases/latest)
 
 [Leia em Português](README.pt-BR.md)
 
@@ -46,7 +46,7 @@ To diagnose an existing Linux install without downloading again:
 curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh -s -- --check-deps
 ```
 
-Binaries and release notes are on the [Releases page](https://github.com/internetdozero/ownhub/releases). Changes are listed in the [CHANGELOG](CHANGELOG.md).
+Binaries and release notes are on the [Releases page](https://github.com/OwnAnAI/ownhub/releases). Changes are listed in the [CHANGELOG](CHANGELOG.md).
 
 ## CLI
 
@@ -95,7 +95,7 @@ sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
 ```
 
 ```bash
-git clone https://github.com/internetdozero/ownhub.git
+git clone https://github.com/OwnAnAI/ownhub.git
 cd ownhub
 npm install
 npm run dev:tauri        # desktop app in development mode

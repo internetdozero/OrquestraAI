@@ -8,7 +8,7 @@ export interface ReleaseCheckResult {
   publishedAt?: string;
 }
 
-const LATEST_URL = "https://api.github.com/repos/internetdozero/ownhub/releases/latest";
+const LATEST_URL = "https://api.github.com/repos/OwnAnAI/ownhub/releases/latest";
 
 /** `v0.1.0` → `0.1.0` so tags compare against the bare app version. */
 function cleanTag(tag: string): string {

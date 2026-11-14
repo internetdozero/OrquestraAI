@@ -43,7 +43,7 @@ while [ "$#" -gt 0 ]; do
 done
 case "$url" in
   */releases/latest)
-    printf '%s' 'https://github.com/internetdozero/ownhub/releases/tag/v1.2.3'
+    printf '%s' 'https://github.com/OwnAnAI/ownhub/releases/tag/v1.2.3'
     ;;
   */releases/download/v1.2.3/SHA256SUMS.txt)
     cp "$FIXTURE_DIR/SHA256SUMS.txt" "$output"

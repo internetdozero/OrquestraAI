@@ -13,7 +13,7 @@ set -e
 REPO_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 WORKER_BASE="${1:-https://ownhub.internetdozero.com.br}"
 WORKER_BASE=$(printf '%s' "$WORKER_BASE" | sed -e 's#/install\.sh$##' -e 's#/install\.ps1$##' -e 's#/$##')
-REPO="internetdozero/ownhub"
+REPO="OwnAnAI/ownhub"
 INSTALLERS="install.sh install.ps1"
 
 if command -v wrangler >/dev/null 2>&1; then

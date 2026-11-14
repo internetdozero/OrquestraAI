@@ -25,8 +25,8 @@
       host only needs a working Flatpak installation.
     </p>
   </description>
-  <url type="homepage">https://github.com/internetdozero/ownhub</url>
-  <url type="bugtracker">https://github.com/internetdozero/ownhub/issues</url>
+  <url type="homepage">https://github.com/OwnAnAI/ownhub</url>
+  <url type="bugtracker">https://github.com/OwnAnAI/ownhub/issues</url>
   <content_rating type="oars-1.1"/>
   <supports>
     <control>pointing</control>

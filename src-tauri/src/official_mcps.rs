@@ -62,7 +62,7 @@ pub(crate) fn official_mcps() -> Vec<OfficialMcpEntry> {
             "OwnHub Core",
             "MCP control plane for OwnHub: project skills just in time, flip MCP servers, use stored vault credentials blind, read the master AGENTS.md and check harness links.",
             "mcps/ownhub-core",
-            "https://github.com/internetdozero/ownhub-core-mcp.git",
+            "https://github.com/OwnAnAI/ownhub-core-mcp.git",
             "ownhub-core",
             "ownhub-core",
         ),
