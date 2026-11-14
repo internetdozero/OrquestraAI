@@ -203,9 +203,36 @@ pub(super) fn load_catalog(paths: &OwnHubPaths, seed: &Path) -> Result<Catalog, 
     let (plaintext, _) =
         crate::at_rest::open_stored(paths, &path, &content, crate::at_rest::AAD_MCPS)
             .map_err(|error| format!("failed to unseal {}: {error}", path.display()))?;
-    let catalog: Catalog = serde_json::from_str(&plaintext)
+    let mut catalog: Catalog = serde_json::from_str(&plaintext)
         .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+    migrate_legacy_storage_paths(&mut catalog);
     Ok(catalog)
+}
+
+/// Pre-OwnHub catalogs point their commands at the old storage root
+/// (`~/.orquestra/...`), which no longer exists after the rename — every
+/// spawn then dies instantly and clients report a closed stdio. Rebase
+/// any path segment named `.orquestra` onto `.ownhub` in commands, args
+/// and env values at load time; the next save persists the fix. Ids are
+/// left alone: harness configs may already reference them.
+fn migrate_legacy_storage_paths(catalog: &mut Catalog) {
+    for server in catalog.mcps.values_mut() {
+        server.command = rebase_storage_path(&server.command);
+        for arg in &mut server.args {
+            *arg = rebase_storage_path(arg);
+        }
+        for value in server.env.values_mut() {
+            *value = rebase_storage_path(value);
+        }
+    }
+}
+
+fn rebase_storage_path(value: &str) -> String {
+    let rebased = value.replace("/.orquestra/", "/.ownhub/");
+    rebased
+        .strip_suffix("/.orquestra")
+        .map(|stem| format!("{stem}/.ownhub"))
+        .unwrap_or(rebased)
 }
 
 /// Populate a first-run catalog from the user-scoped seed dataset. A missing
@@ -304,4 +331,64 @@ pub(super) fn validate_server(server: &McpServer) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    fn server(command: &str) -> McpServer {
+        McpServer {
+            id: "demo".to_string(),
+            name: "demo".to_string(),
+            description: String::new(),
+            command: command.to_string(),
+            args: Vec::new(),
+            env: std::collections::HashMap::new(),
+            url: None,
+            headers: std::collections::HashMap::new(),
+            global_enabled: false,
+            enabled_harnesses: Vec::new(),
+            official: false,
+        }
+    }
+
+    #[test]
+    fn legacy_storage_paths_are_rebased_onto_ownhub() {
+        assert_eq!(
+            rebase_storage_path("/home/u/.orquestra/mcp-servers/x/.venv/bin/x"),
+            "/home/u/.ownhub/mcp-servers/x/.venv/bin/x"
+        );
+        assert_eq!(rebase_storage_path("/home/u/.orquestra"), "/home/u/.ownhub");
+        // Untouched: new paths, bare names and id-like substrings.
+        assert_eq!(rebase_storage_path("/home/u/.ownhub/x"), "/home/u/.ownhub/x");
+        assert_eq!(rebase_storage_path("npx"), "npx");
+        assert_eq!(
+            rebase_storage_path("/opt/orquestra-tools/bin"),
+            "/opt/orquestra-tools/bin"
+        );
+    }
+
+    #[test]
+    fn catalog_migration_rewrites_commands_args_and_env() {
+        let mut catalog = Catalog::default();
+        let mut entry = server("/home/u/.orquestra/mcp-servers/demo/.venv/bin/demo");
+        entry.args = vec!["--vault".to_string(), "/home/u/.orquestra/vault.json".to_string()];
+        entry
+            .env
+            .insert("HOME_DIR".to_string(), "/home/u/.orquestra".to_string());
+        catalog.mcps.insert(entry.id.clone(), entry);
+
+        migrate_legacy_storage_paths(&mut catalog);
+
+        let migrated = catalog.mcps.get("demo").expect("demo server");
+        assert_eq!(
+            migrated.command,
+            "/home/u/.ownhub/mcp-servers/demo/.venv/bin/demo"
+        );
+        assert_eq!(migrated.args[1], "/home/u/.ownhub/vault.json");
+        assert_eq!(migrated.env["HOME_DIR"], "/home/u/.ownhub");
+    }
 }
