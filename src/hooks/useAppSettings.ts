@@ -46,6 +46,10 @@ function readStored(): Partial<AppSettings> {
   }
 }
 
+/** Set once the upgrade has run in this session, so the marker it writes cannot
+ * make a second read (React re-invokes the state initializer) undo the result. */
+let upgradedThisSession = false;
+
 /**
  * One-time schema upgrade. Every install persists the whole settings object on
  * first mount, so a stored `violet` is indistinguishable from the old default
@@ -53,14 +57,18 @@ function readStored(): Partial<AppSettings> {
  * apply; the schema marker keeps a later, deliberate violet choice intact.
  */
 function upgraded(stored: Partial<AppSettings>): Partial<AppSettings> {
+  if (upgradedThisSession) return stored;
+  upgradedThisSession = true;
+
+  let firstRun = false;
   try {
-    if (window.localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return stored;
-    window.localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+    firstRun = window.localStorage.getItem(SCHEMA_KEY) !== SCHEMA_VERSION;
+    if (firstRun) window.localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
   } catch {
     // Storage refused the marker: keep the stored choice rather than fight it.
     return stored;
   }
-  if (stored.accentColor !== "violet") return stored;
+  if (!firstRun || stored.accentColor !== "violet") return stored;
   // Omit the key entirely: an explicit `undefined` would win over the default
   // in the spread below and leave `data-accent` unset.
   const rest: Partial<AppSettings> = { ...stored };
