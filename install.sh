@@ -587,6 +587,6 @@ if [ "$OS" = "Darwin" ]; then
 fi
 if [ "$OS" = "Linux" ]; then
     echo "If it later fails to launch, diagnose missing libraries without reinstalling:"
-    echo "  curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh -s -- --check-deps"
+    echo "  curl -fsSL https://hub.ownanai.dev/install.sh | sh -s -- --check-deps"
 fi
 echo "========================================================"

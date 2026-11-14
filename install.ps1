@@ -27,7 +27,7 @@
     Do not add the install directory to the user PATH.
 
 .EXAMPLE
-    irm https://ownhub.internetdozero.com.br/install.ps1 | iex
+    irm https://hub.ownanai.dev/install.ps1 | iex
 
 .EXAMPLE
     .\install.ps1 -CheckDeps

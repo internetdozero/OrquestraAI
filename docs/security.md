@@ -39,7 +39,7 @@ from before signing can still be installed with an explicit opt-in to
 checksum-only verification:
 
 ```sh
-curl -fsSL https://ownhub.internetdozero.com.br/install.sh | bash -s -- --allow-unsigned-legacy
+curl -fsSL https://hub.ownanai.dev/install.sh | bash -s -- --allow-unsigned-legacy
 ```
 
 ## Manual verification

@@ -27,7 +27,7 @@ O OwnHub é um app desktop e uma CLI para gerenciar vários agentes de código c
 Binários publicados: **Linux x86_64**, **Linux aarch64**, **macOS Apple Silicon**, **macOS Intel** e **Windows x86_64** (instalador NSIS e o executável avulso que o atualizador substitui).
 
 ```bash
-curl -fsSL https://ownhub.internetdozero.com.br/install.sh | bash
+curl -fsSL https://hub.ownanai.dev/install.sh | bash
 ```
 
 O instalador:
@@ -42,7 +42,7 @@ O suporte de distribuição depende da glibc: a release é compilada no Ubuntu 2
 Para diagnosticar uma instalação Linux existente sem baixar de novo:
 
 ```bash
-curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh -s -- --check-deps
+curl -fsSL https://hub.ownanai.dev/install.sh | sh -s -- --check-deps
 ```
 
 Binários e notas de versão ficam na [página de Releases](https://github.com/OwnAnAI/ownhub/releases). As mudanças estão no [CHANGELOG](CHANGELOG.md).

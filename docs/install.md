@@ -1,12 +1,12 @@
 # Installing OwnHub
 
 The supported channel today is the installer served at
-`https://ownhub.internetdozero.com.br/install.sh`, which verifies a detached
+`https://hub.ownanai.dev/install.sh`, which verifies a detached
 signature over the release checksums before it trusts anything (see
 [security.md](security.md)) and installs the binary to `~/.local/bin/ownhub`.
 
 ```sh
-curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh
+curl -fsSL https://hub.ownanai.dev/install.sh | sh
 ```
 
 ## Native package (Debian/Ubuntu)
@@ -200,7 +200,7 @@ before any checksum is trusted, and the downloaded executable must match its
 signed SHA-256 entry.
 
 ```powershell
-irm https://ownhub.internetdozero.com.br/install.ps1 | iex
+irm https://hub.ownanai.dev/install.ps1 | iex
 ```
 
 It installs `ownhub.exe` (the same command name the Unix installer uses)

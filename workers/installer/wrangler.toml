@@ -6,5 +6,5 @@ main = "worker.js"
 compatibility_date = "2026-10-01"
 
 # Custom domain + route are bound in the Cloudflare dashboard (or here):
-# ownhub.internetdozero.com.br/install.sh -> this worker.
-# routes = [{ pattern = "ownhub.internetdozero.com.br/install.sh", zone_name = "internetdozero.com.br" }]
+# hub.ownanai.dev/install.sh -> this worker.
+# routes = [{ pattern = "hub.ownanai.dev/install.sh", zone_name = "ownanai.dev" }]

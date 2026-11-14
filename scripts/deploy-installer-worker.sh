@@ -2,7 +2,7 @@
 # Deploy the ownhub installer edge worker and verify 1:1 byte parity.
 #
 # Usage: sh scripts/deploy-installer-worker.sh [worker-url]
-#   worker-url defaults to https://ownhub.internetdozero.com.br; a URL
+#   worker-url defaults to https://hub.ownanai.dev; a URL
 #   ending in /install.sh or /install.ps1 is accepted and trimmed.
 #
 # Requires: wrangler authenticated (`wrangler login` or CLOUDFLARE_API_TOKEN),
@@ -11,7 +11,7 @@
 set -e
 
 REPO_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-WORKER_BASE="${1:-https://ownhub.internetdozero.com.br}"
+WORKER_BASE="${1:-https://hub.ownanai.dev}"
 WORKER_BASE=$(printf '%s' "$WORKER_BASE" | sed -e 's#/install\.sh$##' -e 's#/install\.ps1$##' -e 's#/$##')
 REPO="OwnAnAI/ownhub"
 INSTALLERS="install.sh install.ps1"

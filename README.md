@@ -28,7 +28,7 @@ OwnHub is a desktop app and CLI for managing several AI coding agents from one p
 Published binaries: **Linux x86_64**, **Linux aarch64**, **macOS Apple Silicon**, **macOS Intel** and **Windows x86_64** (an NSIS installer plus the bare executable the in-app updater replaces).
 
 ```bash
-curl -fsSL https://ownhub.internetdozero.com.br/install.sh | bash
+curl -fsSL https://hub.ownanai.dev/install.sh | bash
 ```
 
 The installer:
@@ -43,7 +43,7 @@ Distribution support depends on glibc: the release is built on Ubuntu 22.04, so 
 To diagnose an existing Linux install without downloading again:
 
 ```bash
-curl -fsSL https://ownhub.internetdozero.com.br/install.sh | sh -s -- --check-deps
+curl -fsSL https://hub.ownanai.dev/install.sh | sh -s -- --check-deps
 ```
 
 Binaries and release notes are on the [Releases page](https://github.com/OwnAnAI/ownhub/releases). Changes are listed in the [CHANGELOG](CHANGELOG.md).
