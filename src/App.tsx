@@ -7,7 +7,8 @@ import { PresetBar } from "./components/PresetBar";
 import { Sidebar } from "./components/Sidebar";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
-import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
+import { useAppUpdater } from "./hooks/useAppUpdater";
+import { UpdatePromptModal } from "./components/UpdatePromptModal";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
 import { useJanitor } from "./hooks/useJanitor";
@@ -68,18 +69,14 @@ export default function App() {
 
   const { toast, showToast } = useToast();
   const prefs = useAppSettings();
-  const handleUpdateFound = useCallback(
-    (release: { latestVersion: string }) => {
-      showToast(t.settings.about.newVersionAvailable(release.latestVersion));
-    },
-    [showToast, t],
-  );
-  const { hasUpdate: hasAppUpdate } = useAutoUpdateCheck({
+  const updater = useAppUpdater({
     enabled: prefs.settings.autoCheckAppUpdates,
     currentVersion: status?.version ?? "0.1.0",
     isTauri,
-    onUpdateFound: handleUpdateFound,
+    onToast: showToast,
+    onError: setError,
   });
+  const hasAppUpdate = updater.availableRelease !== null || updater.readyVersion !== null;
   const clearError = useCallback(() => setError(null), []);
   const janitor = useJanitor({
     isTauri,
@@ -435,6 +432,7 @@ export default function App() {
           prefs={prefs}
           status={status}
           isTauri={isTauri}
+          updater={updater}
           onClose={() => setSettingsOpen(false)}
           onToast={showToast}
           onError={setError}
@@ -442,6 +440,16 @@ export default function App() {
             setSettingsOpen(false);
             selectView("sessions");
           }}
+        />
+      )}
+
+      {updater.promptOpen && updater.readyVersion && (
+        <UpdatePromptModal
+          version={updater.readyVersion}
+          release={updater.availableRelease}
+          installing={updater.step === "installing"}
+          onInstallAndRestart={() => void updater.installReadyAndRestart()}
+          onDismiss={updater.dismissPrompt}
         />
       )}
 

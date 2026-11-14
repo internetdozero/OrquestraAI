@@ -68,7 +68,7 @@ use sessions::{
 use skills::{pick_folder, HarnessSummary, SkillItem};
 use tauri::Manager;
 use tray::set_minimize_to_tray;
-use updater::{restart_app, sync_official_extensions};
+use updater::{download_app_update, install_staged_update, restart_app, sync_official_extensions};
 // Re-exported for integration tests of the updater's anti-downgrade gate.
 pub use updater::apply_app_update;
 use vault::{
@@ -375,9 +375,8 @@ pub fn run() {
             save_retention_policy,
             estimate_purge,
             purge_sessions,
-            apply_app_update,
-            sync_official_extensions,
-            restart_app,
+            apply_app_update, download_app_update, install_staged_update,
+            sync_official_extensions, restart_app,
             list_vault_presets,
             vault_list_services,
             vault_import_services,

@@ -6,6 +6,8 @@ identifier = "update-ops"
 description = "Desktop binary update, official extension sync, restart."
 permissions = [
   "allow-apply-app-update",
+  "allow-download-app-update",
+  "allow-install-staged-update",
   "allow-sync-official-extensions",
   "allow-restart-app",
 ]

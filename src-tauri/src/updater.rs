@@ -11,14 +11,66 @@ use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use serde::Serialize;
+use tauri::Emitter;
 
+mod download;
 mod replace;
 
+use download::{asset_candidates, download_async, expected_hash, release_asset_url, sha256_of};
 pub use replace::purge_retired_binaries;
 
-const REPO: &str = "OwnAnAI/ownhub";
+const UPDATE_PROGRESS_EVENT: &str = "app-update-progress";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppUpdateProgress {
+    pub version: String,
+    pub phase: &'static str,
+    pub downloaded_bytes: u64,
+    pub total_bytes: Option<u64>,
+}
+
+#[derive(Default)]
+struct UpdateCoordinator {
+    staged: Option<StagedBinary>,
+    installed_version: Option<String>,
+}
+
+struct StagedBinary {
+    version: String,
+    binary_path: PathBuf,
+    staging_dir: PathBuf,
+}
+
+static UPDATE_COORDINATOR: OnceLock<tauri::async_runtime::Mutex<UpdateCoordinator>> =
+    OnceLock::new();
+
+fn update_coordinator() -> &'static tauri::async_runtime::Mutex<UpdateCoordinator> {
+    UPDATE_COORDINATOR.get_or_init(|| tauri::async_runtime::Mutex::new(UpdateCoordinator::default()))
+}
+
+fn emit_progress(
+    app: Option<&tauri::AppHandle>,
+    version: &str,
+    phase: &'static str,
+    downloaded_bytes: u64,
+    total_bytes: Option<u64>,
+) {
+    if let Some(handle) = app {
+        let _ = handle.emit(
+            UPDATE_PROGRESS_EVENT,
+            AppUpdateProgress {
+                version: version.to_string(),
+                phase,
+                downloaded_bytes,
+                total_bytes,
+            },
+        );
+    }
+}
 
 /// Summary of an upstream sync of installed official extensions.
 #[derive(Debug, Clone, Serialize)]
@@ -50,29 +102,119 @@ const BINARY_MAX_BYTES: u64 = 100 * 1024 * 1024;
 const SUMS_MAX_BYTES: u64 = 1024 * 1024;
 const SIG_MAX_BYTES: u64 = 64 * 1024;
 
-/// Download `target_version` of the desktop binary, verify its SHA-256, and
-/// atomically replace the running executable. Returns a human message.
+/// Download and verify `target_version` into a persistent staging directory.
+/// Idempotent and single-flight: concurrent callers share the coordinator lock,
+/// and an already-staged or already-installed version returns immediately.
 #[tauri::command]
-pub fn apply_app_update(target_version: String) -> Result<String, String> {
+pub async fn download_app_update(
+    app: tauri::AppHandle,
+    target_version: String,
+) -> Result<String, String> {
     let version = validate_version(&target_version)?;
     require_newer_version(&version)?;
-    let assets = asset_candidates(std::env::consts::OS, std::env::consts::ARCH)?;
-    let staging = Staging::fresh("ownhub-update")?;
+    let mut guard = update_coordinator().lock().await;
+    if guard.installed_version.as_deref() == Some(version.as_str()) {
+        emit_progress(Some(&app), &version, "installed", 0, None);
+        return Ok(version);
+    }
+    if let Some(staged) = &guard.staged {
+        if staged.version == version && staged.binary_path.is_file() {
+            emit_progress(Some(&app), &version, "ready", 0, None);
+            return Ok(version);
+        }
+    }
+    download_and_stage(Some(&app), &version, &mut guard).await?;
+    Ok(version)
+}
 
-    // Pin the tag the operator confirmed. `releases/latest` can move between
-    // the UI check and this call, and the success string would still name
-    // the older version.
+/// Atomically install a previously staged `target_version` (or download and
+/// verify it first if not yet staged). Idempotent when already installed in
+/// this session.
+#[tauri::command]
+pub async fn install_staged_update(
+    app: tauri::AppHandle,
+    target_version: String,
+) -> Result<String, String> {
+    let version = validate_version(&target_version)?;
+    require_newer_version(&version)?;
+    let mut guard = update_coordinator().lock().await;
+    if guard.installed_version.as_deref() == Some(version.as_str()) {
+        emit_progress(Some(&app), &version, "installed", 0, None);
+        return Ok(format!("App updated successfully to {version}"));
+    }
+    let has_staged = guard
+        .staged
+        .as_ref()
+        .is_some_and(|s| s.version == version && s.binary_path.is_file());
+    if !has_staged {
+        download_and_stage(Some(&app), &version, &mut guard).await?;
+    }
+    emit_progress(Some(&app), &version, "installing", 0, None);
+    let staged = guard
+        .staged
+        .as_ref()
+        .ok_or_else(|| "staged update missing after download".to_string())?;
+    install_verified_binary(&staged.binary_path)?;
+    let staging_dir = staged.staging_dir.clone();
+    guard.staged = None;
+    guard.installed_version = Some(version.clone());
+    let _ = fs::remove_dir_all(&staging_dir);
+    emit_progress(Some(&app), &version, "installed", 0, None);
+    Ok(format!("App updated successfully to {version}"))
+}
+
+async fn download_and_stage(
+    app: Option<&tauri::AppHandle>,
+    version: &str,
+    guard: &mut UpdateCoordinator,
+) -> Result<(), String> {
+    if let Some(old) = guard.staged.take() {
+        let _ = fs::remove_dir_all(&old.staging_dir);
+    }
+    let staging_dir = crate::paths::ensure_scratch_root()?.join("staged-update");
+    let _ = fs::remove_dir_all(&staging_dir);
+    fs::create_dir_all(&staging_dir)
+        .map_err(|error| format!("failed to create {}: {error}", staging_dir.display()))?;
+
+    let result = download_and_verify_into(app, version, &staging_dir).await;
+    match result {
+        Ok(binary_path) => {
+            guard.staged = Some(StagedBinary {
+                version: version.to_string(),
+                binary_path,
+                staging_dir,
+            });
+            emit_progress(app, version, "ready", 0, None);
+            Ok(())
+        }
+        Err(error) => {
+            let _ = fs::remove_dir_all(&staging_dir);
+            Err(error)
+        }
+    }
+}
+
+async fn download_and_verify_into(
+    app: Option<&tauri::AppHandle>,
+    version: &str,
+    staging_dir: &Path,
+) -> Result<PathBuf, String> {
+    let assets = asset_candidates(std::env::consts::OS, std::env::consts::ARCH)?;
     let mut asset = String::new();
     let mut binary_path = PathBuf::new();
     let mut last_error = String::new();
+    emit_progress(app, version, "downloading", 0, None);
     for candidate in &assets {
-        let path = staging.0.join(candidate);
-        match download(
-            &release_asset_url(&version, candidate),
+        let path = staging_dir.join(candidate);
+        match download_async(
+            &release_asset_url(version, candidate),
             &path,
             BINARY_MAX_BYTES,
             std::time::Duration::from_secs(600),
-        ) {
+            app.map(|handle| (handle, version)),
+        )
+        .await
+        {
             Ok(()) => {
                 asset = candidate.to_string();
                 binary_path = path;
@@ -84,31 +226,30 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
     if asset.is_empty() {
         return Err(last_error);
     }
-    let sums_path = staging.0.join("SHA256SUMS.txt");
-    download(
-        &release_asset_url(&version, "SHA256SUMS.txt"),
+    emit_progress(app, version, "verifying", 0, None);
+    let sums_path = staging_dir.join("SHA256SUMS.txt");
+    download_async(
+        &release_asset_url(version, "SHA256SUMS.txt"),
         &sums_path,
         SUMS_MAX_BYTES,
         std::time::Duration::from_secs(30),
-    )?;
-    // Detached Ed25519 signature over the exact checksums bytes. A forged
-    // release (malicious binary + matching malicious checksums) cannot forge
-    // this without the offline signing key, so verify before trusting the sums.
-    // The trusted comment binds the validated target version: a signature
-    // lifted from an older release (replay/downgrade) names the wrong
-    // version and fails closed even though it verifies cryptographically.
-    let sig_path = staging.0.join(crate::update_sig::SUMS_SIGNATURE_ASSET);
-    download(
-        &release_asset_url(&version, crate::update_sig::SUMS_SIGNATURE_ASSET),
+        None,
+    )
+    .await?;
+    let sig_path = staging_dir.join(crate::update_sig::SUMS_SIGNATURE_ASSET);
+    download_async(
+        &release_asset_url(version, crate::update_sig::SUMS_SIGNATURE_ASSET),
         &sig_path,
         SIG_MAX_BYTES,
         std::time::Duration::from_secs(30),
-    )?;
+        None,
+    )
+    .await?;
     let sums_bytes = fs::read(&sums_path)
         .map_err(|error| format!("failed to read {}: {error}", sums_path.display()))?;
     let sig_text = fs::read_to_string(&sig_path)
         .map_err(|error| format!("failed to read {}: {error}", sig_path.display()))?;
-    crate::update_sig::verify_release_file(&sums_bytes, &sig_text, &version)?;
+    crate::update_sig::verify_release_file(&sums_bytes, &sig_text, version)?;
 
     let expected = expected_hash(&sums_path, &asset)?;
     let actual = sha256_of(&binary_path)?;
@@ -117,7 +258,10 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
             "checksum mismatch for {asset}: expected {expected}, got {actual}"
         ));
     }
+    Ok(binary_path)
+}
 
+fn install_verified_binary(binary_path: &Path) -> Result<(), String> {
     let target = replace::active_binary()?;
     let sibling = target.with_file_name(format!(
         ".{}.tmp-{}",
@@ -127,13 +271,27 @@ pub fn apply_app_update(target_version: String) -> Result<String, String> {
             .unwrap_or_else(|| "ownhub".to_string()),
         crate::paths::unique_tmp_suffix()
     ));
-    fs::copy(&binary_path, &sibling)
+    fs::copy(binary_path, &sibling)
         .map_err(|error| format!("failed to stage {}: {error}", sibling.display()))?;
     #[cfg(unix)]
     fs::set_permissions(&sibling, fs::Permissions::from_mode(0o755))
         .map_err(|error| format!("failed to chmod {}: {error}", sibling.display()))?;
-    replace::install(&sibling, &target)?;
+    replace::install(&sibling, &target)
+}
 
+/// Download `target_version` of the desktop binary, verify its SHA-256, and
+/// atomically replace the running executable. Returns a human message.
+#[tauri::command]
+pub fn apply_app_update(target_version: String) -> Result<String, String> {
+    let version = validate_version(&target_version)?;
+    require_newer_version(&version)?;
+    let staging = Staging::fresh("ownhub-update")?;
+    let binary_path = tauri::async_runtime::block_on(download_and_verify_into(
+        None,
+        &version,
+        &staging.0,
+    ))?;
+    install_verified_binary(&binary_path)?;
     Ok(format!("App updated successfully to {version}"))
 }
 
@@ -200,161 +358,6 @@ pub fn restart_app() -> Result<(), String> {
         .spawn()
         .map_err(|error| format!("failed to relaunch {}: {error}", exe.display()))?;
     std::process::exit(0);
-}
-
-/// Asset URL for one validated version tag (`v` is added back; validation strips it).
-fn release_asset_url(version: &str, asset: &str) -> String {
-    format!("https://github.com/{REPO}/releases/download/v{version}/{asset}")
-}
-
-/// Release asset candidates per platform; Linux keeps the legacy alias.
-fn asset_candidates(os: &str, arch: &str) -> Result<Vec<&'static str>, String> {
-    match (os, arch) {
-        ("linux", "x86_64") => Ok(vec!["ownhub-linux-x86_64", "ownhub"]),
-        ("linux", "aarch64") => Ok(vec!["ownhub-linux-aarch64"]),
-        ("macos", "aarch64") => Ok(vec!["ownhub-macos-arm64"]),
-        ("macos", "x86_64") => Ok(vec!["ownhub-macos-x86_64"]),
-        // Windows ships the bare executable, like every other row: the MSI/NSIS
-        // installer is for first install, and an in-place update must not run
-        // one (it would relaunch the installer mid-session).
-        ("windows", "x86_64") => Ok(vec!["ownhub-windows-x86_64.exe"]),
-        _ => Err(format!("unsupported platform for updates: {os}-{arch}")),
-    }
-}
-
-/// Try each candidate asset in order until one downloads.
-///
-/// Native `reqwest` (rustls) instead of a `curl` subprocess: minimal
-/// containers and bare Windows installs have no curl in `PATH`, and the
-/// release host redirects across origins, so this client keeps the default
-/// redirect policy instead of the vault proxy's same-host-only one.
-fn download(
-    url: &str,
-    destination: &Path,
-    max_bytes: u64,
-    timeout: std::time::Duration,
-) -> Result<(), String> {
-    tauri::async_runtime::block_on(download_async(url, destination, max_bytes, timeout))
-}
-
-async fn download_async(
-    url: &str,
-    destination: &Path,
-    max_bytes: u64,
-    timeout: std::time::Duration,
-) -> Result<(), String> {
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(10))
-        .timeout(timeout)
-        .build()
-        .map_err(|error| format!("failed to build the HTTP client: {error}"))?;
-    // Mirror `curl --retry 2`: transport failures retry, HTTP error
-    // statuses (a missing candidate asset 404s by design) do not.
-    let mut last_error = format!("download failed for {url:?}");
-    for _ in 0..3 {
-        match download_once(&client, url, destination, max_bytes).await {
-            Ok(()) => return Ok(()),
-            Err(error) if error.retryable => last_error = error.message,
-            Err(error) => return Err(error.message),
-        }
-    }
-    Err(last_error)
-}
-
-struct DownloadError {
-    message: String,
-    retryable: bool,
-}
-
-async fn download_once(
-    client: &reqwest::Client,
-    url: &str,
-    destination: &Path,
-    max_bytes: u64,
-) -> Result<(), DownloadError> {
-    let fail = |message: String, retryable: bool| DownloadError { message, retryable };
-    let mut response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|error| fail(format!("download failed for {url:?}: {error}"), true))?;
-    let status = response.status();
-    if !status.is_success() {
-        return Err(fail(
-            format!("download failed for {url:?}: HTTP {status}"),
-            false,
-        ));
-    }
-    let mut file = fs::File::create(destination).map_err(|error| {
-        fail(
-            format!("failed to write {}: {error}", destination.display()),
-            false,
-        )
-    })?;
-    let mut total: u64 = 0;
-    loop {
-        match response.chunk().await {
-            Ok(Some(chunk)) => {
-                total = total.saturating_add(chunk.len() as u64);
-                if total > max_bytes {
-                    return Err(fail(
-                        format!(
-                            "download failed for {url:?}: response exceeds the {max_bytes}-byte cap"
-                        ),
-                        false,
-                    ));
-                }
-                use std::io::Write;
-                file.write_all(&chunk).map_err(|error| {
-                    fail(
-                        format!("failed to write {}: {error}", destination.display()),
-                        false,
-                    )
-                })?;
-            }
-            Ok(None) => return Ok(()),
-            Err(error) => {
-                return Err(fail(format!("download failed for {url:?}: {error}"), true));
-            }
-        }
-    }
-}
-
-/// Exactly one `SHA256SUMS.txt` line must name `asset`; fail closed otherwise.
-fn expected_hash(sums: &Path, asset: &str) -> Result<String, String> {
-    let raw = fs::read_to_string(sums)
-        .map_err(|error| format!("failed to read {}: {error}", sums.display()))?;
-    let mut matches = Vec::new();
-    for line in raw.lines() {
-        let mut parts = line.split_whitespace();
-        if let (Some(hash), Some(name)) = (parts.next(), parts.next()) {
-            let file = name
-                .trim_start_matches('*')
-                .rsplit('/')
-                .next()
-                .unwrap_or(name);
-            if file == asset {
-                matches.push(hash.to_lowercase());
-            }
-        }
-    }
-    match matches.as_slice() {
-        [single] => Ok(single.clone()),
-        [] => Err(format!("{asset:?} has no entry in SHA256SUMS.txt")),
-        _ => Err(format!("{asset:?} has ambiguous checksum entries")),
-    }
-}
-
-/// Hash a file with SHA-256 from the `sha2` crate: no external
-/// `sha256sum`/`shasum` needed, so minimal containers update fine.
-fn sha256_of(path: &Path) -> Result<String, String> {
-    use sha2::Digest;
-    let mut file = fs::File::open(path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    let mut hasher = sha2::Sha256::new();
-    std::io::copy(&mut file, &mut hasher)
-        .map_err(|error| format!("failed to hash {}: {error}", path.display()))?;
-    Ok(format!("{:x}", hasher.finalize()))
 }
 
 /// Anti-replay/anti-downgrade gate: `target` must parse as SemVer and be

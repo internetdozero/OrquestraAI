@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-install-staged-update"
+description = "Enables the install_staged_update command without any pre-configured scope."
+commands.allow = ["install_staged_update"]
+
+[[permission]]
+identifier = "deny-install-staged-update"
+description = "Denies the install_staged_update command without any pre-configured scope."
+commands.deny = ["install_staged_update"]

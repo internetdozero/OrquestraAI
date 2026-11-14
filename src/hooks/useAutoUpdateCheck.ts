@@ -1,19 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { checkLatestRelease, type ReleaseCheckResult } from "../lib/updater";
 
 interface AutoUpdateCheckOptions {
   enabled: boolean;
   currentVersion: string | null;
   isTauri: boolean;
-  onUpdateFound?: (result: ReleaseCheckResult) => void;
+  onUpdateFound: (result: ReleaseCheckResult) => void;
   delayMs?: number;
   intervalMs?: number;
 }
 
 const STARTUP_DELAY_MS = 4000;
-const BACKGROUND_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const BACKGROUND_INTERVAL_MS = 30 * 60 * 1000;
 
-/** Background release poll: delayed first check, then every 4h. */
+/** Background release poll: delayed first check, then every 30 minutes. */
 export function useAutoUpdateCheck({
   enabled,
   currentVersion,
@@ -22,7 +22,8 @@ export function useAutoUpdateCheck({
   delayMs = STARTUP_DELAY_MS,
   intervalMs = BACKGROUND_INTERVAL_MS,
 }: AutoUpdateCheckOptions) {
-  const [availableRelease, setAvailableRelease] = useState<ReleaseCheckResult | null>(null);
+  const onUpdateFoundRef = useRef(onUpdateFound);
+  onUpdateFoundRef.current = onUpdateFound;
 
   useEffect(() => {
     if (!enabled || !isTauri || !currentVersion) return;
@@ -31,8 +32,7 @@ export function useAutoUpdateCheck({
       try {
         const result = await checkLatestRelease(currentVersion);
         if (!cancelled && !result.isLatest) {
-          setAvailableRelease(result);
-          onUpdateFound?.(result);
+          onUpdateFoundRef.current(result);
         }
       } catch {
         /* Network failures resolve as up-to-date; ignore. */
@@ -45,7 +45,5 @@ export function useAutoUpdateCheck({
       window.clearTimeout(startupTimer);
       window.clearInterval(interval);
     };
-  }, [enabled, currentVersion, isTauri, onUpdateFound, delayMs, intervalMs]);
-
-  return { availableRelease, hasUpdate: availableRelease !== null };
+  }, [enabled, currentVersion, isTauri, delayMs, intervalMs]);
 }

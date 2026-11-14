@@ -14,6 +14,7 @@
     "delete_skill",
     "deploy_harness_bridge",
     "deploy_mcps",
+    "download_app_update",
     "estimate_purge",
     "get_bridge_status",
     "get_productivity_metrics",
@@ -25,6 +26,7 @@
     "import_skill",
     "import_skill_from_git",
     "install_rtk",
+    "install_staged_update",
     "list_blackboard_notes",
     "list_idea_projects",
     "list_ideas",
@@ -133,7 +135,13 @@
       "reveal_mcp_secret"
     ],
     "vault-blind-ops": ["vault_http_request", "vault_exec"],
-    "update-ops": ["apply_app_update", "sync_official_extensions", "restart_app"],
+    "update-ops": [
+      "apply_app_update",
+      "download_app_update",
+      "install_staged_update",
+      "sync_official_extensions",
+      "restart_app"
+    ],
     "session-ops": ["purge_sessions", "save_retention_policy", "toggle_pin_session"],
     "admin-ops": [
       "sweep_system_caches",

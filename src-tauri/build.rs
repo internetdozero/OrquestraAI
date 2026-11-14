@@ -125,6 +125,8 @@ fn main() {
             "estimate_purge",
             "purge_sessions",
             "apply_app_update",
+            "download_app_update",
+            "install_staged_update",
             "sync_official_extensions",
             "restart_app",
             "list_vault_presets",

@@ -9,14 +9,13 @@ import {
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
-import { useAppUpdater } from "../../hooks/useAppUpdater";
+import type { AppUpdaterState } from "../../hooks/useAppUpdater";
 import { useClipboard } from "../../hooks/useClipboard";
 import { useI18n } from "../../hooks/useI18n";
 import { HARNESSES } from "../../lib/harnesses";
 import type { CoreStatus } from "../../lib/tauri";
 import { openExternalUrl } from "../../lib/tauri";
 import { probeExternalTools, type ToolReport } from "../../lib/tooling";
-import { checkLatestRelease, type ReleaseCheckResult } from "../../lib/updater";
 import { cn } from "../../lib/utils";
 import ownhubLogo from "../../assets/ownhub-logo.svg";
 
@@ -27,6 +26,7 @@ interface AboutSettingsTabProps {
   autoCheckExtensionUpdates: boolean;
   onToggleAppUpdates: () => void;
   onToggleExtensionUpdates: () => void;
+  updater: AppUpdaterState;
   onToast: (message: string) => void;
   onError: (message: string) => void;
 }
@@ -39,18 +39,31 @@ export function AboutSettingsTab({
   autoCheckExtensionUpdates,
   onToggleAppUpdates,
   onToggleExtensionUpdates,
+  updater,
   onToast,
   onError,
 }: AboutSettingsTabProps) {
   const { t } = useI18n();
   const a = t.settings.about;
-  const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<ReleaseCheckResult | null>(null);
   const { copied: copiedDiag, copy: copyDiagText } = useClipboard(1500);
   const [tools, setTools] = useState<ToolReport | null>(null);
   const version = status?.version ?? "0.1.0";
-  const { updatingApp, syncing, updatedTo, updateApp, syncExtensions, restart, step } =
-    useAppUpdater({ onToast, onError });
+  const {
+    checking,
+    checkResult,
+    availableRelease,
+    updatingApp,
+    syncing,
+    progress,
+    readyVersion,
+    updatedTo,
+    checkNow,
+    updateApp,
+    installReadyAndRestart,
+    syncExtensions,
+    restart,
+    step,
+  } = updater;
 
   useEffect(() => {
     if (!isTauri) return;
@@ -67,15 +80,19 @@ export function AboutSettingsTab({
     };
   }, [isTauri]);
 
-  const checkNow = async () => {
-    setChecking(true);
-    setResult(null);
-    try {
-      setResult(await checkLatestRelease(version));
-    } finally {
-      setChecking(false);
-    }
-  };
+  const progressPct =
+    step === "downloading" && progress?.totalBytes
+      ? Math.min(100, Math.round((progress.downloadedBytes / progress.totalBytes) * 100))
+      : null;
+
+  const progressLabel =
+    step === "verifying"
+      ? a.verifyingUpdate
+      : step === "installing"
+        ? a.installingUpdate
+        : progressPct !== null && progress?.totalBytes
+          ? `${a.downloadingUpdate} ${progressPct}% (${(progress.downloadedBytes / 1048576).toFixed(1)} / ${(progress.totalBytes / 1048576).toFixed(1)} MB)`
+          : a.downloadingUpdate;
 
   const copyDiagnostics = async () => {
     const lines = [
@@ -273,22 +290,29 @@ export function AboutSettingsTab({
             )}
             {checking ? a.checking : a.checkNow}
           </button>
-          {updatingApp && (step === "downloading" || step === "verifying") && (
+          {updatingApp && (
             <div
               role="status"
               aria-live="polite"
               className="mt-2 w-full rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2.5"
             >
               <p className="flex items-center gap-2 text-[11.5px] font-medium text-sky-200">
-                <Loader2 className="size-3.5 animate-spin" />
-                {a.downloadingUpdate}
+                <Loader2 className="size-3.5 shrink-0 animate-spin" />
+                <span>{progressLabel}</span>
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sky-500/15">
-                <div className="h-full w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] rounded-full bg-sky-400" />
+                {progressPct !== null ? (
+                  <div
+                    className="h-full rounded-full bg-sky-400 transition-[width] duration-200"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                ) : (
+                  <div className="h-full w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] rounded-full bg-sky-400" />
+                )}
               </div>
             </div>
           )}
-          {result && !checking && result.isLatest && (
+          {checkResult && !checking && checkResult.isLatest && !readyVersion && !updatedTo && (
             <span
               role="status"
               className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200"
@@ -314,29 +338,25 @@ export function AboutSettingsTab({
               </button>
             </div>
           )}
-          {result && !checking && !result.isLatest && !updatedTo && (
+          {readyVersion && !checking && !updatingApp && !updatedTo && (
             <div
               role="status"
               className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11.5px] font-medium text-amber-200"
             >
-              <span>{a.newVersionAvailable(result.latestVersion)}</span>
+              <span>{a.readyToInstall(readyVersion)}</span>
               <button
                 type="button"
                 disabled={updatingApp || !isTauri}
-                onClick={() => void updateApp(result.latestVersion)}
-                className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] transition hover:bg-amber-500/25 disabled:cursor-wait disabled:opacity-60"
+                onClick={() => void installReadyAndRestart()}
+                className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold transition hover:bg-amber-500/25 disabled:cursor-wait disabled:opacity-60"
               >
-                {updatingApp ? (
-                  <Loader2 className="size-3 animate-spin" />
-                ) : (
-                  <Download className="size-3" />
-                )}
-                {updatingApp ? a.updatingApp : a.updateNow}
+                <Download className="size-3" />
+                {a.installNow}
               </button>
-              {result.releaseUrl && (
+              {availableRelease?.releaseUrl && (
                 <button
                   type="button"
-                  onClick={() => void openExternalUrl(result.releaseUrl as string)}
+                  onClick={() => void openExternalUrl(availableRelease.releaseUrl as string)}
                   className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] transition hover:bg-amber-500/25"
                 >
                   <ExternalLink className="size-3" />
@@ -345,6 +365,38 @@ export function AboutSettingsTab({
               )}
             </div>
           )}
+          {availableRelease &&
+            !availableRelease.isLatest &&
+            !readyVersion &&
+            !checking &&
+            !updatingApp &&
+            !updatedTo && (
+              <div
+                role="status"
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11.5px] font-medium text-amber-200"
+              >
+                <span>{a.newVersionAvailable(availableRelease.latestVersion)}</span>
+                <button
+                  type="button"
+                  disabled={updatingApp || !isTauri}
+                  onClick={() => void updateApp(availableRelease.latestVersion)}
+                  className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] transition hover:bg-amber-500/25 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <Download className="size-3" />
+                  {a.updateNow}
+                </button>
+                {availableRelease.releaseUrl && (
+                  <button
+                    type="button"
+                    onClick={() => void openExternalUrl(availableRelease.releaseUrl as string)}
+                    className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] transition hover:bg-amber-500/25"
+                  >
+                    <ExternalLink className="size-3" />
+                    {a.viewRelease}
+                  </button>
+                )}
+              </div>
+            )}
         </div>
       </section>
     </div>

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "../../hooks/useI18n";
 import type { AppSettingsState } from "../../hooks/useAppSettings";
+import type { AppUpdaterState } from "../../hooks/useAppUpdater";
 import type { CoreStatus } from "../../lib/tauri";
 import { cn } from "../../lib/utils";
 import { AboutSettingsTab } from "./AboutSettingsTab";
@@ -33,6 +34,7 @@ interface SettingsModalProps {
   prefs: AppSettingsState;
   status: CoreStatus | null;
   isTauri: boolean;
+  updater: AppUpdaterState;
   initialTab?: SettingsTabId;
   onClose: () => void;
   onToast: (message: string) => void;
@@ -45,6 +47,7 @@ export function SettingsModal({
   prefs,
   status,
   isTauri,
+  updater,
   initialTab = "general",
   onClose,
   onToast,
@@ -174,6 +177,7 @@ export function SettingsModal({
                 onToggleExtensionUpdates={() =>
                   prefs.setAutoCheckExtensionUpdates(!prefs.settings.autoCheckExtensionUpdates)
                 }
+                updater={updater}
                 onToast={onToast}
                 onError={onError}
               />

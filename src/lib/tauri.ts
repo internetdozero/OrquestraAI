@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { devMockMode } from "./fixtures.ts";
 import { loadDevFixtures } from "./devFixtureLoader.ts";
@@ -161,9 +162,39 @@ export interface ExtensionSyncResult {
   updatedMcps: string[];
 }
 
+export type AppUpdatePhase = "downloading" | "verifying" | "ready" | "installing" | "installed";
+
+export interface AppUpdateProgress {
+  version: string;
+  phase: AppUpdatePhase;
+  downloadedBytes: number;
+  totalBytes: number | null;
+}
+
+/** Download and verify the desktop binary release into staging (idempotent). */
+export function downloadAppUpdate(targetVersion: string): Promise<string> {
+  return invoke<string>("download_app_update", { targetVersion });
+}
+
+/** Atomically install a staged desktop binary release (idempotent). */
+export function installStagedUpdate(targetVersion: string): Promise<string> {
+  return invoke<string>("install_staged_update", { targetVersion });
+}
+
 /** Download, verify and atomically install the desktop binary release. */
-export function applyAppUpdate(targetVersion: string): Promise<string> {
-  return invoke<string>("apply_app_update", { targetVersion });
+export async function applyAppUpdate(targetVersion: string): Promise<string> {
+  await downloadAppUpdate(targetVersion);
+  return installStagedUpdate(targetVersion);
+}
+
+/** Subscribe to backend auto-updater progress events. */
+export function listenAppUpdateProgress(
+  handler: (progress: AppUpdateProgress) => void,
+): Promise<() => void> {
+  if (!isTauri()) return Promise.resolve(() => undefined);
+  return listen<AppUpdateProgress>("app-update-progress", (event) => {
+    handler(event.payload);
+  });
 }
 
 /** Pull upstream into installed official skills; projections stay live. */
