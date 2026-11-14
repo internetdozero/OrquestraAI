@@ -11,17 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0-alpha.10] - 2026-11-14
 
+### Added
+
+- **Silver Accent Theme:** a fifth accent (`silver`) joins emerald, cyan, violet and amber, painted from the same `[data-accent]` palette rules. It is now the default: `:root` carries the silver palette so the first frame already matches, and a one-time schema upgrade retires the `violet` value the app used to write for everyone (a later, deliberate choice is preserved).
+- **Official Logo:** the header and Settings → About show the OwnHub mark instead of generic iconography.
+- **Manual Flatpak Check:** `Remote Build & Release` accepts `build_flatpak`, which wraps the published Linux binary in the Flathub builder and fails the run on a packaging error without building the platform matrix or publishing a release. It is the way to validate the recipe without cutting a tag.
+
 ### Changed
 
 - **Renamed to OwnHub:** the app, CLI (`ownhub`), Tauri identifier (`dev.ownanai.hub`), repository (`OwnAnAI/ownhub`) and Rust workspace crates (`ownhub-*`) now carry the new name. On first launch `~/.orquestra` is moved to `~/.ownhub` automatically; the legacy `ORQUESTRA_WEBKIT_SOFTWARE` and `ORQUESTRA_KEYRING_DISABLE` variables keep working as fallbacks.
-
-### Added
-
-- **Manual Flatpak Check:** `Remote Build & Release` accepts `build_flatpak`, which wraps the published Linux binary in the Flathub builder and fails the run on a packaging error without building the platform matrix or publishing a release. It is the way to validate the recipe without cutting a tag.
+- **Settings and Store Warm at Boot:** the retention policy, the external-tool probe, the RTK version and the official store catalog are now read during the idle warm-up. Opening Settings or the store tab painted their defaults first and jumped when the IPC landed; both now paint from cache.
+- **Tighter Header:** the brand mark is smaller and sits closer to the product name.
 
 ### Fixed
 
-- **Flatpak Packaging:** The release job now runs in Flathub's builder image and builds through the Flathub action, because Ubuntu 22.04's `flatpak-builder` 1.2 still calls the legacy `appstream-compose` binary that GNOME SDK 47 dropped. `v0.1.0-alpha.9` was published without the Flatpak asset for that reason; the binary, `.deb` and installer channels are unaffected.
+- **Legacy MCP Catalog Paths:** a catalog written before the rename pointed its commands at `~/.orquestra/...`, which no longer exists, so every MCP failed to spawn and clients reported a closed stdio (`Connection reset by peer`). Commands, args and env values are rebased onto `~/.ownhub` when the catalog loads.
+- **Flatpak Packaging:** the release job now runs in Flathub's builder image and builds through the Flathub action, because Ubuntu 22.04's `flatpak-builder` 1.2 still calls the legacy `appstream-compose` binary that GNOME SDK 47 dropped. `v0.1.0-alpha.9` was published without the Flatpak asset for that reason; the binary, `.deb` and installer channels are unaffected.
+- **macOS Test Isolation:** the bridge backup tests derived their scratch directory from the clock alone, and macOS resolves it to microseconds — parallel tests could share a directory and fail on an existing fixture. The path is now unique per process and call.
 
 ## [0.1.0-alpha.9] - 2026-11-13
 
