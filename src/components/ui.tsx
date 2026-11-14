@@ -183,19 +183,6 @@ export function ViewFallback() {
   );
 }
 
-/** First paint of a lazily-split modal while its chunk loads. */
-export function ModalFallback() {
-  return (
-    <div
-      role="status"
-      aria-label="Loading dialog"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/60"
-    >
-      <div className="size-8 animate-spin rounded-full border-2 border-white/15 border-t-emerald-400" />
-    </div>
-  );
-}
-
 /** Dismissible inline error banner. */
 export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   const { t } = useI18n();

@@ -7,7 +7,7 @@ import { PresetBar } from "./components/PresetBar";
 import { Sidebar } from "./components/Sidebar";
 import { SkillsView } from "./components/SkillsView";
 import { StatusFooter } from "./components/StatusFooter";
-import { ModalFallback, ViewFallback } from "./components/ui";
+import { ViewFallback } from "./components/ui";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import { useHarnessBridge } from "./hooks/useHarnessBridge";
 import { useHarnessSummaries } from "./hooks/useHarnessSummaries";
@@ -30,6 +30,14 @@ import {
 import { useCoreStatus } from "./lib/tauri";
 import { cn } from "./lib/utils";
 import type { ActiveView } from "./lib/views";
+// The three dialogs are static on purpose: each hangs off the sidebar footer
+// or the status bar and can be clicked in the first frames after boot. Lazy
+// splits made that first click land on the Suspense fallback — the whole
+// window dims behind a spinner while the module arrives — and the shell is a
+// desktop window that loads from disk, so the ~48 KB belong here.
+import { BridgeModal } from "./components/BridgeModal";
+import { JanitorModal } from "./components/JanitorModal";
+import { SettingsModal } from "./components/settings/SettingsModal";
 
 /** Secondary views and modals load on demand: the first paint only needs
  *  the shell around SkillsView. Idle preloading (see `preloadViewChunks`)
@@ -52,17 +60,6 @@ const CredentialsView = lazy(() =>
 );
 const McpView = lazy(() =>
   import("./components/McpView").then((module) => ({ default: module.McpView })),
-);
-const JanitorModal = lazy(() =>
-  import("./components/JanitorModal").then((module) => ({ default: module.JanitorModal })),
-);
-const SettingsModal = lazy(() =>
-  import("./components/settings/SettingsModal").then((module) => ({
-    default: module.SettingsModal,
-  })),
-);
-const BridgeModal = lazy(() =>
-  import("./components/BridgeModal").then((module) => ({ default: module.BridgeModal })),
 );
 
 /**
@@ -445,47 +442,41 @@ export default function App() {
         onOpenJanitor={() => setJanitorOpen(true)}
       />
 
-      <Suspense fallback={janitorOpen ? <ModalFallback /> : null}>
-        {janitorOpen && (
-          <JanitorModal
-            health={janitor.health}
-            ramWarning={prefs.settings.ramAlertThreshold}
-            loading={janitor.loading}
-            sweeping={janitor.sweeping}
-            onClose={() => setJanitorOpen(false)}
-            onRefresh={() => void janitor.refresh()}
-            onSweep={() => void janitor.sweep()}
-          />
-        )}
-      </Suspense>
+      {janitorOpen && (
+        <JanitorModal
+          health={janitor.health}
+          ramWarning={prefs.settings.ramAlertThreshold}
+          loading={janitor.loading}
+          sweeping={janitor.sweeping}
+          onClose={() => setJanitorOpen(false)}
+          onRefresh={() => void janitor.refresh()}
+          onSweep={() => void janitor.sweep()}
+        />
+      )}
 
-      <Suspense fallback={settingsOpen ? <ModalFallback /> : null}>
-        {settingsOpen && (
-          <SettingsModal
-            prefs={prefs}
-            status={status}
-            isTauri={isTauri}
-            onClose={() => setSettingsOpen(false)}
-            onToast={showToast}
-            onError={setError}
-            onOpenSessions={() => {
-              setSettingsOpen(false);
-              selectView("sessions");
-            }}
-          />
-        )}
-      </Suspense>
+      {settingsOpen && (
+        <SettingsModal
+          prefs={prefs}
+          status={status}
+          isTauri={isTauri}
+          onClose={() => setSettingsOpen(false)}
+          onToast={showToast}
+          onError={setError}
+          onOpenSessions={() => {
+            setSettingsOpen(false);
+            selectView("sessions");
+          }}
+        />
+      )}
 
-      <Suspense fallback={bridge.open ? <ModalFallback /> : null}>
-        {bridge.open && (
-          <BridgeModal
-            statuses={bridge.statuses}
-            deploying={bridge.deploying}
-            onClose={() => bridge.setOpen(false)}
-            onConfirm={() => void bridge.deploy()}
-          />
-        )}
-      </Suspense>
+      {bridge.open && (
+        <BridgeModal
+          statuses={bridge.statuses}
+          deploying={bridge.deploying}
+          onClose={() => bridge.setOpen(false)}
+          onConfirm={() => void bridge.deploy()}
+        />
+      )}
 
       {toast && (
         <div

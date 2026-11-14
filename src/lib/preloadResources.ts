@@ -48,14 +48,11 @@ function settingsReads(): Promise<unknown>[] {
 }
 
 /**
- * Warm the settings dialog ahead of a click: its chunk plus every read its
- * tabs need. Fired on hover/focus of the sidebar button.
+ * Warm every read the settings tabs need, on hover/focus of the sidebar
+ * button (the dialog's own chunk starts at module load — see `App`).
  */
 export function preloadSettings(): Promise<void> {
-  return Promise.allSettled([
-    import("../components/settings/SettingsModal"),
-    ...settingsReads(),
-  ]).then(() => undefined);
+  return Promise.allSettled(settingsReads()).then(() => undefined);
 }
 
 /**
@@ -64,14 +61,10 @@ export function preloadSettings(): Promise<void> {
  * imports are cached by the module loader, and a rejection is ignored —
  * the fallback covers a cache miss.
  *
- * The settings dialog is the exception: it hangs off the sidebar footer, so
- * it can be clicked at any moment — including before the first idle window,
- * which is why clicking it used to dim the whole window behind the Suspense
- * fallback. Start its chunk immediately; a module fetch is async and never
- * blocks the thread.
+ * The modals are not here: their chunks start at module load in `App`, since
+ * one of them can be clicked at any moment.
  */
 export async function preloadViewChunks(isCancelled: () => boolean): Promise<void> {
-  void import("../components/settings/SettingsModal").catch(() => undefined);
   await whenIdle(isCancelled);
   if (isCancelled()) return;
   await Promise.allSettled([
@@ -80,8 +73,6 @@ export async function preloadViewChunks(isCancelled: () => boolean): Promise<voi
     import("../components/sessions/SessionsView"),
     import("../components/ideas/IdeasView"),
     import("../components/credentials/CredentialsView"),
-    import("../components/JanitorModal"),
-    import("../components/BridgeModal"),
   ]);
 }
 
