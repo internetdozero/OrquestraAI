@@ -363,7 +363,10 @@ mod tests {
         );
         assert_eq!(rebase_storage_path("/home/u/.orquestra"), "/home/u/.ownhub");
         // Untouched: new paths, bare names and id-like substrings.
-        assert_eq!(rebase_storage_path("/home/u/.ownhub/x"), "/home/u/.ownhub/x");
+        assert_eq!(
+            rebase_storage_path("/home/u/.ownhub/x"),
+            "/home/u/.ownhub/x"
+        );
         assert_eq!(rebase_storage_path("npx"), "npx");
         assert_eq!(
             rebase_storage_path("/opt/orquestra-tools/bin"),
@@ -375,7 +378,10 @@ mod tests {
     fn catalog_migration_rewrites_commands_args_and_env() {
         let mut catalog = Catalog::default();
         let mut entry = server("/home/u/.orquestra/mcp-servers/demo/.venv/bin/demo");
-        entry.args = vec!["--vault".to_string(), "/home/u/.orquestra/vault.json".to_string()];
+        entry.args = vec![
+            "--vault".to_string(),
+            "/home/u/.orquestra/vault.json".to_string(),
+        ];
         entry
             .env
             .insert("HOME_DIR".to_string(), "/home/u/.orquestra".to_string());
