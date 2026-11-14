@@ -178,7 +178,7 @@ export function Header({ onRefresh, refreshing, isTauri }: HeaderProps) {
       <div className="flex h-11 items-center gap-3 pl-4 pr-2 sm:gap-4 sm:pl-6 sm:pr-2">
         {/* Brand (doubles as a drag handle in the desktop shell) */}
         <div
-          className="flex min-w-0 items-center gap-1.5"
+          className="flex min-w-0 items-center gap-1"
           onDoubleClick={isTauri ? toggleMaximize : undefined}
         >
           <img
