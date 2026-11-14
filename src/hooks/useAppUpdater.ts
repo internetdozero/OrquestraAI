@@ -20,13 +20,7 @@ interface AppUpdaterDeps {
 }
 
 export type AppUpdateStep =
-  | "idle"
-  | "downloading"
-  | "verifying"
-  | "ready"
-  | "installing"
-  | "done"
-  | "error";
+  "idle" | "downloading" | "verifying" | "ready" | "installing" | "done" | "error";
 
 export interface AppUpdaterState {
   checking: boolean;

@@ -1,7 +1,6 @@
 {
   "_comment": "Frozen wire contract between the Rust core and the React client. `cargo test` fails if a command, a CLI flag or a serialized payload key changes, so a refactor cannot silently break the frontend. Update this file only together with the matching change in src/lib/*.ts.",
   "commands": [
-    "apply_app_update",
     "apply_preset",
     "batch_set_all",
     "batch_set_mcp_all",
@@ -136,7 +135,6 @@
     ],
     "vault-blind-ops": ["vault_http_request", "vault_exec"],
     "update-ops": [
-      "apply_app_update",
       "download_app_update",
       "install_staged_update",
       "sync_official_extensions",

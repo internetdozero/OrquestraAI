@@ -286,7 +286,6 @@ pub fn run() {
             // An update on Windows parks the replaced image beside the binary;
             // remove it now that the old process is gone.
             updater::purge_retired_binaries();
-
             // Desktop entry and icon integration for Linux application launchers and docks.
             desktop::ensure_desktop_integration();
             app.manage(tray::AppConfigState::default());
@@ -375,8 +374,10 @@ pub fn run() {
             save_retention_policy,
             estimate_purge,
             purge_sessions,
-            apply_app_update, download_app_update, install_staged_update,
-            sync_official_extensions, restart_app,
+            download_app_update,
+            install_staged_update,
+            sync_official_extensions,
+            restart_app,
             list_vault_presets,
             vault_list_services,
             vault_import_services,

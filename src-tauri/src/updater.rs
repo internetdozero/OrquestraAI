@@ -49,7 +49,8 @@ static UPDATE_COORDINATOR: OnceLock<tauri::async_runtime::Mutex<UpdateCoordinato
     OnceLock::new();
 
 fn update_coordinator() -> &'static tauri::async_runtime::Mutex<UpdateCoordinator> {
-    UPDATE_COORDINATOR.get_or_init(|| tauri::async_runtime::Mutex::new(UpdateCoordinator::default()))
+    UPDATE_COORDINATOR
+        .get_or_init(|| tauri::async_runtime::Mutex::new(UpdateCoordinator::default()))
 }
 
 fn emit_progress(
@@ -281,16 +282,14 @@ fn install_verified_binary(binary_path: &Path) -> Result<(), String> {
 
 /// Download `target_version` of the desktop binary, verify its SHA-256, and
 /// atomically replace the running executable. Returns a human message.
-#[tauri::command]
+/// Exposed for integration tests; desktop UI uses `download_app_update` +
+/// `install_staged_update`.
 pub fn apply_app_update(target_version: String) -> Result<String, String> {
     let version = validate_version(&target_version)?;
     require_newer_version(&version)?;
     let staging = Staging::fresh("ownhub-update")?;
-    let binary_path = tauri::async_runtime::block_on(download_and_verify_into(
-        None,
-        &version,
-        &staging.0,
-    ))?;
+    let binary_path =
+        tauri::async_runtime::block_on(download_and_verify_into(None, &version, &staging.0))?;
     install_verified_binary(&binary_path)?;
     Ok(format!("App updated successfully to {version}"))
 }
